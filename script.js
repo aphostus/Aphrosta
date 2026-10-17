@@ -4886,10 +4886,10 @@ async function autoSignIn() {
     console.error('Sign-in error:', code, err?.message);
 
     if (code === 'auth/popup-blocked' || code === 'auth/operation-not-supported-in-this-environment') {
-      authCooldownUntil = Date.now() + 500; setTimeout(autoSignIn, 600); return;
+      hideLoader(); showSignInButton(); return;
     }
     if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
-      authCooldownUntil = Date.now() + 4000; setTimeout(autoSignIn, 4100); return;
+      hideLoader(); showSignInButton(); return;
     }
     if (code === 'auth/network-request-failed') {
       toastOnce('net', 'Offline. Retrying sign-in\u2026');
@@ -4913,6 +4913,11 @@ async function autoSignIn() {
 function renderSigningIn() {
   appEl.innerHTML = '';
   showLoader();
+}
+
+function showSignInButton() {
+  appEl.innerHTML = '<div style="display:grid;place-items:center;height:100vh"><button id="signin-btn" style="padding:12px 24px;font-size:16px">Sign in with Google</button></div>';
+  document.getElementById('signin-btn').onclick = () => { authBusy = false; autoSignIn(); };
 }
 
 async function handleSignOut() {
