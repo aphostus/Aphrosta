@@ -293,8 +293,13 @@ function updateAccountBanner() {
   composer.classList.toggle('is-deactivated', !accountActive);
   const input = composer.querySelector('.composer-input');
   if (input) {
-    input.disabled = !accountActive;
-    input.placeholder = accountActive ? 'Message...' : 'Account deactivated — activate to chat';
+    const locked = accountActive && limitLocked();
+    input.disabled = !accountActive || locked;
+    input.placeholder = !accountActive
+      ? 'Account deactivated — activate to chat'
+      : locked
+        ? `Token limit reached \u2014 resets in ${fmtHMS(LimitWindow.endsAt() - Date.now())}`
+        : 'Message...';
   }
   const sendBtn = composer.querySelector('.send-btn');
   if (sendBtn) sendBtn.disabled = !accountActive;
@@ -1368,14 +1373,14 @@ function onSettingsChange(e) {
     if (!raw || /^(off|0|none)$/i.test(raw)) {
       t.value = '';
       setSetting('tokenLimit', 0);
-      LimitWindow.sync(TokenRecorder.providerUsed(activeModel));
+      LimitWindow.sync(TokenRecorder.dayTotals());
       return refreshTokenMeter();
     }
     const n = parseTokens(raw);
     if (n == null || n < 1000) return toast('Enter at least 1,000 tokens, e.g. 200k or 1.5m.', 'info');
     t.value = fmtTokens(n);
     setSetting('tokenLimit', n);
-    LimitWindow.sync(TokenRecorder.providerUsed(activeModel));
+    LimitWindow.sync(TokenRecorder.dayTotals());
     return refreshTokenMeter();
   }
 
@@ -1496,6 +1501,10 @@ const fmtTokens = (n) =>
   : Math.round(n).toLocaleString('en-US');
 
 const dayLimit = () => Math.max(0, +settings.tokenLimit || 0);
+const limitLocked = () => {
+  const lim = dayLimit();
+  return !!lim && LimitWindow.used() >= lim;
+};
 const timerMins = () => Math.min(1440, Math.max(1, +settings.tokenWindowMins || 1440));
 
 function parseTokens(str) {
@@ -1512,25 +1521,30 @@ function setTokenUsage(used = 0, meta = {}) {
   });
 }
 
+function usageView() {
+  const limit = dayLimit();
+  if (!limit) {
+    const { by, total } = TokenRecorder.dayTotals();
+    return { limit: 0, total, by, scope: 'today' };
+  }
+  return { limit, total: LimitWindow.used(), by: LimitWindow.by(), scope: 'current window' };
+}
+
 function paintUsageCard() {
   const card = document.querySelector('.usage-card');
   if (!card) return;
-  const { by, total } = TokenRecorder.dayTotals();
-  const limit = dayLimit();
-  const used = LimitWindow.used();
-  const displayTotal = limit ? used : total;
-  card.querySelector('[data-day-total]').textContent = fmtTokens(displayTotal);
+  const { limit, total, by } = usageView();
+  card.querySelector('[data-day-total]').textContent = fmtTokens(total);
   const of = card.querySelector('[data-day-of]');
   of.hidden = !limit;
-  if (limit) of.textContent = `of ${fmtTokens(limit)}`;
-  else of.textContent = '';
-  const denom = Math.max(limit || 0, total) || 1;
+  of.textContent = limit ? `of ${fmtTokens(limit)}` : '';
+  const denom = Math.max(limit, total) || 1;
   card.querySelector('[data-usage-stack]').innerHTML = MODEL_PROVIDERS
     .filter((p) => by[p.id] > 0)
     .map((p) => `<i style="width:${(by[p.id] / denom * 100).toFixed(2)}%;background:${PROVIDER_COLORS[p.id]}"></i>`)
     .join('');
   card.querySelectorAll('[data-legend]').forEach((el) => el.classList.toggle('is-used', by[el.dataset.legend] > 0));
-  card.dataset.state = !limit ? '' : used >= limit ? 'over' : used >= limit * 0.9 ? 'warn' : '';
+  card.dataset.state = !limit ? '' : total >= limit ? 'over' : total >= limit * 0.9 ? 'warn' : '';
 }
 
 const Composer = () => `
@@ -2872,19 +2886,34 @@ try { lockInit = JSON.parse(localStorage.getItem(LOCK_INIT_LS) || '{}') || {}; }
 const LIMIT_WIN_LS = 'aphrosta.limitWindow';
 const LimitWindow = {
   d: lsGet(LIMIT_WIN_LS, {}),
-  w() { return (this.d[currentUser?.uid || 'anon'] ||= { start: 0, used: 0 }); },
+  w() {
+    const w = (this.d[currentUser?.uid || 'anon'] ||= { start: 0, used: 0 });
+    w.by ||= {}; // legacy entries had no per-provider breakdown
+    return w;
+  },
   lenMs() { return timerMins() * 60000; },
   roll() {
     const w = this.w();
-    if (w.start && Date.now() >= w.start + this.lenMs()) { w.start = 0; w.used = 0; lsSet(LIMIT_WIN_LS, this.d); }
+    if (w.start && Date.now() >= w.start + this.lenMs()) {
+      w.start = 0; w.used = 0; w.by = {};
+      lsSet(LIMIT_WIN_LS, this.d);
+    }
     return w;
   },
-  add(n) { const w = this.roll(); if (!w.start) w.start = Date.now(); w.used += n; lsSet(LIMIT_WIN_LS, this.d); },
-  used() { return this.roll().used; },
-  sync(n) {
+  add(n, pid) {
     const w = this.roll();
-    w.used = n;
-    if (n > 0 && !w.start) w.start = Date.now();
+    if (!w.start) w.start = Date.now();
+    w.used += n;
+    if (pid) w.by[pid] = (w.by[pid] || 0) + n;
+    lsSet(LIMIT_WIN_LS, this.d);
+  },
+  used() { return this.roll().used; },
+  by() { return { ...this.roll().by }; },
+  sync({ total = 0, by = {} } = {}) {
+    const w = this.roll();
+    w.used = total;
+    w.by = { ...by };
+    if (total > 0 && !w.start) w.start = Date.now();
     lsSet(LIMIT_WIN_LS, this.d);
   },
   endsAt() { const w = this.roll(); return w.start ? w.start + this.lenMs() : 0; }
@@ -2961,7 +2990,7 @@ const TokenRecorder = (() => {
       const today = periodOf('daily');
       Object.keys(data.batches).forEach((bk) => { if (bk.split('|')[4] !== today) delete data.batches[bk]; });
       lsSet(TOKEN_REC_LS, data);
-      LimitWindow.add(total);
+      LimitWindow.add(total, e.provider);
       Cloud.queueUsage(e.provider, e.model);
       return total;
     },
@@ -3046,8 +3075,8 @@ function refreshTokenMeter() {
     setTokenUsage(0, { label: 'No model' });
   } else {
     const name = MODEL_PROVIDERS.find((p) => p.id === pid)?.name || pid;
-    const shown = dayLimit() ? LimitWindow.used() : TokenRecorder.providerUsed(pid);
-    setTokenUsage(shown, { label: name, note: `${name} \u00b7 today` });
+    const view = usageView();
+    setTokenUsage(view.by[pid] || 0, { label: name, note: `${name} \u00b7 ${view.scope}` });
   }
 
   paintUsageCard();
@@ -4510,8 +4539,6 @@ function initSessions() {
     appEl.addEventListener('click', (e) => {
       const ma = e.target.closest('.msg-act');
       if (ma) return onMessageAction(ma);
-
-      if (e.target.closest('[data-action="new-chat"]')) return newSession();
 
       const item = e.target.closest('.chat-item');
       if (!item) return;
