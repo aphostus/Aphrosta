@@ -4877,11 +4877,6 @@ async function autoSignIn() {
 
   authBusy = true;
   try {
-    if (location.protocol === 'https:') {
-      authBusy = false;
-      await signInWithRedirect(auth, provider);
-      return;
-    }
     await signInWithPopup(auth, provider);
     authBusy = false;
     return;
