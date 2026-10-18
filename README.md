@@ -1,4 +1,4 @@
-<div align="center">
+.<div align="center">
 
 <img src="Materials/Public/images/Icon.png" alt="Aphrosta" width="110">
 
