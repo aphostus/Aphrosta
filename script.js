@@ -175,30 +175,16 @@ const ACCENTS = [
 ];
 
 const FONTS = [
-  { id: 'system',    name: 'System',     stack: '-apple-system, BlinkMacSystemFont, \'SF Pro Display\', \'SF Pro Text\', \'Segoe UI\', Roboto, sans-serif' },
-  { id: 'serif',     name: 'Serif',      stack: 'ui-serif, Georgia, \'Times New Roman\', serif' },
-  { id: 'mono',      name: 'Mono',       stack: 'ui-monospace, \'SF Mono\', Menlo, Consolas, monospace' },
-  { id: 'rounded',   name: 'Rounded',    stack: 'ui-rounded, \'SF Pro Rounded\', \'Nunito\', \'Segoe UI\', sans-serif' },
-  { id: 'humanist',  name: 'Humanist',   stack: 'Optima, Candara, \'Segoe UI\', \'Trebuchet MS\', sans-serif' },
-  { id: 'geometric', name: 'Geometric',  stack: '\'Avenir Next\', Avenir, \'Century Gothic\', Futura, \'Trebuchet MS\', sans-serif' },
-  { id: 'book',      name: 'Book',       stack: '\'Iowan Old Style\', \'Palatino Linotype\', Palatino, \'Book Antiqua\', Georgia, serif' },
-  { id: 'typewriter',name: 'Typewriter', stack: '\'American Typewriter\', \'Courier New\', Courier, monospace' },
-  { id: 'hand',      name: 'Handwritten',stack: '\'Bradley Hand\', \'Segoe Print\', \'Chalkboard SE\', \'Comic Sans MS\', cursive' },
-  { id: 'readable',  name: 'Readable',   stack: '\'Atkinson Hyperlegible\', Lexend, Verdana, \'Trebuchet MS\', sans-serif' }
+  { id: 'system',  name: 'System',  stack: '-apple-system, BlinkMacSystemFont, \'SF Pro Display\', \'SF Pro Text\', \'Segoe UI\', Roboto, sans-serif' },
+  { id: 'serif',   name: 'Serif',   stack: 'ui-serif, Georgia, \'Times New Roman\', serif' },
+  { id: 'mono',    name: 'Mono',    stack: 'ui-monospace, \'SF Mono\', Menlo, Consolas, monospace' },
+  { id: 'rounded', name: 'Rounded', stack: 'ui-rounded, \'SF Pro Rounded\', \'Nunito\', \'Segoe UI\', sans-serif' }
 ];
 
 const TEXT_SIZES = [
-  { id: 'xsmall',  name: 'XS', s: 0.85 },
-  { id: 'small',   name: 'S',  s: 0.92 },
-  { id: 'default', name: 'M',  s: 1 },
-  { id: 'large',   name: 'L',  s: 1.12 },
-  { id: 'xlarge',  name: 'XL', s: 1.25 }
-];
-
-const SOUND_LEVELS = [
-  { id: 'low',    name: 'Low',    g: 0.03 },
-  { id: 'medium', name: 'Medium', g: 0.06 },
-  { id: 'high',   name: 'High',   g: 0.12 }
+  { id: 'small',   name: 'Small',   s: 0.9 },
+  { id: 'default', name: 'Default', s: 1 },
+  { id: 'large',   name: 'Large',   s: 1.12 }
 ];
 
 const LENGTHS = [
@@ -242,7 +228,6 @@ const SETTINGS_DEFAULTS = {
   size: 'default',
   soundMusic: false,
   soundEffects: false,
-  soundLevel: 'medium',
   saveSessions: true,
   memoryLong: true,
   memoryShort: true,
@@ -288,7 +273,6 @@ function loadSettings() {
   s.langOut    = valid(LANGUAGES, s.langOut, 'en');
   s.tokenWindowMins = Math.min(1440, Math.max(1, Math.round(+s.tokenWindowMins) || 1440));
   s.version = '1.00';
-  s.soundLevel = valid(SOUND_LEVELS, s.soundLevel, 'medium');
   if (!raw.memInit) { s.memoryLong = s.memoryShort = s.saveSessions = true; s.memInit = true; }
   return s;
 }
@@ -552,50 +536,6 @@ function promptDialog({ title, label = 'Value', value = '', confirmLabel = 'Save
 const APP_NAME = 'Aphrosta';
 const ICON_SRC = 'Materials/Public/images/Icon.png';
 
-const MASCOT_SVG = `<svg class="mascot" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-  <line x1="50" y1="14" x2="50" y2="26" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
-  <circle cx="50" cy="10" r="3.5" fill="currentColor"/>
-  <rect x="22" y="26" width="56" height="54" rx="18" fill="currentColor"/>
-  <rect x="30" y="38" width="40" height="30" rx="12" fill="var(--bg)" opacity="0.12"/>
-  <g transform="translate(42,53)" class="mascot-eye mascot-eye-l">
-    <path d="M0 -7 L1.8 -1.8 L7 0 L1.8 1.8 L0 7 L-1.8 1.8 L-7 0 L-1.8 -1.8 Z" fill="var(--bg)"/>
-  </g>
-  <g transform="translate(58,53)" class="mascot-eye mascot-eye-r">
-    <path d="M0 -7 L1.8 -1.8 L7 0 L1.8 1.8 L0 7 L-1.8 1.8 L-7 0 L-1.8 -1.8 Z" fill="var(--bg)"/>
-  </g>
-  <path d="M 45 63 Q 50 67 55 63" stroke="var(--bg)" stroke-width="2" fill="none" stroke-linecap="round"/>
-</svg>`;
-
-/* Skills: files in Materials/Public/Skills/ listed by manifest.json. */
-let SKILLS = [];
-let skillsLoaded = false;
-async function loadSkills() {
-  if (skillsLoaded) return;
-  skillsLoaded = true;
-  try {
-    const mres = await fetch('Materials/Public/Skills/manifest.json', { cache: 'no-cache' });
-    if (!mres.ok) return;
-    const list = await mres.json();
-    if (!Array.isArray(list)) return;
-    const out = [];
-    for (const entry of list) {
-      if (!entry || !entry.file) continue;
-      try {
-        const r = await fetch(`Materials/Public/Skills/${entry.file}`, { cache: 'force-cache' });
-        if (!r.ok) continue;
-        const text = await r.text();
-        out.push({
-          name: entry.name || entry.file.replace(/\.txt$/, ''),
-          description: entry.description || '',
-          file: entry.file,
-          text
-        });
-      } catch (_) {}
-    }
-    SKILLS = out;
-  } catch (_) {}
-}
-
 const AI_STATES = {
   idle:       { label: null,           kind: 'ring' },
   thinking:   { label: 'Thinking…',    kind: 'text' },
@@ -687,8 +627,7 @@ const ICONS = {
   exit:     svg('<path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>', 16),
   alert:    svg('<circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/>', 14),
   okc:      svg('<circle cx="12" cy="12" r="10"/><path d="M8 12.5l3 3 5-6"/>', 14),
-  infoSm:   svg('<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>', 14),
-  bug:      svg('<path d="M8 2l1.88 1.88"/><path d="M14.12 3.88L16 2"/><path d="M9 7.13v-1a3.003 3.003 0 116 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 014-4h4a4 4 0 014 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path d="M20.97 5c0 2.1-1.6 3.8-3.5 4"/><path d="M22 13h-4"/><path d="M17.2 17c2.1.1 3.8 1.9 3.8 4"/>', 15)
+  infoSm:   svg('<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>', 14)
 };
 
 Object.assign(ICONS, {
@@ -729,24 +668,6 @@ const MODEL_PROVIDERS = [
 const PROVIDER_COLORS = {
   deepseek: '#4d6bfe', groq: '#f55036', gemini: '#b57bff', grok: '#a1a1aa',
   claude: '#e8b04a', chatgpt: '#10a37f', kimi: '#ff6bb5', perplexity: '#20b8cd'
-};
-
-// Free/Paid is a display hint, not a hard check. Confirm against each provider's pricing page.
-const PROVIDER_TIERS = {
-  groq:       { tier: 'free', note: 'Free tier with rate limits' },
-  gemini:     { tier: 'free', note: 'Free tier in Google AI Studio; paid for higher limits' },
-  deepseek:   { tier: 'paid', note: 'Pay as you go' },
-  grok:       { tier: 'paid', note: 'Paid credits required' },
-  claude:     { tier: 'paid', note: 'Paid credits required' },
-  chatgpt:    { tier: 'paid', note: 'Paid credits required' },
-  kimi:       { tier: 'paid', note: 'Paid credits required' },
-  perplexity: { tier: 'paid', note: 'Paid credits required' }
-};
-
-const TierBadge = (id) => {
-  const t = PROVIDER_TIERS[id];
-  if (!t) return '';
-  return `<span class="tier-badge tier-${t.tier}" title="${esc(t.note)}">${t.tier === 'free' ? 'Free' : 'Paid'}</span>`;
 };
 
 const PROVIDER_API = {
@@ -827,6 +748,9 @@ const PROVIDER_API = {
       { id: 'kimi-k2.6',                  name: 'Kimi K2.6',                  series: 'K2.6', reasoning: true }
     ]
   },
+  // NOTE: Perplexity retired Sonar models (Sept 27 2026). The Agent API uses
+  // presets instead of model IDs and may need a different endpoint. Verify
+  // https://docs.perplexity.ai before relying on this provider.
   perplexity: {
     url: 'https://api.perplexity.ai/chat/completions',
     models: [
@@ -993,7 +917,7 @@ const Topbar = () => `
 
 const Welcome = () => `
   <section class="welcome">
-    <div class="welcome-mascot">${MASCOT_SVG}</div>
+    <img class="welcome-logo" src="${ICON_SRC}" alt="">
   </section>
 `;
 
@@ -1049,7 +973,7 @@ const Seg = (key, opts, selected) => `
 const Chips = (key, opts, selected, { toggle = false, lead = '' } = {}) => `
   <div class="chips">
     ${lead}
-    ${opts.map((o) => `<button class="chip ${o.id === selected ? 'on' : ''}" type="button" data-seg="${key}" data-val="${o.id}"${toggle ? ' data-toggle="1"' : ''}${o.style ? ` style="${o.style}"` : ''}>${esc(o.name)}</button>`).join('')}
+    ${opts.map((o) => `<button class="chip ${o.id === selected ? 'on' : ''}" type="button" data-seg="${key}" data-val="${o.id}"${toggle ? ' data-toggle="1"' : ''}>${esc(o.name)}</button>`).join('')}
   </div>`;
 
 const Select = (value) => `<button class="select" type="button"><span class="select-val">${esc(value)}</span>${ICONS.chevron}</button>`;
@@ -1125,19 +1049,15 @@ let ThemeSection = () => Section('theme', 'Theme', [
   Item('language', ICONS.globe, 'Language',
     Field('Input (word check)', Chips('langIn', LANGUAGES, settings.langIn)) +
     Field('Output (replies)', Chips('langOut', LANGUAGES, settings.langOut))),
-  Item('sounds', ICONS.volume, 'Sounds',
-    SubSwitch('Music', 'soundMusic') +
-    SubSwitch('Effects', 'soundEffects') +
-    Field('Sound strength', Seg('soundLevel', SOUND_LEVELS, settings.soundLevel))),
+  Item('sounds', ICONS.volume, 'Sounds', SubSwitch('Music', 'soundMusic') + SubSwitch('Effects', 'soundEffects')),
   VoiceItem(),
   Item('styles', ICONS.palette, 'Styles',
     `<div class="swatches" role="radiogroup" aria-label="Accent color">
       ${ACCENTS.map((a) => `<button class="swatch ${a.c ? '' : 'is-mono'} ${a.id === settings.accent ? 'on' : ''}" type="button" role="radio" aria-checked="${a.id === settings.accent}" aria-label="${a.name}" title="${a.name}" data-seg="accent" data-val="${a.id}"${a.c ? ` style="--sw:${a.c}"` : ''}></button>`).join('')}
     </div>`),
   Item('fonts', ICONS.type, 'Fonts',
-    Field('Fonts', Chips('font', FONTS.map((f) => ({ ...f, style: `font-family:${f.stack}` })), settings.font)) +
-    Field('Text Size', Seg('size', TEXT_SIZES, settings.size)) +
-    Field('Preview', '<p class="font-preview">The quick brown fox jumps over the lazy dog. 0123456789</p>'))
+    Field('Fonts', Seg('font', FONTS.map((f) => ({ ...f, style: `font-family:${f.stack}` })), settings.font)) +
+    Field('Text Size', Seg('size', TEXT_SIZES, settings.size)))
 ], 6);
 
 const memListHtml = () => (settings.memoryNotes?.length
@@ -1205,10 +1125,8 @@ const AboutSection = () => Section('about', 'About', [
 
 let OthersSection = () => Section('others', 'Others', [
   Item('permissions', ICONS.lock, 'Permissions', '<div id="perm-list"><p class="field-note">Checking\u2026</p></div>'),
-  ToggleRow('notifications', ICONS.bell, 'Notifications', 'notifications'),
-  LinkRow('tutorial', ICONS.help, 'Show tutorial', { act: 'replay-tutorial' }),
-  LinkRow('feedback', ICONS.bug, 'Feedback', { act: 'feedback' })
-], 4);
+  ToggleRow('notifications', ICONS.bell, 'Notifications', 'notifications')
+], 2);
 
 const AccountCard = (user) => `
   <button class="account-card" type="button" data-act="account-open" aria-label="Account">
@@ -1242,8 +1160,6 @@ let AccountPage = function (user) {
           SubSwitch('Use chats to improve Aphrosta', 'privTrain') +
           SubSwitch('Hide phone and email', 'privMask') +
           '<button class="btn-line" type="button" data-act="export-data">Export my data</button>' +
-          '<button class="btn-line" type="button" data-act="import-data">Import data</button>' +
-          '<input type="file" accept="application/json,.json" data-import hidden>' +
           '<button class="btn-line danger" type="button" data-act="wipe-local">Delete local data</button>')}
         ${Item('sessions', ICONS.clock, 'Save/Clear Sessions',
           SubSwitch('Save Sessions', 'saveSessions') +
@@ -1282,10 +1198,7 @@ const SettingsPanel = (user) => `
       <section class="usage-card" aria-label="Usage">
         <div class="usage-head">
           <span class="usage-title">${ICONS.zap}<span>Usage</span></span>
-          <span class="usage-head-right">
-            <span class="usage-sub" data-usage-sub>Today</span>
-            <button class="usage-info" type="button" data-act="usage-info" aria-label="About usage numbers" aria-expanded="false">i</button>
-          </span>
+          <span class="usage-sub" data-usage-sub>Today</span>
         </div>
         <div class="usage-figure">
           <b class="day-total" data-day-total>0</b><span class="token-unit">tokens</span>
@@ -1377,12 +1290,6 @@ function onSettingsClick(e) {
     case 'clear-cache':   return clearCache();
     case 'dev-remove':    return removeDevice(actEl.dataset.dev);
     case 'loc-get':       return detectLocation();
-    case 'feedback':       return openFeedback();
-    case 'usage-info':     return toggleUsageInfo(actEl);
-    case 'import-data':    return document.querySelector('[data-import]')?.click();
-    case 'replay-tutorial':
-      try { localStorage.removeItem(`aphrosta.tutorial.${currentUser.uid}`); } catch (_) {}
-      return openTutorial(currentUser);
     case 'mem-del': {
       settings.memoryNotes.splice(+actEl.dataset.i, 1);
       saveSettings();
@@ -1460,7 +1367,6 @@ function onSettingsClick(e) {
 function onSettingsChange(e) {
   const t = e.target;
   if (t.matches?.('[data-avatar]')) return handleAvatar(t.files?.[0], t);
-  if (t.matches?.('[data-import]')) return handleImport(t.files?.[0], t);
 
   if (t.matches?.('[data-token-limit]')) {
     const raw = t.value.trim();
@@ -1532,7 +1438,7 @@ const ProviderCard = (p) => {
         <button class="provider-select" type="button" data-select="provider" role="option" aria-selected="${isActive}">
           <span class="provider-logo">${p.logo}</span>
           <div class="provider-meta">
-            <span class="provider-name">${esc(p.name)}${TierBadge(p.id)}</span>
+            <span class="provider-name">${esc(p.name)}</span>
             <span class="provider-state ${stateCls}">${state}</span>
           </div>
           ${isActive ? `<span class="provider-check">${ICONS.check}</span>` : ''}
@@ -1546,7 +1452,7 @@ const ProviderCard = (p) => {
           <div class="provider-body-content">
             <a class="provider-key-link ${has ? '' : 'is-new'}" href="${esc(p.keysUrl || '#')}" target="_blank" rel="noopener noreferrer">
               ${ICONS.link}
-              <span>Get your API key${PROVIDER_TIERS[p.id] ? ` \u00b7 ${esc(PROVIDER_TIERS[p.id].note)}` : ''}</span>
+              <span>Get your API key</span>
               <span aria-hidden="true">↗</span>
             </a>
             <div class="provider-input-wrap">
@@ -2070,105 +1976,10 @@ async function clearCache() {
   refreshStorage();
 }
 
-/* ---------- IMPORT / EXPORT ---------- */
-const EXPORT_SCHEMA = 1;
-const IMPORT_MAX_BYTES = 8 * 1024 * 1024;
-const IMPORT_REQUIRED = ['appearance', 'accent', 'font', 'size', 'tone', 'length', 'langIn', 'langOut'];
-const BAD_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
-const isObj = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
-
-function validateImport(data) {
-  const errors = [];
-  if (!isObj(data)) return { ok: false, errors: ['The file is not a JSON object.'] };
-  if (data.schemaVersion !== undefined && data.schemaVersion !== EXPORT_SCHEMA) errors.push(`Unsupported schemaVersion ${data.schemaVersion}.`);
-  if (typeof data.exported !== 'string' || Number.isNaN(Date.parse(data.exported))) errors.push('Missing or invalid "exported" date.');
-  if (!isObj(data.settings)) errors.push('Missing "settings" object.');
-  if (!Array.isArray(data.sessions)) errors.push('Missing "sessions" list.');
-  if (errors.length) return { ok: false, errors };
-
-  IMPORT_REQUIRED.forEach((k) => { if (!(k in data.settings)) errors.push(`settings.${k} is missing.`); });
-
-  const settingsClean = {};
-  Object.entries(SETTINGS_DEFAULTS).forEach(([k, def]) => {
-    if (!(k in data.settings)) return;
-    const v = data.settings[k];
-    const ok = Array.isArray(def) ? Array.isArray(v) : isObj(def) ? isObj(v) : typeof v === typeof def;
-    if (ok) settingsClean[k] = v; else errors.push(`settings.${k} has the wrong type.`);
-  });
-  if (settingsClean.avatar === '[photo]') settingsClean.avatar = '';
-
-  if (data.sessions.length > 2000) errors.push('Too many sessions (limit 2000).');
-  const seen = new Set();
-  const sessionsClean = [];
-  data.sessions.forEach((s, i) => {
-    const at = `sessions[${i}]`;
-    if (!isObj(s)) { errors.push(`${at} is not an object.`); return; }
-    if (typeof s.id !== 'string' && typeof s.id !== 'number') errors.push(`${at}.id is missing.`);
-    else if (seen.has(String(s.id))) errors.push(`${at}.id is duplicated.`);
-    else seen.add(String(s.id));
-    if (typeof s.title !== 'string') errors.push(`${at}.title is missing.`);
-    if (!Array.isArray(s.messages)) { errors.push(`${at}.messages is missing.`); return; }
-    if (s.messages.length > 5000) errors.push(`${at} has too many messages.`);
-    s.messages.forEach((m, j) => {
-      if (!isObj(m) || !['user', 'assistant'].includes(m.role) || typeof m.content !== 'string') errors.push(`${at}.messages[${j}] is invalid.`);
-    });
-    const { draft, ...rest } = s;
-    sessionsClean.push(rest);
-  });
-
-  return errors.length ? { ok: false, errors } : { ok: true, settings: settingsClean, sessions: sessionsClean, exported: data.exported };
-}
-
-const importFail = (errors) => {
-  console.warn('Import cancelled:', errors);
-  toast(`Import cancelled: ${errors[0]}${errors.length > 1 ? ` (+${errors.length - 1} more)` : ''}`, 'error', 5000);
-};
-
-async function handleImport(file, input) {
-  input.value = '';
-  if (!file) return;
-  if (file.size > IMPORT_MAX_BYTES) return importFail(['The file is larger than 8 MB.']);
-  let data;
-  try {
-    data = JSON.parse(await file.text(), (k, v) => (BAD_KEYS.has(k) ? undefined : v));
-  } catch (_) { return importFail(['The file is not valid JSON.']); }
-
-  const res = validateImport(data);
-  if (!res.ok) return importFail(res.errors);
-
-  const yes = await confirmDialog({
-    title: 'Replace all your data?',
-    message: `This wipes your current settings and sessions and replaces them with this file (${res.sessions.length} sessions, exported ${new Date(res.exported).toLocaleString()}). This can\u2019t be undone.`,
-    confirmLabel: 'Import',
-    danger: true
-  });
-  if (yes) await applyImport(res);
-}
-
-async function applyImport({ settings: s, sessions: list }) {
-  const prev = { st: localStorage.getItem(SETTINGS_LS), se: localStorage.getItem(SESSIONS_LS), ts: localStorage.getItem(SETTINGS_TS_LS) };
-  const restore = (k, v) => { try { v === null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (_) {} };
-  try {
-    localStorage.setItem(SETTINGS_LS, JSON.stringify({ ...SETTINGS_DEFAULTS, ...s, version: '1.00' }));
-    localStorage.setItem(SESSIONS_LS, JSON.stringify(list));
-    localStorage.setItem(SETTINGS_TS_LS, String(Date.now()));
-  } catch (_) {
-    restore(SETTINGS_LS, prev.st); restore(SESSIONS_LS, prev.se); restore(SETTINGS_TS_LS, prev.ts);
-    return toast('Import failed. Your data was not changed.', 'error', 4000);
-  }
-  clearDraft();
-  try { await Cloud.deleteAllSessions?.(); } catch (_) {}
-  Cloud.queueSettings();
-  Cloud.queueSessions();
-  try { await Cloud.flush?.(); } catch (_) {}
-  toast('Data imported. Reloading\u2026', 'success', 1500);
-  setTimeout(() => location.reload(), 900);
-}
-
 function exportData() {
   let sessionsData = [];
   try { sessionsData = JSON.parse(localStorage.getItem(SESSIONS_LS) || '[]'); } catch (_) {}
-  const data = { schemaVersion: EXPORT_SCHEMA, exported: new Date().toISOString(), settings: { ...settings, avatar: settings.avatar ? '[photo]' : '' }, sessions: sessionsData };
+  const data = { exported: new Date().toISOString(), settings: { ...settings, avatar: settings.avatar ? '[photo]' : '' }, sessions: sessionsData };
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
   a.download = 'aphrosta-data.json';
@@ -2187,258 +1998,6 @@ function wipeLocal() {
     Object.keys(localStorage).filter((k) => k.startsWith('aphrosta.')).forEach((k) => localStorage.removeItem(k));
     location.reload();
   });
-}
-
-/* ---------- FEEDBACK / USAGE INFO ---------- */
-const FEEDBACK_SINK = async (payload) => {
-  if (!currentUser) throw new Error('Not signed in');
-  const id = `${currentUser.uid}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-  await setDoc(doc(db, 'users', currentUser.uid, 'feedback', id), {
-    ...payload,
-    uid: currentUser.uid,
-    email: currentUser.email || '',
-    createdAt: Date.now()
-  });
-};
-
-function openFeedback() {
-  if (document.querySelector('.fb-scrim')) return;
-  const scrim = document.createElement('div');
-  scrim.className = 'fb-scrim';
-  scrim.innerHTML = `
-    <form class="fb-card" role="dialog" aria-modal="true" aria-labelledby="fb-title" novalidate>
-      <h3 id="fb-title" class="fb-title">${ICONS.bug}<span>Send feedback</span></h3>
-      <div class="fb-cats" role="radiogroup" aria-label="Category">
-        <label><input type="radio" name="cat" value="bug" checked><span>Bug</span></label>
-        <label><input type="radio" name="cat" value="idea"><span>Idea</span></label>
-        <label><input type="radio" name="cat" value="other"><span>Other</span></label>
-      </div>
-      <textarea class="input fb-text" name="message" rows="5" maxlength="2000" placeholder="What happened? What did you expect?" aria-label="Message"></textarea>
-      <label class="fb-diag"><input type="checkbox" name="diag" checked><span>Include basic diagnostic info (app version, browser, active provider name). No API keys, no chats.</span></label>
-      <div class="fb-actions">
-        <button type="button" class="btn-line" data-fb="cancel">Cancel</button>
-        <button type="submit" class="btn-line">Send</button>
-      </div>
-    </form>`;
-  document.body.appendChild(scrim);
-
-  const form = scrim.querySelector('form');
-  const close = () => { scrim.remove(); document.removeEventListener('keydown', onKey, true); };
-  const onKey = (e) => { if (e.key === 'Escape') close(); };
-  document.addEventListener('keydown', onKey, true);
-  scrim.addEventListener('pointerdown', (e) => { if (e.target === scrim) close(); });
-  form.querySelector('[data-fb="cancel"]').addEventListener('click', close);
-  form.elements.message.focus();
-
-  form.addEventListener('submit', async (ev) => {
-    ev.preventDefault();
-    const message = form.elements.message.value.trim();
-    if (message.length < 5) return toast('Please add a few more details.', 'info', 2200);
-    const payload = {
-      category: form.elements.cat.value,
-      message,
-      at: Date.now(),
-      ...(form.elements.diag.checked ? { diag: { app: settings.version, ua: navigator.userAgent, lang: navigator.language, provider: activeModel || null } } : {})
-    };
-    try {
-      await FEEDBACK_SINK(payload);
-      close();
-      toast('Thanks! Feedback sent.', 'success');
-    } catch (_) {
-      toast('Couldn\u2019t send feedback. Try again.', 'error');
-    }
-  });
-}
-
-function toggleUsageInfo(btn) {
-  const card = btn.closest('.usage-card');
-  if (!card) return;
-  const existing = card.querySelector('.usage-pop');
-  if (existing) return existing._close();
-
-  const pop = document.createElement('div');
-  pop.className = 'usage-pop';
-  pop.setAttribute('role', 'dialog');
-  pop.setAttribute('aria-label', 'About usage numbers');
-  pop.innerHTML = `
-    <b>How usage works</b>
-    <ul>
-      <li>Aphrosta counts tokens from each reply\u2019s usage report, or estimates them when a provider doesn\u2019t send one.</li>
-      <li><b>It can\u2019t match your provider\u2019s real usage or billing.</b> Only the provider\u2019s own dashboard is exact.</li>
-      <li>Not counted: other apps using the same key, failed requests, and anything used before this was tracked.</li>
-      <li>Your token limit only stops sending from Aphrosta. It doesn\u2019t change the provider\u2019s own limits. It resets when the timer ends.</li>
-      <li>The bars show each provider\u2019s share of the total.</li>
-    </ul>`;
-  card.appendChild(pop);
-  btn.setAttribute('aria-expanded', 'true');
-
-  const off = (e) => {
-    if (e.type === 'keydown' ? e.key === 'Escape' : (!pop.contains(e.target) && !btn.contains(e.target))) pop._close();
-  };
-  pop._close = () => {
-    pop.remove();
-    btn.setAttribute('aria-expanded', 'false');
-    document.removeEventListener('pointerdown', off, true);
-    document.removeEventListener('keydown', off, true);
-  };
-  document.addEventListener('pointerdown', off, true);
-  document.addEventListener('keydown', off, true);
-}
-
-/* ---------- GCASH MODAL ---------- */
-function openGcashModal() {
-  if (!currentUser) return toast('Sign in first.', 'info');
-  if (document.querySelector('.gcash-scrim')) return;
-  const KEY = `aphrosta.gcash.${currentUser.uid}`;
-  const prev = (() => { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (_) { return null; } })();
-
-  const scrim = document.createElement('div');
-  scrim.className = 'dialog-scrim gcash-scrim';
-  scrim.innerHTML = `
-    <div class="dialog gcash-card" role="dialog" aria-modal="true" aria-labelledby="gcash-title">
-      <h3 id="gcash-title" class="dialog-title">Upgrade with GCash</h3>
-      ${prev ? `
-        <div class="gcash-pending">
-          <p><b>Payment submitted</b></p>
-          <p class="field-note">Ref: ${esc(prev.ref)}</p>
-          <p class="field-note">Sent: ${new Date(prev.sent).toLocaleString()}</p>
-          <p class="field-note">We\u2019ll activate your account within 24 hours.</p>
-        </div>
-        <div class="dialog-actions">
-          <button class="dialog-btn ok" type="button" data-r="close">Close</button>
-        </div>
-      ` : `
-        <div class="gcash-body">
-          <p class="dialog-msg">Scan the QR with your GCash app and send any amount. Then enter the reference number and when you sent it.</p>
-          <div class="gcash-qr"><img src="Materials/Public/images/payer.png" alt="GCash payment QR code"></div>
-          <label class="field">
-            <span class="field-label">Reference number (13 digits)</span>
-            <input class="input" data-gcash-ref inputmode="numeric" maxlength="13" placeholder="1234567890123" autocomplete="off">
-          </label>
-          <label class="field">
-            <span class="field-label">Date & time sent</span>
-            <input class="input" type="datetime-local" data-gcash-when>
-          </label>
-          <p class="field-note">Pick the actual time you sent it. Anything more than an hour in the past, or in the future, will be rejected.</p>
-        </div>
-        <div class="dialog-actions">
-          <button class="dialog-btn" type="button" data-r="cancel">Cancel</button>
-          <button class="dialog-btn ok" type="button" data-r="submit">Submit</button>
-        </div>
-      `}
-    </div>`;
-  document.body.appendChild(scrim);
-
-  const whenInput = scrim.querySelector('[data-gcash-when]');
-  if (whenInput) {
-    const d = new Date(Date.now() - new Date().getTimezoneOffset() * 60000);
-    whenInput.value = d.toISOString().slice(0, 16);
-    whenInput.max = new Date(Date.now() + 5 * 60000 - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-    whenInput.min = new Date(Date.now() - 60 * 60000 - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-  }
-
-  const close = () => { scrim.remove(); document.removeEventListener('keydown', onKey, true); };
-  const onKey = (e) => { if (e.key === 'Escape') close(); };
-  document.addEventListener('keydown', onKey, true);
-
-  scrim.addEventListener('click', async (e) => {
-    if (e.target === scrim) return close();
-    const r = e.target.closest('[data-r]');
-    if (!r) return;
-    if (r.dataset.r === 'cancel' || r.dataset.r === 'close') return close();
-    if (r.dataset.r === 'submit') {
-      const ref = scrim.querySelector('[data-gcash-ref]').value.trim();
-      const whenStr = scrim.querySelector('[data-gcash-when]').value;
-      if (!/^\d{13}$/.test(ref)) return toast('Reference number must be exactly 13 digits.', 'info', 2400);
-      if (!whenStr) return toast('Pick the date and time you sent it.', 'info', 2400);
-      const when = new Date(whenStr).getTime();
-      if (!when) return toast('Invalid date.', 'info', 2200);
-      if (when > Date.now() + 5 * 60000) return toast('That time is in the future. Pick when you actually sent it.', 'info', 3000);
-      if (when < Date.now() - 60 * 60000) return toast('That time is over an hour ago. Contact support.', 'info', 3000);
-
-      r.disabled = true;
-      r.textContent = 'Sending\u2026';
-      try {
-        await setDoc(doc(db, 'paymentRequests', `${currentUser.uid}_${Date.now()}`), {
-          uid: currentUser.uid,
-          email: currentUser.email || '',
-          name: settings.username || currentUser.displayName || '',
-          reference: ref,
-          sentAt: when,
-          sentAtIso: new Date(when).toISOString(),
-          createdAt: Date.now(),
-          method: 'gcash',
-          status: 'pending'
-        });
-        try { localStorage.setItem(KEY, JSON.stringify({ ref, sent: when, at: Date.now() })); } catch (_) {}
-        toast('Payment submitted. We\u2019ll activate within 24 hours.', 'success', 4000);
-        close();
-        setTimeout(() => openGcashModal(), 220);
-      } catch (err) {
-        console.error('Payment submit:', err);
-        r.disabled = false;
-        r.textContent = 'Submit';
-        toast('Couldn\u2019t send. Try again.', 'error', 3000);
-      }
-    }
-  });
-}
-
-/* ---------- TUTORIAL ---------- */
-function openTutorial(user) {
-  if (document.querySelector('.tutorial-scrim')) return;
-  const uid = user?.uid || 'anon';
-  const DONE_LS = `aphrosta.tutorial.${uid}`;
-
-  const steps = [
-    { title: 'Hi, I\u2019m Aphrosta', body: 'Your AI assistant. Let\u2019s get you set up in a few seconds.' },
-    { title: 'Add your first API key', body: 'Pick a provider and paste your key. Groq and Gemini have free tiers.', action: { label: 'Choose a model', fn: () => { closeTutorial(); openModelPicker(); } } },
-    { title: 'You\u2019re ready', body: 'Type a message, drop a file, or tap the mic to start.' }
-  ];
-
-  let step = 0;
-  const scrim = document.createElement('div');
-  scrim.className = 'dialog-scrim tutorial-scrim';
-
-  const render = () => {
-    const s = steps[step];
-    scrim.innerHTML = `
-      <div class="dialog tutorial-card" role="dialog" aria-modal="true" aria-labelledby="tut-title">
-        <div class="tut-mascot">${MASCOT_SVG}</div>
-        <h3 id="tut-title" class="tut-title">${esc(s.title)}</h3>
-        <p class="tut-body">${esc(s.body)}</p>
-        <div class="tut-dots">
-          ${steps.map((_, i) => `<span class="tut-dot${i === step ? ' on' : ''}"></span>`).join('')}
-        </div>
-        <div class="tut-actions">
-          <button class="dialog-btn" type="button" data-tut="skip">Skip</button>
-          ${s.action
-            ? `<button class="dialog-btn ok" type="button" data-tut="action">${esc(s.action.label)}</button>`
-            : `<button class="dialog-btn ok" type="button" data-tut="${step < steps.length - 1 ? 'next' : 'done'}">${step < steps.length - 1 ? 'Next' : 'Done'}</button>`}
-        </div>
-      </div>`;
-  };
-
-  const closeTutorial = (markDone = true) => {
-    scrim.remove();
-    document.removeEventListener('keydown', onKey, true);
-    if (markDone) { try { localStorage.setItem(DONE_LS, '1'); } catch (_) {} }
-  };
-  const onKey = (e) => { if (e.key === 'Escape') closeTutorial(); };
-  document.addEventListener('keydown', onKey, true);
-
-  scrim.addEventListener('click', (e) => {
-    if (e.target === scrim) return;
-    const b = e.target.closest('[data-tut]');
-    if (!b) return;
-    const a = b.dataset.tut;
-    if (a === 'skip' || a === 'done') return closeTutorial();
-    if (a === 'action') { steps[step].action?.fn(); return; }
-    if (a === 'next') { step = Math.min(step + 1, steps.length - 1); render(); }
-  });
-
-  render();
-  document.body.appendChild(scrim);
 }
 
 /* ---------- COUNTRY CODES ---------- */
@@ -2723,7 +2282,6 @@ function initComposer() {
   const thinkText = document.createTextNode('');
   thinkBody.appendChild(thinkText);
   let revealQ = '', revealRaf = 0, revealT = 0, revealCarry = 0, openedAt = 0, closeTimer = 0;
-  let scrollTick = 0;
   const REVEAL_CPS = 45;
 
   const flushReveal = () => {
@@ -2742,7 +2300,7 @@ function initComposer() {
       revealCarry -= n;
       thinkText.appendData(revealQ.slice(0, n));
       revealQ = revealQ.slice(n);
-      if (thinkOpen && (++scrollTick & 3) === 0) thinkBody.scrollTop = thinkBody.scrollHeight;
+      if (thinkOpen) thinkBody.scrollTop = thinkBody.scrollHeight;
     }
     if (revealQ) revealRaf = requestAnimationFrame(drain);
   };
@@ -2797,11 +2355,8 @@ function initComposer() {
     thinkPanel.setAttribute('aria-hidden', String(!thinkOpen));
     if (thinkOpen) {
       openedAt = Date.now();
-      requestAnimationFrame(() => {
-        if (!thinkOpen) return;
-        syncThink();
-        thinkBody.scrollTop = thinkBody.scrollHeight;
-      });
+      syncThink();
+      thinkBody.scrollTop = thinkBody.scrollHeight;
     }
   };
 
@@ -3333,7 +2888,7 @@ const LimitWindow = {
   d: lsGet(LIMIT_WIN_LS, {}),
   w() {
     const w = (this.d[currentUser?.uid || 'anon'] ||= { start: 0, used: 0 });
-    w.by ||= {};
+    w.by ||= {}; // legacy entries had no per-provider breakdown
     return w;
   },
   lenMs() { return timerMins() * 60000; },
@@ -3642,6 +3197,7 @@ const Cloud = (() => {
         if (synced.get(x.id) === sg) continue;
         let { draft, ...body } = x;
         body = clean(body);
+        // Never push attachments (image dataUrl / file text) — too big for Firestore docs.
         body.messages = body.messages.map(({ attachments, ...m }) => m);
         while (JSON.stringify(body).length > 900000 && body.messages.length > 2) body.messages.shift();
         await setDoc(docOf('sessions', x.id), body);
@@ -3910,177 +3466,18 @@ function resetSessions() {
   Cloud.queueSessions();
 }
 
-const FENCE = '`'.repeat(3);
-const FILE_FENCE = /^file:\s*([\w.\-\/]{1,80}\.[A-Za-z0-9]{1,10})\s*$/;
-
-const INLINE_RULES = [
-  [/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>'],
-  [/~~([^~\n]+)~~/g, '<del>$1</del>'],
-  [/==([^=\n]+)==/g, '<mark>$1</mark>'],
-  [/\+\+([^+\n]+)\+\+/g, '<u>$1</u>'],
-  [/\|\|([^|\n]+)\|\|/g, '<span class="spoiler" tabindex="0">$1</span>'],
-  [/\^([^^\s][^^\n]*?)\^/g, '<sup>$1</sup>'],
-  [/(^|[^~])~([^~\s][^~\n]*?)~(?!~)/g, '$1<sub>$2</sub>'],
-  [/(^|[^*\w])\*([^*\s][^*\n]*?)\*(?!\*)/g, '$1<em>$2</em>'],
-  [/(^|[^_\w])_([^_\s][^_\n]*?)_(?![_\w])/g, '$1<em>$2</em>']
-];
-
-function mdInline(s) {
-  return s.split(/(`[^`\n]+`)/).map((part, i) => {
-    if (i % 2) return `<code>${esc(part.slice(1, -1))}</code>`;
-    const stash = [];
-    let h = esc(part).replace(
-      /\[([^\]\n]+)\]\((https?:\/\/[^\s)]+|mailto:[^\s)]+)\)/g,
-      (_, text, url) => {
-        stash.push(`<a href="${url}" target="_blank" rel="noopener noreferrer">${text}</a>`);
-        return `\u0000${stash.length - 1}\u0000`;
-      }
-    );
-    INLINE_RULES.forEach(([re, rep]) => { h = h.replace(re, rep); });
-    return h.replace(/\u0000(\d+)\u0000/g, (_, n) => stash[n]);
+function renderMd(src) {
+  return String(src).split('```').map((p, i) => {
+    if (i % 2 === 1) {
+      const nl = p.indexOf('\n');
+      const code = (nl > -1 ? p.slice(nl + 1) : p).replace(/\n$/, '');
+      return `<pre><code>${esc(code)}</code></pre>`;
+    }
+    return esc(p.replace(/^\n+|\n+$/g, ''))
+      .replace(/`([^`\n]+)`/g, '<code>$1</code>')
+      .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
   }).join('');
 }
-
-function mdBlocks(src) {
-  const lines = src.replace(/\r/g, '').replace(/\u0000/g, '').split('\n');
-  const out = [];
-  let para = [];
-  const flush = () => {
-    if (para.length) { out.push(`<p>${para.map(mdInline).join('<br>')}</p>`); para = []; }
-  };
-  for (let i = 0; i < lines.length; i++) {
-    const ln = lines[i];
-    let m;
-    if (!ln.trim()) { flush(); continue; }
-
-    if ((m = ln.match(/^:::(info|warning|success)\s*$/))) {
-      flush();
-      const body = [];
-      while (++i < lines.length && !/^:::\s*$/.test(lines[i])) body.push(lines[i]);
-      out.push(`<div class="callout callout-${m[1]}">${mdBlocks(body.join('\n'))}</div>`);
-      continue;
-    }
-    if ((m = ln.match(/^(#{1,3})\s+(.+)$/))) {
-      flush();
-      const n = m[1].length + 2;
-      out.push(`<h${n} class="md-h">${mdInline(m[2])}</h${n}>`);
-      continue;
-    }
-    if (/^\s*(-{3,}|\*{3,})\s*$/.test(ln)) { flush(); out.push('<hr>'); continue; }
-    if (/^>\s?/.test(ln)) {
-      flush();
-      const q = [];
-      while (i < lines.length && /^>\s?/.test(lines[i])) q.push(lines[i++].replace(/^>\s?/, ''));
-      i--;
-      out.push(`<blockquote>${mdBlocks(q.join('\n'))}</blockquote>`);
-      continue;
-    }
-    if (/^\s*(?:[-*]|\d+\.)\s+/.test(ln)) {
-      flush();
-      const ordered = /^\s*\d+\./.test(ln);
-      const items = [];
-      while (i < lines.length && (m = lines[i].match(/^\s*(?:[-*]|\d+\.)\s+(.*)$/))) {
-        const t = m[1].match(/^\[( |x|X)\]\s+(.*)$/);
-        items.push(t
-          ? `<li class="task"><input type="checkbox" disabled${t[1] === ' ' ? '' : ' checked'}> ${mdInline(t[2])}</li>`
-          : `<li>${mdInline(m[1])}</li>`);
-        i++;
-      }
-      i--;
-      out.push(`<${ordered ? 'ol' : 'ul'}>${items.join('')}</${ordered ? 'ol' : 'ul'}>`);
-      continue;
-    }
-    if (ln.includes('|') && /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(lines[i + 1] || '')) {
-      flush();
-      const cells = (row) => row.trim().replace(/^\||\|$/g, '').split('|').map((c) => mdInline(c.trim()));
-      const head = cells(ln);
-      i += 2;
-      const rows = [];
-      while (i < lines.length && lines[i].includes('|') && lines[i].trim()) rows.push(cells(lines[i++]));
-      i--;
-      out.push(`<div class="md-table"><table><thead><tr>${head.map((c) => `<th>${c}</th>`).join('')}</tr></thead><tbody>${
-        rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join('')}</tr>`).join('')
-      }</tbody></table></div>`);
-      continue;
-    }
-    para.push(ln);
-  }
-  flush();
-  return out.join('');
-}
-
-const fileCard = (name, code, streaming) => {
-  const ext = (name.split('.').pop() || 'txt').toLowerCase();
-  const base = name.split('/').pop();
-  const lines = code ? code.split('\n').length : 0;
-  return `<div class="file-card${streaming ? ' is-streaming' : ''}" data-file="${esc(base)}">
-    <div class="fc-top"><span class="fc-ext">${esc(ext)}</span><span class="fc-name" title="${esc(name)}">${esc(base)}</span></div>
-    <div class="fc-meta">${streaming ? 'Writing\u2026' : `${lines} line${lines === 1 ? '' : 's'}`}</div>
-    ${streaming ? '' : `<div class="fc-actions">
-      <button type="button" class="fc-btn" data-fa="copy">Copy</button>
-      <button type="button" class="fc-btn" data-fa="download">Download</button>
-      <button type="button" class="fc-btn" data-fa="toggle" aria-expanded="false">View</button>
-    </div>
-    <pre class="fc-code" hidden><code>${esc(code)}</code></pre>`}
-  </div>`;
-};
-
-function renderMd(src) {
-  const parts = String(src).split(FENCE);
-  const open = parts.length % 2 === 0;
-  const items = [];
-  parts.forEach((p, i) => {
-    if (i % 2 === 0) {
-      const h = mdBlocks(p);
-      if (h) items.push({ file: false, h });
-      return;
-    }
-    const nl = p.indexOf('\n');
-    const info = (nl > -1 ? p.slice(0, nl) : p).trim();
-    const body = (nl > -1 ? p.slice(nl + 1) : p).replace(/\n$/, '');
-    const streaming = open && i === parts.length - 1;
-    const fm = info.match(FILE_FENCE);
-    if (fm) items.push({ file: true, h: fileCard(fm[1], nl > -1 ? body : '', streaming) });
-    else if (nl === -1 && /^file:/.test(p)) items.push({ file: true, h: fileCard('file', '', true) });
-    else items.push({ file: false, h: `<pre><code>${esc(body)}</code></pre>` });
-  });
-
-  const out = [];
-  let group = [];
-  const flushGroup = () => {
-    for (let k = 0; k < group.length; k += 4) out.push(`<div class="file-grid">${group.slice(k, k + 4).join('')}</div>`);
-    group = [];
-  };
-  items.forEach((x) => { if (x.file) group.push(x.h); else { flushGroup(); out.push(x.h); } });
-  flushGroup();
-  return out.join('');
-}
-
-document.addEventListener('click', (e) => {
-  const sp = e.target.closest?.('.spoiler');
-  if (sp) { sp.classList.toggle('is-revealed'); return; }
-  const b = e.target.closest?.('[data-fa]');
-  if (!b) return;
-  const card = b.closest('.file-card');
-  const codeEl = card?.querySelector('.fc-code');
-  if (!codeEl) return;
-  const text = codeEl.textContent;
-  if (b.dataset.fa === 'copy') {
-    navigator.clipboard?.writeText(text).then(() => toast('Copied.', 'success', 1200)).catch(() => toast('Couldn\u2019t copy.', 'error'));
-  } else if (b.dataset.fa === 'download') {
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }));
-    a.download = card.dataset.file || 'file.txt';
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-  } else if (b.dataset.fa === 'toggle') {
-    const opening = codeEl.hidden;
-    codeEl.hidden = !opening;
-    card.classList.toggle('is-open', opening);
-    b.textContent = opening ? 'Hide' : 'View';
-    b.setAttribute('aria-expanded', String(opening));
-  }
-});
 
 /* Chat loader: single orbit animation, no text. */
 const statusHTML = () => `
@@ -4536,16 +3933,6 @@ let systemPrompt = function () {
   if (settings.persFormat === 'plain') lines.push('Use plain text only. No markdown.');
   if (settings.persFormat === 'markdown') lines.push('Format answers with markdown (headings, bold, code blocks).');
   if (settings.persFormat === 'bullets') lines.push('Prefer short bullet points over paragraphs.');
-  lines.push('FORMATTING: Use rich text sparingly and only when it helps. Available: **bold**, *italic*, ++underline++, ~~strikethrough~~, ==highlight==, `inline code`, ||spoiler||, ^superscript^, ~subscript~, [text](https://url), # / ## / ### headings, > quotes, - bullets, 1. numbered lists, - [ ] task lists, | tables |, --- rules, and callouts written as :::info (or :::warning, :::success) on its own line, the text, then ::: on its own line. Never write raw HTML.');
-  lines.push('FILES: When you produce a complete file (code, text, config, anything with an extension), put it in a fenced block whose info string is file:NAME.EXT, for example ```file:app.js. Use ordinary fenced blocks with a language name for short snippets. Never nest fences.');
-  if (SKILLS.length) {
-    const lastUser = [...currentSession.messages].reverse().find((m) => m.role === 'user');
-    const lastText = (lastUser?.content || '').toLowerCase();
-    const used = SKILLS.filter((s) => lastText.includes(s.name.toLowerCase()));
-    used.forEach((s) => lines.push(`Active skill [${s.name}]:\n${s.text}`));
-    const names = SKILLS.map((s) => `${s.name}${s.description ? ` (${s.description})` : ''}`).join(', ');
-    if (names) lines.push(`Available skills (reference by name to activate): ${names}.`);
-  }
   return lines.join(' ');
 };
 
@@ -4776,14 +4163,10 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
   let usage = null, error = null, raf = 0, first = true;
   let lastPaintContent = '';
   let lastPaintReasoningLen = 0;
-  let lastRenderAt = 0;
 
   const paint = () => {
     raf = 0;
     if (ai.content !== lastPaintContent) {
-      const now = performance.now();
-      if (now - lastRenderAt < 70 && chatBusy) { raf = requestAnimationFrame(paint); return; }
-      lastRenderAt = now;
       lastPaintContent = ai.content;
       const body = q$('#messages .msg:last-child .msg-body');
       if (body) {
@@ -4957,55 +4340,18 @@ function learnMemory(text) {
 
 let actx = null, musicOsc = null;
 const ac = () => { actx ||= new (window.AudioContext || window.webkitAudioContext)(); actx.resume?.(); return actx; };
-const soundGain = () => byId(SOUND_LEVELS, settings.soundLevel || 'medium').g;
-
-function tone(f, d, at = 0, type = 'sine') {
-  const c = ac(), o = c.createOscillator(), g = c.createGain(), t0 = c.currentTime + at;
-  o.type = type;
-  o.frequency.value = f;
-  g.gain.setValueAtTime(soundGain(), t0);
-  g.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
-  o.connect(g).connect(c.destination);
-  o.start(t0);
-  o.stop(t0 + d + 0.02);
-}
-
 function blip(f = 660, d = 0.09) {
-  if (!settings.soundEffects || !permAllowed('audio')) return;
-  try { tone(f, d); } catch (_) {}
-}
-
-const SFX = {
-  tap:    [[520, 0.04, 0]],
-  toggle: [[620, 0.05, 0], [820, 0.05, 0.05]],
-  open:   [[440, 0.06, 0], [660, 0.08, 0.05]],
-  close:  [[660, 0.06, 0], [440, 0.08, 0.05]],
-  danger: [[260, 0.12, 0]]
-};
-let lastSfx = 0;
-function sfx(kind = 'tap') {
-  if (!settings.soundEffects || !permAllowed('audio')) return;
-  const now = performance.now();
-  if (now - lastSfx < 45) return;
-  lastSfx = now;
-  try { (SFX[kind] || SFX.tap).forEach(([f, d, at]) => tone(f, d, at)); } catch (_) {}
-}
-
-const sfxKind = (el) => {
-  if (el.matches('.danger, .is-danger, [data-act="abandon"], [data-act="wipe-local"]')) return 'danger';
-  if (el.matches('.switch, .sub-switch, [role="switch"]')) return 'toggle';
-  if (el.matches('[data-action$="-close"], .think-close')) return 'close';
-  if (el.matches('[data-action$="-open"], .provider-edit, .item-head')) return 'open';
-  return 'tap';
-};
-
-document.addEventListener('click', (e) => {
   if (!settings.soundEffects) return;
-  const el = e.target.closest?.('button, [role="button"], [role="option"], a[href], .chip, .seg-btn, .swatch, .sub-switch, .switch, .chat-item, .item-head');
-  if (!el || el.disabled || el.closest('.send-btn')) return;
-  sfx(sfxKind(el));
-}, true);
-
+  if (!permAllowed('audio')) return;
+  try {
+    const c = ac(), o = c.createOscillator(), g = c.createGain();
+    o.frequency.value = f;
+    g.gain.setValueAtTime(0.06, c.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + d);
+    o.connect(g).connect(c.destination);
+    o.start(); o.stop(c.currentTime + d);
+  } catch (_) {}
+}
 function syncMusic() {
   try {
     if (settings.soundMusic && permAllowed('audio') && !musicOsc) {
@@ -5352,7 +4698,7 @@ function initShell() {
     else if (action === 'signout') handleSignOut();
     else if (action === 'new-chat') newSession();
     else if (action === 'attach') openAttach();
-    else if (action === 'upgrade') openGcashModal();
+    else if (action === 'upgrade') toast('Paid plans are coming soon.', 'info', 1800);
     else if (action === 'nav-worlds' || action === 'nav-agent' || action === 'nav-data' || action === 'nav-automation' || action === 'nav-connectors') toast('Coming soon.', 'info', 1800);
   });
 
@@ -5534,9 +4880,9 @@ function getOrCreateLoader() {
   if (!loaderEl) {
     loaderEl = document.createElement('div');
     loaderEl.id = 'loader';
+    loaderEl.innerHTML = '<img src="Materials/Public/images/Icon.png" alt="" class="loader-icon">';
     document.body.appendChild(loaderEl);
   }
-  loaderEl.innerHTML = MASCOT_SVG;
   return loaderEl;
 }
 function showLoader() { getOrCreateLoader().classList.remove('hidden'); }
@@ -5644,19 +4990,11 @@ async function boot() {
       bindAccountKeys(user.uid);
       renderHome(user);
       loadDictionary(settings.langIn);
-      loadSkills();
       try { await Cloud.init(user); } catch (_) {}
       registerDevice(user);
       applyProfile();
       refreshStorage();
       updateAccountBanner();
-
-      const created = user.metadata?.creationTime ? new Date(user.metadata.creationTime).getTime() : 0;
-      const isNew = created && Date.now() - created < 10 * 60 * 1000;
-      const done = (() => { try { return localStorage.getItem(`aphrosta.tutorial.${user.uid}`) === '1'; } catch (_) { return false; } })();
-      if (isNew && !done && sessions.length === 0) {
-        setTimeout(() => openTutorial(user), 700);
-      }
     } else {
       renderSigningIn();
       autoSignIn();
