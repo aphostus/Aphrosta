@@ -8,11 +8,6 @@
 
 *A virtual robotic agent engineered to curate, remember, and act, built under the Aphostus identity.*
 
-![Version](https://img.shields.io/badge/version-Alpha_1.00-ffffff?style=for-the-badge&labelColor=000000)
-![Status](https://img.shields.io/badge/status-in_development-888888?style=for-the-badge&labelColor=000000)
-![Theme](https://img.shields.io/badge/theme-monochrome_glass-cccccc?style=for-the-badge&labelColor=000000)
-![Providers](https://img.shields.io/badge/providers-8-ffffff?style=for-the-badge&labelColor=000000)
-
 </div>
 
 ---
