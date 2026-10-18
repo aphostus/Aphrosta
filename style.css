@@ -2495,20 +2495,21 @@ html[data-motion="reduce"] .think-panel { transition: none; }
 /* ---------- Task 18.4: Aphrosta sphere-bot mark ---------- */
 .aph-mark { display: block; width: 100%; height: 100%; overflow: visible; }
 .aph-avatar { display: inline-block; width: 44px; height: 44px; margin: 6px 0; color: var(--fg); }
-.loader-mark { width: 96px; height: 96px; color: var(--fg); }
 
-.am-anim .am-body   { animation: amBob 1.5s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
 .am-anim .am-shadow { animation: amShadow 1.5s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.am-anim .am-face   { animation: amLookAround 4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
 .am-anim .am-eye    { animation: amTwinkle 2.2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
 .am-anim .am-eye2   { animation-delay: 0.35s; }
 
-@keyframes amBob {
-  0%, 100% { transform: translateY(0) scale(1.03, 0.97); }
-  50%      { transform: translateY(-4px) scale(0.98, 1.02); }
-}
 @keyframes amShadow {
   0%, 100% { transform: scale(1);    opacity: 0.18; }
-  50%      { transform: scale(0.75); opacity: 0.1; }
+  50%      { transform: scale(0.8); opacity: 0.1; }
+}
+@keyframes amLookAround {
+  0%, 100% { transform: translateX(0) translateY(0); }
+  25%      { transform: translateX(3px) translateY(-1px); }
+  50%      { transform: translateX(-3px) translateY(1px); }
+  75%      { transform: translateX(1px) translateY(-2px); }
 }
 @keyframes amTwinkle {
   0%, 100% { transform: scale(1) rotate(0deg); }

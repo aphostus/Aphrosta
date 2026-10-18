@@ -664,7 +664,7 @@ ICONS.pushpinOn   = ICONS.pushpin.replace('fill="none"', 'fill="currentColor"');
 let _amN = 0;
 function aphMark({ animated = false, cls = '', ink = 'currentColor', eye = 'var(--bg)', bg = '' } = {}) {
   const id = `am${++_amN}`;
-  const star = 'M0 -6 Q1.2 -1.2 6 0 Q1.2 1.2 0 6 Q-1.2 1.2 -6 0 Q-1.2 -1.2 0 -6Z';
+  const star = 'M0 -5 Q1 -1 5 0 Q1 1 0 5 Q-1 1 -5 0 Q-1 -1 0 -5Z';
   return `<svg class="aph-mark${animated ? ' am-anim' : ''} ${cls}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" aria-hidden="true">`
     + `<defs><radialGradient id="${id}s" cx=".35" cy=".3" r=".9"><stop offset="0" stop-color="#000" stop-opacity="0"/><stop offset=".6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".3"/></radialGradient></defs>`
     + (bg ? `<rect width="64" height="64" rx="15" fill="${bg}"/>` : '')
@@ -673,11 +673,10 @@ function aphMark({ animated = false, cls = '', ink = 'currentColor', eye = 'var(
     + `<circle cx="32" cy="31" r="22" style="fill:${ink}"/>`
     + `<circle cx="32" cy="31" r="22" fill="url(#${id}s)"/>`
     + `<ellipse cx="23" cy="19" rx="6" ry="3.4" fill="#fff" opacity=".35" transform="rotate(-30 23 19)"/>`
+    + `<g class="am-face">`
     + `<g transform="translate(23.5 30)"><path class="am-eye" d="${star}" style="fill:${eye}"/></g>`
     + `<g transform="translate(40.5 30)"><path class="am-eye am-eye2" d="${star}" style="fill:${eye}"/></g>`
-    + `<ellipse cx="17.5" cy="38" rx="3.2" ry="2" fill="#ff8fb1" opacity=".55"/>`
-    + `<ellipse cx="46.5" cy="38" rx="3.2" ry="2" fill="#ff8fb1" opacity=".55"/>`
-    + `<path d="M29 38.5 Q32 41.5 35 38.5" fill="none" style="stroke:${eye}" stroke-width="1.6" stroke-linecap="round"/>`
+    + `</g>`
     + `</g></svg>`;
 }
 
@@ -689,7 +688,7 @@ function aphMark({ animated = false, cls = '', ink = 'currentColor', eye = 'var(
     link.type = 'image/svg+xml';
     link.href = 'data:image/svg+xml,' + encodeURIComponent(fav);
     const splash = document.getElementById('loader');
-    if (splash) splash.innerHTML = aphMark({ animated: true, cls: 'loader-mark' });
+    if (splash) splash.innerHTML = '<img src="Materials/Public/images/Icon.png" alt="" class="loader-icon">';
   } catch (_) {}
 })();
 
@@ -5308,7 +5307,7 @@ function getOrCreateLoader() {
   if (!loaderEl) {
     loaderEl = document.createElement('div');
     loaderEl.id = 'loader';
-    loaderEl.innerHTML = aphMark({ animated: true, cls: 'loader-mark' });
+    loaderEl.innerHTML = '<img src="Materials/Public/images/Icon.png" alt="" class="loader-icon">';
     document.body.appendChild(loaderEl);
   }
   return loaderEl;
