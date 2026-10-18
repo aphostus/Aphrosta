@@ -2435,3 +2435,116 @@ html[data-motion="reduce"] .think-panel { transition: none; }
    SELECTION
    ============================================================ */
 ::selection { background: rgba(var(--accent-rgb), 0.3); }
+
+/* ============================================================
+   COMMIT BATCH — appended rules (tasks 1, 2, 6, 9, 11, 18, 19, 20)
+   ============================================================ */
+
+/* ---------- Task 1.4: Free / Paid pricing tags ---------- */
+.price-tag {
+  flex-shrink: 0;
+  padding: 2px 7px;
+  font-size: calc(10px * var(--ts));
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+}
+.price-tag.is-free { color: #30d158; background: rgba(48, 209, 88, 0.12); border-color: rgba(48, 209, 88, 0.28); }
+.price-tag.is-paid { color: #ffb340; background: rgba(255, 179, 64, 0.12); border-color: rgba(255, 179, 64, 0.28); }
+
+/* ---------- Task 2.5: contain thought panel, drop blur during animation, kill tap delay ---------- */
+.think-panel { contain: layout paint; }
+.composer.think-anim { -webkit-backdrop-filter: none; backdrop-filter: none; }
+.agent-btn, .attach-btn, .send-btn { touch-action: manipulation; }
+
+/* ---------- Task 9.4: multiline dialog messages ---------- */
+.dialog-msg { white-space: pre-line; }
+
+/* ---------- Task 11.4: file cards (2×2) and viewer ---------- */
+.file-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 10px 0; white-space: normal; }
+.file-card {
+  display: flex; align-items: center; gap: 10px; min-width: 0; padding: 10px 12px;
+  text-align: left; color: var(--fg);
+  background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 14px;
+  transition: background 0.2s var(--ease-smooth), transform 0.2s var(--ease-bounce);
+}
+.file-card:hover { background: var(--glass-bg-hover); }
+.file-card:active { transform: scale(0.97); }
+.file-card-ico {
+  flex-shrink: 0; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
+  color: var(--gray-light); background: rgba(var(--fg-rgb), 0.06); border-radius: 10px;
+}
+.file-card-meta { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
+.file-card-name { font-size: calc(13px * var(--ts)); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-card-sub { font-size: calc(11px * var(--ts)); color: var(--gray-mid); white-space: nowrap; }
+.file-more { justify-content: center; color: var(--gray-light); font-size: calc(12.5px * var(--ts)); font-weight: 600; }
+.file-grid:not(.expanded) .is-extra { display: none; }
+.file-grid.expanded .file-more { display: none; }
+
+.file-viewer { max-width: 560px; max-height: 82vh; }
+.file-viewer-head { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.file-viewer-head .dialog-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-viewer-code {
+  margin: 0; flex: 1 1 auto; min-height: 0; max-height: 56vh; overflow: auto; padding: 12px 14px;
+  font: calc(12.5px * var(--ts)) / 1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  white-space: pre; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--radius-md);
+}
+
+/* ---------- Task 18.4: Aphrosta sphere-bot mark ---------- */
+.aph-mark { display: block; width: 100%; height: 100%; overflow: visible; }
+.aph-avatar { display: inline-block; width: 44px; height: 44px; margin: 6px 0; color: var(--fg); }
+.loader-mark { width: 96px; height: 96px; color: var(--fg); }
+
+.am-anim .am-body   { animation: amBob 1.5s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
+.am-anim .am-shadow { animation: amShadow 1.5s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.am-anim .am-eye    { animation: amTwinkle 2.2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.am-anim .am-eye2   { animation-delay: 0.35s; }
+
+@keyframes amBob {
+  0%, 100% { transform: translateY(0) scale(1.03, 0.97); }
+  50%      { transform: translateY(-4px) scale(0.98, 1.02); }
+}
+@keyframes amShadow {
+  0%, 100% { transform: scale(1);    opacity: 0.18; }
+  50%      { transform: scale(0.75); opacity: 0.1; }
+}
+@keyframes amTwinkle {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  40%      { transform: scale(0.55) rotate(45deg); }
+  60%      { transform: scale(1.15) rotate(90deg); }
+}
+html[data-motion="reduce"] .aph-mark * { animation: none !important; }
+
+/* ---------- Task 19.5: feedback textarea ---------- */
+.fb-text { width: 100%; min-height: 110px; resize: vertical; }
+
+/* ---------- Task 20.5: usage head info button + usage popup ---------- */
+.usage-head-r { display: inline-flex; align-items: center; gap: 6px; }
+.usage-info {
+  display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px;
+  color: var(--gray-mid); border-radius: 8px;
+}
+.usage-info:hover { color: var(--fg); background: var(--glass-bg-hover); }
+
+.usage-pop { max-width: 380px; max-height: 84vh; overflow-y: auto; }
+.usage-pop-total { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.usage-pop-total b { font-size: calc(28px * var(--ts)); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.usage-pop-total span { font-size: calc(12px * var(--ts)); color: var(--gray-mid); }
+.usage-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.usage-tile {
+  display: flex; flex-direction: column; gap: 2px; padding: 10px;
+  background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 12px;
+}
+.usage-tile b { font-size: calc(15px * var(--ts)); font-variant-numeric: tabular-nums; }
+.usage-tile span { font-size: calc(10.5px * var(--ts)); color: var(--gray-mid); text-transform: uppercase; letter-spacing: 0.04em; }
+.usage-rows { display: flex; flex-direction: column; gap: 10px; }
+.usage-row-head { display: flex; align-items: center; gap: 8px; font-size: calc(13px * var(--ts)); }
+.usage-dot { flex-shrink: 0; width: 8px; height: 8px; border-radius: 50%; }
+.usage-row-name { flex: 1; min-width: 0; font-weight: 600; }
+.usage-row-val { color: var(--gray-light); font-variant-numeric: tabular-nums; }
+.usage-model {
+  display: flex; justify-content: space-between; gap: 8px; padding: 3px 0 0 16px;
+  font-size: calc(11.5px * var(--ts)); color: var(--gray-mid); font-variant-numeric: tabular-nums;
+}
