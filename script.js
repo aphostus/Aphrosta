@@ -58,11 +58,11 @@ let appEl = null;
 
 /* ---------- EFFORT LEVELS ---------- */
 const EFFORT_LEVELS = [
-  { id: 'minima', name: 'Minima' },
+  { id: 'minima', name: 'Minima', note: 'Efficient' },
   { id: 'low',    name: 'Low' },
   { id: 'medium', name: 'Medium', note: 'Preferred' },
   { id: 'high',   name: 'High' },
-  { id: 'maxima', name: 'Maxima' }
+  { id: 'maxima', name: 'Maxima', note: 'Strength' }
 ];
 const DEFAULT_EFFORT = 'medium';
 
@@ -187,11 +187,11 @@ const FONTS = [
 ];
 
 const TEXT_SIZES = [
-  { id: 'tiny',    name: 'Tiny',    s: 0.82 },
-  { id: 'small',   name: 'Small',   s: 0.9 },
-  { id: 'default', name: 'Default', s: 1 },
-  { id: 'large',   name: 'Large',   s: 1.12 },
-  { id: 'huge',    name: 'Huge',    s: 1.26 }
+  { id: 'tiny',    name: 'Tiny',    s: 0.65 },
+  { id: 'small',   name: 'Small',   s: 0.75 },
+  { id: 'default', name: 'Default', s: 0.85 },
+  { id: 'large',   name: 'Large',   s: 0.95 },
+  { id: 'huge',    name: 'Huge',    s: 1.00 }
 ];
 
 const LENGTHS = [
