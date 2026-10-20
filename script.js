@@ -108,7 +108,6 @@ function persistApiKeys() {
   Cloud.queueSettings();
 }
 
-/* Call once per sign-in, BEFORE renderHome(user). Migrates the old global keys to the previous owner only. */
 function bindAccountKeys(uid) {
   keyScope = uid;
   try {
@@ -343,7 +342,10 @@ const haptic = (pattern = 12) => {
 
 document.addEventListener('click', (e) => {
   const el = e.target.closest?.('button, [role="button"], [role="option"], a[href], .chip, .seg-btn, .swatch, .sub-switch, .switch, .chat-item, .item-head');
-  if (el && !el.disabled) haptic(8);
+  if (el && !el.disabled) {
+    haptic(8);
+    if (!el.matches('.send-btn, .msg-act, .provider-key-link')) sfx('tap');
+  }
 }, true);
 
 document.addEventListener('change', (e) => {
@@ -380,6 +382,7 @@ function applySettings() {
   root.dataset.theme = theme;
   document.querySelector('meta[name="theme-color"]')
     ?.setAttribute('content', theme === 'light' ? '#ffffff' : '#000000');
+  updateFavicon();
 
   const accent = byId(ACCENTS, settings.accent);
   if (accent.c) {
@@ -680,13 +683,21 @@ function aphMark({ animated = false, cls = '', ink = 'currentColor', eye = 'var(
     + `</g></svg>`;
 }
 
-(function applyBrandMark() {
+function updateFavicon() {
   try {
-    const fav = aphMark({ ink: '#fff', eye: '#111', bg: '#000' });
+    const theme = document.documentElement.dataset.theme || 'dark';
+    const light = theme === 'light';
+    const fav = aphMark({ ink: light ? '#0a0a0a' : '#ffffff', eye: light ? '#ffffff' : '#0a0a0a', bg: '' });
     let link = document.querySelector('link[rel="icon"]');
     if (!link) { link = document.createElement('link'); link.rel = 'icon'; document.head.appendChild(link); }
     link.type = 'image/svg+xml';
     link.href = 'data:image/svg+xml,' + encodeURIComponent(fav);
+  } catch (_) {}
+}
+
+(function applyBrandMark() {
+  try {
+    updateFavicon();
     const splash = document.getElementById('loader');
     if (splash) splash.innerHTML = '<img src="Materials/Public/images/Icon.png" alt="" class="loader-icon">';
   } catch (_) {}
@@ -795,9 +806,6 @@ const PROVIDER_API = {
       { id: 'kimi-k2.6',                  name: 'Kimi K2.6',                  series: 'K2.6', reasoning: true }
     ]
   },
-  // NOTE: Perplexity retired Sonar models (Sept 27 2026). The Agent API uses
-  // presets instead of model IDs and may need a different endpoint. Verify
-  // https://docs.perplexity.ai before relying on this provider.
   perplexity: {
     url: 'https://api.perplexity.ai/chat/completions',
     models: [
@@ -812,8 +820,6 @@ const PROVIDER_API = {
 };
 
 /* ---------- API PRICING (Free / Paid) ---------- */
-// true = every model of that provider has a free tier. An array = only those model ids are free.
-// Anything not listed is Paid. Edit this table when a provider changes its free tier.
 const FREE_TIER = {
   groq: true,
   gemini: ['gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite']
@@ -1126,6 +1132,10 @@ let ThemeSection = () => Section('theme', 'Theme', [
     Field('Text Size', Seg('size', TEXT_SIZES, settings.size)))
 ], 6);
 
+const ResetGroup = () => Section('reset', 'Defaults', [
+  LinkRow('reset-defaults', ICONS.switch, 'Reset to Default', { act: 'reset-defaults' })
+], 1);
+
 const memListHtml = () => (settings.memoryNotes?.length
   ? settings.memoryNotes.map((n, i) => `<div class="mem-item"><span title="${esc(n)}">${esc(n)}</span><button type="button" data-act="mem-del" data-i="${i}">Delete</button></div>`).join('')
   : '<p class="field-note">No saved memories yet.</p>');
@@ -1227,7 +1237,7 @@ let AccountPage = function (user) {
           SubSwitch('Use chats to improve Aphrosta', 'privTrain') +
           SubSwitch('Hide phone and email', 'privMask') +
           '<button class="btn-line" type="button" data-act="export-data">Export my data</button>' +
-          '<label class="btn-line">Import data (JSON)<input type="file" accept="application/json,.json" data-import hidden></label>' +
+          '<label class="btn-line">Import my data<input type="file" accept="application/json,.json" data-import hidden></label>' +
           '<button class="btn-line danger" type="button" data-act="wipe-local">Delete local data</button>')}
         ${Item('sessions', ICONS.clock, 'Save/Clear Sessions',
           SubSwitch('Save Sessions', 'saveSessions') +
@@ -1245,7 +1255,9 @@ let AccountPage = function (user) {
         ${accountActive
           ? LinkRow('activation', ICONS.power, 'Deactivate account', { act: 'deactivate', value: 'Active' })
           : LinkRow('activation', ICONS.power, 'Activate account', { act: 'activate', value: 'Paused' })}
-        ${LinkRow('abandon', ICONS.exit, 'Abandon', { act: 'abandon', danger: true })}
+        ${LinkRow('abandon', ICONS.exit, 'Abandon account', { act: 'abandon', danger: true })}
+        ${LinkRow('abolish', ICONS.trash, 'Abolish account', { act: 'abolish', danger: true })}
+        ${LinkRow('destruct', ICONS.alert, 'Destruct account', { act: 'destruct', danger: true })}
       </div>
     </div>
   </div>`;
@@ -1290,9 +1302,10 @@ const SettingsPanel = (user) => `
             <input data-timer-m inputmode="numeric" maxlength="2" aria-label="Minutes" value="${String(timerMins() % 60).padStart(2, '0')}">
           </div>
         </div>
-        <p class="field-note">Counts every model together. Resets when the timer runs out.</p>
+        <p class="field-note">Counts every model together. Resets at 00:00 UTC.</p>
       </section>
 
+      ${ResetGroup()}
       ${ThemeSection()}
       ${AccountCard(user)}
       ${AssistanceSection()}
@@ -1388,6 +1401,35 @@ function onSettingsClick(e) {
         toast('Sessions cleared.', 'success');
       });
       return;
+    case 'reset-defaults':
+      confirmDialog({
+        title: 'Reset to default?',
+        message: 'All settings will return to their defaults. Your account, API keys and sessions are kept.',
+        confirmLabel: 'Reset',
+        danger: true
+      }).then((yes) => {
+        if (!yes) return;
+        settings = { ...SETTINGS_DEFAULTS };
+        activeEffort = DEFAULT_EFFORT;
+        saveSettings();
+        persistEffort();
+        applySettings();
+        loadDictionary(settings.langIn);
+        const panel = document.getElementById('settings-panel');
+        if (panel && currentUser) {
+          const wrap = document.createElement('div');
+          wrap.innerHTML = SettingsPanel(currentUser);
+          panel.replaceWith(wrap.firstElementChild);
+          document.getElementById('settings-panel')?.classList.add('open');
+          refreshSummaries();
+          refreshPermissions();
+        }
+        updateModelButton?.();
+        updateEffortButton?.();
+        refreshTokenMeter();
+        toast('Settings reset to default.', 'success');
+      });
+      return;
     case 'deactivate':
       confirmDialog({
         title: 'Deactivate account?',
@@ -1411,11 +1453,61 @@ function onSettingsClick(e) {
     case 'abandon':
       confirmDialog({
         title: 'Abandon account?',
-        message: 'This permanently removes your account and everything in it. Type ABANDON to continue.',
+        message: 'Your data is kept, but this account can never be signed into again. Type ABANDON to confirm.',
         confirmLabel: 'Abandon',
         danger: true,
         phrase: 'ABANDON'
-      }).then((yes) => { if (yes) toast('Not available in this version.', 'info'); });
+      }).then(async (yes) => {
+        if (!yes) return;
+        try {
+          await setDoc(doc(db, 'users', currentUser.uid, 'data', 'account'), { abandoned: true, abandonedAt: Date.now(), email: currentUser.email }, { merge: true });
+          const ek = (currentUser.email || '').toLowerCase().replace(/[^\w.@-]/g, '_');
+          if (ek) await setDoc(doc(db, 'blocks', ek), { type: 'abandoned', at: Date.now(), uid: currentUser.uid });
+        } catch (_) {}
+        try { await Cloud.flush(); } catch (_) {}
+        Cloud.reset();
+        authBlocked = true;
+        showBlockedScreen('abandoned');
+        await signOut(auth);
+      });
+      return;
+    case 'abolish':
+      confirmDialog({
+        title: 'Abolish account?',
+        message: 'All your account data will be deleted. You can sign in again with the same Google account and start fresh. Type ABOLISH to confirm.',
+        confirmLabel: 'Abolish',
+        danger: true,
+        phrase: 'ABOLISH'
+      }).then(async (yes) => {
+        if (!yes) return;
+        toast('Deleting account data…', 'info', 4000);
+        try { await purgeAllUserData(); } catch (_) {}
+        Cloud.reset();
+        try { Object.keys(localStorage).filter((k) => k.startsWith('aphrosta.')).forEach((k) => localStorage.removeItem(k)); } catch (_) {}
+        await signOut(auth);
+      });
+      return;
+    case 'destruct':
+      confirmDialog({
+        title: 'Destruct account?',
+        message: 'All your data will be deleted and this account can never be signed into again. Type DESTRUCT to confirm.',
+        confirmLabel: 'Destruct',
+        danger: true,
+        phrase: 'DESTRUCT'
+      }).then(async (yes) => {
+        if (!yes) return;
+        toast('Destroying account…', 'info', 4000);
+        try { await purgeAllUserData(); } catch (_) {}
+        Cloud.reset();
+        try {
+          const ek = (currentUser.email || '').toLowerCase().replace(/[^\w.@-]/g, '_');
+          if (ek) await setDoc(doc(db, 'blocks', ek), { type: 'blocked', at: Date.now(), uid: currentUser.uid });
+        } catch (_) {}
+        try { Object.keys(localStorage).filter((k) => k.startsWith('aphrosta.')).forEach((k) => localStorage.removeItem(k)); } catch (_) {}
+        authBlocked = true;
+        showBlockedScreen('blocked');
+        await signOut(auth);
+      });
       return;
   }
 
@@ -1622,7 +1714,7 @@ function openUsagePopup() {
   const end = limit ? LimitWindow.endsAt() : 0;
   const resetLine = limit
     ? (end ? `Resets in <b data-count>${fmtHMS(end - Date.now())}</b>` : 'Timer starts with your next message')
-    : 'Counted per day \u00b7 resets at midnight';
+    : 'Counted per day \u00b7 resets at 00:00 UTC';
   const left = limit ? Math.max(0, limit - total) : 0;
 
   const scrim = document.createElement('div');
@@ -1673,7 +1765,7 @@ function paintUsageCard() {
     .filter((p) => by[p.id] > 0)
     .map((p) => `<i style="width:${(by[p.id] / denom * 100).toFixed(2)}%;background:${PROVIDER_COLORS[p.id]}"></i>`)
     .join('');
-  card.querySelectorAll('[data-legend]').forEach((el) => el.classList.toggle('is-used', by[el.dataset.legend] > 0));
+  card.querySelectorAll('[data-legend]').forEach((el) => el.classList.toggle('is-used', !!apiKeys[el.dataset.legend]));
   card.dataset.state = !limit ? '' : total >= limit ? 'over' : total >= limit * 0.9 ? 'warn' : '';
 }
 
@@ -2626,6 +2718,7 @@ function initComposer() {
 
   const setThinkOpen = (on) => {
     clearTimeout(closeTimer);
+    const opening = !!on && !thinkOpen;
     thinkOpen = !!on;
     composer.classList.add('think-anim');
     clearTimeout(animEndT);
@@ -2633,10 +2726,20 @@ function initComposer() {
     thinkPanel.classList.toggle('is-open', thinkOpen);
     thinkPanel.toggleAttribute('inert', !thinkOpen);
     thinkPanel.setAttribute('aria-hidden', String(!thinkOpen));
+    composer.classList.toggle('think-expanded', thinkOpen);
+    syncInputLock();
     if (thinkOpen) {
       openedAt = Date.now();
       syncThink();
+      if (main && topbar) {
+        const avail = main.clientHeight - topbar.offsetHeight;
+        const maxH = Math.max(160, Math.min(avail * 0.9, avail - 160));
+        thinkPanel.style.setProperty('--think-max', maxH + 'px');
+      }
       requestAnimationFrame(() => { thinkBody.scrollTop = thinkBody.scrollHeight; });
+    } else {
+      thinkPanel.style.removeProperty('--think-max');
+      fit();
     }
   };
 
@@ -2674,6 +2777,11 @@ function initComposer() {
   };
 
   const fit = () => {
+    if (thinkOpen) {
+      input.style.height = MIN_H + 'px';
+      input.style.overflowY = 'hidden';
+      return;
+    }
     if (agentOn) {
       const max = getMax();
       input.style.height = max + 'px';
@@ -2712,12 +2820,13 @@ function initComposer() {
   };
 
   const syncInputLock = () => {
-    input.readOnly = agentOn;
+    input.readOnly = agentOn || thinkOpen;
     if (!accountActive) {
       input.placeholder = 'Account deactivated — activate to chat';
       return;
     }
-    input.placeholder = agentOn ? 'Streaming'
+    input.placeholder = thinkOpen ? 'Viewing thoughts…'
+      : agentOn ? 'Streaming'
       : mode === 'speech' ? (voiceState === 'paused' ? 'Paused' : 'Listening\u2026')
       : `Message...`;
   };
@@ -3168,7 +3277,7 @@ const LimitWindow = {
   d: lsGet(LIMIT_WIN_LS, {}),
   w() {
     const w = (this.d[currentUser?.uid || 'anon'] ||= { start: 0, used: 0 });
-    w.by ||= {}; // legacy entries had no per-provider breakdown
+    w.by ||= {};
     return w;
   },
   lenMs() { return timerMins() * 60000; },
@@ -3199,7 +3308,7 @@ const LimitWindow = {
   endsAt() { const w = this.roll(); return w.start ? w.start + this.lenMs() : 0; }
 };
 
-/* ---------- TOKEN RECORDER ---------- */
+/* ---------- TOKEN RECORDER (UTC day buckets) ---------- */
 const TokenRecorder = (() => {
   const data = lsGet(TOKEN_REC_LS, { batches: {}, entries: [] });
   if (!data.batches) data.batches = {};
@@ -3207,7 +3316,8 @@ const TokenRecorder = (() => {
 
   const who = () => currentUser?.uid || 'anon';
   const pad = (n) => String(n).padStart(2, '0');
-  const periodOf = (reset, d = new Date()) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const periodOf = (reset, d = new Date()) =>
+    `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
 
   function fingerprint(raw) {
     let h = 2166136261;
@@ -3231,7 +3341,10 @@ const TokenRecorder = (() => {
     }
   });
 
-  const resetAt = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1); };
+  const resetAt = () => {
+    const d = new Date();
+    return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1));
+  };
 
   return {
     used: (pid, mid) => data.batches[key(pid, mid)] || 0,
@@ -3274,7 +3387,7 @@ const TokenRecorder = (() => {
       });
       return n;
     },
-    resetText() { return 'at midnight'; },
+    resetText() { return 'at 00:00 UTC'; },
     resetMs() { return resetAt().getTime(); },
     periodMs() { return 864e5; },
     lock() {},
@@ -3494,7 +3607,6 @@ const Cloud = (() => {
         if (synced.get(x.id) === sg) continue;
         let { draft, ...body } = x;
         body = clean(body);
-        // Never push attachments (image dataUrl / file text) — too big for Firestore docs.
         body.messages = body.messages.map(({ attachments, ...m }) => m);
         while (JSON.stringify(body).length > 900000 && body.messages.length > 2) body.messages.shift();
         await setDoc(docOf('sessions', x.id), body);
@@ -3790,35 +3902,51 @@ function parseFence(raw, idx) {
 const fileCardHtml = (f, i, extra) =>
   `<button class="file-card${extra ? ' is-extra' : ''}" type="button" data-fi="${i}" aria-label="Open ${esc(f.name)}"><span class="file-card-ico">${ICONS.file}</span><span class="file-card-meta"><span class="file-card-name">${esc(f.name)}</span><span class="file-card-sub">${esc((f.ext || f.lang || 'text').toUpperCase())} \u00b7 ${f.lines} lines</span></span></button>`;
 
+function fileGroupHtml(files) {
+  if (files.length === 1) {
+    const c = files[0];
+    return `<div class="file-single">${fileCardHtml(c.f, c.i, false)}</div>`;
+  }
+  const extra = files.length - 4;
+  const inner = files.map((c, n) => fileCardHtml(c.f, c.i, n >= 4)).join('');
+  const more = extra > 0 ? `<button class="file-card file-more" type="button">+${extra} more</button>` : '';
+  return `<div class="file-materials">
+    <div class="file-materials-head">${ICONS.folder}<span>Materials</span></div>
+    <div class="file-grid">${inner}${more}</div>
+  </div>`;
+}
+
 function renderMd(src) {
   const parts = String(src).split('```');
   const streamingFence = parts.length % 2 === 0;
-  const out = [];
-  let cards = [];
-  const flush = () => {
-    if (!cards.length) return;
-    const extra = cards.length - 4;
-    const html = cards.map((c, n) => fileCardHtml(c.f, c.i, n >= 4)).join('');
-    const more = extra > 0 ? `<button class="file-card file-more" type="button">+${extra} more</button>` : '';
-    out.push(`<div class="file-grid">${html}${more}</div>`);
-    cards = [];
-  };
-  parts.forEach((p, i) => {
+  const items = [];
+  for (let i = 0; i < parts.length; i++) {
     if (i % 2 === 1) {
-      const f = parseFence(p, i);
-      if (f.isFile && !(streamingFence && i === parts.length - 1)) { cards.push({ f, i }); return; }
-      flush();
-      out.push(`<pre><code>${esc(f.code)}</code></pre>`);
+      const f = parseFence(parts[i], i);
+      const isStreamingLast = streamingFence && i === parts.length - 1;
+      if (f.isFile && !isStreamingLast) items.push({ type: 'file', f, i });
+      else items.push({ type: 'code', f, i });
+    } else {
+      const t = parts[i].replace(/^\n+|\n+$/g, '');
+      if (t.trim()) items.push({ type: 'text', text: t });
+    }
+  }
+  const files = items.filter((it) => it.type === 'file');
+  const firstFileIdx = items.findIndex((it) => it.type === 'file');
+  const out = [];
+  items.forEach((it, idx) => {
+    if (it.type === 'file') {
+      if (idx === firstFileIdx) out.push(fileGroupHtml(files));
       return;
     }
-    const t = p.replace(/^\n+|\n+$/g, '');
-    if (!t.trim()) return;
-    flush();
-    out.push(esc(t)
+    if (it.type === 'code') {
+      out.push(`<pre><code>${esc(it.f.code)}</code></pre>`);
+      return;
+    }
+    out.push(esc(it.text)
       .replace(/`([^`\n]+)`/g, '<code>$1</code>')
       .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>'));
   });
-  flush();
   return out.join('');
 }
 
@@ -4732,8 +4860,6 @@ function learnMemory(text) {
 
 let actx = null, musicOsc = null;
 const ac = () => { actx ||= new (window.AudioContext || window.webkitAudioContext)(); actx.resume?.(); return actx; };
-// Each effect is a list of notes: f = Hz, to = slide target Hz, d = seconds, at = start delay,
-// t = oscillator type, v = peak volume.
 const SFX = {
   send:  [{ f: 620, to: 880, d: 0.09 }],
   start: [{ f: 440, d: 0.06, v: 0.04 }, { f: 587, d: 0.08, v: 0.04, at: 0.06 }],
@@ -4770,7 +4896,6 @@ function sfx(name) {
   } catch (_) {}
 }
 
-// Kept so any old call still works.
 function blip(f = 660, d = 0.09) { SFX._blip = [{ f, d }]; sfx('_blip'); }
 function syncMusic() {
   try {
@@ -5319,10 +5444,12 @@ function hideLoader() {
 }
 
 let authBusy = false;
+let authBlocked = false;
 let authCooldownUntil = 0;
 let postSignOutCooldown = 0;
 
 async function autoSignIn() {
+  if (authBlocked) return;
   if (auth.currentUser) return;
   if (authBusy) return;
   const now = Date.now();
@@ -5374,6 +5501,28 @@ function showSignInButton() {
   document.getElementById('signin-btn').onclick = () => { authBusy = false; autoSignIn(); };
 }
 
+function showBlockedScreen(type) {
+  const msg = type === 'blocked'
+    ? 'This account has been destroyed and can never be signed into again.'
+    : 'This account was abandoned and can no longer be signed into.';
+  appEl.innerHTML = `<div style="display:grid;place-items:center;height:100vh;padding:24px;text-align:center"><p style="max-width:320px;line-height:1.6;color:var(--gray-light)">${msg}</p></div>`;
+}
+
+async function purgeAllUserData() {
+  const uid = currentUser?.uid;
+  if (!uid) return;
+  const cols = ['sessions', 'usage', 'feedback', 'devices'];
+  for (const c of cols) {
+    try {
+      const snap = await getDocs(collection(db, 'users', uid, c));
+      await Promise.all(snap.docs.map((d) => deleteDoc(d.ref)));
+    } catch (_) {}
+  }
+  for (const docId of ['settings', 'account']) {
+    try { await deleteDoc(doc(db, 'users', uid, 'data', docId)); } catch (_) {}
+  }
+}
+
 async function handleSignOut() {
   try {
     showLoader();
@@ -5415,6 +5564,24 @@ async function boot() {
     if (user) {
       hideLoader();
       bindAccountKeys(user.uid);
+      let blocked = null;
+      try {
+        const emailKey = (user.email || '').toLowerCase().replace(/[^\w.@-]/g, '_');
+        if (emailKey) {
+          const b = await getDoc(doc(db, 'blocks', emailKey));
+          if (b.exists()) blocked = b.data().type;
+        }
+        if (!blocked) {
+          const acc = await getDoc(doc(db, 'users', user.uid, 'data', 'account'));
+          if (acc.exists() && acc.data().abandoned) blocked = 'abandoned';
+        }
+      } catch (_) {}
+      if (blocked) {
+        authBlocked = true;
+        showBlockedScreen(blocked);
+        await signOut(auth);
+        return;
+      }
       renderHome(user);
       loadDictionary(settings.langIn);
       try { await Cloud.init(user); } catch (_) {}
@@ -5423,6 +5590,7 @@ async function boot() {
       refreshStorage();
       updateAccountBanner();
     } else {
+      if (authBlocked) return;
       renderSigningIn();
       autoSignIn();
     }

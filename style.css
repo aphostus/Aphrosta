@@ -1401,16 +1401,19 @@ select.input { width: 100%; appearance: none; -webkit-appearance: none; }
 .meter-text { display: flex; justify-content: space-between; font-size: calc(11.5px * var(--ts)); color: var(--gray-mid); }
 
 .btn-line {
+  display: block;
   width: 100%;
   padding: 10px;
   font-size: calc(13px * var(--ts));
   font-weight: 600;
+  text-align: center;
   color: var(--gray-light);
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   transition: background 0.2s var(--ease-smooth);
 }
+
 .btn-line:hover { background: var(--glass-bg-hover); }
 .btn-line.danger { color: var(--bad); }
 
@@ -2042,7 +2045,7 @@ html[data-motion="reduce"] .ol-moon { offset-distance: 12%; }
   color: var(--gray-mid);
 }
 .picker-label img { width: 14px; height: 14px; filter: brightness(0) invert(1); opacity: 0.8; }
-:root[data-theme="light"] .picker-label img { filter: none; }
+:root[data-theme="light"] .picker-label img { filter: brightness(0); }
 
 .picker-series {
   padding: 6px 12px 2px;
@@ -2400,7 +2403,10 @@ html[data-motion="reduce"] .think-panel { transition: none; }
 .legend-ico.is-used { opacity: 1; }
 .legend-ico img, .legend-ico svg { width: 13px; height: 13px; display: block; filter: brightness(0) invert(1); opacity: 0.9; }
 :root[data-theme="light"] .legend-ico img,
-:root[data-theme="light"] .legend-ico svg { filter: none; }
+:root[data-theme="light"] .legend-ico svg,
+:root[data-theme="light"] .model-btn-logo img,
+:root[data-theme="light"] .model-btn-logo svg,
+:root[data-theme="light"] .provider-logo-img { filter: brightness(0); }
 
 /* shared: token-limit input + custom HH:MM timer input */
 .usage-limit .input,
@@ -2463,6 +2469,20 @@ html[data-motion="reduce"] .think-panel { transition: none; }
 .dialog-msg { white-space: pre-line; }
 
 /* ---------- Task 11.4: file cards (2×2) and viewer ---------- */
+.file-single { margin: 10px 0; white-space: normal; }
+.file-single .file-card { width: 100%; }
+.file-materials {
+  display: flex; flex-direction: column; gap: 8px;
+  margin: 10px 0; padding: 10px;
+  background: var(--glass-bg); border: 1px solid var(--glass-border);
+  border-radius: 14px; white-space: normal;
+}
+.file-materials-head {
+  display: flex; align-items: center; gap: 6px;
+  font-size: calc(11px * var(--ts)); font-weight: 600;
+  letter-spacing: 0.05em; text-transform: uppercase; color: var(--gray-mid);
+}
+.file-materials .file-grid { margin: 0; }
 .file-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 10px 0; white-space: normal; }
 .file-card {
   display: flex; align-items: center; gap: 10px; min-width: 0; padding: 10px 12px;
@@ -2512,14 +2532,27 @@ html[data-motion="reduce"] .think-panel { transition: none; }
   75%      { transform: translateX(1px) translateY(-2px); }
 }
 @keyframes amTwinkle {
-  0%, 100% { transform: scale(1) rotate(0deg); }
-  40%      { transform: scale(0.55) rotate(45deg); }
-  60%      { transform: scale(1.15) rotate(90deg); }
+  0%, 100% { transform: rotate(0deg); }
+  50%      { transform: rotate(45deg); }
 }
 html[data-motion="reduce"] .aph-mark * { animation: none !important; }
 
 /* ---------- Task 19.5: feedback textarea ---------- */
-.fb-text { width: 100%; min-height: 110px; resize: vertical; }
+.fb-text {
+  width: 100%;
+  min-height: 110px;
+  resize: vertical;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: calc(13.5px * var(--ts));
+  color: var(--fg);
+  background: rgba(var(--fg-rgb), 0.04);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition: border-color 0.2s var(--ease-smooth);
+}
+.fb-text:focus { border-color: rgba(var(--fg-rgb), 0.28); }
 
 /* ---------- Task 20.5: usage head info button + usage popup ---------- */
 .usage-head-r { display: inline-flex; align-items: center; gap: 6px; }
