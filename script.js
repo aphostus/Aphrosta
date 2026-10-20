@@ -4882,7 +4882,10 @@ let musicGain = null, sfxBus = null;
 const ac = () => {
   if (!actx) {
     actx = new (window.AudioContext || window.webkitAudioContext)();
-    sfxBus = actx.createGain();    sfxBus.gain.value = 1;    sfxBus.connect(actx.destination);
+    const limiter = actx.createDynamicsCompressor();
+    limiter.threshold.value = -6; limiter.ratio.value = 12;
+    limiter.connect(actx.destination);
+    sfxBus = actx.createGain();    sfxBus.gain.value = 3;    sfxBus.connect(limiter);
     musicGain = actx.createGain(); musicGain.gain.value = 0.25; musicGain.connect(actx.destination);
   }
   actx.resume?.();
@@ -4901,7 +4904,7 @@ const SFX = {
   close: [{ f: 600, to: 400, d: 0.09, v: 0.04 }],
   tap:   [{ f: 1200, d: 0.02, v: 0.03 }]
 };
-const SFX_VOL = { low: 2, normal: 4, high: 7 };
+const SFX_VOL = { low: 3, normal: 6, high: 10 };
 
 function sfx(name) {
   if (!settings.soundEffects || !permAllowed('audio')) return;
