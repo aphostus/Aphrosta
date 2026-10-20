@@ -4878,7 +4878,16 @@ const MUSIC_TRACKS = [
   'Materials/Public/musics/Solasarius.mp3'
 ];
 
-const ac = () => { actx ||= new (window.AudioContext || window.webkitAudioContext)(); actx.resume?.(); return actx; };
+let musicGain = null, sfxBus = null;
+const ac = () => {
+  if (!actx) {
+    actx = new (window.AudioContext || window.webkitAudioContext)();
+    sfxBus = actx.createGain();    sfxBus.gain.value = 1;    sfxBus.connect(actx.destination);
+    musicGain = actx.createGain(); musicGain.gain.value = 0.25; musicGain.connect(actx.destination);
+  }
+  actx.resume?.();
+  return actx;
+};
 const SFX = {
   send:  [{ f: 620, to: 880, d: 0.09 }],
   start: [{ f: 440, d: 0.06, v: 0.04 }, { f: 587, d: 0.08, v: 0.04, at: 0.06 }],
@@ -4892,7 +4901,7 @@ const SFX = {
   close: [{ f: 600, to: 400, d: 0.09, v: 0.04 }],
   tap:   [{ f: 1200, d: 0.02, v: 0.03 }]
 };
-const SFX_VOL = { low: 0.5, normal: 1, high: 1.6 };
+const SFX_VOL = { low: 2, normal: 4, high: 7 };
 
 function sfx(name) {
   if (!settings.soundEffects || !permAllowed('audio')) return;
@@ -4909,7 +4918,7 @@ function sfx(name) {
       g.gain.setValueAtTime(0.0001, start);
       g.gain.exponentialRampToValueAtTime((n.v || 0.06) * vol, start + 0.01);
       g.gain.exponentialRampToValueAtTime(0.0001, end);
-      o.connect(g).connect(c.destination);
+      o.connect(g).connect(sfxBus);
       o.start(start); o.stop(end + 0.02);
     });
   } catch (_) {}
@@ -4933,7 +4942,8 @@ function playRandomTrack() {
   }
 
   musicAudio = new Audio(MUSIC_TRACKS[idx]);
-  musicAudio.volume = 0.25;
+  const c = ac();
+  c.createMediaElementSource(musicAudio).connect(musicGain);
   musicAudio.addEventListener('ended', () => {
     musicTimer = setTimeout(playRandomTrack, 4000); // 4 second gap
   });
