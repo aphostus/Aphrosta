@@ -2501,6 +2501,10 @@ window.addEventListener('pagehide', () => {
   LIVE_VOICES.forEach((stop) => { try { stop(); } catch (_) {} });
   stopSpeaking();
   Cloud.flush();
+  if (musicAudio) {
+    musicAudio.pause();
+    musicAudio.src = '';
+  }
 });
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') Cloud.flush();
@@ -4863,7 +4867,17 @@ function learnMemory(text) {
   saveSettings();
 }
 
-let actx = null, musicOsc = null;
+let actx = null;
+let musicAudio = null;
+let musicTimer = 0;
+let lastTrack = -1;
+
+const MUSIC_TRACKS = [
+  'Materials/Public/musics/Lunaarius.mp3',
+  'Materials/Public/musics/Planetarius.mp3',
+  'Materials/Public/musics/Solasarius.mp3'
+];
+
 const ac = () => { actx ||= new (window.AudioContext || window.webkitAudioContext)(); actx.resume?.(); return actx; };
 const SFX = {
   send:  [{ f: 620, to: 880, d: 0.09 }],
@@ -4902,14 +4916,47 @@ function sfx(name) {
 }
 
 function blip(f = 660, d = 0.09) { SFX._blip = [{ f, d }]; sfx('_blip'); }
+
+function playRandomTrack() {
+  if (!settings.soundMusic || !permAllowed('audio')) return;
+  clearTimeout(musicTimer);
+
+  let idx;
+  do {
+    idx = Math.floor(Math.random() * MUSIC_TRACKS.length);
+  } while (idx === lastTrack && MUSIC_TRACKS.length > 1);
+  lastTrack = idx;
+
+  if (musicAudio) {
+    musicAudio.pause();
+    musicAudio.src = '';
+  }
+
+  musicAudio = new Audio(MUSIC_TRACKS[idx]);
+  musicAudio.volume = 0.25;
+  musicAudio.addEventListener('ended', () => {
+    musicTimer = setTimeout(playRandomTrack, 4000); // 4 second gap
+  });
+  musicAudio.play().catch(() => {
+    // If autoplay is blocked, wait for next user interaction
+    document.addEventListener('pointerdown', () => {
+      if (settings.soundMusic) musicAudio?.play();
+    }, { once: true });
+  });
+}
+
 function syncMusic() {
   try {
-    if (settings.soundMusic && permAllowed('audio') && !musicOsc) {
-      const c = ac(), g = c.createGain(); g.gain.value = 0.025; g.connect(c.destination);
-      musicOsc = [220, 277.18, 329.63].map((f) => { const o = c.createOscillator(); o.frequency.value = f; o.connect(g); o.start(); return o; });
-    } else if ((!settings.soundMusic || !permAllowed('audio')) && musicOsc) {
-      musicOsc.forEach((o) => o.stop());
-      musicOsc = null;
+    if (settings.soundMusic && permAllowed('audio')) {
+      if (!musicAudio || musicAudio.paused) {
+        playRandomTrack();
+      }
+    } else {
+      clearTimeout(musicTimer);
+      if (musicAudio) {
+        musicAudio.pause();
+        musicAudio.currentTime = 0;
+      }
     }
   } catch (_) {}
 }
