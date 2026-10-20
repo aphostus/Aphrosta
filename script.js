@@ -2718,7 +2718,6 @@ function initComposer() {
 
   const setThinkOpen = (on) => {
     clearTimeout(closeTimer);
-    const opening = !!on && !thinkOpen;
     thinkOpen = !!on;
     composer.classList.add('think-anim');
     clearTimeout(animEndT);
@@ -2726,20 +2725,10 @@ function initComposer() {
     thinkPanel.classList.toggle('is-open', thinkOpen);
     thinkPanel.toggleAttribute('inert', !thinkOpen);
     thinkPanel.setAttribute('aria-hidden', String(!thinkOpen));
-    composer.classList.toggle('think-expanded', thinkOpen);
-    syncInputLock();
     if (thinkOpen) {
       openedAt = Date.now();
       syncThink();
-      if (main && topbar) {
-        const avail = main.clientHeight - topbar.offsetHeight;
-        const maxH = Math.max(160, Math.min(avail * 0.9, avail - 160));
-        thinkPanel.style.setProperty('--think-max', maxH + 'px');
-      }
       requestAnimationFrame(() => { thinkBody.scrollTop = thinkBody.scrollHeight; });
-    } else {
-      thinkPanel.style.removeProperty('--think-max');
-      fit();
     }
   };
 
@@ -2777,11 +2766,6 @@ function initComposer() {
   };
 
   const fit = () => {
-    if (thinkOpen) {
-      input.style.height = MIN_H + 'px';
-      input.style.overflowY = 'hidden';
-      return;
-    }
     if (agentOn) {
       const max = getMax();
       input.style.height = max + 'px';
@@ -2820,13 +2804,12 @@ function initComposer() {
   };
 
   const syncInputLock = () => {
-    input.readOnly = agentOn || thinkOpen;
+    input.readOnly = agentOn;
     if (!accountActive) {
       input.placeholder = 'Account deactivated — activate to chat';
       return;
     }
-    input.placeholder = thinkOpen ? 'Viewing thoughts…'
-      : agentOn ? 'Streaming'
+    input.placeholder = agentOn ? 'Streaming'
       : mode === 'speech' ? (voiceState === 'paused' ? 'Paused' : 'Listening\u2026')
       : `Message...`;
   };
@@ -3885,12 +3868,18 @@ const FILE_EXT = {
 function parseFence(raw, idx) {
   const nl = raw.indexOf('\n');
   const info = (nl > -1 ? raw.slice(0, nl) : '').trim();
-  const code = (nl > -1 ? raw.slice(nl + 1) : raw).replace(/\n$/, '');
+  let code = (nl > -1 ? raw.slice(nl + 1) : raw).replace(/\n$/, '');
   const [lang = '', ...rest] = info.split(/\s+/);
   let name = rest.join(' ').replace(/^(title|file(name)?)=/i, '').replace(/^["']|["']$/g, '');
   if (!name) {
-    const m = code.split('\n')[0].match(/^(?:\/\/|#|<!--|\/\*)\s*([\w./-]+\.\w{1,6})/);
-    if (m) name = m[1];
+    const firstLine = code.split('\n')[0].trim();
+    if (/^[\w./-]+\.\w{1,6}$/.test(firstLine)) {
+      name = firstLine;
+      code = code.slice(firstLine.length).trim();
+    } else {
+      const m = firstLine.match(/^(?:\/\/|#|<!--|\/\*)\s*([\w./-]+\.\w{1,6})/);
+      if (m) name = m[1];
+    }
   }
   const named = !!name;
   const ext = FILE_EXT[lang.toLowerCase()] || (name.includes('.') ? name.split('.').pop() : '');
@@ -3901,20 +3890,6 @@ function parseFence(raw, idx) {
 
 const fileCardHtml = (f, i, extra) =>
   `<button class="file-card${extra ? ' is-extra' : ''}" type="button" data-fi="${i}" aria-label="Open ${esc(f.name)}"><span class="file-card-ico">${ICONS.file}</span><span class="file-card-meta"><span class="file-card-name">${esc(f.name)}</span><span class="file-card-sub">${esc((f.ext || f.lang || 'text').toUpperCase())} \u00b7 ${f.lines} lines</span></span></button>`;
-
-function fileGroupHtml(files) {
-  if (files.length === 1) {
-    const c = files[0];
-    return `<div class="file-single">${fileCardHtml(c.f, c.i, false)}</div>`;
-  }
-  const extra = files.length - 4;
-  const inner = files.map((c, n) => fileCardHtml(c.f, c.i, n >= 4)).join('');
-  const more = extra > 0 ? `<button class="file-card file-more" type="button">+${extra} more</button>` : '';
-  return `<div class="file-materials">
-    <div class="file-materials-head">${ICONS.folder}<span>Materials</span></div>
-    <div class="file-grid">${inner}${more}</div>
-  </div>`;
-}
 
 function renderMd(src) {
   const parts = String(src).split('```');
@@ -3931,21 +3906,51 @@ function renderMd(src) {
       if (t.trim()) items.push({ type: 'text', text: t });
     }
   }
-  const files = items.filter((it) => it.type === 'file');
-  const firstFileIdx = items.findIndex((it) => it.type === 'file');
+
+  const files = items.filter(it => it.type === 'file');
+  let fileGridHtml = '';
+  if (files.length === 1) {
+    fileGridHtml = `<div class="file-single">${fileCardHtml(files[0].f, files[0].i, false)}</div>`;
+  } else if (files.length > 1) {
+    const extra = files.length - 4;
+    const inner = files.map((c, n) => fileCardHtml(c.f, c.i, n >= 4)).join('');
+    const more = extra > 0 ? `<button class="file-card file-more" type="button">+${extra} more</button>` : '';
+    fileGridHtml = `<div class="file-materials">
+      <div class="file-materials-head">${ICONS.folder}<span>Materials</span></div>
+      <div class="file-grid">${inner}${more}</div>
+    </div>`;
+  }
+
+  const cleanedItems = [];
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i];
+    if (it.type === 'text' && i + 1 < items.length && items[i+1].type === 'file') {
+      const nextFile = items[i+1].f;
+      if (it.text.length < 150 && it.text.includes(nextFile.name)) {
+        continue;
+      }
+    }
+    cleanedItems.push(it);
+  }
+
   const out = [];
-  items.forEach((it, idx) => {
+  let filesRendered = false;
+  cleanedItems.forEach((it) => {
     if (it.type === 'file') {
-      if (idx === firstFileIdx) out.push(fileGroupHtml(files));
+      if (!filesRendered) {
+        out.push(fileGridHtml);
+        filesRendered = true;
+      }
       return;
     }
     if (it.type === 'code') {
       out.push(`<pre><code>${esc(it.f.code)}</code></pre>`);
       return;
     }
-    out.push(esc(it.text)
+    let txt = esc(it.text)
       .replace(/`([^`\n]+)`/g, '<code>$1</code>')
-      .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>'));
+      .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+    out.push(txt);
   });
   return out.join('');
 }

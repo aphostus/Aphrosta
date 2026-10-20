@@ -1413,7 +1413,6 @@ select.input { width: 100%; appearance: none; -webkit-appearance: none; }
   border-radius: var(--radius-sm);
   transition: background 0.2s var(--ease-smooth);
 }
-
 .btn-line:hover { background: var(--glass-bg-hover); }
 .btn-line.danger { color: var(--bad); }
 
@@ -2443,7 +2442,7 @@ html[data-motion="reduce"] .think-panel { transition: none; }
 ::selection { background: rgba(var(--accent-rgb), 0.3); }
 
 /* ============================================================
-   COMMIT BATCH — appended rules (tasks 1, 2, 6, 9, 11, 18, 19, 20)
+   COMMIT BATCH — appended rules
    ============================================================ */
 
 /* ---------- Task 1.4: Free / Paid pricing tags ---------- */
