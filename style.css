@@ -53,6 +53,7 @@
 
   --composer-bg: rgba(20, 20, 20, 0.55);
   --composer-bg-focus: rgba(26, 26, 26, 0.66);
+  --composer-bg-solid: rgb(26, 26, 26);
 }
 
 :root[data-theme="light"] {
@@ -73,6 +74,7 @@
 
   --composer-bg: rgba(255, 255, 255, 0.55);
   --composer-bg-focus: rgba(255, 255, 255, 0.7);
+  --composer-bg-solid: rgb(246, 246, 246);
 }
 
 /* ============================================================
@@ -2467,7 +2469,11 @@ html[data-motion="reduce"] .think-panel { transition: none; }
 
 /* ---------- Task 2.5: contain thought panel, drop blur during animation, kill tap delay ---------- */
 .think-panel { contain: layout paint; }
-.composer.think-anim { -webkit-backdrop-filter: none; backdrop-filter: none; }
+.composer.think-anim {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background: var(--composer-bg-solid);
+}
 .agent-btn, .attach-btn, .send-btn { touch-action: manipulation; }
 
 /* ---------- Task 9.4: multiline dialog messages ---------- */
