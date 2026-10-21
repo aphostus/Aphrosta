@@ -5818,7 +5818,8 @@ function locked() {
 }
 
 /* ---------- ONBOARDING TOUR ---------- */
-const TOUR_LS = 'aph.tour.v1';
+const TOUR_LS_BASE = 'aph.tour.v1';
+const tourKey = () => TOUR_LS_BASE + '.' + (auth?.currentUser?.uid || 'anon');
 const TOUR_STEPS = [
   { title: `Welcome to ${APP_NAME}`, text: 'A quick 20-second tour. You can skip it any time.' },
   { sel: '[data-action="model-select"]', title: 'Pick a model', text: 'Switch providers and models here.' },
@@ -5837,7 +5838,7 @@ function maybeStartOnboarding() {
 
 function startOnboarding(force = false) {
   if (document.querySelector('.tour')) return;
-  if (!force) { try { if (localStorage.getItem(TOUR_LS)) return; } catch (_) {} }
+  if (!force) { try { if (localStorage.getItem(tourKey())) return; } catch (_) {} }
   const reduce = document.documentElement.dataset.motion === 'reduce';
   const root = document.createElement('div');
   root.className = 'tour';
@@ -5895,7 +5896,7 @@ function startOnboarding(force = false) {
     if (!sidebarWasOpen && !matchMedia('(min-width: 860px)').matches) sidebarEl?.classList.remove('open');
     root.classList.add('leaving');
     setTimeout(() => root.remove(), reduce ? 0 : 260);
-    try { localStorage.setItem(TOUR_LS, '1'); } catch (_) {}
+    try { localStorage.setItem(tourKey(), '1'); } catch (_) {}
   };
 
   const show = async (n, dir = 1) => {
