@@ -58,11 +58,11 @@ let appEl = null;
 
 /* ---------- EFFORT LEVELS ---------- */
 const EFFORT_LEVELS = [
-  { id: 'minima', name: 'Minima', note: 'Efficient' },
-  { id: 'low',    name: 'Low' },
-  { id: 'medium', name: 'Medium', note: 'Preferred' },
-  { id: 'high',   name: 'High' },
-  { id: 'maxima', name: 'Maxima', note: 'Strength' }
+  { id: 'minima', name: 'Minima', note: 'Efficient', desc: 'Fastest. Short answers, very little thinking.' },
+  { id: 'low',    name: 'Low', desc: 'Quick answers with light thinking.' },
+  { id: 'medium', name: 'Medium', note: 'Preferred', desc: 'Balanced speed and depth. Best for most chats.' },
+  { id: 'high',   name: 'High', desc: 'Slower and more careful. Good for code and analysis.' },
+  { id: 'maxima', name: 'Maxima', note: 'Strength', desc: 'Deepest thinking. Slowest and uses the most tokens.' }
 ];
 const DEFAULT_EFFORT = 'medium';
 
@@ -1690,6 +1690,13 @@ function onSettingsChange(e) {
   }
 }
 
+const ProviderSteps = (p) => `<ol class="provider-steps">
+  <li>Tap <b>Get your API key</b> and sign in to ${esc(p.name)}.</li>
+  <li>Create a new key and copy it.</li>
+  <li>Paste it below and tap <b>Save</b>.</li>
+  <li>Choose a model from the top bar and start chatting.</li>
+  <li class="provider-steps-note">Some providers need billing or credit set up before a key works.</li>
+</ol>`;
 const ProviderCard = (p) => {
   const has = !!apiKeys[p.id];
   const isActive = activeModel === p.id;
@@ -1713,6 +1720,7 @@ const ProviderCard = (p) => {
       <div class="provider-body">
         <div class="provider-body-inner">
           <div class="provider-body-content">
+            ${has ? '' : ProviderSteps(p)}
             <a class="provider-key-link ${has ? '' : 'is-new'}" href="${esc(p.keysUrl || '#')}" target="_blank" rel="noopener noreferrer">
               ${ICONS.link}
               <span>Get your API key</span>
@@ -1740,7 +1748,10 @@ const EffortOption = (e) => {
   return `
     <button class="effort-option ${isActive ? 'is-active' : ''}" type="button" data-effort="${e.id}" role="option" aria-selected="${isActive}">
       ${EffortBall(e.id)}
-      <span class="effort-option-name">${esc(e.name)}${e.note ? ` <span class="effort-option-note">(${esc(e.note)})</span>` : ''}</span>
+      <span class="effort-option-text">
+        <span class="effort-option-name">${esc(e.name)}${e.note ? ` <span class="effort-option-note">(${esc(e.note)})</span>` : ''}</span>
+        ${e.desc ? `<span class="effort-option-desc">${esc(e.desc)}</span>` : ''}
+      </span>
       ${isActive ? `<span class="provider-check">${ICONS.check}</span>` : ''}
     </button>
   `;
@@ -4309,6 +4320,7 @@ function stopStatusRotor() {
   statusTimer = 0;
 }
 
+const NO_REPLY_TEXT = 'No visible reply. The model used its whole budget on thinking. Try a lower Effort, a non-reasoning model, or rephrase.';
 const stepCards = new WeakMap();
 const stepMsgs = new WeakSet();
 const TOOL_LABEL = { web_search: 'Searched', fetch_url: 'Read', calculator: 'Calculated', current_time: 'Checked time' };
@@ -4327,10 +4339,12 @@ function buildStepCards(msgs) {
     }
   });
 }
+const GLOBE_ANIM = '<svg class="tool-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19"/><ellipse class="globe-mer" cx="12" cy="12" rx="4.5" ry="9.5"/></svg>';
+const TOOL_ICON = { web_search: GLOBE_ANIM, fetch_url: ICONS.link, calculator: ICONS.cpu, current_time: ICONS.clock };
 function cardsEl(cards) {
   const d = document.createElement('div');
   d.className = 'tool-cards';
-  d.innerHTML = cards.map((c) => `<div class="tool-card${c.ok ? '' : ' bad'}"><b>${c.ok ? '\u2713' : '!'}</b> ${esc(TOOL_LABEL[c.name] || c.name)} <em>${esc(String(c.arg).slice(0, 70))}</em></div>`).join('');
+  d.innerHTML = cards.map((c) => `<div class="tool-card${c.ok ? '' : ' bad'}"><span class="tool-ico">${c.ok ? (TOOL_ICON[c.name] || ICONS.check) : ICONS.info}</span> ${esc(TOOL_LABEL[c.name] || c.name)} <em>${esc(String(c.arg).slice(0, 70))}</em></div>`).join('');
   return d;
 }
 
@@ -4362,12 +4376,12 @@ function msgEl(m, i) {
     return el;
   }
 
-  const canRetry = !!m.__failed;
+  const canRetry = !!(m.__failed || m.__empty);
   const body = document.createElement('div');
   body.className = 'msg-body';
 
   if (canRetry) {
-    body.textContent = 'No reply. Tap retry, or pick another model.';
+    body.textContent = m.__empty ? NO_REPLY_TEXT : (m.__error || 'No reply. Tap retry, or pick another model.');
     body.style.color = 'var(--gray-mid)';
     body.style.fontStyle = 'italic';
   } else {
@@ -4766,7 +4780,8 @@ let systemPrompt = function () {
   if (settings.persRole) lines.push(`About the user: ${settings.persRole}.`);
   if (settings.persInterests) lines.push(`User interests: ${settings.persInterests}.`);
   if (settings.persEmoji === 'never') lines.push('Never use emoji.');
-  if (settings.persEmoji === 'often') lines.push('Use emoji naturally and often.');
+  else if (settings.persEmoji === 'often') lines.push('Use emoji occasionally, at most one or two per reply, only where they add warmth.');
+  else lines.push('Use emoji very sparingly: usually none, and never in headings, lists, code, or technical and factual answers.');
   if (settings.persFormat === 'plain') lines.push('Use plain text only. No markdown.');
   if (settings.persFormat === 'markdown') lines.push('Format answers with markdown (headings, bold, code blocks).');
   if (settings.persFormat === 'bullets') lines.push('Prefer short bullet points over paragraphs.');
@@ -4856,8 +4871,11 @@ const ADAPTERS = {
       const body = { model: variant.id, system: sys, messages: rest, max_tokens: maxTok, stream: wantStream };
       if (variant.reasoning) {
         const budgetByEffort = { minima: 1024, low: 2048, medium: 4096, high: 8192, maxima: 16384 };
-        const b = Math.min(budgetByEffort[activeEffort] || 4096, Math.max(1024, maxTok - 1024));
-        body.thinking = { type: 'enabled', budget_tokens: b };
+        const room = maxTok - 2048;
+        if (room >= 1024) {
+          const b = Math.min(budgetByEffort[activeEffort] || 4096, room);
+          body.thinking = { type: 'enabled', budget_tokens: b };
+        }
       } else {
         body.temperature = extras.temperature ?? 0.7;
       }
@@ -5305,11 +5323,11 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
       ai.content = ai.content || '';
       ai.__failed = true;
       ai.__error = error.message || 'Something went wrong.';
-    } else if (!ai.content) {
+    } else if (!ai.content.trim()) {
       if (aborted) {
         session.messages = session.messages.filter((m) => m !== ai);
       } else {
-        ai.content = '\u26a0\ufe0f No visible reply. The model spent its whole budget on internal reasoning. Try lowering Effort, using a non-reasoning model, or rephrasing.';
+        ai.content = NO_REPLY_TEXT;
         ai.__empty = true;
       }
     }
@@ -5330,8 +5348,8 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
     }
 
     const last = session.messages[session.messages.length - 1];
-    if (last && last.role === 'assistant' && !last.content && !last.__failed) {
-      last.content = '\u26a0\ufe0f No visible reply. The model spent its whole budget on internal reasoning. Try lowering Effort, using a non-reasoning model, or rephrasing.';
+    if (last && last.role === 'assistant' && !(last.content || '').trim() && !last.__failed) {
+      last.content = NO_REPLY_TEXT;
       last.__empty = true;
       persistSessions();
       renderMessages();
@@ -5977,8 +5995,10 @@ function locked() {
 const TOUR_LS_BASE = 'aph.tour.v1';
 const tourKey = () => TOUR_LS_BASE + '.' + (auth?.currentUser?.uid || 'anon');
 const TOUR_STEPS = [
-  { title: `Welcome to ${APP_NAME}`, text: 'A quick 20-second tour. You can skip it any time.' },
-  { sel: '[data-action="model-select"]', title: 'Pick a model', text: 'Switch providers and models here.' },
+  { title: `Welcome to ${APP_NAME}`, text: 'A quick tour of the basics. You can skip it any time.' },
+  { sel: '[data-action="model-select"]', title: 'Add an API key first', text: 'Open the model menu, pick a provider, tap Get your API key, paste it and Save. Aphrosta runs on your own key.' },
+  { sel: '[data-action="model-select"]', title: 'Pick a model', text: 'Once a key is saved, switch providers and models from here any time.' },
+  { sel: '[data-action="effort-select"]', title: 'Set the effort', text: 'Minima is fastest. Maxima thinks longest and uses more tokens. Medium suits most chats.' },
   { sel: '.composer', title: 'Ask anything', text: 'Type, speak, or attach files. Ask for a deck, a document or a spreadsheet and it arrives as a file card.' },
   { sel: '.agent-btn', title: 'Watch it think', text: 'Tap to follow the reasoning and the agent’s steps as they stream in.' },
   { sel: '[data-action="menu"]', title: 'Your sessions', text: 'Chats, agents and tools live in the sidebar.', sidebar: true },

@@ -1608,6 +1608,9 @@ select.input { width: 100%; appearance: none; -webkit-appearance: none; }
 .provider-key-link:active { transform: scale(0.98); }
 .provider-key-link.is-new { animation: keyPulse 2.2s var(--ease-smooth) 2; }
 .provider-key-link svg { width: 14px; height: 14px; flex-shrink: 0; }
+.provider-steps { margin: 0 0 10px; padding-left: 18px; font-size: calc(12.5px * var(--ts)); line-height: 1.5; color: var(--gray-mid); }
+.provider-steps b { font-weight: 600; }
+.provider-steps-note { list-style: none; margin-left: -18px; margin-top: 4px; opacity: 0.8; }
 @keyframes keyPulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0.45); }
   60%      { box-shadow: 0 0 0 8px rgba(var(--accent-rgb), 0); }
@@ -1732,6 +1735,9 @@ select.input { width: 100%; appearance: none; -webkit-appearance: none; }
   border-radius: var(--radius-sm);
   transition: background 0.2s var(--ease-smooth), color 0.2s var(--ease-smooth);
 }
+
+.effort-option-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; text-align: left; }
+.effort-option-desc { font-size: calc(11.5px * var(--ts)); color: var(--gray-mid); }
 .effort-option:hover { background: var(--glass-bg-hover); color: var(--fg); }
 .effort-option.is-active { background: rgba(var(--fg-rgb), 0.04); color: var(--accent); font-weight: 600; }
 .effort-option-name { flex: 1; min-width: 0; }
@@ -2740,6 +2746,12 @@ html[data-motion="reduce"] .aph-mark * { animation: none !important; }
 
 .tool-cards { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
 .tool-card { font-size: 13px; padding: 6px 10px; border-radius: 10px; background: rgba(255,255,255,.06); color: var(--gray-mid); }
-.tool-card b { color: #4ade80; margin-right: 4px; }
-.tool-card.bad b { color: #f87171; }
+.tool-card { display: flex; align-items: center; gap: 8px; }
+.tool-ico { display: inline-flex; flex-shrink: 0; color: var(--text, currentColor); }
+.tool-ico svg { width: 15px; height: 15px; }
+.tool-card.bad .tool-ico { color: var(--gray-mid); }
+.tool-globe .globe-mer { transform-box: fill-box; transform-origin: center; animation: globeTurn 2.8s ease-in-out infinite; }
+@keyframes globeTurn { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(0.15); } }
+html[data-motion="reduce"] .tool-globe .globe-mer { animation: none; }
+@media (prefers-reduced-motion: reduce) { .tool-globe .globe-mer { animation: none; } }
 .tool-card em { font-style: normal; opacity: .8; overflow-wrap: anywhere; }
