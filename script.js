@@ -733,6 +733,14 @@ ICONS.bug = svg('<path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="
 ICONS.thumbDownOn = ICONS.thumbDown.replace('fill="none"', 'fill="currentColor"');
 ICONS.pushpinOn   = ICONS.pushpin.replace('fill="none"', 'fill="currentColor"');
 
+/* ---------- NEW ICONS (Fix 4) ---------- */
+Object.assign(ICONS, {
+  sparkles: svg('<path d="M9.937 15.5A2 2 0 008.5 14.063l-6.135-1.582a.5.5 0 010-.962L8.5 9.936A2 2 0 009.937 8.5l1.582-6.135a.5.5 0 01.963 0L14.063 8.5A2 2 0 0015.5 9.937l6.135 1.581a.5.5 0 010 .964L15.5 14.063a2 2 0 00-1.437 1.437l-1.582 6.135a.5.5 0 01-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/>'),
+  pilcrow:  svg('<path d="M13 4v16"/><path d="M17 4v16"/><path d="M19 4H9.5a4.5 4.5 0 000 9H13"/>'),
+  scale:    svg('<path d="M16 16l3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1z"/><path d="M2 16l3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/>'),
+  flame:    svg('<path d="M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 11-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 002.5 2.5z"/>')
+});
+
 /* ---------- BRAND MARK ---------- */
 let _amN = 0;
 function aphMark({ animated = false, cls = '', ink = 'currentColor', eye = 'var(--bg)', bg = '' } = {}) {
@@ -1238,7 +1246,7 @@ let AssistanceSection = () => Section('assistance', 'Assistance', [
 
   ToggleRow('streaming', ICONS.zap, 'Streaming', 'streaming'),
 
-  Item('personalize', ICONS.sliders, 'Personalize',
+  Item('personalize', ICONS.sparkles, 'Personalize',
     Field('Nickname', `<input class="input" data-text="nickname" maxlength="40" placeholder="What should I call you?" value="${esc(settings.nickname || '')}">`) +
     Field('About you', `<input class="input" data-text="persRole" maxlength="80" placeholder="e.g. student, nurse, developer" value="${esc(settings.persRole || '')}">`) +
     Field('Interests', `<input class="input" data-text="persInterests" maxlength="120" placeholder="e.g. football, cooking, coding" value="${esc(settings.persInterests || '')}">`) +
@@ -1250,7 +1258,7 @@ let AssistanceSection = () => Section('assistance', 'Assistance', [
     Field('Length', Seg('length', LENGTHS, settings.length)) +
     Field('Tone & Moods', Chips('tone', TONES, settings.tone))),
 
-  Item('richtext', ICONS.sliders, 'Rich text',
+  Item('richtext', ICONS.pilcrow, 'Rich text',
     Field('Line spacing', Seg('lineHeight', LINE_HEIGHTS, settings.lineHeight)) +
     Field('Code size', Seg('codeSize', CODE_SIZES, settings.codeSize)) +
     SubSwitch('Wrap long code lines', 'codeWrap') +
@@ -1278,7 +1286,7 @@ let AssistanceSection = () => Section('assistance', 'Assistance', [
 
 const AboutSection = () => Section('about', 'About', [
   LinkRow('terms', ICONS.file, 'Terms & Conditions'),
-  LinkRow('rules', ICONS.shield, 'Rules & Policies'),
+  LinkRow('rules', ICONS.scale, 'Rules & Policies'),
   LinkRow('licenses', ICONS.info, 'About & Licenses'),
   LinkRow('help', ICONS.help, 'Help & Support'),
   LinkRow('billing', ICONS.card, 'Billing & Payment'),
@@ -1342,7 +1350,7 @@ let AccountPage = function (user) {
           : LinkRow('activation', ICONS.power, 'Activate account', { act: 'activate', value: 'Paused' })}
         ${LinkRow('abandon', ICONS.exit, 'Abandon account', { act: 'abandon', danger: true })}
         ${LinkRow('abolish', ICONS.trash, 'Abolish account', { act: 'abolish', danger: true })}
-        ${LinkRow('destruct', ICONS.alert, 'Destruct account', { act: 'destruct', danger: true })}
+        ${LinkRow('destruct', ICONS.flame, 'Destruct account', { act: 'destruct', danger: true })}
       </div>
     </div>
   </div>`;
@@ -1545,12 +1553,13 @@ function onSettingsClick(e) {
         phrase: 'ABANDON'
       }).then(async (yes) => {
         if (!yes) return;
-        try {
-          await setDoc(doc(db, 'users', currentUser.uid, 'data', 'account'), { abandoned: true, abandonedAt: Date.now(), email: currentUser.email }, { merge: true });
-          const ek = (currentUser.email || '').toLowerCase().replace(/[^\w.@-]/g, '_');
-          if (ek) await setDoc(doc(db, 'blocks', ek), { type: 'abandoned', at: Date.now(), uid: currentUser.uid });
-        } catch (_) {}
         try { await Cloud.flush(); } catch (_) {}
+        try { await lockAccount('abandoned'); }
+        catch (err) {
+          console.error('Abandon failed:', err);
+          toast('Couldn\u2019t lock the account. Check your connection and try again.');
+          return;
+        }
         Cloud.reset();
         authBlocked = true;
         showBlockedScreen('abandoned');
@@ -1583,12 +1592,14 @@ function onSettingsClick(e) {
       }).then(async (yes) => {
         if (!yes) return;
         toast('Destroying account…', 'info', 4000);
-        try { await purgeAllUserData(); } catch (_) {}
+        try { await lockAccount('blocked'); }
+        catch (err) {
+          console.error('Destruct failed:', err);
+          toast('Couldn\u2019t lock the account, so nothing was deleted. Try again.');
+          return;
+        }
         Cloud.reset();
-        try {
-          const ek = (currentUser.email || '').toLowerCase().replace(/[^\w.@-]/g, '_');
-          if (ek) await setDoc(doc(db, 'blocks', ek), { type: 'blocked', at: Date.now(), uid: currentUser.uid });
-        } catch (_) {}
+        try { await purgeAllUserData(true); } catch (_) {}
         try { Object.keys(localStorage).filter((k) => k.startsWith('aphrosta.')).forEach((k) => localStorage.removeItem(k)); } catch (_) {}
         authBlocked = true;
         showBlockedScreen('blocked');
@@ -1871,6 +1882,7 @@ const Composer = () => `
               ${ICONS.close}
             </button>
           </div>
+          <div class="think-plan" hidden></div>
           <div class="think-body"></div>
         </div>
       </div>
@@ -2701,6 +2713,15 @@ function initComposer() {
   const thinkPanel = composer.querySelector('.think-panel');
   const thinkBody = thinkPanel.querySelector('.think-body');
   const thinkModelEl = thinkPanel.querySelector('.think-model');
+  const thinkPlanEl = thinkPanel.querySelector('.think-plan');
+  let lastPlanMd = '';
+  const syncPlan = (ai) => {
+    const md = ai && settings.agentPlan ? splitPlanParts(ai.content || '').plan : '';
+    if (md === lastPlanMd) return;
+    lastPlanMd = md;
+    thinkPlanEl.innerHTML = md ? renderRich(md) : '';
+    thinkPlanEl.hidden = !md;
+  };
   let thinkOpen = false;
 
   let hRaf = 0, hLast = 0, hTimer = 0, animEndT = 0;
@@ -2767,10 +2788,12 @@ function initComposer() {
 
   const syncThink = () => {
     const ai = currentThinkAi();
+    syncPlan(ai);
     if (!sameThinkModel(ai)) {
       if (thinkBody.firstChild) resetReveal();
       if (thinkModelEl.textContent) thinkModelEl.textContent = '';
-      composer.classList.remove('has-think', 'think-recorded');
+      composer.classList.remove('has-think');
+      composer.classList.toggle('think-recorded', !!lastPlanMd);
       agentBtn.dataset.thinking = '0';
       lastThinkId = '';
       lastReasoningLen = 0;
@@ -2800,7 +2823,7 @@ function initComposer() {
     const label = p ? `${p.name} · ${model?.name || ai.model}` : ai.model;
     if (thinkModelEl.textContent !== label) thinkModelEl.textContent = label;
 
-    const hasText = full.length > 0;
+    const hasText = full.length > 0 || !!lastPlanMd;
     composer.classList.toggle('has-think', hasText && chatBusy);
     composer.classList.toggle('think-recorded', hasText);
     agentBtn.dataset.thinking = (hasText && thinkSeenId !== thinkId) ? '1' : '0';
@@ -2843,6 +2866,8 @@ function initComposer() {
     setThinkOpen(false);
     resetReveal();
     thinkModelEl.textContent = '';
+    if (thinkPlanEl) { thinkPlanEl.innerHTML = ''; thinkPlanEl.hidden = true; }
+    lastPlanMd = '';
     composer.classList.remove('has-think', 'think-recorded');
     agentBtn.dataset.thinking = '0';
     lastThinkId = '';
@@ -2915,7 +2940,7 @@ function initComposer() {
 
   const syncAgentLabel = () => {
     const ai = currentThinkAi();
-    const hasThink = sameThinkModel(ai) && ai.reasoning && ai.reasoning.length > 0;
+    const hasThink = sameThinkModel(ai) && ((ai.reasoning && ai.reasoning.length > 0) || (settings.agentPlan && splitPlanParts(ai.content || '').plan));
     if (hasThink) {
       agentBtn.setAttribute('aria-label', thinkOpen ? 'Hide thinking' : 'Show thinking');
       return;
@@ -3201,7 +3226,8 @@ function initComposer() {
 
   agentBtn.addEventListener('click', () => {
     const ai = currentThinkAi();
-    const hasThink = sameThinkModel(ai) && ai.reasoning && ai.reasoning.length > 0;
+    const hasPlan = ai && settings.agentPlan && splitPlanParts(ai.content || '').plan;
+    const hasThink = sameThinkModel(ai) && ((ai.reasoning && ai.reasoning.length > 0) || hasPlan);
     if (hasThink) {
       const opening = !thinkOpen;
       setThinkOpen(!thinkOpen);
@@ -4222,7 +4248,45 @@ function onFileCard(card) {
 
 const statusHTML = () => `<span class="aph-avatar" role="status" aria-label="Loading response">${aphMark({ animated: true })}</span>`;
 
-const setMsgBody = (el, text) => { el.innerHTML = text ? renderMd(text) : statusHTML(); };
+/* ---------- PLAN / TASK EXTRACTION (shown in Thought, hidden from reply) ---------- */
+const TASK_LINE_RE = /^\s*[-*+]\s+\[( |x|X|~)\]\s+/;
+function splitPlanParts(text) {
+  const src = String(text || '');
+  if (!/^:::plan\b/im.test(src)) return { clean: src, plan: '' };
+  const lines = src.split('\n');
+  const keep = [], plans = [], tasks = [];
+  let fence = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (/^\s*```/.test(line)) { fence = !fence; keep.push(line); continue; }
+    if (fence) { keep.push(line); continue; }
+    if (/^:::plan\b/i.test(line)) {
+      const buf = [line];
+      i++;
+      while (i < lines.length && lines[i].trim() !== ':::') buf.push(lines[i++]);
+      buf.push(':::');
+      plans.push(buf.join('\n'));
+      continue;
+    }
+    if (TASK_LINE_RE.test(line)) {
+      const buf = [];
+      while (i < lines.length && (TASK_LINE_RE.test(lines[i]) || (buf.length && /^\s{2,}\S/.test(lines[i])))) buf.push(lines[i++]);
+      i--;
+      tasks.push(buf.join('\n'));
+      continue;
+    }
+    keep.push(line);
+  }
+  return {
+    clean: keep.join('\n').replace(/\n{3,}/g, '\n\n').trim(),
+    plan: [plans[plans.length - 1], ...tasks].filter(Boolean).join('\n\n')
+  };
+}
+
+const setMsgBody = (el, text) => {
+  const shown = text && settings.agentPlan ? splitPlanParts(text).clean : text;
+  el.innerHTML = shown ? renderMd(shown) : statusHTML();
+};
 
 let statusTimer = 0;
 let statusIndex = 0;
@@ -4340,14 +4404,11 @@ function renderSessionList() {
 
   const count = q$('[data-pin-count]');
   if (count) count.textContent = `${sessions.filter((s) => s.pinned).length}/${MAX_PINS}`;
-  q$('[data-sec="pinned"]')?.classList.toggle('hidden', !!q && !pinned.length);
+  q$('[data-sec="pinned"]')?.classList.toggle('hidden', !pinned.length);
+  q$('[data-sec="chats"]')?.classList.toggle('hidden', !normal.length);
 
-  pinnedBox.innerHTML = pinned.length
-    ? pinned.map(sessionItem).join('')
-    : '<p class="side-empty">Pin up to 3 sessions to keep them here.</p>';
-  chatsBox.innerHTML = normal.length
-    ? normal.map(sessionItem).join('')
-    : `<p class="side-empty">${q ? 'No sessions found.' : 'No sessions yet.'}</p>`;
+  pinnedBox.innerHTML = pinned.map(sessionItem).join('');
+  chatsBox.innerHTML = normal.map(sessionItem).join('');
 }
 
 function syncSessionControls() {
@@ -6038,6 +6099,32 @@ function showSignInButton() {
   document.getElementById('signin-btn').onclick = () => { authBusy = false; autoSignIn(); };
 }
 
+/* ---------- Lock helpers (Fix 1) ---------- */
+const lockKey = (email) => String(email || '').toLowerCase().replace(/[^\w.@-]/g, '_');
+const LOCK_LS = 'lockedAccounts.v1'; // deliberately NOT prefixed "aphrosta." so wipeLocal and destruct never clear it
+function readLocalLocks() {
+  try { return JSON.parse(localStorage.getItem(LOCK_LS) || '{}') || {}; } catch (_) { return {}; }
+}
+function writeLocalLock(ek, type) {
+  if (!ek) return;
+  try { const m = readLocalLocks(); m[ek] = type; localStorage.setItem(LOCK_LS, JSON.stringify(m)); } catch (_) {}
+}
+// type: 'abandoned' | 'blocked'. Throws if the lock could not be saved AND verified.
+async function lockAccount(type) {
+  const user = currentUser;
+  const ek = lockKey(user?.email);
+  if (!user || !ek) throw new Error('no-user');
+  const at = Date.now();
+  await setDoc(doc(db, 'blocks', ek), { type, at, uid: user.uid });
+  try {
+    await setDoc(doc(db, 'users', user.uid, 'data', 'account'),
+      { [type === 'blocked' ? 'blocked' : 'abandoned']: true, lockedAt: at, email: user.email }, { merge: true });
+  } catch (err) { console.warn('Account-doc lock flag failed:', err?.code, err?.message); }
+  const check = await getDoc(doc(db, 'blocks', ek));
+  if (!check.exists()) throw new Error('lock-not-saved');
+  writeLocalLock(ek, type);
+}
+
 function showBlockedScreen(type) {
   const msg = type === 'blocked'
     ? 'This account has been destroyed and can never be signed into again.'
@@ -6045,7 +6132,7 @@ function showBlockedScreen(type) {
   appEl.innerHTML = `<div style="display:grid;place-items:center;height:100vh;padding:24px;text-align:center"><p style="max-width:320px;line-height:1.6;color:var(--gray-light)">${msg}</p></div>`;
 }
 
-async function purgeAllUserData() {
+async function purgeAllUserData(keepAccount = false) {
   const uid = currentUser?.uid;
   if (!uid) return;
   const cols = ['sessions', 'usage', 'feedback', 'devices'];
@@ -6055,7 +6142,7 @@ async function purgeAllUserData() {
       await Promise.all(snap.docs.map((d) => deleteDoc(d.ref)));
     } catch (_) {}
   }
-  for (const docId of ['settings', 'account']) {
+  for (const docId of keepAccount ? ['settings'] : ['settings', 'account']) {
     try { await deleteDoc(doc(db, 'users', uid, 'data', docId)); } catch (_) {}
   }
 }
@@ -6102,17 +6189,24 @@ async function boot() {
       hideLoader();
       bindAccountKeys(user.uid);
       let blocked = null;
+      const emailKey = lockKey(user.email);
       try {
-        const emailKey = (user.email || '').toLowerCase().replace(/[^\w.@-]/g, '_');
         if (emailKey) {
           const b = await getDoc(doc(db, 'blocks', emailKey));
-          if (b.exists()) blocked = b.data().type;
+          if (b.exists()) blocked = b.data().type === 'blocked' ? 'blocked' : 'abandoned';
         }
         if (!blocked) {
           const acc = await getDoc(doc(db, 'users', user.uid, 'data', 'account'));
-          if (acc.exists() && acc.data().abandoned) blocked = 'abandoned';
+          if (acc.exists()) {
+            const a = acc.data();
+            if (a.blocked) blocked = 'blocked';
+            else if (a.abandoned) blocked = 'abandoned';
+          }
         }
-      } catch (_) {}
+      } catch (err) {
+        console.error('Lock check failed:', err?.code, err?.message);
+      }
+      if (!blocked && emailKey) blocked = readLocalLocks()[emailKey] || null;
       if (blocked) {
         authBlocked = true;
         showBlockedScreen(blocked);
