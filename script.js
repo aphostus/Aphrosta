@@ -228,6 +228,68 @@ const LANGUAGES = [
 
 const PREVIEW_VERSIONS = ['1.01', '1.02', '1.03', '1.04', '1.05'].map((v) => ({ id: v, name: v }));
 
+/* ---------- NEW: skill / prompt constants ---------- */
+const FENCE = '\u0060\u0060\u0060';
+
+const LINE_HEIGHTS = [
+  { id: 'tight',   name: 'Tight' },
+  { id: 'normal',  name: 'Normal' },
+  { id: 'relaxed', name: 'Relaxed' }
+];
+
+const CODE_SIZES = [
+  { id: 'small',   name: 'Small' },
+  { id: 'default', name: 'Default' },
+  { id: 'large',   name: 'Large' }
+];
+
+const SKILL_LIBRARY = [
+  {
+    id: 'presentations', key: 'skillPresentations', name: 'Presentations',
+    prompt: () => [
+      'SKILL Presentations: when asked for a presentation, slides or a deck, reply with one short sentence and then ONE file block: ' + FENCE + 'html deck.html.',
+      'The file is a single self-contained HTML page with inline CSS and JS and no external assets.',
+      'Each slide is <section class="slide"> in 16:9. Slide 1 is a title slide. At most 8 slides and 5 short bullets per slide unless asked for more.',
+      'Large readable type, dark background, one accent colour. Use simple CSS shapes instead of images.',
+      'Navigation: arrow keys, swipe, and on-screen Prev/Next buttons, plus a slide counter.',
+      'Optional speaker notes go in <aside class="notes" hidden>.'
+    ].join(' ')
+  },
+  {
+    id: 'documents', key: 'skillDocuments', name: 'Documents',
+    prompt: () => [
+      'SKILL Documents: for reports, letters, memos, resumes, notes and guides, reply with one short sentence and then ONE file block: ' + FENCE + 'md name.md.',
+      'Use a title, a 2-sentence summary, clear headings, short paragraphs, and tables for comparisons.',
+      'If the user wants it print-ready or as a PDF, use ' + FENCE + 'html name.html instead: semantic HTML, inline CSS, and an @media print rule with sensible margins.'
+    ].join(' ')
+  },
+  {
+    id: 'spreadsheets', key: 'skillSheets', name: 'Spreadsheets',
+    prompt: () => [
+      'SKILL Spreadsheets: for tables, trackers, budgets and data, reply with one short sentence and then a file block: ' + FENCE + 'csv name.csv.',
+      'Row 1 is the header. One record per row, comma-separated. Wrap fields containing commas, quotes or newlines in double quotes and escape " as "".',
+      'No thousands separators, ISO dates (YYYY-MM-DD), no markdown inside the file.',
+      'Use spreadsheet formulas (text starting with =) only when asked. Several tables mean several files. Keep it under about 200 rows and say so if you truncated.'
+    ].join(' ')
+  },
+  {
+    id: 'web', key: 'skillWeb', name: 'Web search', needsTools: true,
+    prompt: () => [
+      'SKILL Web search: use the web_search tool for current events, prices, people, products, or anything you are unsure of or that may have changed. Do not search for stable general knowledge.',
+      'At most 3 searches per answer, one per distinct question. Results are short snippets: summarise them in your own words, never paste long passages, and cite sources as markdown links [Title](url).',
+      'If results are thin or off-topic, say so instead of guessing.'
+    ].join(' ')
+  }
+];
+
+const RICH_FORMAT_PROMPT = [
+  'FORMATTING (the app renders this): **bold**, *italic*, ~~strike~~, ==highlight==, `code`, # to #### headings, "- " and "1. " lists (indent 2 spaces to nest), "- [ ]" and "- [x]" task lists, "> " quotes, "---" rules,',
+  'tables with a header separator row, [text](https://url) links, inline $math$ and $$display math$$ in simple LaTeX (\\frac{a}{b}, ^, _, \\sqrt{x}, \\times, \\pi),',
+  'and callouts written as a line ":::tip Title" (or :::info, :::warning, :::note), then the body, then ":::" alone on a line. Use these sparingly and only where they make the answer clearer.'
+].join(' ');
+
+const PLAN_PROMPT = 'PLANNING: for tasks that need three or more steps, open the reply with a plan block: a line ":::plan Plan", up to 6 lines like "- [ ] step", then ":::" alone on a line. When you post an updated plan, mark finished steps "- [x]" and the current step "- [~]". Skip the plan for simple questions.';
+
 const SETTINGS_DEFAULTS = {
   appearance: 'dark',
   accent: 'mono',
@@ -258,7 +320,10 @@ const SETTINGS_DEFAULTS = {
   ctxLimit: 'all', reduceMotion: false, haptics: false, privMask: false,
   perms: {},
   tokenLimit: 0,
-  tokenWindowMins: 1440
+  tokenWindowMins: 1440,
+  lineHeight: 'normal', codeSize: 'default', codeWrap: false, richFormat: true,
+  agentTools: true, agentPlan: true,
+  skillPresentations: true, skillDocuments: true, skillSheets: true, skillWeb: true
 };
 
 function loadSettings() {
@@ -272,6 +337,8 @@ function loadSettings() {
   s.font       = valid(FONTS, s.font, 'system');
   s.size       = valid(TEXT_SIZES, s.size, 'default');
   s.length     = valid(LENGTHS, s.length, 'medium');
+  s.lineHeight = valid(LINE_HEIGHTS, s.lineHeight, 'normal');
+  s.codeSize   = valid(CODE_SIZES, s.codeSize, 'default');
   s.tone       = valid(TONES, s.tone, 'neutral');
   const rawStatus = raw.status === 'active' ? 'online'
     : raw.status === 'idle' ? 'offline'
@@ -398,6 +465,9 @@ function applySettings() {
   root.style.setProperty('--ts', String(byId(TEXT_SIZES, settings.size).s));
   root.dataset.status = settings.status;
   root.dataset.motion = settings.reduceMotion ? 'reduce' : 'full';
+  root.dataset.lh = settings.lineHeight;
+  root.dataset.cs = settings.codeSize;
+  root.dataset.cw = settings.codeWrap ? 'on' : 'off';
   applyProfile();
 }
 
@@ -663,7 +733,7 @@ ICONS.bug = svg('<path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="
 ICONS.thumbDownOn = ICONS.thumbDown.replace('fill="none"', 'fill="currentColor"');
 ICONS.pushpinOn   = ICONS.pushpin.replace('fill="none"', 'fill="currentColor"');
 
-/* ---------- BRAND MARK: white sphere bot with sparkle eyes ---------- */
+/* ---------- BRAND MARK ---------- */
 let _amN = 0;
 function aphMark({ animated = false, cls = '', ink = 'currentColor', eye = 'var(--bg)', bg = '' } = {}) {
   const id = `am${++_amN}`;
@@ -819,7 +889,7 @@ const PROVIDER_API = {
   }
 };
 
-/* ---------- API PRICING (Free / Paid) ---------- */
+/* ---------- API PRICING ---------- */
 const FREE_TIER = {
   groq: true,
   gemini: ['gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite']
@@ -1180,6 +1250,21 @@ let AssistanceSection = () => Section('assistance', 'Assistance', [
     Field('Length', Seg('length', LENGTHS, settings.length)) +
     Field('Tone & Moods', Chips('tone', TONES, settings.tone))),
 
+  Item('richtext', ICONS.sliders, 'Rich text',
+    Field('Line spacing', Seg('lineHeight', LINE_HEIGHTS, settings.lineHeight)) +
+    Field('Code size', Seg('codeSize', CODE_SIZES, settings.codeSize)) +
+    SubSwitch('Wrap long code lines', 'codeWrap') +
+    SubSwitch('AI uses tables, callouts &amp; math', 'richFormat')),
+
+  Item('agentskills', ICONS.agent, 'Agent &amp; skills',
+    SubSwitch('Agent tools', 'agentTools') +
+    SubSwitch('Visible step plans', 'agentPlan') +
+    SubSwitch('Skill: Presentations', 'skillPresentations') +
+    SubSwitch('Skill: Documents', 'skillDocuments') +
+    SubSwitch('Skill: Spreadsheets', 'skillSheets') +
+    SubSwitch('Skill: Web search', 'skillWeb') +
+    Field('Tutorial', '<button class="chip" type="button" data-action="replay-tour">Replay tour</button>')),
+
   Item('controls', ICONS.cpu, 'Controls',
     Field('Creativity', Chips('creativity', [{ id: 'precise', name: 'Precise' }, { id: 'balanced', name: 'Balanced' }, { id: 'creative', name: 'Creative' }], settings.creativity)) +
     Field('Chat memory (messages sent)', Chips('ctxLimit', [{ id: 'all', name: 'All' }, { id: '6', name: '6' }, { id: '12', name: '12' }, { id: '24', name: '24' }], settings.ctxLimit)) +
@@ -1189,7 +1274,7 @@ let AssistanceSection = () => Section('assistance', 'Assistance', [
     SubSwitch('Haptic feedback', 'haptics')),
 
   Item('status', ICONS.pulse, 'Status', Field('State', Seg('status', STATUSES, settings.status)))
-], 11);
+], 13);
 
 const AboutSection = () => Section('about', 'About', [
   LinkRow('terms', ICONS.file, 'Terms & Conditions'),
@@ -1894,7 +1979,7 @@ function handleAvatar(file, input) {
   img.src = url;
 }
 
-/* ---------- VOICE (read aloud) ---------- */
+/* ---------- VOICE ---------- */
 const SPEEDS = [{ id: 'slow', name: 'Slow' }, { id: 'normal', name: 'Normal' }, { id: 'fast', name: 'Fast' }];
 const PITCHES = [{ id: 'low', name: 'Low' }, { id: 'normal', name: 'Normal' }, { id: 'high', name: 'High' }];
 
@@ -3296,7 +3381,7 @@ const LimitWindow = {
   endsAt() { const w = this.roll(); return w.start ? w.start + this.lenMs() : 0; }
 };
 
-/* ---------- TOKEN RECORDER (UTC day buckets) ---------- */
+/* ---------- TOKEN RECORDER ---------- */
 const TokenRecorder = (() => {
   const data = lsGet(TOKEN_REC_LS, { batches: {}, entries: [] });
   if (!data.batches) data.batches = {};
@@ -3896,6 +3981,139 @@ function parseFence(raw, idx) {
 const fileCardHtml = (f, i, extra) =>
   `<button class="file-card${extra ? ' is-extra' : ''}" type="button" data-fi="${i}" aria-label="Open ${esc(f.name)}"><span class="file-card-ico">${ICONS.file}</span><span class="file-card-meta"><span class="file-card-name">${esc(f.name)}</span><span class="file-card-sub">${esc((f.ext || f.lang || 'text').toUpperCase())} \u00b7 ${f.lines} lines</span></span></button>`;
 
+/* ---------- RICH TEXT RENDERER ---------- */
+const GREEK = { alpha: 'α', beta: 'β', gamma: 'γ', delta: 'δ', theta: 'θ', lambda: 'λ', mu: 'μ', pi: 'π', sigma: 'σ', phi: 'φ', omega: 'ω', Delta: 'Δ', Sigma: 'Σ', Omega: 'Ω' };
+const MATH_SYM = { times: '×', cdot: '·', div: '÷', pm: '±', le: '≤', ge: '≥', ne: '≠', approx: '≈', infty: '∞', to: '→', rightarrow: '→', leftarrow: '←', sum: '∑', int: '∫', partial: '∂', degree: '°' };
+
+function mathLite(src) {
+  let t = String(src);
+  for (let k = 0; k < 3; k++) t = t.replace(/\\frac\{([^{}]*)\}\{([^{}]*)\}/g, '($1)/($2)');
+  t = t.replace(/\\sqrt\{([^{}]*)\}/g, '√($1)')
+    .replace(/\\([A-Za-z]+)/g, (_, n) => GREEK[n] || MATH_SYM[n] || n)
+    .replace(/\^\{([^{}]*)\}/g, '<sup>$1</sup>')
+    .replace(/\^([A-Za-z0-9])/g, '<sup>$1</sup>')
+    .replace(/_\{([^{}]*)\}/g, '<sub>$1</sub>')
+    .replace(/_([A-Za-z0-9])/g, '<sub>$1</sub>')
+    .replace(/[{}]/g, '');
+  return t;
+}
+
+function inlineMd(raw) {
+  const stash = [];
+  const keep = (html) => `\u0000${stash.push(html) - 1}\u0000`;
+  let s = esc(raw)
+    .replace(/`([^`\n]+)`/g, (_, c) => keep(`<code>${c}</code>`))
+    .replace(/\$(?![\s\d])([^$\n]*[^$\s])\$(?!\d)/g, (_, m) => keep(`<span class="math">${mathLite(m)}</span>`));
+  s = s
+    .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/(^|[^*\w])\*(?!\s)([^*\n]*[^*\s])\*(?![*\w])/g, '$1<em>$2</em>')
+    .replace(/~~([^~\n]+)~~/g, '<del>$1</del>')
+    .replace(/==([^=\n]+)==/g, '<mark>$1</mark>')
+    .replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)"<>]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  return s.replace(/\u0000(\d+)\u0000/g, (_, n) => stash[+n]);
+}
+
+function richBlocks(text) {
+  const lines = String(text).split('\n');
+  const out = [];
+  const LIST_RE = /^(\s*)([-*+]|\d+[.)])\s+(.*)$/;
+  const isSep = (l) => /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(l || '');
+  const cells = (l) => l.trim().replace(/^\||\|$/g, '').split('|').map((c) => c.trim());
+  const starter = (l, nxt) => /^(#{1,4}\s|>|:::|\s*\$\$|\[\[tool:)/.test(l) || LIST_RE.test(l) || /^\s*([-*_])\1{2,}\s*$/.test(l) || (l.includes('|') && isSep(nxt));
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    if (!line.trim()) { i++; continue; }
+    let m;
+
+    if ((m = line.match(/^:::(plan|callout|note|tip|info|warning)\s*(.*)$/i))) {
+      let kind = m[1].toLowerCase();
+      if (kind === 'callout') kind = 'info';
+      const title = m[2].trim() || (kind === 'plan' ? 'Plan' : kind.charAt(0).toUpperCase() + kind.slice(1));
+      const body = [];
+      i++;
+      while (i < lines.length && lines[i].trim() !== ':::') body.push(lines[i++]);
+      i++;
+      out.push(`<div class="rich-box rich-${kind}"><div class="rich-box-title">${inlineMd(title)}</div>${richBlocks(body.join('\n'))}</div>`);
+      continue;
+    }
+
+    if ((m = line.match(/^\[\[tool:(\w+)\s*(\{.*\})?\s*\]\]\s*$/))) {
+      let arg = '';
+      try { arg = Object.values(JSON.parse(m[2] || '{}'))[0] ?? ''; } catch (_) {}
+      out.push(`<div class="rich-tool"><span class="rich-tool-dot"></span>${esc(m[1].replace(/_/g, ' '))}${arg ? ' · ' + esc(String(arg).slice(0, 80)) : ''}</div>`);
+      i++;
+      continue;
+    }
+
+    if (/^\s*\$\$/.test(line)) {
+      let buf = line.trim().slice(2);
+      i++;
+      if (!/\$\$\s*$/.test(buf)) {
+        while (i < lines.length && !/\$\$\s*$/.test(lines[i])) buf += ' ' + lines[i++];
+        if (i < lines.length) buf += ' ' + lines[i++];
+      }
+      buf = buf.replace(/\$\$\s*$/, '').trim();
+      out.push(`<div class="rich-math">${mathLite(esc(buf))}</div>`);
+      continue;
+    }
+
+    if ((m = line.match(/^(#{1,4})\s+(.*)$/))) {
+      out.push(`<h${m[1].length} class="rich-h">${inlineMd(m[2])}</h${m[1].length}>`);
+      i++;
+      continue;
+    }
+
+    if (/^\s*([-*_])\1{2,}\s*$/.test(line)) { out.push('<hr>'); i++; continue; }
+
+    if (/^>/.test(line)) {
+      const inner = [];
+      while (i < lines.length && /^>/.test(lines[i])) inner.push(lines[i++].replace(/^>\s?/, ''));
+      out.push(`<blockquote>${richBlocks(inner.join('\n'))}</blockquote>`);
+      continue;
+    }
+
+    if (line.includes('|') && isSep(lines[i + 1])) {
+      const head = cells(line);
+      const aligns = cells(lines[i + 1]).map((c) => (/^:-+:$/.test(c) ? 'center' : /-+:$/.test(c) ? 'right' : 'left'));
+      i += 2;
+      const rows = [];
+      while (i < lines.length && lines[i].trim() && lines[i].includes('|')) rows.push(cells(lines[i++]));
+      const td = (tag, c, n) => `<${tag} style="text-align:${aligns[n] || 'left'}">${inlineMd(c)}</${tag}>`;
+      out.push(`<div class="rich-table"><table><thead><tr>${head.map((c, n) => td('th', c, n)).join('')}</tr></thead><tbody>${rows.map((r) => `<tr>${head.map((_, n) => td('td', r[n] ?? '', n)).join('')}</tr>`).join('')}</tbody></table></div>`);
+      continue;
+    }
+
+    if ((m = line.match(LIST_RE))) {
+      const base = m[1].length;
+      const ordered = /\d/.test(m[2]);
+      const items = [];
+      while (i < lines.length) {
+        const lm = lines[i].match(LIST_RE);
+        if (!lm || lm[1].length < base) break;
+        if (lm[1].length > base) { if (items.length) items[items.length - 1].sub.push(lines[i]); i++; continue; }
+        items.push({ text: lm[3], sub: [] });
+        i++;
+      }
+      const tag = ordered ? 'ol' : 'ul';
+      out.push(`<${tag} class="rich-list">${items.map((it) => {
+        let t = it.text, cls = '';
+        const tm = t.match(/^\[( |x|X|~)\]\s+(.*)$/);
+        if (tm) { cls = tm[1] === '~' ? 'task run' : tm[1] === ' ' ? 'task' : 'task done'; t = tm[2]; }
+        return `<li class="${cls}">${inlineMd(t)}${it.sub.length ? richBlocks(it.sub.join('\n')) : ''}</li>`;
+      }).join('')}</${tag}>`);
+      continue;
+    }
+
+    const para = [lines[i++]];
+    while (i < lines.length && lines[i].trim() && !starter(lines[i], lines[i + 1])) para.push(lines[i++]);
+    out.push(`<p>${para.map(inlineMd).join('<br>')}</p>`);
+  }
+  return out.join('');
+}
+
+const renderRich = (text) => `<div class="rich">${richBlocks(text)}</div>`;
+
 function renderMd(src) {
   const parts = String(src).split('```');
   const streamingFence = parts.length % 2 === 0;
@@ -3952,10 +4170,7 @@ function renderMd(src) {
       out.push(`<pre><code>${esc(it.f.code)}</code></pre>`);
       return;
     }
-    let txt = esc(it.text)
-      .replace(/`([^`\n]+)`/g, '<code>$1</code>')
-      .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
-    out.push(txt);
+    out.push(renderRich(it.text));
   });
   return out.join('');
 }
@@ -4005,7 +4220,6 @@ function onFileCard(card) {
   openFileViewer(parseFence(part, +card.dataset.fi));
 }
 
-/* Chat loader: single orbit animation, no text. */
 const statusHTML = () => `<span class="aph-avatar" role="status" aria-label="Loading response">${aphMark({ animated: true })}</span>`;
 
 const setMsgBody = (el, text) => { el.innerHTML = text ? renderMd(text) : statusHTML(); };
@@ -4099,7 +4313,7 @@ function renderMessages() {
   const welcome = q$('.welcome');
   if (!box) return;
   const n = currentSession.messages.length;
-  box.replaceChildren(...currentSession.messages.map(msgEl));
+  box.replaceChildren(...currentSession.messages.map((m, i) => (m.hidden ? null : msgEl(m, i))).filter(Boolean));
   box.classList.toggle('hidden', n === 0);
   welcome?.classList.toggle('hidden', n > 0);
 }
@@ -4457,6 +4671,7 @@ let systemPrompt = function () {
   if (settings.persFormat === 'plain') lines.push('Use plain text only. No markdown.');
   if (settings.persFormat === 'markdown') lines.push('Format answers with markdown (headings, bold, code blocks).');
   if (settings.persFormat === 'bullets') lines.push('Prefer short bullet points over paragraphs.');
+  lines.push(...agentPromptLines());
   return lines.join(' ');
 };
 
@@ -4627,6 +4842,128 @@ function stripUnsupportedParams(body, errText) {
   return changed ? out : null;
 }
 
+/* ---------- Agent engine ---------- */
+let agentNextHidden = false;
+const AGENT_MAX_STEPS = 4;
+const SEARCH_ENDPOINT = '';
+
+const TOOL_DOCS = {
+  web_search: 'web_search {"query": "..."} searches the web for current information',
+  calculator: 'calculator {"expression": "..."} exact maths using + - * / % ^ ( ) sqrt sin cos tan log ln abs round floor ceil min max pi e',
+  current_time: 'current_time {} returns the user\'s current date and time'
+};
+
+const enabledAgentTools = () => (!settings.agentTools ? [] : Object.keys(TOOL_DOCS).filter((k) => k !== 'web_search' || settings.skillWeb));
+
+const AGENT_TOOLS = {
+  async web_search({ query } = {}) {
+    if (!settings.skillWeb) return 'Error: web search is turned off in settings.';
+    const q = String(query || '').trim().slice(0, 200);
+    if (!q) return 'Error: empty query.';
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 9000);
+    try {
+      let items = [];
+      if (SEARCH_ENDPOINT) {
+        const r = await fetch(`${SEARCH_ENDPOINT}?q=${encodeURIComponent(q)}&format=json`, { signal: ctl.signal });
+        const j = await r.json();
+        items = (j.results || []).slice(0, 5).map((x) => ({ title: x.title, url: x.url, text: x.content || '' }));
+      } else {
+        const u = 'https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrlimit=5&prop=extracts%7Cinfo&exintro=1&explaintext=1&exchars=450&inprop=url&format=json&origin=*&gsrsearch=' + encodeURIComponent(q);
+        const r = await fetch(u, { signal: ctl.signal });
+        const j = await r.json();
+        items = Object.values(j?.query?.pages || {}).sort((a, b) => a.index - b.index).map((p) => ({ title: p.title, url: p.fullurl, text: p.extract || '' }));
+      }
+      if (!items.length) return 'No results found for: ' + q;
+      return items.map((x, n) => `${n + 1}. ${x.title}\n${x.url}\n${String(x.text).replace(/\s+/g, ' ').slice(0, 450)}`).join('\n\n');
+    } catch (e) {
+      return 'Error: search failed (' + (e.name === 'AbortError' ? 'timed out' : (e.message || 'network error')) + ').';
+    } finally {
+      clearTimeout(timer);
+    }
+  },
+
+  async calculator({ expression } = {}) {
+    const src = String(expression || '').trim().toLowerCase().slice(0, 200);
+    const scope = {
+      sqrt: Math.sqrt, sin: Math.sin, cos: Math.cos, tan: Math.tan, log: Math.log10, ln: Math.log,
+      abs: Math.abs, round: Math.round, floor: Math.floor, ceil: Math.ceil, min: Math.min, max: Math.max,
+      pi: Math.PI, e: Math.E
+    };
+    const ids = src.match(/[a-z_]+/g) || [];
+    if (!src || /[^0-9a-z_+\-*/%^().,\s]/.test(src) || ids.some((w) => !(w in scope))) return 'Error: unsupported expression.';
+    try {
+      const val = new Function(...Object.keys(scope), '"use strict"; return (' + src.replace(/\^/g, '**') + ');')(...Object.values(scope));
+      return Number.isFinite(val) ? String(val) : 'Error: result is not a finite number.';
+    } catch (_) {
+      return 'Error: could not evaluate the expression.';
+    }
+  },
+
+  async current_time() {
+    const d = new Date();
+    return `${d.toString()} | ISO ${d.toISOString()}`;
+  }
+};
+
+function parseToolCalls(text) {
+  const calls = [];
+  const clean = String(text).split(FENCE).filter((_, n) => n % 2 === 0).join('\n');
+  const re = /^\[\[tool:(\w+)\s*(\{.*\})?\s*\]\]\s*$/gm;
+  let m;
+  while ((m = re.exec(clean))) {
+    let args = {};
+    try { args = JSON.parse(m[2] || '{}'); } catch (_) {}
+    calls.push({ name: m[1], args });
+  }
+  return calls;
+}
+
+function agentDepthOf(session) {
+  let n = 0;
+  for (let k = session.messages.length - 1; k >= 0; k--) {
+    const m = session.messages[k];
+    if (m.role === 'assistant') continue;
+    if (m.hidden) n++; else break;
+  }
+  return n;
+}
+
+function agentPromptLines() {
+  const out = [];
+  if (settings.persFormat !== 'plain' && settings.richFormat) out.push(RICH_FORMAT_PROMPT);
+  SKILL_LIBRARY.forEach((s) => {
+    if (!settings[s.key]) return;
+    if (s.needsTools && !settings.agentTools) return;
+    out.push(s.prompt());
+  });
+  if (settings.agentPlan) out.push(PLAN_PROMPT);
+  const tools = enabledAgentTools();
+  if (tools.length) {
+    out.push('TOOLS: to use a tool, end your reply with ONE line exactly like [[tool:NAME {"arg":"value"}]] and then stop writing. The app runs it and answers with [tool_result NAME]...[/tool_result], then you continue. Never write tool lines inside code blocks and never invent tool results. Available: ' + tools.map((k) => TOOL_DOCS[k]).join('; ') + '.');
+  }
+  out.push('Content inside a file block (deck, document, spreadsheet, code) does not count toward the LENGTH rule, but it must still finish inside the hard output limit.');
+  return out;
+}
+
+async function agentAfterReply(ai, session) {
+  if (!settings.agentTools || session !== currentSession || chatBusy) return;
+  const calls = parseToolCalls(ai.content).slice(0, 2);
+  if (!calls.length) return;
+  if (agentDepthOf(session) >= AGENT_MAX_STEPS) { toast('Agent step limit reached.', 'info', 2000); return; }
+  const results = [];
+  for (const c of calls) {
+    const fn = enabledAgentTools().includes(c.name) ? AGENT_TOOLS[c.name] : null;
+    let r;
+    try { r = fn ? await fn(c.args) : `Error: unknown or disabled tool "${c.name}".`; }
+    catch (e) { r = 'Error: ' + (e.message || 'tool failed'); }
+    results.push(`[tool_result ${c.name}]\n${String(r).slice(0, 3500)}\n[/tool_result]`);
+  }
+  if (session !== currentSession || chatBusy) return;
+  agentNextHidden = true;
+  sendChatMessage(results.join('\n\n') + '\n\nContinue the task using these results.');
+}
+
 let sendChatMessage = async function (text, regen = false, attachmentsOverride = null) {
   if (chatBusy || !chatReady()) return;
   chatBusy = true;
@@ -4644,11 +4981,14 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
 
   if (!regen) {
     const atts = (attachmentsOverride || []).map((a) => ({ ...a }));
+    const hiddenMsg = agentNextHidden;
+    agentNextHidden = false;
     session.messages.push({
       role: 'user',
       content: text,
       t: Date.now(),
-      attachments: atts.length ? atts : undefined
+      attachments: atts.length ? atts : undefined,
+      hidden: hiddenMsg || undefined
     });
     MessageRecorder.log({ type: 'user', sessionId: session.id, chars: text.length, files: atts.length, provider: pid, model: variant.id });
     if (session.draft) {
@@ -4658,9 +4998,8 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
       sessions.push(session);
       clearDraft();
     }
-    haptic(12);
-    sfx('send');
-    if (settings.memoryLong) learnMemory(text);
+    if (!hiddenMsg) { haptic(12); sfx('send'); }
+    if (settings.memoryLong && !hiddenMsg) learnMemory(text);
   } else {
     MessageRecorder.log({ type: 'regenerate', sessionId: session.id, provider: pid, model: variant.id });
   }
@@ -4821,6 +5160,7 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
     renderSessionUi();
     refreshTokenMeter();
     scrollDown(true);
+    if (!error && !aborted && ai.content && !ai.__failed) setTimeout(() => agentAfterReply(ai, session), 300);
 
     if (ai.reasoning && ai.reasoning.length > 0) {
       composerRef?.__closeThink?.();
@@ -4949,10 +5289,9 @@ function playRandomTrack() {
   const c = ac();
   c.createMediaElementSource(musicAudio).connect(musicGain);
   musicAudio.addEventListener('ended', () => {
-    musicTimer = setTimeout(playRandomTrack, 4000); // 4 second gap
+    musicTimer = setTimeout(playRandomTrack, 4000);
   });
   musicAudio.play().catch(() => {
-    // If autoplay is blocked, wait for next user interaction
     document.addEventListener('pointerdown', () => {
       if (settings.soundMusic) musicAudio?.play();
     }, { once: true });
@@ -5316,6 +5655,7 @@ function initShell() {
     else if (action === 'signout') handleSignOut();
     else if (action === 'new-chat') newSession();
     else if (action === 'attach') openAttach();
+    else if (action === 'replay-tour') { closeSettings(); setTimeout(() => startOnboarding(true), 350); }
     else if (action === 'upgrade') toast('Paid plans are coming soon.', 'info', 1800);
     else if (action === 'nav-worlds' || action === 'nav-agent' || action === 'nav-data' || action === 'nav-automation' || action === 'nav-connectors') toast('Coming soon.', 'info', 1800);
   });
@@ -5468,6 +5808,129 @@ function locked() {
   if (!chatBusy) return false;
   toast('Stop the response before changing model.', 'info');
   return true;
+}
+
+/* ---------- ONBOARDING TOUR ---------- */
+const TOUR_LS = 'aph.tour.v1';
+const TOUR_STEPS = [
+  { title: `Welcome to ${APP_NAME}`, text: 'A quick 20-second tour. You can skip it any time.' },
+  { sel: '[data-action="model-select"]', title: 'Pick a model', text: 'Switch providers and models here.' },
+  { sel: '.composer', title: 'Ask anything', text: 'Type, speak, or attach files. Ask for a deck, a document or a spreadsheet and it arrives as a file card.' },
+  { sel: '.agent-btn', title: 'Watch it think', text: 'Tap to follow the reasoning and the agent’s steps as they stream in.' },
+  { sel: '[data-action="menu"]', title: 'Your sessions', text: 'Chats, agents and tools live in the sidebar.', sidebar: true },
+  { sel: '[data-action="settings"]', title: 'Make it yours', text: 'Themes, fonts, rich-text options, agent tools and skills.', sidebar: true }
+];
+
+function maybeStartOnboarding() {
+  setTimeout(() => {
+    if (document.querySelector('.dialog-scrim')) return;
+    startOnboarding(false);
+  }, 900);
+}
+
+function startOnboarding(force = false) {
+  if (document.querySelector('.tour')) return;
+  if (!force) { try { if (localStorage.getItem(TOUR_LS)) return; } catch (_) {} }
+  const reduce = document.documentElement.dataset.motion === 'reduce';
+  const root = document.createElement('div');
+  root.className = 'tour';
+  root.innerHTML = `<div class="tour-spot"></div>
+    <div class="tour-card" role="dialog" aria-modal="true" aria-live="polite">
+      <div class="tour-art"></div>
+      <h3 class="tour-title"></h3>
+      <p class="tour-text"></p>
+      <div class="tour-dots">${TOUR_STEPS.map(() => '<i></i>').join('')}</div>
+      <div class="tour-actions">
+        <button class="tour-skip" type="button">Skip</button>
+        <span class="tour-spacer"></span>
+        <button class="tour-back" type="button">Back</button>
+        <button class="tour-next" type="button">Next</button>
+      </div>
+    </div>`;
+  document.body.appendChild(root);
+
+  const spot = root.querySelector('.tour-spot');
+  const card = root.querySelector('.tour-card');
+  const art = root.querySelector('.tour-art');
+  const sidebarEl = document.getElementById('sidebar');
+  const sidebarWasOpen = !!sidebarEl?.classList.contains('open');
+  let idx = 0, alive = true;
+
+  const visible = (el) => {
+    if (!el) return false;
+    const r = el.getBoundingClientRect();
+    return r.width > 0 && r.height > 0 && r.right > 0 && r.left < innerWidth && r.bottom > 0 && r.top < innerHeight;
+  };
+
+  const place = () => {
+    const s = TOUR_STEPS[idx];
+    const el = s.sel ? document.querySelector(s.sel) : null;
+    if (el && visible(el)) {
+      const r = el.getBoundingClientRect();
+      const pad = 8;
+      spot.style.cssText = `top:${r.top - pad}px;left:${r.left - pad}px;width:${r.width + pad * 2}px;height:${r.height + pad * 2}px;`;
+      const cw = card.offsetWidth, ch = card.offsetHeight;
+      const below = r.bottom + pad + 14 + ch < innerHeight;
+      const top = below ? r.bottom + pad + 14 : Math.max(12, r.top - pad - 14 - ch);
+      const left = Math.min(Math.max(12, r.left + r.width / 2 - cw / 2), innerWidth - cw - 12);
+      card.style.cssText = `top:${top}px;left:${left}px;transform:none;`;
+    } else {
+      spot.style.cssText = '';
+      card.style.cssText = 'top:50%;left:50%;transform:translate(-50%,-50%);';
+    }
+  };
+
+  const finish = () => {
+    if (!alive) return;
+    alive = false;
+    document.removeEventListener('keydown', onKey, true);
+    removeEventListener('resize', place);
+    if (!sidebarWasOpen && !matchMedia('(min-width: 860px)').matches) sidebarEl?.classList.remove('open');
+    root.classList.add('leaving');
+    setTimeout(() => root.remove(), reduce ? 0 : 260);
+    try { localStorage.setItem(TOUR_LS, '1'); } catch (_) {}
+  };
+
+  const show = async (n, dir = 1) => {
+    while (n >= 0 && n < TOUR_STEPS.length) {
+      const s = TOUR_STEPS[n];
+      if (!s.sel) break;
+      if (s.sidebar && sidebarEl && !sidebarEl.classList.contains('open')) {
+        sidebarEl.classList.add('open');
+        await new Promise((r) => setTimeout(r, reduce ? 0 : 380));
+      }
+      if (visible(document.querySelector(s.sel))) break;
+      n += dir;
+    }
+    if (!alive) return;
+    if (n >= TOUR_STEPS.length) return finish();
+    idx = Math.max(0, n);
+    const s = TOUR_STEPS[idx];
+    root.querySelector('.tour-title').textContent = s.title;
+    root.querySelector('.tour-text').textContent = s.text;
+    art.innerHTML = idx === 0 ? aphMark({ animated: true }) : '';
+    art.hidden = idx !== 0;
+    root.querySelectorAll('.tour-dots i').forEach((d, k) => d.classList.toggle('on', k === idx));
+    root.querySelector('.tour-back').hidden = idx === 0;
+    root.querySelector('.tour-next').textContent = idx === TOUR_STEPS.length - 1 ? 'Done' : 'Next';
+    card.classList.remove('in');
+    void card.offsetWidth;
+    card.classList.add('in');
+    place();
+  };
+
+  const onKey = (e) => {
+    if (e.key === 'Escape') { e.stopPropagation(); finish(); }
+    else if (e.key === 'ArrowRight' || e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); idx === TOUR_STEPS.length - 1 ? finish() : show(idx + 1, 1); }
+    else if (e.key === 'ArrowLeft') { e.stopPropagation(); show(idx - 1, -1); }
+  };
+
+  root.querySelector('.tour-skip').addEventListener('click', finish);
+  root.querySelector('.tour-back').addEventListener('click', () => show(idx - 1, -1));
+  root.querySelector('.tour-next').addEventListener('click', () => (idx === TOUR_STEPS.length - 1 ? finish() : show(idx + 1, 1)));
+  document.addEventListener('keydown', onKey, true);
+  addEventListener('resize', place);
+  show(0, 1);
 }
 
 function renderHome(user) {
@@ -5655,6 +6118,7 @@ async function boot() {
       applyProfile();
       refreshStorage();
       updateAccountBanner();
+      maybeStartOnboarding();
     } else {
       if (authBlocked) return;
       renderSigningIn();
