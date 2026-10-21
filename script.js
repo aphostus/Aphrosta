@@ -4931,6 +4931,11 @@ const AGENT_TOOLS = {
         const j = await r.json();
         items = (j.results || []).slice(0, 5).map((x) => ({ title: x.title, url: x.url, text: x.content || '' }));
       } else {
+        try {
+          const r = await fetch('https://r.jina.ai/https://html.duckduckgo.com/html/?q=' + encodeURIComponent(q), { signal: ctl.signal });
+          const t = (await r.text()).replace(/\s+/g, ' ').trim();
+          if (t.length > 200) return ('Web results for: ' + q + '\n' + t).slice(0, 3500);
+        } catch (_) {}
         const u = 'https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrlimit=5&prop=extracts%7Cinfo&exintro=1&explaintext=1&exchars=450&inprop=url&format=json&origin=*&gsrsearch=' + encodeURIComponent(q);
         const r = await fetch(u, { signal: ctl.signal });
         const j = await r.json();
@@ -5016,8 +5021,7 @@ function agentPromptLines() {
   if (settings.agentPlan) out.push(PLAN_PROMPT);
   const tools = enabledAgentTools();
   if (tools.length) {
-    out.push('TOOLS (mandatory when relevant): if the question needs current facts, a URL, or a calculation, you MUST call a tool before answering. Do not answer from memory first. Put ONE line on its own, exactly like [[tool:NAME {"arg":"value"}]], as the LAST line, then stop writing. Example: [[tool:web_search {"query":"latest iPhone"}]]. The app runs it and answers with [tool_result NAME]...[/tool_result], then you continue. Never write tool lines inside code blocks and never invent tool results. Available: ' + tools.map((k) => TOOL_DOCS[k]).join('; ') + '.');
-  }
+  out.push('TOOLS: NEVER use any built-in, native, browser, python or function-call tool. The ONLY way to use a tool is a plain text line. If the question needs current facts, research, a URL, or a calculation, you MUST use a tool before answering and not answer from memory first. Put ONE line on its own, exactly like [[tool:NAME {"arg":"value"}]], as the LAST line of your reply, then stop writing. Example: [[tool:web_search {"query":"latest iPhone"}]]. The app runs it and answers with [tool_result NAME]...[/tool_result], then you continue. Never write tool lines inside code blocks and never invent tool results. Available: ' + tools.map((k) => TOOL_DOCS[k]).join('; ') + '.');  }
   out.push('Content inside a file block (deck, document, spreadsheet, code) does not count toward the LENGTH rule, but it must still finish inside the hard output limit.');
   return out;
 }
