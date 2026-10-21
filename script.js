@@ -4706,7 +4706,7 @@ function tokenCeiling(pid, variant) {
   let ceil = Math.floor(cap * (EFFORT_FRAC[activeEffort] ?? 0.5));
   if (variant.reasoning) ceil = Math.max(ceil, Math.min(16384, hard));
   else ceil = Math.max(ceil, Math.min(Math.round(answerBudget() * 2.5), hard));
-  return Math.max(256, Math.min(ceil, hard));
+  return Math.max(256, Math.min(ceil, hard, pid === 'groq' ? 4500 : 16384));
 }
 
 let systemPrompt = function () {
@@ -4905,7 +4905,7 @@ function stripUnsupportedParams(body, errText) {
 
 /* ---------- Agent engine ---------- */
 let agentNextHidden = false;
-const AGENT_MAX_STEPS = 4;
+const AGENT_MAX_STEPS = 2;
 const SEARCH_ENDPOINT = ''; // Set to 'https://YOUR-SEARX-HOST/search' to use SearXNG instead of Wikipedia
 
 const TOOL_DOCS = {
@@ -5028,7 +5028,7 @@ function agentPromptLines() {
 
 async function agentAfterReply(ai, session) {
   if (!settings.agentTools || session !== currentSession || chatBusy) return;
-  const calls = parseToolCalls(ai.content).slice(0, 2);
+  const calls = parseToolCalls(ai.content).slice(0, 1);
   console.log('[agent]', { agentTools: settings.agentTools, skillWeb: settings.skillWeb, calls, tail: ai.content.slice(-160) });
   if (!calls.length) return;
   if (agentDepthOf(session) >= AGENT_MAX_STEPS) { toast('Agent step limit reached.', 'info', 2000); return; }
@@ -5038,7 +5038,7 @@ async function agentAfterReply(ai, session) {
     let r;
     try { r = fn ? await fn(c.args) : `Error: unknown or disabled tool "${c.name}".`; }
     catch (e) { r = 'Error: ' + (e.message || 'tool failed'); }
-    results.push(`[tool_result ${c.name}]\n${String(r).slice(0, 3500)}\n[/tool_result]`);
+    results.push(`[tool_result ${c.name}]\n${String(r).slice(0, 1500)}\n[/tool_result]`);
   }
   if (session !== currentSession || chatBusy) return;
   agentNextHidden = true;
