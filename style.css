@@ -2737,3 +2737,9 @@ html[data-motion="reduce"] .aph-mark * { animation: none !important; }
 .chat-act { width: 26px; height: 26px; }
 .chat-act svg { width: 14px; height: 14px; }
 .side-empty { display: none; }
+
+.tool-cards { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.tool-card { font-size: 13px; padding: 6px 10px; border-radius: 10px; background: rgba(255,255,255,.06); color: var(--gray-mid); }
+.tool-card b { color: #4ade80; margin-right: 4px; }
+.tool-card.bad b { color: #f87171; }
+.tool-card em { font-style: normal; opacity: .8; overflow-wrap: anywhere; }

@@ -4283,8 +4283,10 @@ function splitPlanParts(text) {
   };
 }
 
+const stripToolLines = (t) => String(t || '').replace(/\[\[tool:[\s\S]*?\]\]/g, '').replace(/\[\[tool:[^\]]*$/, '').trim();
 const setMsgBody = (el, text) => {
-  const shown = text && settings.agentPlan ? splitPlanParts(text).clean : text;
+  const raw = stripToolLines(text);
+  const shown = raw && settings.agentPlan ? splitPlanParts(raw).clean : raw;
   el.innerHTML = shown ? renderMd(shown) : statusHTML();
 };
 
@@ -4305,6 +4307,31 @@ function startStatusRotor() {
 function stopStatusRotor() {
   if (statusTimer) clearInterval(statusTimer);
   statusTimer = 0;
+}
+
+const stepCards = new WeakMap();
+const stepMsgs = new WeakSet();
+const TOOL_LABEL = { web_search: 'Searched', fetch_url: 'Read', calculator: 'Calculated', current_time: 'Checked time' };
+function buildStepCards(msgs) {
+  let pending = [];
+  msgs.forEach((m, i) => {
+    if (m.role !== 'assistant') return;
+    const next = msgs[i + 1];
+    if (next && next.hidden) {
+      const c = parseToolCalls(m.content)[0];
+      if (c) pending.push({ name: c.name, arg: c.args.query || c.args.url || c.args.expression || '', ok: !/\[tool_result \w+\]\s*(Error|No results)/.test(String(next.content || '')) });
+      stepMsgs.add(m);
+    } else {
+      if (pending.length) stepCards.set(m, pending);
+      pending = [];
+    }
+  });
+}
+function cardsEl(cards) {
+  const d = document.createElement('div');
+  d.className = 'tool-cards';
+  d.innerHTML = cards.map((c) => `<div class="tool-card${c.ok ? '' : ' bad'}"><b>${c.ok ? '\u2713' : '!'}</b> ${esc(TOOL_LABEL[c.name] || c.name)} <em>${esc(String(c.arg).slice(0, 70))}</em></div>`).join('');
+  return d;
 }
 
 function msgEl(m, i) {
@@ -4347,6 +4374,8 @@ function msgEl(m, i) {
     setMsgBody(body, m.content);
   }
 
+  const cards = stepCards.get(m);
+  if (cards) el.appendChild(cardsEl(cards));
   el.appendChild(body);
 
   const last = i === currentSession.messages.length - 1;
@@ -4377,7 +4406,8 @@ function renderMessages() {
   const welcome = q$('.welcome');
   if (!box) return;
   const n = currentSession.messages.length;
-  box.replaceChildren(...currentSession.messages.map((m, i) => (m.hidden ? null : msgEl(m, i))).filter(Boolean));
+  buildStepCards(currentSession.messages);
+  box.replaceChildren(...currentSession.messages.map((m, i) => (m.hidden || stepMsgs.has(m) ? null : msgEl(m, i))).filter(Boolean));
   box.classList.toggle('hidden', n === 0);
   welcome?.classList.toggle('hidden', n > 0);
 }
@@ -4700,13 +4730,21 @@ const DEFAULT_CAP = 4096;
 const capFor = (v) => MODEL_CAPS[v.id] || SERIES_CAPS[v.series] || DEFAULT_CAP;
 const EFFORT_FRAC = { minima: 0.10, low: 0.25, medium: 0.50, high: 0.75, maxima: 0.90 };
 
+const rateLearn = (() => { try { return JSON.parse(localStorage.getItem('rateLearn') || '{}'); } catch (_) { return {}; } })();
+function learnRate(pid, id, lim) {
+  rateLearn[pid + '|' + id] = lim;
+  try { localStorage.setItem('rateLearn', JSON.stringify(rateLearn)); } catch (_) {}
+}
+
 function tokenCeiling(pid, variant) {
   const cap = capFor(variant);
   const hard = Math.floor(cap * 0.9);
   let ceil = Math.floor(cap * (EFFORT_FRAC[activeEffort] ?? 0.5));
   if (variant.reasoning) ceil = Math.max(ceil, Math.min(16384, hard));
   else ceil = Math.max(ceil, Math.min(Math.round(answerBudget() * 2.5), hard));
-  return Math.max(256, Math.min(ceil, hard, pid === 'groq' ? 4500 : 16384));
+  const learned = rateLearn[pid + '|' + variant.id];
+  const learnedCap = learned ? Math.max(512, Math.floor(learned * 0.45)) : Infinity;
+  return Math.max(256, Math.min(ceil, hard, learnedCap, pid === 'groq' ? 4500 : 16384));
 }
 
 let systemPrompt = function () {
@@ -4917,13 +4955,34 @@ const TOOL_DOCS = {
 
 const enabledAgentTools = () => (!settings.agentTools ? [] : Object.keys(TOOL_DOCS).filter((k) => (k !== 'web_search' && k !== 'fetch_url') || settings.skillWeb));
 
+async function readerFetch(target, signal) {
+  const tries = [
+    'https://r.jina.ai/' + target,
+    'https://api.allorigins.win/raw?url=' + encodeURIComponent(target),
+    'https://corsproxy.io/?url=' + encodeURIComponent(target)
+  ];
+  let last = 'no reader available';
+  for (const u of tries) {
+    try {
+      const r = await fetch(u, { signal });
+      if (!r.ok) { last = 'HTTP ' + r.status; continue; }
+      let t = await r.text();
+      if (/<html|<body|<!doctype/i.test(t.slice(0, 500))) t = t.replace(/<(script|style|noscript|svg)[\s\S]*?<\/\1>/gi, ' ').replace(/<[^>]+>/g, ' ');
+      t = t.replace(/\s+/g, ' ').trim();
+      if (t.length > 150) return t;
+      last = 'empty page';
+    } catch (e) { if (e.name === 'AbortError') throw e; last = e.message || 'network error'; }
+  }
+  throw new Error(last);
+}
+
 const AGENT_TOOLS = {
   async web_search({ query } = {}) {
     if (!settings.skillWeb) return 'Error: web search is turned off in settings.';
     const q = String(query || '').trim().slice(0, 200);
     if (!q) return 'Error: empty query.';
     const ctl = new AbortController();
-    const timer = setTimeout(() => ctl.abort(), 9000);
+    const timer = setTimeout(() => ctl.abort(), 25000);
     try {
       let items = [];
       if (SEARCH_ENDPOINT) {
@@ -4932,9 +4991,8 @@ const AGENT_TOOLS = {
         items = (j.results || []).slice(0, 5).map((x) => ({ title: x.title, url: x.url, text: x.content || '' }));
       } else {
         try {
-          const r = await fetch('https://r.jina.ai/https://html.duckduckgo.com/html/?q=' + encodeURIComponent(q), { signal: ctl.signal });
-          const t = (await r.text()).replace(/\s+/g, ' ').trim();
-          if (t.length > 200) return ('Web results for: ' + q + '\n' + t).slice(0, 3500);
+          const t = await readerFetch('https://html.duckduckgo.com/html/?q=' + encodeURIComponent(q), ctl.signal);
+          return ('Web results for: ' + q + '\n' + t).slice(0, 1800);
         } catch (_) {}
         const u = 'https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrlimit=5&prop=extracts%7Cinfo&exintro=1&explaintext=1&exchars=450&inprop=url&format=json&origin=*&gsrsearch=' + encodeURIComponent(q);
         const r = await fetch(u, { signal: ctl.signal });
@@ -4955,10 +5013,9 @@ const AGENT_TOOLS = {
     const u = String(url || '').trim();
     if (!/^https?:\/\//i.test(u)) return 'Error: need a full http(s) URL.';
     const ctl = new AbortController();
-    const timer = setTimeout(() => ctl.abort(), 12000);
+    const timer = setTimeout(() => ctl.abort(), 25000);
     try {
-      const r = await fetch('https://r.jina.ai/' + u, { signal: ctl.signal });
-      return (await r.text()).replace(/\s+/g, ' ').slice(0, 3000);
+      return (await readerFetch(u, ctl.signal)).slice(0, 1500);
     } catch (e) {
       return 'Error: fetch failed (' + (e.name === 'AbortError' ? 'timed out' : (e.message || 'network error')) + ').';
     } finally { clearTimeout(timer); }
@@ -5031,6 +5088,8 @@ async function agentAfterReply(ai, session) {
   const calls = parseToolCalls(ai.content).slice(0, 1);
   console.log('[agent]', { agentTools: settings.agentTools, skillWeb: settings.skillWeb, calls, tail: ai.content.slice(-160) });
   if (!calls.length) return;
+  const mm = /\[\[tool:\w+\s*(\{[^\n]*?\})?\s*\]\]/.exec(ai.content);
+  if (mm) ai.content = ai.content.slice(0, mm.index + mm[0].length);
   if (agentDepthOf(session) >= AGENT_MAX_STEPS) { toast('Agent step limit reached.', 'info', 2000); return; }
   const results = [];
   for (const c of calls) {
@@ -5145,6 +5204,22 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
         if (modelMsg) throw new Error(modelMsg);
         throw new Error(friendlyHttpError(res.status, firstErr));
       }
+    }
+
+    if ((res.status === 429 || res.status === 413) && !req.__retried) {
+      const errT = await res.text();
+      const lim = +(/Limit (\d+)/i.exec(errT) || [])[1];
+      const w = /try again in ([\d.]+)\s*(ms|s|m)?/i.exec(errT);
+      let wait = w ? parseFloat(w[1]) * ({ ms: 1, s: 1000, m: 60000 }[w[2] || 's']) : 4000;
+      wait = Math.min(Math.max(wait + 300, 1500), 25000);
+      if (lim) learnRate(pid, variant.id, lim);
+      const tk = api.tokenParam || 'max_tokens';
+      const body2 = { ...req.body };
+      if (body2[tk]) body2[tk] = Math.max(512, Math.min(body2[tk], lim ? Math.floor(lim * 0.45) : Math.floor(body2[tk] / 2)));
+      toast('Rate limit hit. Retrying in ' + Math.ceil(wait / 1000) + 's…', 'info', Math.min(wait, 4000));
+      await new Promise((ok) => setTimeout(ok, wait));
+      req = { ...req, body: body2, __retried: true };
+      res = await fetch(req.url, { method: 'POST', signal: myAbort.signal, headers: req.headers, body: JSON.stringify(req.body) });
     }
 
     if (!res.ok) {
