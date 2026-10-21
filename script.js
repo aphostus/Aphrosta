@@ -4643,7 +4643,7 @@ function tokenCeiling(pid, variant) {
   const cap = capFor(variant);
   const hard = Math.floor(cap * 0.9);
   let ceil = Math.floor(cap * (EFFORT_FRAC[activeEffort] ?? 0.5));
-  if (variant.reasoning) ceil = Math.max(ceil, Math.min(4096, hard));
+  if (variant.reasoning) ceil = Math.max(ceil, Math.min(16384, hard));
   else ceil = Math.max(ceil, Math.min(Math.round(answerBudget() * 2.5), hard));
   return Math.max(256, Math.min(ceil, hard));
 }
@@ -4702,7 +4702,7 @@ function trimCtx(msgs) {
 }
 
 function buildMessages() {
-  const ctx = trimCtx(currentSession.messages).map((m) => {
+  const ctx = trimCtx(currentSession.messages.filter((m) => !m.__empty && !m.__failed)).map((m) => {
     if (m.role !== 'user') return { role: m.role, content: m.content };
     const atts = m.attachments || [];
     const texts = atts.filter((a) => a.kind === 'text');
@@ -5023,7 +5023,7 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
 
   const messages = buildMessages();
   const wantStream = settings.streaming !== false;
-  let usage = null, error = null, raf = 0, first = true, lastTick = 0;
+  let usage = null, error = null, raf = 0, first = true, lastTick = 0, streamErr = '';
   let lastPaintContent = '';
   let lastPaintReasoningLen = 0;
 
@@ -5104,6 +5104,7 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
           if (!json || json === '[DONE]') continue;
           try {
             const p = JSON.parse(json);
+            if (p?.error || p?.type === 'error') { streamErr = p.error?.message || 'The provider stopped the stream.'; continue; }
             const delta = adapter.readDelta(p);
             if (delta) {
               if (first) { first = false; setAiState('composing'); haptic(10); sfx('start'); }
@@ -5123,6 +5124,7 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
           } catch (_) {}
         }
       }
+      if (streamErr && !ai.content) throw new Error(streamErr);
     }
   } catch (err) {
     if (err.name !== 'AbortError') error = err;
@@ -5148,7 +5150,12 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
       ai.__failed = true;
       ai.__error = error.message || 'Something went wrong.';
     } else if (!ai.content) {
-      session.messages = session.messages.filter((m) => m !== ai);
+      if (aborted) {
+        session.messages = session.messages.filter((m) => m !== ai);
+      } else {
+        ai.content = '\u26a0\ufe0f No visible reply. The model spent its whole budget on internal reasoning. Try lowering Effort, using a non-reasoning model, or rephrasing.';
+        ai.__empty = true;
+      }
     }
 
     session.updated = Date.now();
