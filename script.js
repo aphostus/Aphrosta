@@ -5025,6 +5025,7 @@ function agentPromptLines() {
 async function agentAfterReply(ai, session) {
   if (!settings.agentTools || session !== currentSession || chatBusy) return;
   const calls = parseToolCalls(ai.content).slice(0, 2);
+  console.log('[agent]', { agentTools: settings.agentTools, skillWeb: settings.skillWeb, calls, tail: ai.content.slice(-160) });
   if (!calls.length) return;
   if (agentDepthOf(session) >= AGENT_MAX_STEPS) { toast('Agent step limit reached.', 'info', 2000); return; }
   const results = [];
