@@ -275,7 +275,7 @@ const SKILL_LIBRARY = [
   {
     id: 'web', key: 'skillWeb', name: 'Web search', needsTools: true,
     prompt: () => [
-      'SKILL Web search: use the web_search tool for current events, prices, people, products, or anything you are unsure of or that may have changed. Do not search for stable general knowledge.',
+      'SKILL Web search: you MUST use web_search or fetch_url for current events, prices, people, products, versions, "latest/today/current", or any URL the user gives. Skip only for stable general knowledge.',
       'At most 3 searches per answer, one per distinct question. Results are short snippets: summarise them in your own words, never paste long passages, and cite sources as markdown links [Title](url).',
       'If results are thin or off-topic, say so instead of guessing.'
     ].join(' ')
@@ -4906,15 +4906,16 @@ function stripUnsupportedParams(body, errText) {
 /* ---------- Agent engine ---------- */
 let agentNextHidden = false;
 const AGENT_MAX_STEPS = 4;
-const SEARCH_ENDPOINT = '';
+const SEARCH_ENDPOINT = ''; // Set to 'https://YOUR-SEARX-HOST/search' to use SearXNG instead of Wikipedia
 
 const TOOL_DOCS = {
   web_search: 'web_search {"query": "..."} searches the web for current information',
+  fetch_url: 'fetch_url {"url": "https://..."} reads a web page as text',
   calculator: 'calculator {"expression": "..."} exact maths using + - * / % ^ ( ) sqrt sin cos tan log ln abs round floor ceil min max pi e',
   current_time: 'current_time {} returns the user\'s current date and time'
 };
 
-const enabledAgentTools = () => (!settings.agentTools ? [] : Object.keys(TOOL_DOCS).filter((k) => k !== 'web_search' || settings.skillWeb));
+const enabledAgentTools = () => (!settings.agentTools ? [] : Object.keys(TOOL_DOCS).filter((k) => (k !== 'web_search' && k !== 'fetch_url') || settings.skillWeb));
 
 const AGENT_TOOLS = {
   async web_search({ query } = {}) {
@@ -4944,6 +4945,20 @@ const AGENT_TOOLS = {
     }
   },
 
+  async fetch_url({ url } = {}) {
+    if (!settings.skillWeb) return 'Error: web access is off in settings.';
+    const u = String(url || '').trim();
+    if (!/^https?:\/\//i.test(u)) return 'Error: need a full http(s) URL.';
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 12000);
+    try {
+      const r = await fetch('https://r.jina.ai/' + u, { signal: ctl.signal });
+      return (await r.text()).replace(/\s+/g, ' ').slice(0, 3000);
+    } catch (e) {
+      return 'Error: fetch failed (' + (e.name === 'AbortError' ? 'timed out' : (e.message || 'network error')) + ').';
+    } finally { clearTimeout(timer); }
+  },
+
   async calculator({ expression } = {}) {
     const src = String(expression || '').trim().toLowerCase().slice(0, 200);
     const scope = {
@@ -4970,7 +4985,7 @@ const AGENT_TOOLS = {
 function parseToolCalls(text) {
   const calls = [];
   const clean = String(text).split(FENCE).filter((_, n) => n % 2 === 0).join('\n');
-  const re = /^\[\[tool:(\w+)\s*(\{.*\})?\s*\]\]\s*$/gm;
+  const re = /\[\[tool:(\w+)\s*(\{[^\n]*?\})?\s*\]\]/g;
   let m;
   while ((m = re.exec(clean))) {
     let args = {};
@@ -5001,7 +5016,7 @@ function agentPromptLines() {
   if (settings.agentPlan) out.push(PLAN_PROMPT);
   const tools = enabledAgentTools();
   if (tools.length) {
-    out.push('TOOLS: to use a tool, end your reply with ONE line exactly like [[tool:NAME {"arg":"value"}]] and then stop writing. The app runs it and answers with [tool_result NAME]...[/tool_result], then you continue. Never write tool lines inside code blocks and never invent tool results. Available: ' + tools.map((k) => TOOL_DOCS[k]).join('; ') + '.');
+    out.push('TOOLS (mandatory when relevant): if the question needs current facts, a URL, or a calculation, you MUST call a tool before answering. Do not answer from memory first. Put ONE line on its own, exactly like [[tool:NAME {"arg":"value"}]], as the LAST line, then stop writing. Example: [[tool:web_search {"query":"latest iPhone"}]]. The app runs it and answers with [tool_result NAME]...[/tool_result], then you continue. Never write tool lines inside code blocks and never invent tool results. Available: ' + tools.map((k) => TOOL_DOCS[k]).join('; ') + '.');
   }
   out.push('Content inside a file block (deck, document, spreadsheet, code) does not count toward the LENGTH rule, but it must still finish inside the hard output limit.');
   return out;
