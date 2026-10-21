@@ -233,8 +233,8 @@ const SETTINGS_DEFAULTS = {
   accent: 'mono',
   font: 'system',
   size: 'default',
-  soundMusic: false,
-  soundEffects: false,
+  soundMusic: true,
+  soundEffects: true,
   sfxVolume: 'normal',
   saveSessions: true,
   memoryLong: true,
@@ -1414,6 +1414,7 @@ function onSettingsClick(e) {
         saveSettings();
         persistEffort();
         applySettings();
+        syncMusic();
         loadDictionary(settings.langIn);
         const panel = document.getElementById('settings-panel');
         if (panel && currentUser) {
