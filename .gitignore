@@ -1,12 +1,22 @@
+# 1. Ignore everything by default
 *
+
+# 2. Allow the essential website files in the root
 !index.html
 !style.css
 !script.js
-!Materials/
-!Materials/**
-!Operators/
-!Operators/**
 !.gitignore
 
-Materials/Private/
+# 3. Allow your public assets and specific config folders
+!Materials/
+!Materials/Public/**
+!Operators/
+!Operators/Configury/vite.config.js
+
+# 4. Explicitly ignore your private tooling and scratchpads
 Operators/Configury/vibe.py
+Operators/Configury/planner.txt
+Materials/Private/
+Materials/System/
+Prototypes/
+NEW_*

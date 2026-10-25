@@ -5415,8 +5415,10 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
     if (settings.autoRead && last?.role === 'assistant' && last.content && !last.__empty && !last.__failed) {
       const speakingId = session.id;
       setTimeout(() => {
-        if (currentSession.id === speakingId) speak(last.content);
-      }, 80);
+        if (currentSession.id !== speakingId) return;
+        const btns = appEl.querySelectorAll('#messages .msg [data-a="voice"]');
+        speak(last.content, btns[btns.length - 1] || null);
+      }, 250);
     }
 
     if (error && !aborted) {
@@ -5548,6 +5550,11 @@ function syncMusic() {
   } catch (_) {}
 }
 document.addEventListener('pointerdown', syncMusic, { once: true });
+setInterval(() => {
+  if (!settings.soundMusic || !permAllowed('audio')) return;
+  if (document.visibilityState !== 'visible') return;
+  if (musicAudio && (musicAudio.ended || musicAudio.paused)) playRandomTrack();
+}, 5000);
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') syncMusic();
 });
