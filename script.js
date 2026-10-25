@@ -763,13 +763,8 @@ function aphMark({ animated = false, cls = '', ink = 'currentColor', eye = 'var(
 
 function updateFavicon() {
   try {
-    const theme = document.documentElement.dataset.theme || 'dark';
-    const light = theme === 'light';
-    const fav = aphMark({ ink: light ? '#0a0a0a' : '#ffffff', eye: light ? '#ffffff' : '#0a0a0a', bg: '' });
-    let link = document.querySelector('link[rel="icon"]');
-    if (!link) { link = document.createElement('link'); link.rel = 'icon'; document.head.appendChild(link); }
-    link.type = 'image/svg+xml';
-    link.href = 'data:image/svg+xml,' + encodeURIComponent(fav);
+    const link = document.querySelector('link[rel="icon"][type="image/svg+xml"]');
+    if (link) link.href = 'Materials/Public/images/Logo.svg';
   } catch (_) {}
 }
 

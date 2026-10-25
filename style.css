@@ -502,7 +502,7 @@ html.has-vv #app-shell { height: var(--app-h); }
   .chat-item:hover .chat-actions,
   .chat-item:focus-within .chat-actions { opacity: 1; }
 }
-.side-empty { padding: 6px 10px; font-size: calc(12.5px * var(--ts)); color: var(--gray-mid); }
+
 
 /* ============================================================
    TOPBAR
@@ -1377,7 +1377,7 @@ select.input { width: 100%; appearance: none; -webkit-appearance: none; }
   border: 2px solid var(--accent);
 }
 .swatch.is-mono { background: linear-gradient(135deg, var(--fg) 50%, var(--bg) 50%); }
-.swatch-name { font-size: calc(11.5px * var(--ts)); color: var(--gray-mid); }
+
 
 .select {
   display: inline-flex;
@@ -1933,56 +1933,7 @@ select.input { width: 100%; appearance: none; -webkit-appearance: none; }
 
 @keyframes msgIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
-/* ---------- ORBIT LOADER (chat) ---------- */
-.orbit-loader {
-  position: relative; display: inline-block; width: 44px; height: 44px; margin: 6px 0;
-  color: var(--fg);
-  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.25));
-}
-:root[data-theme="light"] .orbit-loader { filter: invert(1) drop-shadow(0 0 6px rgba(255, 255, 255, 0.25)); }
 
-.ol-planet {
-  position: absolute; left: 50%; top: 50%; width: 15px; height: 15px; margin: -7.5px;
-  border-radius: 50%; overflow: hidden; z-index: 1;
-  background: radial-gradient(circle at 32% 28%, #fff 0%, #dcdcdc 38%, #8a8a8a 72%, #3a3a3a 100%);
-  box-shadow: inset -2px -2px 4px rgba(0, 0, 0, 0.45), 0 0 10px rgba(255, 255, 255, 0.35);
-}
-.ol-planet::after {
-  content: ""; position: absolute; inset: 0; width: 200%;
-  background: repeating-linear-gradient(100deg, transparent 0 4px, rgba(0, 0, 0, 0.14) 4px 6px);
-  animation: olBands 6s linear infinite;
-}
-@keyframes olBands { to { transform: translateX(-50%); } }
-
-.ol-orbit {
-  position: absolute; inset: 0;
-  animation: olPrecess 7s var(--ease-smooth) infinite alternate;
-}
-@keyframes olPrecess { from { transform: rotate(-22deg); } to { transform: rotate(22deg); } }
-.ol-ring {
-  position: absolute; left: 4px; top: 16px; width: 36px; height: 12px; border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.38);
-}
-
-.ol-moon {
-  position: absolute; left: 0; top: 0; width: 6px; height: 6px; border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #fff, #bdbdbd 60%, #666);
-  offset-path: path('M4 22 A18 6 0 1 1 40 22 A18 6 0 1 1 4 22');
-  offset-rotate: 0deg; offset-anchor: 50% 50%;
-  animation: olTravel 3.2s linear infinite, olDepth 3.2s linear infinite;
-}
-@keyframes olTravel { from { offset-distance: 0%; } to { offset-distance: 100%; } }
-@keyframes olDepth {
-  0%        { z-index: 2; transform: scale(1.15); opacity: 1; }
-  25%       { z-index: 0; transform: scale(0.55); opacity: 0.45; }
-  50%       { z-index: 0; transform: scale(0.55); opacity: 0.45; }
-  75%       { z-index: 2; transform: scale(1.15); opacity: 1; }
-  100%      { z-index: 2; transform: scale(1.15); opacity: 1; }
-}
-
-html[data-motion="reduce"] .orbit-loader *,
-html[data-motion="reduce"] .orbit-loader *::after { animation: none !important; }
-html[data-motion="reduce"] .ol-moon { offset-distance: 12%; }
 
 /* ============================================================
    IN-CHAT STATUS — removed (replaced by .orbit-loader above)
@@ -2144,40 +2095,7 @@ html[data-motion="reduce"] .ol-moon { offset-distance: 12%; }
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-/* ============================================================
-   SIGN-IN SCREEN
-   ============================================================ */
-.auth-view {
-  align-items: center;
-  justify-content: center;
-  padding: calc(24px + var(--safe-top)) 24px calc(24px + var(--safe-bottom));
-}
-.auth-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  width: min(320px, 100%);
-  text-align: center;
-}
-.auth-logo { width: 72px; height: 72px; object-fit: contain; }
-.auth-title { font-size: calc(22px * var(--ts)); font-weight: 700; letter-spacing: -0.02em; color: var(--fg); }
-.auth-btn {
-  width: 100%;
-  padding: 13px 16px;
-  font-size: calc(15px * var(--ts));
-  font-weight: 600;
-  color: var(--fg);
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-md);
-  box-shadow: inset 0 1px 0 var(--glass-highlight);
-  transition: background 0.2s var(--ease-smooth), transform 0.15s var(--ease-bounce);
-}
-.auth-btn:hover { background: var(--glass-bg-hover); }
-.auth-btn:active { transform: scale(0.98); }
-.auth-btn:disabled { opacity: 0.5; pointer-events: none; }
-.auth-note { min-height: 1em; font-size: calc(13px * var(--ts)); line-height: 1.5; color: var(--bad); }
+
 
 /* ============================================================
    MOTION PREFERENCES
@@ -2748,7 +2666,7 @@ html[data-motion="reduce"] .aph-mark * { animation: none !important; }
 .chat-open { padding: 8px 10px; font-size: calc(13.5px * var(--ts)); }
 .chat-act { width: 26px; height: 26px; }
 .chat-act svg { width: 14px; height: 14px; }
-.side-empty { display: none; }
+
 
 .tool-cards { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
 .tool-card { font-size: 13px; padding: 6px 10px; border-radius: 10px; background: rgba(255,255,255,.06); color: var(--gray-mid); }
