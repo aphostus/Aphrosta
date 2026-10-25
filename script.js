@@ -1685,6 +1685,7 @@ function onSettingsChange(e) {
     window.Notification?.requestPermission?.();
   }
   if (input.dataset.set === 'soundMusic') syncMusic();
+  if (input.dataset.set === 'autoRead' && input.checked) unlockSpeech();
   if (input.dataset.set === 'saveSessions' && !input.checked) {
     Cloud.deleteAllSessions?.();
   }
@@ -2019,6 +2020,7 @@ function cleanForSpeech(text) {
   return String(text)
     .replace(/```[\s\S]*?```/g, ' Code block. ')
     .replace(/`([^`\n]+)`/g, '$1')
+    .replace(/\[\[\s*tool\s*:[\s\S]*?\]\]/g, ' ')
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
     .replace(/(\*\*|__)(.*?)\1/g, '$2')
     .replace(/(\*|_)(.*?)\1/g, '$2')
@@ -2084,12 +2086,34 @@ let speak = function (text, btn = null) {
     if (v) u.voice = v;
     u.rate = rate; u.pitch = pitch;
     u.onend = next;
-    u.onerror = (e) => { if (gen === speakGen && e.error !== 'interrupted' && e.error !== 'canceled') stopSpeaking(); };
+    u.onerror = (e) => {
+      if (gen !== speakGen) return;
+      if (e.error === 'not-allowed') {
+        stopSpeaking();
+        document.addEventListener('pointerdown', () => speak(text, btn), { once: true });
+        return;
+      }
+      if (e.error !== 'interrupted' && e.error !== 'canceled') stopSpeaking();
+    };
     s.speak(u);
   };
   speakTimer = setTimeout(next, wasBusy ? 150 : 0);
 };
 const testVoice = () => speak('Hi, this is how I sound.');
+
+let speechUnlocked = false;
+function unlockSpeech() {
+  if (speechUnlocked || !window.speechSynthesis) return;
+  try {
+    const u = new SpeechSynthesisUtterance(' ');
+    u.volume = 0;
+    window.speechSynthesis.speak(u);
+    speechUnlocked = true;
+  } catch (_) {}
+}
+['pointerdown', 'keydown', 'touchend'].forEach((ev) =>
+  document.addEventListener(ev, unlockSpeech, { passive: true })
+);
 
 /* ---------- DEVICES & LOCATION ---------- */
 const deviceId = (() => {
@@ -4758,7 +4782,7 @@ function tokenCeiling(pid, variant) {
   else ceil = Math.max(ceil, Math.min(Math.round(answerBudget() * 2.5), hard));
   const learned = rateLearn[pid + '|' + variant.id];
   const learnedCap = learned ? Math.max(512, Math.floor(learned * 0.45)) : Infinity;
-  return Math.max(256, Math.min(ceil, hard, learnedCap, pid === 'groq' ? 4500 : 16384));
+  return Math.max(256, Math.min(ceil, hard, learnedCap, pid === 'groq' ? 4500 : hard));
 }
 
 let systemPrompt = function () {
@@ -4832,7 +4856,7 @@ function buildMessages() {
     images.forEach((a) => parts.push({ type: 'image_url', image_url: { url: a.dataUrl } }));
     return { role: 'user', content: parts };
   });
-  return [{ role: 'system', content: systemPrompt() }, ...ctx];
+  return [{ role: 'system', content: systemPrompt() + (pendingToolContext ? '\n\n' + pendingToolContext : '') }, ...ctx];
 }
 
 const ADAPTERS = {
@@ -4870,7 +4894,7 @@ const ADAPTERS = {
       const maxTok = extras.max_tokens || 4096;
       const body = { model: variant.id, system: sys, messages: rest, max_tokens: maxTok, stream: wantStream };
       if (variant.reasoning) {
-        const budgetByEffort = { minima: 1024, low: 2048, medium: 4096, high: 8192, maxima: 16384 };
+        const budgetByEffort = { minima: 1024, low: 2048, medium: 4096, high: Math.floor(maxTok * 0.5), maxima: Math.floor(maxTok * 0.7) };
         const room = maxTok - 2048;
         if (room >= 1024) {
           const b = Math.min(budgetByEffort[activeEffort] || 4096, room);
@@ -4961,7 +4985,7 @@ function stripUnsupportedParams(body, errText) {
 
 /* ---------- Agent engine ---------- */
 let agentNextHidden = false;
-const AGENT_MAX_STEPS = 2;
+const AGENT_MAX_STEPS = 3;
 const SEARCH_ENDPOINT = ''; // Set to 'https://YOUR-SEARX-HOST/search' to use SearXNG instead of Wikipedia
 
 const TOOL_DOCS = {
@@ -5065,7 +5089,7 @@ const AGENT_TOOLS = {
 function parseToolCalls(text) {
   const calls = [];
   const clean = String(text).split(FENCE).filter((_, n) => n % 2 === 0).join('\n');
-  const re = /\[\[tool:(\w+)\s*(\{[^\n]*?\})?\s*\]\]/g;
+  const re = /\[\[\s*tool\s*:\s*(\w+)\s*(\{[\s\S]*?\})?\s*\]\]/g;
   let m;
   while ((m = re.exec(clean))) {
     let args = {};
@@ -5101,12 +5125,38 @@ function agentPromptLines() {
   return out;
 }
 
+let pendingToolContext = '';
+const NEEDS_WEB_RE = /\b(latest|today|tonight|current(ly)?|right now|news|prices?|weather|scores?|stocks?|recent(ly)?|this (week|month|year)|released?|version|who is|who won|202[5-9]|research|look ?up|search|find out|google)\b/i;
+
+async function autoResearch(text) {
+  try {
+    if (!settings.agentTools || !settings.skillWeb) return '';
+    const t = String(text || '').trim();
+    if (!t || /^\[tool_result /.test(t)) return '';
+    const out = [];
+    const urls = (t.match(/https?:\/\/[^\s)>\]]+/g) || []).slice(0, 2);
+    for (const u of urls) {
+      const r = await AGENT_TOOLS.fetch_url({ url: u });
+      out.push(`[tool_result fetch_url ${u}]\n${String(r).slice(0, 1500)}\n[/tool_result]`);
+    }
+    const wantsSearch = !urls.length && (NEEDS_WEB_RE.test(t) ||
+      ((activeEffort === 'high' || activeEffort === 'maxima') && /\?/.test(t) && t.length > 40));
+    if (wantsSearch) {
+      const r = await AGENT_TOOLS.web_search({ query: t.slice(0, 200) });
+      out.push(`[tool_result web_search]\n${String(r).slice(0, 1800)}\n[/tool_result]`);
+    }
+    return out.length
+      ? 'The app already ran these tools for the latest user message. Use them in your answer and do not repeat the same call:\n' + out.join('\n\n')
+      : '';
+  } catch (_) { return ''; }
+}
+
 async function agentAfterReply(ai, session) {
   if (!settings.agentTools || session !== currentSession || chatBusy) return;
   const calls = parseToolCalls(ai.content).slice(0, 1);
   console.log('[agent]', { agentTools: settings.agentTools, skillWeb: settings.skillWeb, calls, tail: ai.content.slice(-160) });
   if (!calls.length) return;
-  const mm = /\[\[tool:\w+\s*(\{[^\n]*?\})?\s*\]\]/.exec(ai.content);
+  const mm = /\[\[\s*tool\s*:\s*\w+\s*(\{[\s\S]*?\})?\s*\]\]/.exec(ai.content);
   if (mm) ai.content = ai.content.slice(0, mm.index + mm[0].length);
   if (agentDepthOf(session) >= AGENT_MAX_STEPS) { toast('Agent step limit reached.', 'info', 2000); return; }
   const results = [];
@@ -5179,7 +5229,9 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
   setAiState('thinking');
   startStatusRotor();
 
+  pendingToolContext = await autoResearch(seedText);
   const messages = buildMessages();
+  pendingToolContext = '';
   const wantStream = settings.streaming !== false;
   let usage = null, error = null, raf = 0, first = true, lastTick = 0, streamErr = '';
   let lastPaintContent = '';
@@ -5455,28 +5507,29 @@ function playRandomTrack() {
   if (!settings.soundMusic || !permAllowed('audio')) return;
   clearTimeout(musicTimer);
 
-  let idx;
-  do {
-    idx = Math.floor(Math.random() * MUSIC_TRACKS.length);
-  } while (idx === lastTrack && MUSIC_TRACKS.length > 1);
-  lastTrack = idx;
+  lastTrack = (lastTrack + 1) % MUSIC_TRACKS.length;
 
-  if (musicAudio) {
-    musicAudio.pause();
-    musicAudio.src = '';
-  }
-
-  musicAudio = new Audio(MUSIC_TRACKS[idx]);
-  const c = ac();
-  c.createMediaElementSource(musicAudio).connect(musicGain);
-  musicAudio.addEventListener('ended', () => {
-    musicTimer = setTimeout(playRandomTrack, 4000);
-  });
-  musicAudio.play().catch(() => {
-    document.addEventListener('pointerdown', () => {
-      if (settings.soundMusic) musicAudio?.play();
-    }, { once: true });
-  });
+  try {
+    if (!musicAudio) {
+      musicAudio = new Audio();
+      musicAudio.preload = 'auto';
+      ac().createMediaElementSource(musicAudio).connect(musicGain);
+      musicAudio.addEventListener('ended', () => {
+        musicTimer = setTimeout(playRandomTrack, 1500);
+      });
+      musicAudio.addEventListener('error', () => {
+        if (!musicAudio.getAttribute('src')) return;
+        musicTimer = setTimeout(playRandomTrack, 3000);
+      });
+    }
+    musicAudio.src = MUSIC_TRACKS[lastTrack];
+    ac();
+    musicAudio.play().catch(() => {
+      document.addEventListener('pointerdown', () => {
+        if (settings.soundMusic) syncMusic();
+      }, { once: true });
+    });
+  } catch (_) {}
 }
 
 function syncMusic() {
@@ -5495,6 +5548,9 @@ function syncMusic() {
   } catch (_) {}
 }
 document.addEventListener('pointerdown', syncMusic, { once: true });
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') syncMusic();
+});
 
 /* ---------- MODEL PICKER POPUP ---------- */
 const canAutoFocus = () => window.matchMedia('(hover: hover) and (pointer: fine)').matches;

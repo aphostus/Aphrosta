@@ -1,0 +1,191 @@
+<<<< SEARCH
+function playRandomTrack() {
+  if (!settings.soundMusic || !permAllowed('audio')) return;
+  clearTimeout(musicTimer);
+
+  let idx;
+  do {
+    idx = Math.floor(Math.random() * MUSIC_TRACKS.length);
+  } while (idx === lastTrack && MUSIC_TRACKS.length > 1);
+  lastTrack = idx;
+
+  if (musicAudio) {
+    musicAudio.pause();
+    musicAudio.src = '';
+  }
+
+  musicAudio = new Audio(MUSIC_TRACKS[idx]);
+  const c = ac();
+  c.createMediaElementSource(musicAudio).connect(musicGain);
+  musicAudio.addEventListener('ended', () => {
+    musicTimer = setTimeout(playRandomTrack, 4000);
+  });
+  musicAudio.play().catch(() => {
+    document.addEventListener('pointerdown', () => {
+      if (settings.soundMusic) musicAudio?.play();
+    }, { once: true });
+  });
+}
+====
+function playRandomTrack() {
+  if (!settings.soundMusic || !permAllowed('audio')) return;
+  clearTimeout(musicTimer);
+
+  lastTrack = (lastTrack + 1) % MUSIC_TRACKS.length;
+
+  try {
+    if (!musicAudio) {
+      musicAudio = new Audio();
+      musicAudio.preload = 'auto';
+      ac().createMediaElementSource(musicAudio).connect(musicGain);
+      musicAudio.addEventListener('ended', () => {
+        musicTimer = setTimeout(playRandomTrack, 1500);
+      });
+      musicAudio.addEventListener('error', () => {
+        if (!musicAudio.getAttribute('src')) return;
+        musicTimer = setTimeout(playRandomTrack, 3000);
+      });
+    }
+    musicAudio.src = MUSIC_TRACKS[lastTrack];
+    ac();
+    musicAudio.play().catch(() => {
+      document.addEventListener('pointerdown', () => {
+        if (settings.soundMusic) syncMusic();
+      }, { once: true });
+    });
+  } catch (_) {}
+}
+>>>> REPLACE
+
+<<<< SEARCH
+document.addEventListener('pointerdown', syncMusic, { once: true });
+====
+document.addEventListener('pointerdown', syncMusic, { once: true });
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') syncMusic();
+});
+>>>> REPLACE
+
+<<<< SEARCH
+const testVoice = () => speak('Hi, this is how I sound.');
+====
+const testVoice = () => speak('Hi, this is how I sound.');
+
+let speechUnlocked = false;
+function unlockSpeech() {
+  if (speechUnlocked || !window.speechSynthesis) return;
+  try {
+    const u = new SpeechSynthesisUtterance(' ');
+    u.volume = 0;
+    window.speechSynthesis.speak(u);
+    speechUnlocked = true;
+  } catch (_) {}
+}
+['pointerdown', 'keydown', 'touchend'].forEach((ev) =>
+  document.addEventListener(ev, unlockSpeech, { passive: true })
+);
+>>>> REPLACE
+
+<<<< SEARCH
+    u.onerror = (e) => { if (gen === speakGen && e.error !== 'interrupted' && e.error !== 'canceled') stopSpeaking(); };
+====
+    u.onerror = (e) => {
+      if (gen !== speakGen) return;
+      if (e.error === 'not-allowed') {
+        stopSpeaking();
+        document.addEventListener('pointerdown', () => speak(text, btn), { once: true });
+        return;
+      }
+      if (e.error !== 'interrupted' && e.error !== 'canceled') stopSpeaking();
+    };
+>>>> REPLACE
+
+<<<< SEARCH
+  if (input.dataset.set === 'soundMusic') syncMusic();
+====
+  if (input.dataset.set === 'soundMusic') syncMusic();
+  if (input.dataset.set === 'autoRead' && input.checked) unlockSpeech();
+>>>> REPLACE
+
+<<<< SEARCH
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+====
+    .replace(/\[\[\s*tool\s*:[\s\S]*?\]\]/g, ' ')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+>>>> REPLACE
+
+<<<< SEARCH
+const AGENT_MAX_STEPS = 2;
+====
+const AGENT_MAX_STEPS = 3;
+>>>> REPLACE
+
+<<<< SEARCH
+  const re = /\[\[tool:(\w+)\s*(\{[^\n]*?\})?\s*\]\]/g;
+====
+  const re = /\[\[\s*tool\s*:\s*(\w+)\s*(\{[\s\S]*?\})?\s*\]\]/g;
+>>>> REPLACE
+
+<<<< SEARCH
+  const mm = /\[\[tool:\w+\s*(\{[^\n]*?\})?\s*\]\]/.exec(ai.content);
+====
+  const mm = /\[\[\s*tool\s*:\s*\w+\s*(\{[\s\S]*?\})?\s*\]\]/.exec(ai.content);
+>>>> REPLACE
+
+<<<< SEARCH
+async function agentAfterReply(ai, session) {
+====
+let pendingToolContext = '';
+const NEEDS_WEB_RE = /\b(latest|today|tonight|current(ly)?|right now|news|prices?|weather|scores?|stocks?|recent(ly)?|this (week|month|year)|released?|version|who is|who won|202[5-9]|research|look ?up|search|find out|google)\b/i;
+
+async function autoResearch(text) {
+  try {
+    if (!settings.agentTools || !settings.skillWeb) return '';
+    const t = String(text || '').trim();
+    if (!t || /^\[tool_result /.test(t)) return '';
+    const out = [];
+    const urls = (t.match(/https?:\/\/[^\s)>\]]+/g) || []).slice(0, 2);
+    for (const u of urls) {
+      const r = await AGENT_TOOLS.fetch_url({ url: u });
+      out.push(`[tool_result fetch_url ${u}]\n${String(r).slice(0, 1500)}\n[/tool_result]`);
+    }
+    const wantsSearch = !urls.length && (NEEDS_WEB_RE.test(t) ||
+      ((activeEffort === 'high' || activeEffort === 'maxima') && /\?/.test(t) && t.length > 40));
+    if (wantsSearch) {
+      const r = await AGENT_TOOLS.web_search({ query: t.slice(0, 200) });
+      out.push(`[tool_result web_search]\n${String(r).slice(0, 1800)}\n[/tool_result]`);
+    }
+    return out.length
+      ? 'The app already ran these tools for the latest user message. Use them in your answer and do not repeat the same call:\n' + out.join('\n\n')
+      : '';
+  } catch (_) { return ''; }
+}
+
+async function agentAfterReply(ai, session) {
+>>>> REPLACE
+
+<<<< SEARCH
+  const messages = buildMessages();
+====
+  pendingToolContext = await autoResearch(seedText);
+  const messages = buildMessages();
+  pendingToolContext = '';
+>>>> REPLACE
+
+<<<< SEARCH
+  return [{ role: 'system', content: systemPrompt() }, ...ctx];
+====
+  return [{ role: 'system', content: systemPrompt() + (pendingToolContext ? '\n\n' + pendingToolContext : '') }, ...ctx];
+>>>> REPLACE
+
+<<<< SEARCH
+  return Math.max(256, Math.min(ceil, hard, learnedCap, pid === 'groq' ? 4500 : 16384));
+====
+  return Math.max(256, Math.min(ceil, hard, learnedCap, pid === 'groq' ? 4500 : hard));
+>>>> REPLACE
+
+<<<< SEARCH
+        const budgetByEffort = { minima: 1024, low: 2048, medium: 4096, high: 8192, maxima: 16384 };
+====
+        const budgetByEffort = { minima: 1024, low: 2048, medium: 4096, high: Math.floor(maxTok * 0.5), maxima: Math.floor(maxTok * 0.7) };
+>>>> REPLACE

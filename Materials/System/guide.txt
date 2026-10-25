@@ -1,28 +1,44 @@
 === APHROSTA DEV GUIDE ===
 
---- 1. START HERE ---
-Type this every time you open Termux:
+--- 1. START HERE (Every time) ---
 cd /sdcard/Programs/Aphrosta/Website
 
---- 2. AI VIBECODING ---
-Type this to edit a file:
-python Operators/Configury/vibe.py <filename> "your instruction"
+--- 2. EDITING FILES (Use Single Quotes ' ') ---
+To use the AI to generate changes:
+python Operators/Configury/vibe.py <file> '<instruction>'
 
 Example:
-python Operators/Configury/vibe.py script.js "fix the timer"
+python Operators/Configury/vibe.py index.html 'Add a <!-- comment --> at the top'
 
-Where is the result?
-Look in the Prototypes folder for the file starting with NEW_.
-(The AI never touches your real file).
+* Result is saved in Prototypes as NEW_<file>.
 
---- 3. SAVE TO GITHUB ---
+--- 3. USING PLANNER.TXT (From Claude/GPT) ---
+If an external AI gives you code in <<<< SEARCH and >>>> REPLACE blocks, paste it into Operators/Configury/planner.txt.
+
+Option A (Direct Apply - Instant, No API Limit):
+python Operators/Configury/vibe.py script.js planner.txt --direct
+
+Option B (Ask Groq to parse it):
+python Operators/Configury/vibe.py script.js planner.txt
+
+--- 4. CHUNK WORKFLOW (For JS/CSS) ---
+Look in Materials/System/js_map.txt to find the chunk you need.
+
+1. Edit chunk:
+   python Operators/Configury/vibe.py Materials/Private/sources/src_js/chunk_000.js 'fix bug'
+
+2. Replace chunk:
+   mv Prototypes/NEW_chunk_000.js Materials/Private/sources/src_js/chunk_000.js
+
+3. Rebuild main file:
+   cat Materials/Private/sources/src_js/chunk_*.js > script.js
+   (For CSS, use src_css and > style.css)
+
+--- 5. SAVE TO GITHUB ---
 git add .
 git commit -m "update"
 git push origin main
 
---- 4. PREVIEW WEBSITE ---
-Type this to start Vite:
+--- 6. PREVIEW WEBSITE ---
 cd ~/Website
 npx vite --port 3000 --host
-
-Stop server: Ctrl + C
