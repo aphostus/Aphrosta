@@ -2833,12 +2833,12 @@ html[data-motion="reduce"] .tool-globe .globe-mer { animation: none; }
   border-radius: 0 0 16px 16px;
   transition: border-color 0.2s var(--ease-smooth), color 0.2s var(--ease-smooth);
 }
-.ab-search:focus-within { color: var(--accent); border-color: rgba(var(--accent-rgb), 0.5); }
+/* search bar keeps the same border when focused */
 .ab-search svg { flex-shrink: 0; }
 .ab-search input {
   flex: 1;
   min-width: 0;
-  font-size: max(16px, calc(13px * var(--ts)));
+  font-size: calc(13.5px * var(--ts));
   color: var(--fg);
   background: transparent;
   border: 0;
@@ -2911,7 +2911,7 @@ button.ab-card-head { cursor: pointer; }
   flex-direction: column;
   gap: 12px;
   min-width: 0;
-  padding: 0 12px 14px;
+  padding: 14px 12px;
   font-size: calc(13px * var(--ts));
   line-height: 1.55;
   color: var(--gray-light);
@@ -2943,9 +2943,9 @@ mark.ab-mark {
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  min-height: 44px;
-  padding: 10px 12px;
-  font-size: max(16px, calc(13px * var(--ts)));
+  min-height: 40px;
+  padding: 9px 12px;
+  font-size: calc(13.5px * var(--ts));
   color: var(--fg);
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
@@ -2956,10 +2956,10 @@ mark.ab-mark {
   transition: border-color 0.2s var(--ease-smooth);
 }
 .ab-input::placeholder { color: var(--gray-mid); }
-.ab-input:focus { border-color: rgba(var(--accent-rgb), 0.55); }
+.ab-input:focus { border-color: rgba(var(--fg-rgb), 0.28); }
 .ab-btn {
   width: 100%;
-  min-height: 44px;
+  min-height: 40px;
   padding: 11px;
   font-size: calc(13px * var(--ts));
   font-weight: 600;

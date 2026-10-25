@@ -6436,7 +6436,7 @@ const AB_PAGES = {
 
 /* ----- billing storage (localStorage + in-memory cache) ----- */
 let abBillCache = null;
-const abBillDefault = () => ({ plan: 'free', cycle: 'monthly', cards: [], info: {}, history: [] });
+const abBillDefault = () => ({ day: '1', cards: [], info: {}, history: [] });
 function abBill() {
   if (abBillCache) return abBillCache;
   let raw = {};
@@ -6449,11 +6449,7 @@ function abBillSave() {
   catch (_) { toast('Could not save on this device.', 'error'); return false; }
 }
 const abLog = (text) => { const b = abBill(); b.history.unshift({ at: Date.now(), text }); b.history = b.history.slice(0, 40); };
-const AB_PLANS = [
-  { id: 'free', name: 'Free', d: 'Core chat with your own keys.' },
-  { id: 'plus', name: 'Plus', d: 'More memory, skills and longer sessions.' },
-  { id: 'pro',  name: 'Pro',  d: 'Everything in Plus, plus priority features.' }
-];
+const AB_DAYS = [{ id: '1', name: 'Every 1st' }, { id: '10', name: 'Every 10th' }];
 const abBrand = (n) => (/^4/.test(n) ? 'Visa' : /^(5[1-5]|2[2-7])/.test(n) ? 'Mastercard' : /^3[47]/.test(n) ? 'Amex' : /^6/.test(n) ? 'Discover' : 'Card');
 const abLuhn = (n) => {
   let s = 0, alt = false;
@@ -6464,7 +6460,9 @@ const abDate = (t) => new Date(t).toLocaleDateString(undefined, { year: 'numeric
 
 function abBillingCards() {
   const b = abBill(), inf = b.info || {};
-  const plan = AB_PLANS.find((p) => p.id === b.plan) || AB_PLANS[0];
+  const now = new Date(), dd = +b.day === 10 ? 10 : 1;
+  const nextDue = new Date(now.getFullYear(), now.getMonth(), dd);
+  if (nextDue < new Date(now.getFullYear(), now.getMonth(), now.getDate())) nextDue.setMonth(nextDue.getMonth() + 1);
   const field = (label, key, ph, type = 'text') => `<label class="ab-field"><span>${label}</span><input class="ab-input" type="${type}" data-ab-info="${key}" placeholder="${ph}" value="${esc(inf[key] || '')}" autocomplete="off"></label>`;
   const cards = b.cards.length
     ? b.cards.map((c) => `<div class="ab-pay">
@@ -6478,10 +6476,11 @@ function abBillingCards() {
     ? b.history.map((h) => `<div class="ab-kv"><span>${esc(h.text)}</span><b>${esc(abDate(h.at))}</b></div>`).join('') + '<button class="btn-line danger" type="button" data-ab="hist-clear">Clear history</button>'
     : '<p class="ab-muted">Nothing here yet. Changes to your plan and cards show up here.</p>';
   return [
-    { t: 'Your plan', st: 1, kw: 'plan free plus pro monthly yearly', b: `
-      <div class="chips">${AB_PLANS.map((p) => `<button class="chip ${p.id === b.plan ? 'on' : ''}" type="button" data-ab="plan" data-val="${p.id}">${p.name}</button>`).join('')}</div>
-      <p class="ab-muted">${esc(plan.d)}</p>
-      <div class="chips">${['monthly', 'yearly'].map((c) => `<button class="chip ${c === b.cycle ? 'on' : ''}" type="button" data-ab="cycle" data-val="${c}">${c[0].toUpperCase() + c.slice(1)}</button>`).join('')}</div>` },
+    { t: 'Billing date', st: 1, kw: 'billing date monthly day 1st 10th next', b: `
+      <div class="ab-field"><span>Billing date</span>
+        <div class="chips">${AB_DAYS.map((d) => `<button class="chip ${d.id === String(b.day) ? 'on' : ''}" type="button" data-ab="day" data-val="${d.id}">${d.name}</button>`).join('')}</div>
+      </div>
+      <p class="ab-muted">Billed monthly only. Next billing: ${esc(abDate(nextDue))}.</p>` },
     { t: 'Payment methods', st: 1, kw: 'card visa mastercard payment', b: `
       ${cards}
       <div class="ab-form">
@@ -6504,12 +6503,9 @@ function abBillingCards() {
   ];
 }
 
-function abCardHtml(c, i) {
+function abCardHtml(c) {
   const body = typeof c.b === 'function' ? c.b() : c.b;
-  const st = c.st;
-  return `<section class="ab-card ${st ? 'open static' : ''}" data-kw="${esc((c.kw || '').toLowerCase())}">
-    ${st ? `<div class="ab-card-head"><span class="ab-num">${i + 1}</span><span class="ab-card-title">${c.t}</span></div>`
-         : `<button class="ab-card-head" type="button" data-ab="toggle" aria-expanded="false"><span class="ab-num">${i + 1}</span><span class="ab-card-title">${c.t}</span><span class="ab-chev">${ICONS.chevronR}</span></button>`}
+  return `<section class="ab-card open static" data-kw="${esc((c.kw || '').toLowerCase())}">
     <div class="ab-card-body"><div class="ab-card-inner"><div class="ab-card-content">${body}</div></div></div>
   </section>`;
 }
@@ -6637,13 +6633,9 @@ document.addEventListener('click', (e) => {
       return;
     }
     case 'feedback': return openFeedback();
-    case 'plan':
-      b.plan = el.dataset.val; abLog(`Plan set to ${AB_PLANS.find((p) => p.id === b.plan).name}`);
-      if (abBillSave()) { abRender(page); toast('Plan saved on this device.', 'success', 1800); }
-      return;
-    case 'cycle':
-      b.cycle = el.dataset.val; abLog(`Billing cycle: ${b.cycle}`);
-      if (abBillSave()) abRender(page);
+    case 'day':
+      b.day = el.dataset.val; abLog(`Billing date set to the ${b.day === '10' ? '10th' : '1st'}`);
+      if (abBillSave()) { abRender(page); toast('Billing date saved on this device.', 'success', 1800); }
       return;
     case 'card-add': {
       const v = (k) => page.querySelector(`[data-ab-card="${k}"]`).value.trim();
