@@ -993,7 +993,7 @@ const Sidebar = (user) => `
     <nav class="side-nav" aria-label="Workspace">
       <button class="side-btn" type="button" data-action="nav-worlds">${ICONS.folder}<span>Worlds</span></button>
       <button class="side-btn" type="button" data-action="nav-agent">${ICONS.agent}<span>Agents</span></button>
-      <button class="side-btn" type="button" data-action="nav-data">${ICONS.memory}<span>Data</span></button>
+      <button class="side-btn" type="button" data-action="nav-data">${ICONS.memory}<span>System</span></button>
     </nav>
 
     <div class="side-tools" aria-label="Workspace tools">

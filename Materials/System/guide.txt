@@ -3,42 +3,48 @@
 --- 1. START HERE (Every time) ---
 cd /sdcard/Programs/Aphrosta/Website
 
---- 2. EDITING FILES (Use Single Quotes ' ') ---
-To use the AI to generate changes:
+--- 2. AI VIBECODING (vibe.py) ---
+The script lives at Operators/Configury/vibe.py
+
+A. GENERATE CODE (AI Mode)
 python Operators/Configury/vibe.py <file> '<instruction>'
+Example: python Operators/Configury/vibe.py script.js 'Fix the timer bug'
 
-Example:
-python Operators/Configury/vibe.py index.html 'Add a <!-- comment --> at the top'
+B. APPLY PLANNER.TXT (Direct Mode - No API limits)
+python Operators/Configury/vibe.py <file> planner.txt --direct
 
-* Result is saved in Prototypes as NEW_<file>.
+C. SAVE DIRECTLY TO ORIGINAL (Skip the Prototypes folder)
+Add --inplace to any command. It backs up the old file automatically.
+Example: python Operators/Configury/vibe.py script.js planner.txt --direct --inplace
 
---- 3. USING PLANNER.TXT (From Claude/GPT) ---
-If an external AI gives you code in <<<< SEARCH and >>>> REPLACE blocks, paste it into Operators/Configury/planner.txt.
+D. TEST FIRST (Dry Run - see if it works without writing)
+Add --dry to any command.
 
-Option A (Direct Apply - Instant, No API Limit):
-python Operators/Configury/vibe.py script.js planner.txt --direct
+--- 3. FILE MANAGEMENT BASH ---
+- See files in current folder: ls
+- View a file's content: cat <file> (e.g., cat script.js)
+- View the last 20 lines of an error: tail -n 20 <file>
+- Copy a file: cp <source> <destination>
+- Move/Overwrite a file: mv <source> <destination>
+  (Use this for: mv Prototypes/NEW_script.js script.js)
+- Delete a file: rm <file>
+- Clear the screen: clear
 
-Option B (Ask Groq to parse it):
-python Operators/Configury/vibe.py script.js planner.txt
+--- 4. CHUNK WORKFLOW (For massive script.js) ---
+1. Find the chunk: cat Materials/System/js_map.txt
+2. Edit chunk: python Operators/Configury/vibe.py Materials/Private/sources/src_js/chunk_015.js 'fix bug' --inplace
+3. Rebuild script.js: cat Materials/Private/sources/src_js/chunk_*.js > script.js
 
---- 4. CHUNK WORKFLOW (For JS/CSS) ---
-Look in Materials/System/js_map.txt to find the chunk you need.
+--- 5. GIT / GITHUB ---
+- Save all changes: git add .
+- Commit with a message: git commit -m "update"
+- Upload to GitHub: git push origin main
+- Download from Github: git pull
+- Undo ALL uncommitted changes: git restore .
+- Check status: git status
 
-1. Edit chunk:
-   python Operators/Configury/vibe.py Materials/Private/sources/src_js/chunk_000.js 'fix bug'
-
-2. Replace chunk:
-   mv Prototypes/NEW_chunk_000.js Materials/Private/sources/src_js/chunk_000.js
-
-3. Rebuild main file:
-   cat Materials/Private/sources/src_js/chunk_*.js > script.js
-   (For CSS, use src_css and > style.css)
-
---- 5. SAVE TO GITHUB ---
-git add .
-git commit -m "update"
-git push origin main
-
---- 6. PREVIEW WEBSITE ---
+--- 6. PREVIEW WEBSITE (Vite) ---
+Note: Vite runs in the Termux hidden folder, not /sdcard/
 cd ~/Website
 npx vite --port 3000 --host
+(Stop server: Ctrl + C)
