@@ -763,8 +763,8 @@ function aphMark({ animated = false, cls = '', ink = 'currentColor', eye = 'var(
 
 function updateFavicon() {
   try {
-    const link = document.querySelector('link[rel="icon"][type="image/svg+xml"]');
-    if (link) link.href = 'Materials/Public/images/Logo.svg';
+    const link = document.querySelector('link[rel="icon"][type="image/png"]');
+    if (link) link.href = 'Materials/Public/images/Logo.png';
   } catch (_) {}
 }
 
