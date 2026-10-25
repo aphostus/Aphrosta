@@ -7,13 +7,18 @@
 !script.js
 !.gitignore
 
-# 3. Allow your public assets and specific config folders
+# 3. Allow your public assets (folders must be re-included first)
 !Materials/
+!Materials/Public/
 !Materials/Public/**
+
+# 4. Allow only the vite config from Operators/Configury
 !Operators/
+!Operators/Configury/
+Operators/Configury/*
 !Operators/Configury/vite.config.js
 
-# 4. Explicitly ignore your private tooling and scratchpads
+# 5. Explicitly ignore your private tooling and scratchpads
 Operators/Configury/vibe.py
 Operators/Configury/planner.txt
 Materials/Private/
