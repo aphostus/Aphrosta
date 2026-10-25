@@ -1,0 +1,28 @@
+=== APHROSTA DEV GUIDE ===
+
+--- 1. START HERE ---
+Type this every time you open Termux:
+cd /sdcard/Programs/Aphrosta/Website
+
+--- 2. AI VIBECODING ---
+Type this to edit a file:
+python Operators/Configury/vibe.py <filename> "your instruction"
+
+Example:
+python Operators/Configury/vibe.py script.js "fix the timer"
+
+Where is the result?
+Look in the Prototypes folder for the file starting with NEW_.
+(The AI never touches your real file).
+
+--- 3. SAVE TO GITHUB ---
+git add .
+git commit -m "update"
+git push origin main
+
+--- 4. PREVIEW WEBSITE ---
+Type this to start Vite:
+cd ~/Website
+npx vite --port 3000 --host
+
+Stop server: Ctrl + C

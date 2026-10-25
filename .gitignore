@@ -1,0 +1,12 @@
+*
+!index.html
+!style.css
+!script.js
+!Materials/
+!Materials/**
+!Operators/
+!Operators/**
+!.gitignore
+
+Materials/Private/
+Operators/Configury/vibe.py
