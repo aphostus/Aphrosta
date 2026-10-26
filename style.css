@@ -2753,6 +2753,19 @@ html[data-motion="reduce"] .tool-globe .globe-mer { animation: none; }
 }
 /* search bar keeps the same border when focused */
 .ab-search svg { flex-shrink: 0; }
+
+/* ICON SCALE PER SECTION (composer attach + brain untouched) */
+.sidebar .side-nav .side-btn svg,
+.sidebar .side-actions .side-btn svg { width: 18px; height: 18px; stroke-width: 1.6; }
+.sidebar .side-search svg { width: 16px; height: 16px; stroke-width: 1.6; }
+.sidebar .side-tool-ico svg { width: 17px; height: 17px; stroke-width: 1.6; }
+.sidebar .side-tool-chev svg { width: 14px; height: 14px; stroke-width: 2; }
+.panel-row .row-icon svg { width: 17px; height: 17px; stroke-width: 1.6; }
+.panel-row .row-chev svg { width: 14px; height: 14px; stroke-width: 2; }
+.msg-act svg { width: 15px; height: 15px; stroke-width: 1.6; }
+.chat-act svg { width: 14px; height: 14px; stroke-width: 1.6; }
+.tool-ico svg { width: 15px; height: 15px; stroke-width: 1.6; }
+.toast-ico svg { width: 16px; height: 16px; stroke-width: 1.8; }
 .ab-search input {
   flex: 1;
   min-width: 0;
