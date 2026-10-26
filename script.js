@@ -828,6 +828,52 @@ Object.assign(ICONS, {
 /* fix identical-drawing clones */
 ICONS.newChat = svg('<path d="M21 12a8 8 0 01-8 8H4l2.5-3.5A8 8 0 1121 12z"/><path d="M12 9v6M9 12h6"/>');
 ICONS.closeLg = svg('<circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/>', 20);
+
+/* ---------- SETTINGS ICONS (one unique drawing per spot, uniform 16px; chevrons 14px) ---------- */
+Object.assign(ICONS, {
+  stUsage:       svg('<path d="M4 17a8 8 0 1116 0"/><path d="M12 17l4-5M12 3v2M4.9 6.9l1.4 1.4M19.1 6.9l-1.4 1.4"/>', 16),
+  stUsageDetail: svg('<path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/>', 16),
+  stClose:       svg('<rect x="3" y="3" width="18" height="18" rx="5"/><path d="M9 9l6 6M15 9l-6 6"/>', 16),
+  stBack:        svg('<path d="M19 12H5M11 6l-6 6 6 6"/>', 16),
+  stReset:       svg('<path d="M4 12a8 8 0 108-8H8"/><path d="M11 1L8 4l3 3"/>', 16),
+  stAppearance:  svg('<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 000 18z"/>', 16),
+  stLanguage:    svg('<path d="M4 5h9M8.5 3v2M6 5c.5 3 3 6 6.5 7.5M12 5c-.8 3.5-3.5 6.5-7.5 8.5"/><path d="M12 20l4-9 4 9M13.5 17h5"/>', 16),
+  stSounds:      svg('<path d="M9 18V5l11-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/>', 16),
+  stVoice:       svg('<rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0013 0M12 17.5V21M9 21h6"/>', 16),
+  stAccent:      svg('<path d="M12 3s6 5.6 6 10.2A6 6 0 016 13.2C6 8.6 12 3 12 3z"/>', 16),
+  stType:        svg('<path d="M4 19l6-15 6 15M6.6 13h6.8"/><path d="M18 11h3M19.5 8v9"/>', 16),
+  stMemory:      svg('<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0012 3z"/>', 16),
+  stStorage:     svg('<path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>', 16),
+  stWarnings:    svg('<path d="M5 21V4"/><path d="M5 4h12l-2.5 4 2.5 4H5"/>', 16),
+  stSeries:      svg('<rect x="3" y="4" width="4.5" height="16" rx="1"/><rect x="9.5" y="4" width="4.5" height="16" rx="1"/><path d="M16.8 5.6l3.9-1 2.6 14.6-3.9 1z"/>', 16),
+  stVersions:    svg('<path d="M6 3v12"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="6" r="3"/><path d="M18 9a9 9 0 01-9 9"/>', 16),
+  stStreaming:   svg('<circle cx="12" cy="12" r="2"/><path d="M16.2 7.8a6 6 0 010 8.4M7.8 16.2a6 6 0 010-8.4M19.1 4.9a10 10 0 010 14.2M4.9 19.1a10 10 0 010-14.2"/>', 16),
+  stPersonalize: svg('<path d="M4 20L14.5 9.5"/><path d="M13 6l5 5"/><path d="M19 3v3M17.5 4.5h3M6 5v2M5 6h2"/>', 16),
+  stResponses:   svg('<path d="M4 4h16v12H9l-5 4z"/><path d="M8 8.5h8M8 11.5h5"/>', 16),
+  stFormat:      svg('<path d="M6 4h7a3.5 3.5 0 010 7H6zM6 11h8a3.5 3.5 0 010 7H6z"/>', 16),
+  stSkills:      svg('<path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/>', 16),
+  stControls:    svg('<path d="M3 7h10M17 7h4M3 17h4M11 17h10"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>', 16),
+  stStatus:      svg('<path d="M5 20v-4M10 20v-8M15 20v-12M20 20V4"/>', 16),
+  stTerms:       svg('<path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4M9.5 14l2 2 3.5-4"/>', 16),
+  stRules:       svg('<path d="M10 6h11M10 12h11M10 18h11"/><path d="M3 6l1.5 1.5L7 5M3 12l1.5 1.5L7 11M3 18l1.5 1.5L7 17"/>', 16),
+  stLicense:     svg('<circle cx="12" cy="9" r="5.5"/><path d="M8.5 13.5L7 21l5-3 5 3-1.5-7.5"/>', 16),
+  stHelp:        svg('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/><path d="M5.6 5.6l3.9 3.9M14.5 14.5l3.9 3.9M18.4 5.6l-3.9 3.9M9.5 14.5l-3.9 3.9"/>', 16),
+  stBilling:     svg('<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>', 16),
+  stFeedback:    svg('<path d="M21 3L3 10.5l7 3 3 7z"/><path d="M21 3L10 13.5"/>', 16),
+  stPermissions: svg('<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3M14 9l2 2"/>', 16),
+  stNotify:      svg('<path d="M6 9a6 6 0 0112 0c0 5 2 6 2 7H4c0-1 2-2 2-7z"/><path d="M10 20a2 2 0 004 0M3 8c.5-2 1.5-3.5 3-4.5M21 8c-.5-2-1.5-3.5-3-4.5"/>', 16),
+  stConnect:     svg('<circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 006 0v-1a10 10 0 10-4 8"/>', 16),
+  stPrivacy:     svg('<path d="M12 21s8-3.6 8-10V5.5L12 3 4 5.5V11c0 6.4 8 10 8 10z"/><circle cx="12" cy="10.5" r="1.8"/><path d="M12 12.3V15"/>', 16),
+  stSessions:    svg('<path d="M3 12a9 9 0 109-9 9.7 9.7 0 00-6.7 2.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/>', 16),
+  stProfile:     svg('<rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="9" cy="11" r="2"/><path d="M6 16c.5-1.5 1.7-2.2 3-2.2s2.5.7 3 2.2M15 10h3M15 14h3"/>', 16),
+  stDevices:     svg('<rect x="2" y="4" width="14" height="11" rx="2"/><path d="M6 20h6M9 15v5"/><rect x="18" y="9" width="4" height="9" rx="1"/>', 16),
+  stActivate:    svg('<rect x="2" y="7" width="20" height="10" rx="5"/><circle cx="16" cy="12" r="2.5"/>', 16),
+  stAbandon:     svg('<circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/>', 16),
+  stDestruct:    svg('<circle cx="11" cy="14" r="7"/><path d="M16 9l3-3M18 3l.5 1.5L20 5l-1.5.5L18 7l-.5-1.5L16 5l1.5-.5z"/>', 16),
+  stChevItem:    svg('<path d="M9.5 6.5L15 12l-5.5 5.5"/>', 14),
+  stChevLink:    svg('<path d="M8 16L16 8M9 8h7v7"/>', 14),
+  stChevAcct:    svg('<path d="M8 5l7 7-7 7"/>', 14)
+});
 ICONS.infoSm  = svg('<path d="M4 4h16v12H8l-4 4z"/><path d="M12 8v3M12 13h.01"/>', 14);
 delete ICONS.memory; delete ICONS.pen;
 
@@ -1174,7 +1220,7 @@ const SUM = {
   sessions:   () => (settings.saveSessions ? 'Saving' : 'Off'),
   memory:     () => {
     const l = settings.memoryLong, s = settings.memoryShort;
-    return l && s ? 'Long & Short' : l ? 'Long-Term' : s ? 'Short-Term' : 'Off';
+    return l && s ? 'Both' : l ? 'Long-Term' : s ? 'Short-Term' : 'Off';
   },
 
   warnings:   () => (settings.warnOn ? 'On' : 'Off'),
@@ -1246,7 +1292,7 @@ const Item = (id, icon, label, body, { stat = false } = {}) => stat
         <span class="row-icon">${icon}</span>
         <span class="row-label">${label}</span>
         <span class="row-value" data-sum="${id}">${esc(SUM[id] ? SUM[id]() : (id === 'storage' ? storageSummary : ''))}</span>
-        <span class="row-chev">${ICONS.chevronR}</span>
+        <span class="row-chev">${ICONS.stChevItem}</span>
       </button>
       <div class="item-body"><div class="item-body-inner"><div class="item-content">${body}</div></div></div>
     </div>`;
@@ -1257,7 +1303,7 @@ const LinkRow = (id, icon, label, { value = '', act = '', danger = false } = {})
       <span class="row-icon">${icon}</span>
       <span class="row-label">${label}</span>
       ${value ? `<span class="row-value">${esc(value)}</span>` : ''}
-      <span class="row-chev">${ICONS.chevronR}</span>
+      <span class="row-chev">${ICONS.stChevLink}</span>
     </button>
   </div>`;
 
@@ -1279,37 +1325,37 @@ const Section = (id, title, rows, count) => `
     <div class="panel-group">${rows.join('')}</div>
   </section>`;
 
-const VoiceItem = () => Item('voice', ICONS.mic, 'Voice',
-  Field('Input language', Chips('voiceIn', [{ id: 'auto', name: 'Auto' }, ...LANGUAGES], settings.voiceIn)) +
-  SubSwitch('Artificial Intellectual Voice', 'elOn') +
-  '<button class="btn-line" type="button" data-act="el-voices">Choose voice (10)</button>' +
+const VoiceItem = () => Item('voice', ICONS.stVoice, 'Voice',
+  Field('Input', Chips('voiceIn', [{ id: 'auto', name: 'Auto' }, ...LANGUAGES], settings.voiceIn)) +
+  SubSwitch('AI Voice', 'elOn') +
+  '<button class="btn-line" type="button" data-act="el-voices">Pick Voice</button>' +
   `<div data-el-panel hidden>${Field('Men', Chips('elVoice', EL_VOICES.filter((v) => v.g === 'm'), settings.elVoice))}${Field('Women', Chips('elVoice', EL_VOICES.filter((v) => v.g === 'f'), settings.elVoice))}</div>` +
-  Field('Device voice (fallback)', `<select class="input" data-text="voiceName" data-voices>${voiceOptions()}</select>`) +
+  Field('Device Voice', `<select class="input" data-text="voiceName" data-voices>${voiceOptions()}</select>`) +
   Field('Speed', Chips('voiceOut', SPEEDS, settings.voiceOut)) +
   Field('Pitch', Chips('voicePitch', PITCHES, settings.voicePitch)) +
-  SubSwitch('Read replies aloud', 'autoRead') +
-  '<button class="btn-line" type="button" data-act="voice-test">Test voice</button>');
+  SubSwitch('Auto Read', 'autoRead') +
+  '<button class="btn-line" type="button" data-act="voice-test">Test Voice</button>');
 
 let ThemeSection = () => Section('theme', 'Theme', [
-  Item('appearance', ICONS.moon, 'Appearance', Field('Mode', Seg('appearance', APPEARANCES, settings.appearance))),
-  Item('language', ICONS.globe, 'Language',
-    Field('Input (word check)', Chips('langIn', LANGUAGES, settings.langIn)) +
-    Field('Output (replies)', Chips('langOut', LANGUAGES, settings.langOut))),
-  Item('sounds', ICONS.setSounds, 'Sounds',
+  Item('appearance', ICONS.stAppearance, 'Appearance', Field('Mode', Seg('appearance', APPEARANCES, settings.appearance))),
+  Item('language', ICONS.stLanguage, 'Language',
+    Field('Input', Chips('langIn', LANGUAGES, settings.langIn)) +
+    Field('Output', Chips('langOut', LANGUAGES, settings.langOut))),
+  Item('sounds', ICONS.stSounds, 'Sounds',
     SubSwitch('Music', 'soundMusic') + SubSwitch('Effects', 'soundEffects') +
-    Field('Effects volume', Chips('sfxVolume', [{ id: 'low', name: 'Low' }, { id: 'normal', name: 'Normal' }, { id: 'high', name: 'High' }], settings.sfxVolume))),
+    Field('Volume', Chips('sfxVolume', [{ id: 'low', name: 'Low' }, { id: 'normal', name: 'Normal' }, { id: 'high', name: 'High' }], settings.sfxVolume))),
   VoiceItem(),
-  Item('styles', ICONS.palette, 'Styles',
+  Item('styles', ICONS.stAccent, 'Accent',
     `<div class="swatches" role="radiogroup" aria-label="Accent color">
       ${ACCENTS.map((a) => `<button class="swatch ${a.c ? '' : 'is-mono'} ${a.id === settings.accent ? 'on' : ''}" type="button" role="radio" aria-checked="${a.id === settings.accent}" aria-label="${a.name}" title="${a.name}" data-seg="accent" data-val="${a.id}"${a.c ? ` style="--sw:${a.c}"` : ''}></button>`).join('')}
     </div>`),
-  Item('fonts', ICONS.type, 'Fonts',
-    Field('Fonts', Chips('font', FONTS.map((f) => ({ ...f, style: `font-family:${f.stack}` })), settings.font)) +
-    Field('Text Size', Seg('size', TEXT_SIZES, settings.size)))
+  Item('fonts', ICONS.stType, 'Typography',
+    Field('Typeface', Chips('font', FONTS.map((f) => ({ ...f, style: `font-family:${f.stack}` })), settings.font)) +
+    Field('Size', Seg('size', TEXT_SIZES, settings.size)))
 ], 6);
 
 const ResetGroup = () => Section('reset', 'Defaults', [
-  LinkRow('reset-defaults', ICONS.switch, 'Reset to Default', { act: 'reset-defaults' })
+  LinkRow('reset-defaults', ICONS.stReset, 'Reset All', { act: 'reset-defaults' })
 ], 1);
 
 const memListHtml = () => (settings.memoryNotes?.length
@@ -1317,84 +1363,84 @@ const memListHtml = () => (settings.memoryNotes?.length
   : '<p class="field-note">No saved memories yet.</p>');
 
 let AssistanceSection = () => Section('assistance', 'Assistance', [
-  Item('memory', ICONS.setMemory, 'Memory',
+  Item('memory', ICONS.stMemory, 'Memory',
     SubSwitch('Long-Term', 'memoryLong') + SubSwitch('Short-Term', 'memoryShort') +
     Field('Stored', `<span class="field-note" data-memsys-stat>${esc(memSysStat())}</span>`) +
     `<div class="mem-list" id="mem-list">${memListHtml()}</div>` +
-    '<button class="btn-line danger" type="button" data-act="clear-memory">Forget</button>'),
+    '<button class="btn-line danger" type="button" data-act="clear-memory">Clear Memory</button>'),
 
-  Item('storage', ICONS.database, 'Storage',
-    Field('Total account data (estimated)', `
+  Item('storage', ICONS.stStorage, 'Storage',
+    Field('Data Used', `
       <div class="meter"><i data-storage-bar></i></div>
       <div class="meter-text"><span data-storage-used>\u2014</span><span data-storage-cap>Max 500 MB</span></div>
       <div class="storage-break" data-storage-break></div>`) +
-    '<button class="btn-line" type="button" data-act="clear-cache">Clear cache</button>'),
+    '<button class="btn-line" type="button" data-act="clear-cache">Clear Cache</button>'),
 
-  Item('warnings', ICONS.alert, 'Warnings',
-    SubSwitch('Warnings', 'warnOn') + SubSwitch('Token Warning Notification', 'warnTokens')),
+  Item('warnings', ICONS.stWarnings, 'Warnings',
+    SubSwitch('Show Warnings', 'warnOn') + SubSwitch('Token Alerts', 'warnTokens')),
 
-  Item('series', ICONS.list, 'Series',
+  Item('series', ICONS.stSeries, 'Series',
     Field('Series', '<span class="static-val">Pluthos</span>', { inline: true }), { stat: true }),
 
-  Item('versions', ICONS.tag, 'Versions',
+  Item('versions', ICONS.stVersions, 'Versions',
     `<div class="chips">
       <button class="chip ${settings.version === '1.00' ? 'on' : ''}" type="button" data-seg="version" data-val="1.00">1.00</button>
       ${PREVIEW_VERSIONS.map((v) => `<span class="chip is-locked" title="Preview only">${v.name}</span>`).join('')}
     </div>
     <p class="field-note">1.00 is the current version. 1.01 to 1.05 are shown for reference and unlock as they release.</p>`),
 
-  ToggleRow('streaming', ICONS.setStreaming, 'Streaming', 'streaming'),
+  ToggleRow('streaming', ICONS.stStreaming, 'Streaming', 'streaming'),
 
-  Item('personalize', ICONS.sparkles, 'Personalize',
+  Item('personalize', ICONS.stPersonalize, 'Personalize',
     Field('Nickname', `<input class="input" data-text="nickname" maxlength="40" placeholder="What should I call you?" value="${esc(settings.nickname || '')}">`) +
-    Field('About you', `<input class="input" data-text="persRole" maxlength="80" placeholder="e.g. student, nurse, developer" value="${esc(settings.persRole || '')}">`) +
+    Field('Background', `<input class="input" data-text="persRole" maxlength="80" placeholder="e.g. student, nurse, developer" value="${esc(settings.persRole || '')}">`) +
     Field('Interests', `<input class="input" data-text="persInterests" maxlength="120" placeholder="e.g. football, cooking, coding" value="${esc(settings.persInterests || '')}">`) +
     Field('Emoji', Chips('persEmoji', [{ id: 'auto', name: 'Auto' }, { id: 'never', name: 'Never' }, { id: 'often', name: 'Often' }], settings.persEmoji)) +
     Field('Format', Chips('persFormat', [{ id: 'auto', name: 'Auto' }, { id: 'plain', name: 'Plain' }, { id: 'markdown', name: 'Markdown' }, { id: 'bullets', name: 'Bullets' }], settings.persFormat)) +
-    Field('Custom instructions', `<textarea class="input" data-text="instructions" maxlength="600" rows="3">${esc(settings.instructions || '')}</textarea>`)),
+    Field('Instructions', `<textarea class="input" data-text="instructions" maxlength="600" rows="3">${esc(settings.instructions || '')}</textarea>`)),
 
-  Item('responses', ICONS.setResponses, 'Responses',
+  Item('responses', ICONS.stResponses, 'Responses',
     Field('Length', Seg('length', LENGTHS, settings.length)) +
-    Field('Tone & Moods', Chips('tone', TONES, settings.tone))),
+    Field('Tone', Chips('tone', TONES, settings.tone))),
 
-  Item('richtext', ICONS.pilcrow, 'Rich text',
-    Field('Line spacing', Seg('lineHeight', LINE_HEIGHTS, settings.lineHeight)) +
-    Field('Code size', Seg('codeSize', CODE_SIZES, settings.codeSize)) +
-    SubSwitch('Wrap long code lines', 'codeWrap') +
-    SubSwitch('AI uses tables, callouts &amp; math', 'richFormat')),
+  Item('richtext', ICONS.stFormat, 'Formatting',
+    Field('Spacing', Seg('lineHeight', LINE_HEIGHTS, settings.lineHeight)) +
+    Field('Code Size', Seg('codeSize', CODE_SIZES, settings.codeSize)) +
+    SubSwitch('Wrap Code', 'codeWrap') +
+    SubSwitch('Rich Output', 'richFormat')),
 
-  Item('agentskills', ICONS.agent, 'Agent &amp; skills',
-    SubSwitch('Agent tools', 'agentTools') +
-    SubSwitch('Visible step plans', 'agentPlan') +
-    SubSwitch('Skill: Presentations', 'skillPresentations') +
-    SubSwitch('Skill: Documents', 'skillDocuments') +
-    SubSwitch('Skill: Spreadsheets', 'skillSheets') +
-    SubSwitch('Skill: Web search', 'skillWeb') +
-    Field('Tutorial', '<button class="chip" type="button" data-action="replay-tour">Replay tour</button>')),
+  Item('agentskills', ICONS.stSkills, 'Agent Skills',
+    SubSwitch('Tool Use', 'agentTools') +
+    SubSwitch('Show Plans', 'agentPlan') +
+    SubSwitch('Slides', 'skillPresentations') +
+    SubSwitch('Documents', 'skillDocuments') +
+    SubSwitch('Spreadsheets', 'skillSheets') +
+    SubSwitch('Web Search', 'skillWeb') +
+    Field('Tutorial', '<button class="chip" type="button" data-action="replay-tour">Replay Tour</button>')),
 
-  Item('controls', ICONS.cpu, 'Controls',
+  Item('controls', ICONS.stControls, 'Controls',
     Field('Creativity', Chips('creativity', [{ id: 'precise', name: 'Precise' }, { id: 'balanced', name: 'Balanced' }, { id: 'creative', name: 'Creative' }], settings.creativity)) +
-    Field('Chat memory (messages sent)', Chips('ctxLimit', [{ id: 'all', name: 'All' }, { id: '6', name: '6' }, { id: '12', name: '12' }, { id: '24', name: '24' }], settings.ctxLimit)) +
-    SubSwitch('Enter sends message', 'enterSends') +
-    SubSwitch('Auto-scroll', 'autoScroll') +
-    SubSwitch('Reduce motion', 'reduceMotion') +
-    SubSwitch('Haptic feedback', 'haptics')),
+    Field('Context Size', Chips('ctxLimit', [{ id: 'all', name: 'All' }, { id: '6', name: '6' }, { id: '12', name: '12' }, { id: '24', name: '24' }], settings.ctxLimit)) +
+    SubSwitch('Enter Sends', 'enterSends') +
+    SubSwitch('Auto Scroll', 'autoScroll') +
+    SubSwitch('Reduce Motion', 'reduceMotion') +
+    SubSwitch('Haptics', 'haptics')),
 
-  Item('status', ICONS.pulse, 'Status', Field('State', Seg('status', STATUSES, settings.status)))
+  Item('status', ICONS.stStatus, 'Status', Field('State', Seg('status', STATUSES, settings.status)))
 ], 13);
 
 const AboutSection = () => Section('about', 'About', [
-  LinkRow('terms', ICONS.file, 'Terms & Conditions', { act: 'about-terms' }),
-  LinkRow('rules', ICONS.scale, 'Rules & Policies', { act: 'about-rules' }),
-  LinkRow('licenses', ICONS.info, 'About & Licenses', { act: 'about-licenses' }),
-  LinkRow('help', ICONS.help, 'Help & Support', { act: 'about-help' }),
-  LinkRow('billing', ICONS.card, 'Billing & Payment', { act: 'about-billing' }),
-  LinkRow('feedback', ICONS.bug, 'Feedback', { act: 'feedback' })
+  LinkRow('terms', ICONS.stTerms, 'Terms & Conditions', { act: 'about-terms' }),
+  LinkRow('rules', ICONS.stRules, 'Rules & Policies', { act: 'about-rules' }),
+  LinkRow('licenses', ICONS.stLicense, 'About & Licenses', { act: 'about-licenses' }),
+  LinkRow('help', ICONS.stHelp, 'Help & Support', { act: 'about-help' }),
+  LinkRow('billing', ICONS.stBilling, 'Billing & Payment', { act: 'about-billing' }),
+  LinkRow('feedback', ICONS.stFeedback, 'Feedback', { act: 'feedback' })
 ], 6);
 
 let OthersSection = () => Section('others', 'Others', [
-  Item('permissions', ICONS.lock, 'Permissions', '<div id="perm-list"><p class="field-note">Checking\u2026</p></div>'),
-  ToggleRow('notifications', ICONS.bell, 'Notifications', 'notifications')
+  Item('permissions', ICONS.stPermissions, 'Permissions', '<div id="perm-list"><p class="field-note">Checking\u2026</p></div>'),
+  ToggleRow('notifications', ICONS.stNotify, 'Notifications', 'notifications')
 ], 2);
 
 const AccountCard = (user) => `
@@ -1404,52 +1450,52 @@ const AccountCard = (user) => `
       <span class="account-name">${esc(profileName(user))}</span>
       <span class="account-sub">${esc(shownEmail(user.email, 'Signed in'))}</span>
     </span>
-    <span class="row-chev">${ICONS.chevronR}</span>
+    <span class="row-chev">${ICONS.stChevAcct}</span>
   </button>`;
 
 let AccountPage = function (user) {
   return `
   <div class="panel-sub" id="account-page" aria-label="Account">
     <div class="panel-head">
-      <button class="icon-btn" type="button" data-act="account-back" aria-label="Back">${ICONS.back}</button>
+      <button class="icon-btn" type="button" data-act="account-back" aria-label="Back">${ICONS.stBack}</button>
       <h2 class="panel-title">Account</h2>
     </div>
     <div class="panel-scroll">
       <div class="panel-group">
-        ${Item('connections', ICONS.acctConn, 'Connections',
-          Field('Email (display only)', `<span class="static-val" data-mask="email">${esc(shownEmail(user.email, 'Not set'))}</span>`) +
+        ${Item('connections', ICONS.stConnect, 'Connections',
+          Field('Email', `<span class="static-val" data-mask="email">${esc(shownEmail(user.email, 'Not set'))}</span>`) +
           Field('Phone', `<div class="phone-row">
             <select class="input" data-text="phoneCc" aria-label="Country code">${ccOptions()}</select>
             <input class="input" data-text="phone" inputmode="tel" maxlength="14" placeholder="9XX XXX XXXX"
               value="${esc(settings.privMask ? maskPhone(settings.phone || '') : (settings.phone || ''))}"
               data-masked="${settings.privMask && settings.phone ? '1' : '0'}">
           </div>`))}
-        ${Item('privacy', ICONS.shield, 'Privacy and Controls',
-          SubSwitch('Share usage data', 'privUsage') +
-          SubSwitch('Use chats to improve Aphrosta', 'privTrain') +
-          SubSwitch('Hide phone and email', 'privMask') +
-          '<button class="btn-line" type="button" data-act="export-data">Export my data</button>' +
-          '<label class="btn-line">Import my data<input type="file" accept="application/json,.json" data-import hidden></label>' +
-          '<button class="btn-line danger" type="button" data-act="wipe-local">Delete local data</button>')}
-        ${Item('sessions', ICONS.clock, 'Save/Clear Sessions',
+        ${Item('privacy', ICONS.stPrivacy, 'Privacy',
+          SubSwitch('Share Usage', 'privUsage') +
+          SubSwitch('Improve Service', 'privTrain') +
+          SubSwitch('Mask Details', 'privMask') +
+          '<button class="btn-line" type="button" data-act="export-data">Export Data</button>' +
+          '<label class="btn-line">Import Data<input type="file" accept="application/json,.json" data-import hidden></label>' +
+          '<button class="btn-line danger" type="button" data-act="wipe-local">Delete Local</button>')}
+        ${Item('sessions', ICONS.stSessions, 'Sessions',
           SubSwitch('Save Sessions', 'saveSessions') +
           '<button class="btn-line danger" type="button" data-act="clear-sessions">Clear Sessions</button>')}
-        ${Item('profile', ICONS.user, 'Username and Profile',
+        ${Item('profile', ICONS.stProfile, 'Profile',
           `<div class="avatar-edit">
             ${Avatar(user)}
-            <label class="btn-line">Upload photo<input type="file" accept="image/*" data-avatar hidden></label>
+            <label class="btn-line">Upload Photo<input type="file" accept="image/*" data-avatar hidden></label>
             <button class="btn-line" type="button" data-act="avatar-remove">Remove</button>
           </div>` +
           Field('Username', `<input class="input" data-text="username" maxlength="30" placeholder="${esc(user.displayName || 'Your name')}" value="${esc(settings.username || '')}">`))}
-        ${Item('devices', ICONS.pin, 'Devices & Location',
+        ${Item('devices', ICONS.stDevices, 'Devices',
           '<div id="device-list" class="dev-list"></div>' +
-          Field('Approximate location', `<button class="btn-line" type="button" data-act="loc-get">Detect location</button><span class="field-note" id="loc-out">Not shared</span>`))}
+          Field('Location', `<button class="btn-line" type="button" data-act="loc-get">Detect Location</button><span class="field-note" id="loc-out">Not shared</span>`))}
         ${accountActive
-          ? LinkRow('activation', ICONS.power, 'Deactivate account', { act: 'deactivate', value: 'Active' })
-          : LinkRow('activation', ICONS.power, 'Activate account', { act: 'activate', value: 'Paused' })}
-        ${LinkRow('abandon', ICONS.exit, 'Abandon account', { act: 'abandon', danger: true })}
-        ${LinkRow('abolish', ICONS.abolishAcct, 'Abolish account', { act: 'abolish', danger: true })}
-        ${LinkRow('destruct', ICONS.flame, 'Destruct account', { act: 'destruct', danger: true })}
+          ? LinkRow('activation', ICONS.stActivate, 'Deactivate', { act: 'deactivate', value: 'Active' })
+          : LinkRow('activation', ICONS.stActivate, 'Activate', { act: 'activate', value: 'Paused' })}
+        ${LinkRow('abandon', ICONS.stAbandon, 'Abandon', { act: 'abandon', danger: true })}
+        ${LinkRow('abolish', ICONS.abolishAcct, 'Abolish', { act: 'abolish', danger: true })}
+        ${LinkRow('destruct', ICONS.stDestruct, 'Destruct', { act: 'destruct', danger: true })}
       </div>
     </div>
   </div>`;
@@ -1463,16 +1509,16 @@ const SettingsPanel = (user) => `
   <aside class="settings-panel" id="settings-panel" aria-label="Settings">
     <div class="panel-head">
       <h2 class="panel-title">Settings</h2>
-      <button class="icon-btn" type="button" data-action="settings-close" aria-label="Close">${ICONS.closeSettings}</button>
+      <button class="icon-btn" type="button" data-action="settings-close" aria-label="Close">${ICONS.stClose}</button>
     </div>
 
     <div class="panel-scroll">
       <section class="usage-card" aria-label="Usage">
         <div class="usage-head">
-          <span class="usage-title">${ICONS.zap}<span>Usage</span></span>
+          <span class="usage-title">${ICONS.stUsage}<span>Usage</span></span>
           <span class="usage-head-r">
             <span class="usage-sub" data-usage-sub>Today</span>
-            <button class="usage-info" type="button" data-act="usage-info" aria-label="Usage details">${ICONS.usageInfo}</button>
+            <button class="usage-info" type="button" data-act="usage-info" aria-label="Usage details">${ICONS.stUsageDetail}</button>
           </span>
         </div>
         <div class="usage-figure">
@@ -1602,7 +1648,7 @@ function onSettingsClick(e) {
       return;
     case 'reset-defaults':
       confirmDialog({
-        title: 'Reset to default?',
+        title: 'Reset all settings?',
         message: 'All settings will return to their defaults. Your account, API keys and sessions are kept.',
         confirmLabel: 'Reset',
         danger: true
