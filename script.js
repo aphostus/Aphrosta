@@ -165,7 +165,7 @@ const EL_VOICES = [
 ];
 
 /* EL-SEAL-BEGIN */
-const EL_SEAL = { p: ["3PDcOfEmXgsw","AB0cY3lD7PBm","sYOtezrOYzpg","6cy39qli02Pg"], o: [1,3,0,2], s: 'dnTWuCVr6bsUxZacrUrvWw==', i: 'APHT96FsWkErxydT', c: ["MF8HSFKTKGO2EJ","Me/p6QtUBCpy/dO","UdqsGWkZg+ZabNGoCXmm1CFv9rZ+TGO2E9H4fiJ/MuTGXjbcDfHGG5X3KPFoA=="] };
+const EL_SEAL = { p: ["R9h8BHPVU6qp","2IZh0x7iJZoA","ZJ9CqxIZtXOX","UyolL3Sv9iUG"], o: [0,3,1,2], s: 'mYa/ns6UyrHDuhgeGZ5WLg==', i: 'L8ghdfRmn0xr4fI4', c: ["PLszFY6Bf0drAc","Yzq9pS7RqbN164X","qe5L5lubgkJahDfjN87rKqmXnG4cQaTlB08FhdlPDcZpUMKSysmjqqjlry0ag=="] };
 /* EL-SEAL-END */
 
 let elKeyCache = '';

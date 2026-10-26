@@ -2,6 +2,10 @@
 
 --- 1. START HERE (Every time) ---
 cd /sdcard/Programs/Aphrosta/Website
+~~~ Eleven Labs API Renewal:
+cd /sdcard/Programs/Tools
+node mkkey.js sk_YOUR_NEW_KEY
+history -c
 
 --- 2. AI VIBECODING (vibe.py) ---
 The script lives at Operators/Configury/vibe.py
@@ -12,6 +16,8 @@ Example: python Operators/Configury/vibe.py script.js 'Fix the timer bug'
 
 B. APPLY PLANNER.TXT (Direct Mode - No API limits)
 python Operators/Configury/vibe.py <file> planner.txt --direct
+python Operators/Configury/vibe.py index.html planner.txt --direct
+
 
 C. SAVE DIRECTLY TO ORIGINAL (Skip the Prototypes folder)
 Add --inplace to any command. It backs up the old file automatically.

@@ -21,6 +21,7 @@ Operators/Configury/*
 # 5. Explicitly ignore your private tooling and scratchpads
 Operators/Configury/vibe.py
 Operators/Configury/planner.txt
+Materials/System/guide.txt
 Materials/Private/
 Materials/System/
 Prototypes/
