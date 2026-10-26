@@ -1232,7 +1232,7 @@ const Section = (id, title, rows, count) => `
 
 const VoiceItem = () => Item('voice', ICONS.mic, 'Voice',
   Field('Input language', Chips('voiceIn', [{ id: 'auto', name: 'Auto' }, ...LANGUAGES], settings.voiceIn)) +
-  SubSwitch('ElevenLabs voice (read aloud + mic)', 'elOn') +
+  SubSwitch('Artificial Intellectual Voice', 'elOn') +
   '<button class="btn-line" type="button" data-act="el-voices">Choose voice (10)</button>' +
   `<div data-el-panel hidden>${Field('Men', Chips('elVoice', EL_VOICES.filter((v) => v.g === 'm'), settings.elVoice))}${Field('Women', Chips('elVoice', EL_VOICES.filter((v) => v.g === 'f'), settings.elVoice))}</div>` +
   Field('Device voice (fallback)', `<select class="input" data-text="voiceName" data-voices>${voiceOptions()}</select>`) +
