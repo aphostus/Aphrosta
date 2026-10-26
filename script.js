@@ -799,8 +799,7 @@ Object.assign(ICONS, {
 Object.assign(ICONS, {
   navWorlds:     svg('<circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18"/>'),
   navAgents:     svg('<ellipse cx="12" cy="14" rx="8.5" ry="6.5"/><path d="M9 10.5v7M14.5 10.5v7"/><path d="M10 7.5C9.5 4.5 10.5 3 12.5 3s3 1.5 2 4.5"/><path d="M17.5 9.5L20 6.5M18 13.5h.01"/>'),
-  navSystem:     svg('<rect x="3" y="3" width="18" height="7" rx="2"/><rect x="3" y="14" width="18" height="7" rx="2"/><path d="M7 6.5h.01M7 17.5h.01"/>'),
-  navAutomation: svg('<rect x="3" y="3" width="6" height="6" rx="1.5"/><rect x="15" y="15" width="6" height="6" rx="1.5"/><path d="M9 6h3a3 3 0 013 3v6"/>', 16),
+navSystem:     svg('<rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3"/>'),  navAutomation: svg('<rect x="3" y="3" width="6" height="6" rx="1.5"/><rect x="15" y="15" width="6" height="6" rx="1.5"/><path d="M9 6h3a3 3 0 013 3v6"/>', 16),
   navConnectors: svg('<path d="M9 2v6M15 2v6"/><path d="M6 8h12v3a6 6 0 01-12 0z"/><path d="M12 17v5"/>', 16),
   navOperations: svg('<rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M7 10l3 2.5L7 15M13 15h4"/>', 16),
   setMemory:     svg('<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h6M9 11h6M9 15h3"/>', 16),
