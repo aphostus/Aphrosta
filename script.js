@@ -350,6 +350,9 @@ const SETTINGS_DEFAULTS = {
   saveSessions: true,
   memoryLong: true,
   memoryShort: true,
+  memDms: true,
+  memMds: true,
+  memSls: true,
   warnOn: true,
   warnTokens: true,
   version: '1.00',
@@ -1128,6 +1131,7 @@ const SUM = {
     const l = settings.memoryLong, s = settings.memoryShort;
     return l && s ? 'Long & Short' : l ? 'Long-Term' : s ? 'Short-Term' : 'Off';
   },
+  memsys:     () => (settings.memDms || settings.memMds || settings.memSls ? 'Active' : 'Off'),
   warnings:   () => (settings.warnOn ? 'On' : 'Off'),
   series:     () => 'Pluthos',
   versions:   () => settings.version || '1.00',
@@ -1272,6 +1276,13 @@ let AssistanceSection = () => Section('assistance', 'Assistance', [
     SubSwitch('Long-Term', 'memoryLong') + SubSwitch('Short-Term', 'memoryShort') +
     '<button class="btn-line danger" type="button" data-act="clear-memory">Clear Memory</button>' +
     `<div class="mem-list" id="mem-list">${memListHtml()}</div>`),
+
+  Item('memsys', ICONS.layers, 'Memory Systems',
+    SubSwitch('DMS \u00b7 Dimensional Memory', 'memDms') +
+    SubSwitch('MDS \u00b7 Memory Database', 'memMds') +
+    SubSwitch('SLS \u00b7 State Logtracker', 'memSls') +
+    Field('Stored', `<span class="field-note" data-memsys-stat>${esc(memSysStat())}</span>`) +
+    '<button class="btn-line danger" type="button" data-act="clear-log">Clear Log</button>'),
 
   Item('storage', ICONS.database, 'Storage',
     Field('Total account data (estimated)', `
@@ -1522,7 +1533,7 @@ function onSettingsClick(e) {
     case 'dev-remove':    return removeDevice(actEl.dataset.dev);
     case 'loc-get':       return detectLocation();
     case 'mem-del': {
-      settings.memoryNotes.splice(+actEl.dataset.i, 1);
+      MemSys.forget(settings.memoryNotes.splice(+actEl.dataset.i, 1)[0]);
       saveSettings();
       const box = document.getElementById('mem-list');
       if (box) box.innerHTML = memListHtml();
@@ -1530,8 +1541,15 @@ function onSettingsClick(e) {
     }
     case 'clear-memory':
       settings.memoryNotes = [];
+      MemSys.clearMemory();
       saveSettings();
+      document.querySelectorAll('[data-memsys-stat]').forEach((el) => { el.textContent = memSysStat(); });
       toast('Memory cleared.', 'success');
+      return;
+    case 'clear-log':
+      MemSys.clearLog();
+      document.querySelectorAll('[data-memsys-stat]').forEach((el) => { el.textContent = memSysStat(); });
+      toast('Log cleared.', 'success');
       return;
     case 'clear-sessions':
       confirmDialog({
@@ -3794,11 +3812,349 @@ const TokenRecorder = (() => {
   };
 })();
 
+/* ---------- MEMORY SYSTEMS (silent): DMS / MDS / SLS ----------
+   DMS  Dimensional Memory System  - facts with dimensions (kind, topic, project, scope, weight) + relations
+   MDS  Memory Database System     - scoped storage (chat / project / global), short + long retention, Firestore sync
+   SLS  State Logtracker System    - compact log of what happened / is happening / is next
+   No UI except Settings > Assistance > Memory Systems. Zero extra API calls. */
+function memSysStat() {
+  try { return MemSys.stat(); } catch (_) { return ''; }
+}
+const MemSys = (() => {
+  const LIM = { mem: 150, log: 200, cloudLog: 120, chats: 20, gone: 200 };
+  const DAY = 864e5;
+  const STOP = new Set('about above after again also because been before being below between both could does doing down during each from further have having here into just like more most only other over same should some such than that their them then there these they this those through under until very what when where which while will with would your you the and for are but not can its was were our out off too any all'.split(' '));
+  const PROJ_RE = /\b(?:building|making|working on|developing|creating)\s+(?:a |an |the |my |our )?(?:project |app |site |game |bot |website )?(?:called |named )?([A-Z][\w-]{2,24})/;
+  const PATS = [
+    ['pref',  /\bi (?:prefer|really like|love|always want|need you to)\s+(?:(?!\band i\b)[^.;,!?\n]){3,90}/i, 3],
+    ['avoid', /\bi (?:don'?t|do not|never) (?:like|want|use|need)\s+(?:(?!\band i\b)[^.;,!?\n]){3,90}/i, 3],
+    ['tool',  /\b(?:i use|i'?m using|i am using)\s+(?:(?!\band i\b)[^.;,!?\n]){2,80}/i, 2],
+    ['proj',  PROJ_RE, 4]
+  ];
+  let who = null, pulled = false, dirty = false, tSave = 0, tPush = 0;
+  let st = { mem: [], log: [], ch: {}, gone: [], cut: 0 };
+
+  const now = () => Date.now();
+  const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const keyOf = (s) => norm(s).slice(0, 80);
+  const lsKey = () => `aphrosta.mds.${who}`;
+  const ref = () => doc(db, 'users', who, 'data', 'memsys');
+  const cloudOk = () => !!(settings.memMds && settings.privUsage && currentUser && currentUser.uid === who);
+
+  function toks(s) {
+    const seen = new Set();
+    norm(s).split(' ').forEach((w) => {
+      if (w.length < 4 || STOP.has(w)) return;
+      seen.add(w.length > 5 ? w.replace(/(?:ing|es|s)$/, '') : w);
+    });
+    return [...seen].slice(0, 8);
+  }
+
+  function tidy(s) {
+    return s.trim().replace(/\s+/g, ' ')
+      .replace(/^i am\b/i, 'User is').replace(/^i'?m\b/i, 'User is').replace(/^i\b/i, 'User')
+      .replace(/[.!?,]+$/, '');
+  }
+
+  function ensure() {
+    const w = currentUser?.uid || 'anon';
+    if (who === w) return;
+    who = w; pulled = false; dirty = false;
+    st = { mem: [], log: [], ch: {}, gone: [], cut: 0 };
+    const raw = lsGet(lsKey(), null);
+    if (raw && typeof raw === 'object') {
+      if (Array.isArray(raw.mem)) st.mem = raw.mem;
+      if (Array.isArray(raw.log)) st.log = raw.log;
+      if (Array.isArray(raw.gone)) st.gone = raw.gone;
+      if (raw.ch && typeof raw.ch === 'object') st.ch = raw.ch;
+      st.cut = +raw.cut || 0;
+    }
+    prune();
+  }
+
+  function prune() {
+    const t = now();
+    st.mem = st.mem.filter((m) => m && m.i && m.x
+      && !(m.sc === 'c' && t - m.u > 3 * DAY)
+      && !(m.h === 0 && m.w < 4 && t - m.u > 90 * DAY));
+    if (st.mem.length > LIM.mem) {
+      const keep = (m) => m.w * 2 + Math.min(m.h, 10) - (t - m.u) / (30 * DAY);
+      st.mem.sort((a, b) => keep(b) - keep(a));
+      st.mem.length = LIM.mem;
+    }
+    if (st.log.length > LIM.log) st.log.splice(0, st.log.length - LIM.log);
+    if (st.gone.length > LIM.gone) st.gone = st.gone.slice(-LIM.gone);
+    Object.keys(st.ch).forEach((id) => { if (t - (st.ch[id].u || 0) > 7 * DAY) delete st.ch[id]; });
+    const ids = Object.keys(st.ch);
+    if (ids.length > LIM.chats) ids.sort((a, b) => st.ch[a].u - st.ch[b].u).slice(0, ids.length - LIM.chats).forEach((id) => delete st.ch[id]);
+    const alive = new Set(st.mem.map((m) => m.i));
+    st.mem.forEach((m) => { m.r = (m.r || []).filter((x) => alive.has(x)); });
+  }
+
+  function save() {
+    dirty = true;
+    clearTimeout(tSave);
+    tSave = setTimeout(() => {
+      if (!settings.memMds || !who) return;
+      try { prune(); lsSet(lsKey(), st); } catch (_) {}
+    }, 600);
+    if (cloudOk()) { clearTimeout(tPush); tPush = setTimeout(push, 4000); }
+  }
+
+  async function push() {
+    clearTimeout(tPush);
+    if (!dirty || !pulled || !cloudOk()) return;
+    dirty = false;
+    try {
+      prune();
+      await setDoc(ref(), JSON.parse(JSON.stringify({
+        mem: st.mem, log: st.log.slice(-LIM.cloudLog), ch: st.ch, gone: st.gone, cut: st.cut, updated: now()
+      })));
+    } catch (err) { dirty = true; console.warn('Memory sync:', err?.code || err); }
+  }
+
+  async function pull() {
+    ensure();
+    if (!cloudOk()) return;
+    try {
+      const snap = await getDoc(ref());
+      if (snap.exists()) {
+        const c = snap.data() || {};
+        st.gone = [...new Set([...(st.gone || []), ...(c.gone || [])])].slice(-LIM.gone);
+        st.cut = Math.max(st.cut || 0, +c.cut || 0);
+        const byId = new Map(st.mem.map((m) => [m.i, m]));
+        (c.mem || []).forEach((m) => {
+          if (!m || !m.i || st.gone.includes(m.k)) return;
+          const o = byId.get(m.i);
+          if (!o || (m.u || 0) > (o.u || 0)) byId.set(m.i, m);
+        });
+        st.mem = [...byId.values()].filter((m) => !st.gone.includes(m.k));
+        const seen = new Set(st.log.map((e) => e.t + e.k + (e.s || '')));
+        (c.log || []).forEach((e) => { if (e.t > st.cut && !seen.has(e.t + e.k + (e.s || ''))) st.log.push(e); });
+        st.log.sort((a, b) => a.t - b.t);
+        Object.entries(c.ch || {}).forEach(([id, v]) => { if (!st.ch[id] || (v.u || 0) > (st.ch[id].u || 0)) st.ch[id] = v; });
+        prune();
+        lsSet(lsKey(), st);
+      }
+      pulled = true;
+      dirty = true;
+      push();
+    } catch (err) { console.warn('Memory sync:', err?.code || err); }
+  }
+
+  async function flush() {
+    try {
+      clearTimeout(tSave);
+      if (!who) return;
+      if (settings.memMds) lsSet(lsKey(), st);
+      if (!pulled) await pull();
+      await push();
+    } catch (_) {}
+  }
+
+  function reset() {
+    clearTimeout(tSave); clearTimeout(tPush);
+    who = null; pulled = false; dirty = false;
+    st = { mem: [], log: [], ch: {}, gone: [], cut: 0 };
+  }
+
+  /* DMS: add or reinforce a fact, then link it to related facts */
+  function add(x, kd, o = {}) {
+    x = String(x || '').trim().replace(/\s+/g, ' ').slice(0, 160);
+    const k = keyOf(x);
+    if (k.length < 4) return null;
+    st.gone = st.gone.filter((g) => g !== k);
+    const t = now();
+    let m = st.mem.find((y) => y.k === k && (y.sc !== 'c' || y.s === o.s));
+    if (m) {
+      m.u = t; m.w = Math.min(5, m.w + 1);
+      if (o.sc && o.sc !== 'c' && m.sc === 'c') { m.sc = o.sc; delete m.s; }
+      return m;
+    }
+    m = { i: uid(), x, k, kd, tp: toks(x), pj: o.pj || '', sc: o.sc || 'g', w: o.w || 3, h: 0, t, u: t, r: [] };
+    if (m.sc === 'c') m.s = o.s;
+    st.mem.forEach((y) => {
+      if (y.sc === 'c' && y.s !== m.s) return;
+      if (m.r.length >= 4 || (y.r || []).length >= 4) return;
+      const common = (y.tp || []).some((z) => m.tp.includes(z));
+      if (common || (m.pj && y.pj === m.pj)) { m.r.push(y.i); y.r.push(m.i); }
+    });
+    st.mem.push(m);
+    return m;
+  }
+
+  function seed() {
+    if (!settings.memoryLong) return;
+    const have = new Set(st.mem.map((m) => m.k));
+    (settings.memoryNotes || []).forEach((n) => {
+      const k = keyOf(n);
+      if (k.length >= 4 && !have.has(k)) add(n, 'note', { sc: 'g', w: 4 });
+    });
+  }
+
+  const allowed = (m, sid) => (m.sc === 'c' ? settings.memoryShort && m.s === sid : settings.memoryLong);
+
+  /* DMS: rank by topic overlap, project, weight, practical use (hits), recency; then pull one hop of relations */
+  function recall(text, sid) {
+    const q = new Set(toks(text));
+    const pj = st.ch[sid]?.pj || '';
+    const t = now();
+    const scored = [];
+    st.mem.forEach((m) => {
+      if (!allowed(m, sid)) return;
+      const hit = (m.tp || []).filter((z) => q.has(z)).length;
+      const inPj = !!pj && m.pj === pj;
+      const base = m.kd === 'note' ? 1.5 : 0;
+      if (!hit && !inPj && !base) return;
+      const s = hit * 3 + (inPj ? 2.5 : 0) + base + m.w * 0.5 + Math.min(m.h, 6) * 0.3 + 1.5 / (1 + (t - m.u) / (14 * DAY));
+      scored.push([s, m]);
+    });
+    scored.sort((a, b) => b[0] - a[0]);
+    const pick = [];
+    const take = (m) => { if (m && !pick.includes(m)) pick.push(m); };
+    scored.slice(0, 4).forEach(([, m]) => take(m));
+    scored.slice(0, 2).forEach(([, m]) => (m.r || []).slice(0, 2).forEach((id) => {
+      const rel = st.mem.find((y) => y.i === id);
+      if (rel && allowed(rel, sid)) take(rel);
+    }));
+    const out = [];
+    let used = 0;
+    for (const m of pick) {
+      if (out.length >= 6 || used + m.x.length + 2 > 600) break;
+      out.push(m); used += m.x.length + 2;
+    }
+    if (out.length) { out.forEach((m) => { m.h = (m.h || 0) + 1; }); save(); }
+    return out;
+  }
+
+  /* called once per real user message */
+  function observe(text, session) {
+    try {
+      if (!text || !session) return;
+      ensure();
+      const sid = session.id;
+      const c = (st.ch[sid] = st.ch[sid] || { q: [], pj: '', u: 0 });
+      c.u = now();
+      if (settings.memMds && settings.memoryShort && settings.saveSessions) {
+        c.q.push([now(), text.replace(/\s+/g, ' ').trim().slice(0, 90)]);
+        if (c.q.length > 10) c.q.shift();
+      }
+      if (settings.memDms) {
+        const low = text.toLowerCase();
+        const known = st.mem.find((m) => m.pj && low.includes(m.pj.toLowerCase()));
+        if (known) c.pj = known.pj;
+        const pm = text.match(PROJ_RE);
+        if (pm) c.pj = pm[1];
+        if (settings.memoryLong || settings.memoryShort) {
+          const sc = settings.memoryLong ? (c.pj ? 'p' : 'g') : 'c';
+          PATS.forEach(([kd, re, w]) => {
+            const m = text.match(re);
+            if (m) add(kd === 'proj' ? `User is working on ${m[1]}` : tidy(m[0]), kd, { sc, w, s: sid, pj: c.pj });
+          });
+        }
+      }
+      seed();
+      save();
+    } catch (_) {}
+  }
+
+  /* SLS: one compact event per call */
+  function sls(e) {
+    try {
+      if (!settings.memSls) return;
+      ensure();
+      const k = e.type;
+      const d = k === 'feedback' ? e.value : k === 'tool' ? e.name : k === 'error' ? e.msg : e.chars ? `${e.chars}c` : '';
+      st.log.push({ t: now(), k, s: e.sessionId || '', d: String(d || '').slice(0, 60) });
+      if (st.log.length > LIM.log) st.log.splice(0, st.log.length - LIM.log);
+      save();
+    } catch (_) {}
+  }
+
+  function brief(sid, tool) {
+    const mine = st.log.filter((e) => e.s === sid);
+    const n = (k) => mine.filter((e) => e.k === k).length;
+    const turns = n('user');
+    if (!turns) return '';
+    const bits = [`${turns} turn${turns === 1 ? '' : 's'}`];
+    if (n('regenerate')) bits.push(`${n('regenerate')} redo`);
+    if (n('stop')) bits.push(`${n('stop')} stopped`);
+    if (n('error')) bits.push(`${n('error')} errors`);
+    const fb = [...mine].reverse().find((e) => e.k === 'feedback');
+    if (fb && fb.d) bits.push(`last feedback ${fb.d}`);
+    const tools = mine.filter((e) => e.k === 'tool').slice(-2).map((e) => e.d);
+    if (tools.length) bits.push(`tools ${tools.join(',')}`);
+    if (bits.length === 1 && turns <= 1 && !tool) return '';
+    return `State log: ${bits.join(', ')}. Now: ${tool ? 'continuing after a tool result' : 'answering the latest message'}. Next: ${tool ? 'give the final answer' : 'user reply'}.`;
+  }
+
+  /* extra system-prompt lines (kept tiny) */
+  function prompt({ tool } = {}) {
+    try {
+      ensure();
+      seed();
+      const out = [];
+      const sid = currentSession?.id;
+      const msgs = (currentSession?.messages || []).filter((m) => !m.__empty && !m.__failed);
+      if (settings.memDms) {
+        const lastUser = [...msgs].reverse().find((m) => m.role === 'user');
+        const items = recall(lastUser?.content || '', sid);
+        if (items.length) out.push(`Memory (apply silently and only when relevant; never list it unless asked): ${items.map((m) => m.x).join('; ')}.`);
+      }
+      const n = parseInt(settings.ctxLimit, 10);
+      const c = st.ch[sid];
+      if (n && c?.q?.length && settings.memMds && settings.memoryShort && settings.saveSessions) {
+        const cut = msgs.slice(-n)[0]?.t || 0;
+        const old = c.q.filter((x) => x[0] < cut).slice(-4).map((x) => x[1]);
+        if (old.length) out.push(`Earlier in this chat the user asked: ${old.join(' | ')}.`);
+      }
+      if (settings.memSls) {
+        const b = brief(sid, tool);
+        if (b) out.push(b);
+      }
+      return out;
+    } catch (_) { return []; }
+  }
+
+  function forget(text) {
+    try {
+      ensure();
+      const k = keyOf(text);
+      if (!k) return;
+      const n = st.mem.length;
+      st.mem = st.mem.filter((m) => m.k !== k);
+      if (st.mem.length !== n) { st.gone.push(k); save(); }
+    } catch (_) {}
+  }
+
+  function clearMemory() {
+    try {
+      ensure();
+      st.gone.push(...st.mem.map((m) => m.k));
+      st.mem = []; st.ch = {};
+      save();
+    } catch (_) {}
+  }
+
+  function clearLog() {
+    try {
+      ensure();
+      st.log = []; st.cut = now();
+      save();
+    } catch (_) {}
+  }
+
+  const stat = () => { ensure(); return `${st.mem.length} memories \u00b7 ${st.log.length} log entries`; };
+
+  return { prompt, observe, sls, forget, clearMemory, clearLog, stat, pull, flush, reset };
+})();
+
 const MessageRecorder = (() => {
   const log = lsGet(MSG_REC_LS, []);
   return {
     log(e) {
       log.push({ t: Date.now(), uid: currentUser?.uid || 'anon', ...e });
+      try { MemSys.sls(e); } catch (_) {}
       if (log.length > 5000) log.splice(0, log.length - 5000);
       lsSet(MSG_REC_LS, log);
     }
@@ -3999,7 +4355,7 @@ const Cloud = (() => {
   async function flushAll() {
     if (!ready) return;
     clearTimeout(tSettings); clearTimeout(tSessions); clearTimeout(tUsage);
-    const jobs = [];
+    const jobs = [MemSys.flush()];
     if (settingsDirty) jobs.push(pushSettings());
     if (sessionsDirty) jobs.push(pushSessions());
     if (usageQ.size) jobs.push(pushUsage());
@@ -4080,7 +4436,7 @@ const Cloud = (() => {
         }
       } catch (err) { warn(err); }
     },
-    reset() { ready = false; uid = null; known.clear(); synced.clear(); usageQ.clear(); settingsDirty = false; sessionsDirty = false; },
+    reset() { ready = false; uid = null; known.clear(); synced.clear(); usageQ.clear(); settingsDirty = false; sessionsDirty = false; MemSys.reset(); },
 
     async init(user) {
       const mine = ++initSeq;
@@ -4175,6 +4531,7 @@ const Cloud = (() => {
       });
       if (usageQ.size) { clearTimeout(tUsage); tUsage = setTimeout(pushUsage, 300); }
       runPurges();
+      MemSys.pull();
 
       if (changed && currentUser && !chatBusy) renderHome(currentUser);
       else refreshTokenMeter();
@@ -5022,7 +5379,8 @@ let systemPrompt = function () {
   if (settings.langOut && settings.langOut !== 'en') lines.push(`Always reply in ${byId(LANGUAGES, settings.langOut).name}.`);
   if (settings.nickname) lines.push(`Call the user ${settings.nickname}.`);
   if (settings.instructions) lines.push(`User instructions: ${settings.instructions}`);
-  if (settings.memoryLong && settings.memoryNotes?.length) lines.push(`Known about the user: ${settings.memoryNotes.join('; ')}.`);
+  if (!settings.memDms && settings.memoryLong && settings.memoryNotes?.length) lines.push(`Known about the user: ${settings.memoryNotes.join('; ')}.`);
+  lines.push(...MemSys.prompt({ tool: !!pendingToolContext }));
   if (settings.persRole) lines.push(`About the user: ${settings.persRole}.`);
   if (settings.persInterests) lines.push(`User interests: ${settings.persInterests}.`);
   if (settings.persEmoji === 'never') lines.push('Never use emoji.');
@@ -5387,6 +5745,7 @@ async function agentAfterReply(ai, session) {
   const calls = parseToolCalls(ai.content).slice(0, 1);
   console.log('[agent]', { agentTools: settings.agentTools, skillWeb: settings.skillWeb, calls, tail: ai.content.slice(-160) });
   if (!calls.length) return;
+  MessageRecorder.log({ type: 'tool', sessionId: session.id, name: calls[0].name });
   const mm = /\[\[\s*tool\s*:\s*\w+\s*(\{[\s\S]*?\})?\s*\]\]/.exec(ai.content);
   if (mm) ai.content = ai.content.slice(0, mm.index + mm[0].length);
   if (agentDepthOf(session) >= AGENT_MAX_STEPS) { toast('Agent step limit reached.', 'info', 2000); return; }
@@ -5439,6 +5798,7 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
     }
     if (!hiddenMsg) { haptic(12); sfx('send'); }
     if (settings.memoryLong && !hiddenMsg) learnMemory(text);
+    if (!hiddenMsg) MemSys.observe(text, session);
   } else {
     MessageRecorder.log({ type: 'regenerate', sessionId: session.id, provider: pid, model: variant.id });
   }
@@ -5606,6 +5966,7 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
       ai.content = ai.content || '';
       ai.__failed = true;
       ai.__error = error.message || 'Something went wrong.';
+      MessageRecorder.log({ type: 'error', sessionId: session.id, msg: String(ai.__error).slice(0, 60) });
     } else if (!ai.content.trim()) {
       if (aborted) {
         session.messages = session.messages.filter((m) => m !== ai);
@@ -6552,7 +6913,7 @@ async function purgeAllUserData(keepAccount = false) {
       await Promise.all(snap.docs.map((d) => deleteDoc(d.ref)));
     } catch (_) {}
   }
-  for (const docId of keepAccount ? ['settings'] : ['settings', 'account']) {
+  for (const docId of keepAccount ? ['settings', 'memsys'] : ['settings', 'memsys', 'account']) {
     try { await deleteDoc(doc(db, 'users', uid, 'data', docId)); } catch (_) {}
   }
 }
