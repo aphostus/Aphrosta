@@ -150,6 +150,55 @@ function persistVariants() {
 }
 
 /* ---------- SETTINGS STATE ---------- */
+/* ---------- ELEVENLABS (voice) ---------- */
+const EL_VOICES = [
+  { id: 'george', name: 'George', g: 'm', v: 'JBFqnCBsd6RMkjVDRZzb' },
+  { id: 'brian', name: 'Brian', g: 'm', v: 'nPczCjzI2devNBz1zQrb' },
+  { id: 'daniel', name: 'Daniel', g: 'm', v: 'onwK4e9ZLuTAKqWW03F9' },
+  { id: 'roger', name: 'Roger', g: 'm', v: 'CwhRBWXzGAHq8TQ4Fs17' },
+  { id: 'will', name: 'Will', g: 'm', v: 'bIHbv24MWmeRgasZH58o' },
+  { id: 'sarah', name: 'Sarah', g: 'f', v: 'EXAVITQu4vr4xnSDxMaL' },
+  { id: 'alice', name: 'Alice', g: 'f', v: 'Xb7hH8MSUJpSbSDYk0k2' },
+  { id: 'jessica', name: 'Jessica', g: 'f', v: 'cgSgspJ2msm6clMCkdW9' },
+  { id: 'lily', name: 'Lily', g: 'f', v: 'pFZP5JQG7iQjIQuC4Bku' },
+  { id: 'matilda', name: 'Matilda', g: 'f', v: 'XrExE9yKIg1WjnnlVkGX' }
+];
+
+/* EL-SEAL-BEGIN */
+const EL_SEAL = { p: ["3PDcOfEmXgsw","AB0cY3lD7PBm","sYOtezrOYzpg","6cy39qli02Pg"], o: [1,3,0,2], s: 'dnTWuCVr6bsUxZacrUrvWw==', i: 'APHT96FsWkErxydT', c: ["MF8HSFKTKGO2EJ","Me/p6QtUBCpy/dO","UdqsGWkZg+ZabNGoCXmm1CFv9rZ+TGO2E9H4fiJ/MuTGXjbcDfHGG5X3KPFoA=="] };
+/* EL-SEAL-END */
+
+let elKeyCache = '';
+async function elKey() {
+  if (elKeyCache) return elKeyCache;
+  if (!window.crypto || !crypto.subtle) throw new Error('needs https or localhost');
+  const u8 = (b) => Uint8Array.from(atob(b), (c) => c.charCodeAt(0));
+  const pass = EL_SEAL.o.map((i) => EL_SEAL.p[i]).join('');
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
+  const k = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt: u8(EL_SEAL.s), iterations: 120000, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: u8(EL_SEAL.i) }, k, u8(EL_SEAL.c.join('')));
+  elKeyCache = new TextDecoder().decode(pt);
+  return elKeyCache;
+}
+const elEnabled = () => settings.elOn !== false;
+
+const elAudio = new Audio();
+elAudio.preload = 'auto';
+let elCtl = null, elResolve = null;
+function elStop() {
+  try { if (elCtl) elCtl.abort(); } catch (_) {}
+  elCtl = null;
+  try { elAudio.pause(); } catch (_) {}
+  const r = elResolve;
+  elResolve = null;
+  if (r) r();
+}
+const EL_SILENT = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
+function elUnlock() {
+  try { elAudio.src = EL_SILENT; const p = elAudio.play(); if (p && p.catch) p.catch(() => {}); } catch (_) {}
+}
+['pointerdown', 'touchend', 'keydown'].forEach((ev) => document.addEventListener(ev, elUnlock, { once: true, passive: true }));
+
 const SETTINGS_LS = 'aphrosta.settings';
 const SETTINGS_TS_LS = 'aphrosta.settingsUpdated';
 const SESSIONS_LS = 'aphrosta.sessions';
@@ -275,7 +324,7 @@ const SKILL_LIBRARY = [
   {
     id: 'web', key: 'skillWeb', name: 'Web search', needsTools: true,
     prompt: () => [
-      'SKILL Web search: you MUST use web_search or fetch_url for current events, prices, people, products, versions, "latest/today/current", or any URL the user gives. Skip only for stable general knowledge.',
+      'SKILL Web search: you MUST use web_search or fetch_url for current events, prices, people, products, versions, "latest/today/current", or any URL the user gives. Search by default: if you are not completely sure of a fact, or it could have changed since your training, search first instead of guessing. Skip only for stable general knowledge, small talk, maths and pure writing or coding tasks.',
       'At most 3 searches per answer, one per distinct question. Results are short snippets: summarise them in your own words, never paste long passages, and cite sources as markdown links [Title](url).',
       'If results are thin or off-topic, say so instead of guessing.'
     ].join(' ')
@@ -316,6 +365,7 @@ const SETTINGS_DEFAULTS = {
   username: '', phone: '', privUsage: true, privTrain: false,
   phoneCc: '+63', avatar: '',
   voiceName: '', voicePitch: 'normal', autoRead: false,
+  elOn: true, elVoice: 'george',
   persRole: '', persInterests: '', persEmoji: 'auto', persFormat: 'auto',
   ctxLimit: 'all', reduceMotion: false, haptics: false, privMask: false,
   perms: {},
@@ -476,7 +526,8 @@ function setSetting(key, value) {
   saveSettings();
   applySettings();
   if (key === 'langIn') loadDictionary(value);
-  if (['langOut', 'voiceName', 'voiceOut', 'voicePitch'].includes(key)) stopSpeaking();
+  if (['langOut', 'voiceName', 'voiceOut', 'voicePitch', 'elOn', 'elVoice'].includes(key)) stopSpeaking();
+  if (key === 'elVoice') document.querySelectorAll('[data-seg="elVoice"]').forEach((b) => { const on = b.dataset.val === value; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)); });
   if (['username', 'avatar', 'privMask'].includes(key)) applyProfile();
   refreshSummaries();
   if (key === 'haptics' && value) haptic(15);
@@ -1181,7 +1232,10 @@ const Section = (id, title, rows, count) => `
 
 const VoiceItem = () => Item('voice', ICONS.mic, 'Voice',
   Field('Input language', Chips('voiceIn', [{ id: 'auto', name: 'Auto' }, ...LANGUAGES], settings.voiceIn)) +
-  Field('Output voice', `<select class="input" data-text="voiceName" data-voices>${voiceOptions()}</select>`) +
+  SubSwitch('ElevenLabs voice (read aloud + mic)', 'elOn') +
+  '<button class="btn-line" type="button" data-act="el-voices">Choose voice (10)</button>' +
+  `<div data-el-panel hidden>${Field('Men', Chips('elVoice', EL_VOICES.filter((v) => v.g === 'm'), settings.elVoice))}${Field('Women', Chips('elVoice', EL_VOICES.filter((v) => v.g === 'f'), settings.elVoice))}</div>` +
+  Field('Device voice (fallback)', `<select class="input" data-text="voiceName" data-voices>${voiceOptions()}</select>`) +
   Field('Speed', Chips('voiceOut', SPEEDS, settings.voiceOut)) +
   Field('Pitch', Chips('voicePitch', PITCHES, settings.voicePitch)) +
   SubSwitch('Read replies aloud', 'autoRead') +
@@ -1458,6 +1512,7 @@ function onSettingsClick(e) {
     case 'about-terms': case 'about-rules': case 'about-licenses': case 'about-help': case 'about-billing':
       return openAboutPage(act.slice(6));
     case 'voice-test':    return testVoice();
+    case 'el-voices': { const p = document.querySelector('[data-el-panel]'); if (p) p.hidden = !p.hidden; return; }
     case 'avatar-remove': setSetting('avatar', ''); toast('Profile photo removed.', 'success', 1800); return;
     case 'export-data':   return exportData();
     case 'feedback':      return openFeedback();
@@ -2030,6 +2085,7 @@ function cleanForSpeech(text) {
 let speakGen = 0, speakTimer = 0;
 function stopSpeaking() {
   speakGen++; clearTimeout(speakTimer);
+  elStop();
   window.speechSynthesis?.cancel();
   if (currentSpeakBtn) {
     try {
@@ -2055,7 +2111,7 @@ function chunkForSpeech(t, max = 180) {
   if (cur.trim()) out.push(cur.trim());
   return out.flatMap((c) => c.length > max * 1.5 ? (c.match(new RegExp(`.{1,${max}}(\\s|$)`, 'g')) || [c]) : [c]);
 }
-let speak = function (text, btn = null) {
+const speakBrowser = function (text, btn = null) {
   const s = window.speechSynthesis;
   if (!s) return toast('Read aloud isn\u2019t supported here.');
   const same = !!btn && currentSpeakBtn === btn;
@@ -2095,6 +2151,68 @@ let speak = function (text, btn = null) {
     s.speak(u);
   };
   speakTimer = setTimeout(next, wasBusy ? 150 : 0);
+};
+async function elSpeak(text, btn = null) {
+  const same = !!btn && currentSpeakBtn === btn;
+  stopSpeaking();
+  if (same) return;
+  const clean = cleanForSpeech(text);
+  if (!clean) return;
+  const gen = speakGen;
+  if (btn) {
+    currentSpeakBtn = btn;
+    btn.innerHTML = ICONS.stopSpk;
+    btn.setAttribute('aria-label', 'Stop reading');
+    btn.title = 'Stop reading';
+    btn.classList.add('speaking');
+  }
+  const vo = EL_VOICES.find((x) => x.id === settings.elVoice) || EL_VOICES[0];
+  const speed = { slow: 0.85, normal: 1, fast: 1.15 }[settings.voiceOut] || 1;
+  const chunks = chunkForSpeech(clean, 450);
+  const ctl = new AbortController();
+  elCtl = ctl;
+  let played = 0;
+  try {
+    const key = await elKey();
+    const grab = (t) => fetch('https://api.elevenlabs.io/v1/text-to-speech/' + vo.v + '?output_format=mp3_44100_64', {
+      method: 'POST',
+      signal: ctl.signal,
+      headers: { 'xi-api-key': key, 'Content-Type': 'application/json', Accept: 'audio/mpeg' },
+      body: JSON.stringify({ text: t, model_id: 'eleven_flash_v2_5', voice_settings: { stability: 0.5, similarity_boost: 0.75, speed } })
+    }).then(async (r) => {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return URL.createObjectURL(await r.blob());
+    });
+    let next = grab(chunks[0]);
+    for (let i = 0; i < chunks.length; i++) {
+      const src = await next;
+      if (gen !== speakGen) { URL.revokeObjectURL(src); return; }
+      next = i + 1 < chunks.length ? grab(chunks[i + 1]) : null;
+      if (next) next.catch(() => {});
+      await new Promise((res, rej) => {
+        elResolve = res;
+        elAudio.onended = elAudio.onerror = () => { elResolve = null; res(); };
+        elAudio.src = src;
+        const p = elAudio.play();
+        if (p && p.catch) p.catch((e) => { elResolve = null; rej(e); });
+      });
+      URL.revokeObjectURL(src);
+      if (gen !== speakGen) return;
+      played++;
+    }
+    stopSpeaking();
+  } catch (e) {
+    if (gen !== speakGen || (e && e.name === 'AbortError')) return;
+    stopSpeaking();
+    if (!played) {
+      toast('ElevenLabs unavailable (' + ((e && e.message) || 'error') + '). Using the device voice.', 'info', 2600);
+      speakBrowser(text, btn);
+    }
+  }
+}
+let speak = function (text, btn = null) {
+  if (elEnabled()) return elSpeak(text, btn);
+  return speakBrowser(text, btn);
 };
 const testVoice = () => speak('Hi, this is how I sound.');
 
@@ -3014,7 +3132,113 @@ function initComposer() {
     }
   };
 
+  /* ElevenLabs speech-to-text: record a segment, then send it to Scribe */
+  const el = { stream: null, rec: null, ctx: null, an: null, buf: null, timer: 0, seg: null, quiet: 0, busy: 0, bad: false };
+
+  const elTranscribe = async (blob) => {
+    el.busy++;
+    try {
+      const key = await elKey();
+      const fd = new FormData();
+      fd.append('model_id', 'scribe_v1');
+      fd.append('file', blob, 'speech.' + (/mp4/.test(blob.type) ? 'm4a' : /ogg/.test(blob.type) ? 'ogg' : 'webm'));
+      const r = await fetch('https://api.elevenlabs.io/v1/speech-to-text', { method: 'POST', headers: { 'xi-api-key': key }, body: fd });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const j = await r.json();
+      const t = String(j.text || '').trim();
+      if (t) {
+        input.value = (input.value ? input.value.replace(/\s+$/, '') + ' ' : '') + t;
+        if (voice.on) { voice.base = input.value; voice.committed = ''; }
+        syncSend();
+        syncIdle();
+        fit();
+        refreshPill();
+        input.scrollTop = input.scrollHeight;
+      }
+    } catch (e) {
+      el.bad = true;
+      toast('ElevenLabs mic failed (' + ((e && e.message) || 'error') + '). Switching to device transcription.', 'info', 2800);
+    } finally {
+      el.busy--;
+    }
+  };
+
+  const elBegin = () => {
+    if (!el.stream) return;
+    const mt = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus']
+      .find((m) => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || '';
+    const mr = mt ? new MediaRecorder(el.stream, { mimeType: mt }) : new MediaRecorder(el.stream);
+    const parts = [];
+    const seg = { heard: !el.an };
+    mr.ondataavailable = (e) => { if (e.data && e.data.size) parts.push(e.data); };
+    mr.onstop = () => {
+      const blob = new Blob(parts, { type: mr.mimeType || mt || 'audio/webm' });
+      if (seg.heard && blob.size > 1500) elTranscribe(blob);
+    };
+    mr.start();
+    el.rec = mr;
+    el.seg = seg;
+    el.quiet = 0;
+  };
+
+  const elCut = () => {
+    const mr = el.rec;
+    el.rec = null;
+    if (mr && mr.state !== 'inactive') { try { mr.stop(); } catch (_) {} }
+    elBegin();
+  };
+
+  const elTick = () => {
+    let lv = 0;
+    if (el.an) {
+      el.an.getByteTimeDomainData(el.buf);
+      let s = 0;
+      for (let i = 0; i < el.buf.length; i++) { const d = (el.buf[i] - 128) / 128; s += d * d; }
+      lv = Math.sqrt(s / el.buf.length);
+    }
+    voice.energy = Math.max(voice.energy, Math.min(1, lv * 7));
+    if (!el.seg) return;
+    if (lv > 0.03) { el.seg.heard = true; el.quiet = 0; }
+    else if (el.seg.heard && el.an && (el.quiet += 60) >= 1500) elCut();
+  };
+
+  const elStopRec = () => {
+    clearInterval(el.timer);
+    el.timer = 0;
+    const mr = el.rec;
+    el.rec = null;
+    el.seg = null;
+    if (mr && mr.state !== 'inactive') { try { mr.stop(); } catch (_) {} }
+    if (el.stream) { el.stream.getTracks().forEach((t) => t.stop()); el.stream = null; }
+    if (el.ctx) { try { el.ctx.close(); } catch (_) {} el.ctx = null; }
+    el.an = null;
+  };
+
+  const elStartRec = (token) => {
+    if (el.bad || !window.MediaRecorder || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return false;
+    navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }).then((stream) => {
+      if (el.stream || token !== voice.token || !voice.on || voice.paused) { stream.getTracks().forEach((t) => t.stop()); return; }
+      el.stream = stream;
+      try {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        el.ctx = new AC();
+        const src = el.ctx.createMediaStreamSource(stream);
+        el.an = el.ctx.createAnalyser();
+        el.an.fftSize = 1024;
+        el.buf = new Uint8Array(el.an.fftSize);
+        src.connect(el.an);
+      } catch (_) { el.an = null; }
+      try { elBegin(); } catch (_) { elStopRec(); el.bad = true; toast('Recording is not supported here.'); return; }
+      el.timer = setInterval(elTick, 60);
+    }).catch(() => {
+      toast('Mic is blocked. Allow it in browser settings.');
+      if (token === voice.token) { stopVoice(); setMode('text'); }
+    });
+    return true;
+  };
+
   const stopRecognition = () => {
+    elStopRec();
     const r = voice.rec;
     voice.rec = null;
     if (!r) return;
@@ -3026,6 +3250,7 @@ function initComposer() {
 
   const startRecognition = (token) => {
     if (!permAllowed('microphone')) { toast('Microphone is turned off in Permissions.', 'info'); return; }
+    if (elEnabled() && elStartRec(token)) return;
     if (!SpeechRec) return;
     const rec = new SpeechRec();
     rec.continuous = true;
@@ -3104,7 +3329,7 @@ function initComposer() {
 
   const startVoice = () => {
     if (voice.on) return;
-    if (!SpeechRec) {
+    if (!SpeechRec && !(elEnabled() && window.MediaRecorder)) {
       if (!voice.warned) {
         voice.warned = true;
         toast('Live transcription isn\u2019t supported here. Try Chrome.');
@@ -4982,7 +5207,7 @@ function stripUnsupportedParams(body, errText) {
 
 /* ---------- Agent engine ---------- */
 let agentNextHidden = false;
-const AGENT_MAX_STEPS = 3;
+const AGENT_MAX_STEPS = 4;
 const SEARCH_ENDPOINT = ''; // Set to 'https://YOUR-SEARX-HOST/search' to use SearXNG instead of Wikipedia
 
 const TOOL_DOCS = {
@@ -5029,10 +5254,16 @@ const AGENT_TOOLS = {
         const j = await r.json();
         items = (j.results || []).slice(0, 5).map((x) => ({ title: x.title, url: x.url, text: x.content || '' }));
       } else {
-        try {
-          const t = await readerFetch('https://html.duckduckgo.com/html/?q=' + encodeURIComponent(q), ctl.signal);
-          return ('Web results for: ' + q + '\n' + t).slice(0, 1800);
-        } catch (_) {}
+        for (const eng of [
+          'https://html.duckduckgo.com/html/?q=',
+          'https://lite.duckduckgo.com/lite/?q=',
+          'https://www.bing.com/search?q='
+        ]) {
+          try {
+            const t = await readerFetch(eng + encodeURIComponent(q), ctl.signal);
+            return ('Web results for: ' + q + '\n' + t).slice(0, 3000);
+          } catch (e) { if (e && e.name === 'AbortError') throw e; }
+        }
         const u = 'https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrlimit=5&prop=extracts%7Cinfo&exintro=1&explaintext=1&exchars=450&inprop=url&format=json&origin=*&gsrsearch=' + encodeURIComponent(q);
         const r = await fetch(u, { signal: ctl.signal });
         const j = await r.json();
@@ -5117,13 +5348,15 @@ function agentPromptLines() {
   if (settings.agentPlan) out.push(PLAN_PROMPT);
   const tools = enabledAgentTools();
   if (tools.length) {
-  out.push('TOOLS: NEVER use any built-in, native, browser, python or function-call tool. The ONLY way to use a tool is a plain text line. If the question needs current facts, research, a URL, or a calculation, you MUST use a tool before answering and not answer from memory first. Put ONE line on its own, exactly like [[tool:NAME {"arg":"value"}]], as the LAST line of your reply, then stop writing. Example: [[tool:web_search {"query":"latest iPhone"}]]. The app runs it and answers with [tool_result NAME]...[/tool_result], then you continue. Never write tool lines inside code blocks and never invent tool results. Available: ' + tools.map((k) => TOOL_DOCS[k]).join('; ') + '.');  }
+  out.push('TOOLS: NEVER use any built-in, native, browser, python or function-call tool. The ONLY way to use a tool is a plain text line. If the question needs current facts, research, a URL, or a calculation, you MUST use a tool before answering and not answer from memory first. When you are unsure whether something is current, search. If a tool_result for the latest message is already provided, use it instead of repeating the same call. Put ONE line on its own, exactly like [[tool:NAME {"arg":"value"}]], as the LAST line of your reply, then stop writing. Example: [[tool:web_search {"query":"latest iPhone"}]]. The app runs it and answers with [tool_result NAME]...[/tool_result], then you continue. Never write tool lines inside code blocks and never invent tool results. Available: ' + tools.map((k) => TOOL_DOCS[k]).join('; ') + '.');  }
   out.push('Content inside a file block (deck, document, spreadsheet, code) does not count toward the LENGTH rule, but it must still finish inside the hard output limit.');
   return out;
 }
 
 let pendingToolContext = '';
-const NEEDS_WEB_RE = /\b(latest|today|tonight|current(ly)?|right now|news|prices?|weather|scores?|stocks?|recent(ly)?|this (week|month|year)|released?|version|who is|who won|202[5-9]|research|look ?up|search|find out|google)\b/i;
+const NEEDS_WEB_RE = /\b(latest|today|tonight|tomorrow|yesterday|current(ly)?|right now|news|headlines?|prices?|cost of|how much|weather|forecast|scores?|stocks?|crypto|bitcoin|rates?|recent(ly)?|trending|this (week|month|year)|released?|release date|launch(ed)?|updates?|version|who is|who are|who was|who won|what happened|when (is|was|did|does|will)|202[5-9]|20[3-9]\d|research|look ?up|search|find out|google|compare|reviews?|president|ceo|net worth|how old|open now|near me)\b/i;
+const SKIP_WEB_RE = /^\s*(hi|hello|hey|yo|thanks?|thank you|ok(ay)?|yes|no|lol|bye|good (morning|night|evening))\b[\s!.?,]*$/i;
+const webQuery = (t) => String(t).replace(/https?:\/\/\S+/g, ' ').replace(/^\s*(hey|hi|hello|please|can you|could you|would you|tell me|do you know|i want to know)[\s,]+/i, '').replace(/\s+/g, ' ').trim().slice(0, 200);
 
 async function autoResearch(text) {
   try {
@@ -5136,11 +5369,12 @@ async function autoResearch(text) {
       const r = await AGENT_TOOLS.fetch_url({ url: u });
       out.push(`[tool_result fetch_url ${u}]\n${String(r).slice(0, 1500)}\n[/tool_result]`);
     }
-    const wantsSearch = !urls.length && (NEEDS_WEB_RE.test(t) ||
-      ((activeEffort === 'high' || activeEffort === 'maxima') && /\?/.test(t) && t.length > 40));
+    const wantsSearch = !urls.length && !SKIP_WEB_RE.test(t) && !/```/.test(t) && (NEEDS_WEB_RE.test(t) ||
+      (/\?/.test(t) && t.length > 20) ||
+      (t.length > 60 && /\b(who|what|when|where|which|why|how)\b/i.test(t)));
     if (wantsSearch) {
-      const r = await AGENT_TOOLS.web_search({ query: t.slice(0, 200) });
-      out.push(`[tool_result web_search]\n${String(r).slice(0, 1800)}\n[/tool_result]`);
+      const r = await AGENT_TOOLS.web_search({ query: webQuery(t) });
+      out.push(`[tool_result web_search]\n${String(r).slice(0, 3000)}\n[/tool_result]`);
     }
     return out.length
       ? 'The app already ran these tools for the latest user message. Use them in your answer and do not repeat the same call:\n' + out.join('\n\n')
@@ -6041,7 +6275,7 @@ function initShell() {
       closeEffortMenu();
       closeSettings();
       document.getElementById('sidebar')?.classList.remove('open');
-      if (window.speechSynthesis?.speaking) stopSpeaking();
+      if (window.speechSynthesis?.speaking || !elAudio.paused) stopSpeaking();
     }
   });
 }
