@@ -1131,7 +1131,7 @@ const SUM = {
     const l = settings.memoryLong, s = settings.memoryShort;
     return l && s ? 'Long & Short' : l ? 'Long-Term' : s ? 'Short-Term' : 'Off';
   },
-  memsys:     () => (settings.memDms || settings.memMds || settings.memSls ? 'Active' : 'Off'),
+  memsys:     () => (settings.memDms || settings.memMds || settings.memSls ? (memSysStat().split(' \u00b7 ')[0] || 'Active') : 'Off'),
   warnings:   () => (settings.warnOn ? 'On' : 'Off'),
   series:     () => 'Pluthos',
   versions:   () => settings.version || '1.00',
@@ -2425,7 +2425,7 @@ function lsBreakdown() {
         out.chats = arr.length;
         out.msgs = arr.reduce((n, s) => n + (s.messages?.length || 0), 0);
       } catch (_) {}
-    } else if (k === SETTINGS_LS) out.settings += b;
+    } else if (k === SETTINGS_LS || k.startsWith('aphrosta.mds.')) out.settings += b;
     else out.other += b;
   }
   return out;
@@ -3825,10 +3825,15 @@ const MemSys = (() => {
   const DAY = 864e5;
   const STOP = new Set('about above after again also because been before being below between both could does doing down during each from further have having here into just like more most only other over same should some such than that their them then there these they this those through under until very what when where which while will with would your you the and for are but not can its was were our out off too any all'.split(' '));
   const PROJ_RE = /\b(?:building|making|working on|developing|creating)\s+(?:a |an |the |my |our )?(?:project |app |site |game |bot |website )?(?:called |named )?([A-Z][\w-]{2,24})/;
+  const CL = '(?:(?!\\band i\\b)[^.;,!?\\n])';
+  const mk = (head, lo, hi) => new RegExp(`\\b${head}\\s+${CL}{${lo},${hi}}`, 'i');
   const PATS = [
-    ['pref',  /\bi (?:prefer|really like|love|always want|need you to)\s+(?:(?!\band i\b)[^.;,!?\n]){3,90}/i, 3],
-    ['avoid', /\bi (?:don'?t|do not|never) (?:like|want|use|need)\s+(?:(?!\band i\b)[^.;,!?\n]){3,90}/i, 3],
-    ['tool',  /\b(?:i use|i'?m using|i am using)\s+(?:(?!\band i\b)[^.;,!?\n]){2,80}/i, 2],
+    ['pref',  mk("i (?:prefer|really like|love|enjoy|always want|need you to)", 3, 90), 3],
+    ['avoid', mk("i (?:don'?t|do not|never) (?:like|want|use|need)", 3, 90), 3],
+    ['tool',  mk("(?:i use|i'?m using|i am using)", 2, 80), 2],
+    ['id',    mk("my (?:name|job|role|age|city|country|school|language|stack|setup|phone|device|favou?rite \\w+) is", 2, 60), 4],
+    ['id',    mk("i(?:'m| am) (?:a(?! (?:bit|little|lot|few|sec|second|minute))|an|from|learning|studying|into)", 2, 60), 3],
+    ['goal',  mk("(?:my goal is|i(?:'m| am) trying to|i plan to)", 3, 90), 3],
     ['proj',  PROJ_RE, 4]
   ];
   let who = null, pulled = false, dirty = false, tSave = 0, tPush = 0;
@@ -3852,7 +3857,7 @@ const MemSys = (() => {
 
   function tidy(s) {
     return s.trim().replace(/\s+/g, ' ')
-      .replace(/^i am\b/i, 'User is').replace(/^i'?m\b/i, 'User is').replace(/^i\b/i, 'User')
+      .replace(/^i am\b/i, 'User is').replace(/^i'?m\b/i, 'User is').replace(/^i\b/i, 'User').replace(/^my\b/i, "User's")
       .replace(/[.!?,]+$/, '');
   }
 
@@ -3870,6 +3875,7 @@ const MemSys = (() => {
       st.cut = +raw.cut || 0;
     }
     prune();
+    paint();
   }
 
   function prune() {
@@ -3891,13 +3897,24 @@ const MemSys = (() => {
     st.mem.forEach((m) => { m.r = (m.r || []).filter((x) => alive.has(x)); });
   }
 
+  function paint() {
+    try {
+      const on = settings.memDms || settings.memMds || settings.memSls;
+      const s = stat();
+      document.querySelectorAll('[data-memsys-stat]').forEach((el) => { el.textContent = s; });
+      document.querySelectorAll('[data-sum="memsys"]').forEach((el) => { el.textContent = on ? s.split(' \u00b7 ')[0] : 'Off'; });
+    } catch (_) {}
+  }
+
   function save() {
     dirty = true;
     clearTimeout(tSave);
     tSave = setTimeout(() => {
       if (!settings.memMds || !who) return;
       try { prune(); lsSet(lsKey(), st); } catch (_) {}
+      try { if (document.querySelector('[data-storage-used]')) refreshStorage(); } catch (_) {}
     }, 600);
+    paint();
     if (cloudOk()) { clearTimeout(tPush); tPush = setTimeout(push, 4000); }
   }
 
@@ -3938,6 +3955,7 @@ const MemSys = (() => {
       }
       pulled = true;
       dirty = true;
+      paint();
       push();
     } catch (err) { console.warn('Memory sync:', err?.code || err); }
   }
@@ -4144,7 +4162,7 @@ const MemSys = (() => {
     } catch (_) {}
   }
 
-  const stat = () => { ensure(); return `${st.mem.length} memories \u00b7 ${st.log.length} log entries`; };
+  const stat = () => { ensure(); seed(); return `${st.mem.length} memories \u00b7 ${Object.keys(st.ch).length} chats \u00b7 ${st.log.length} log entries`; };
 
   return { prompt, observe, sls, forget, clearMemory, clearLog, stat, pull, flush, reset };
 })();
