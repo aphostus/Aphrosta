@@ -738,7 +738,7 @@ const ICONS = {
   phone:    svg('<rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/>', 16),
   cpu:      svg('<rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3"/>', 16),
   sliders:  svg('<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>', 16),
-  layers:   svg('<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>', 16),
+
   pen:      svg('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/>', 16),
   mic:      svg('<path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4"/>', 16),
   volume:   svg('<path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 010 7M19 5a10 10 0 010 14"/>', 16),
@@ -797,9 +797,9 @@ Object.assign(ICONS, {
 
 /* ---------- UNIQUE ICONS (one per spot, no shared copies) ---------- */
 Object.assign(ICONS, {
-  navWorlds:     svg('<circle cx="12" cy="12" r="5"/><path d="M3.6 15.4c-1.3-2.4 2.9-6.4 9.4-8.8M20.4 8.6c1.3 2.4-2.9 6.4-9.4 8.8"/>'),
-  navAgents:     svg('<rect x="5" y="9" width="14" height="10" rx="3"/><path d="M12 5v4M10 4h4"/><path d="M9.5 14h.01M14.5 14h.01M10 17h4"/>'),
-  navSystem:     svg('<rect x="3" y="4" width="18" height="6" rx="2"/><rect x="3" y="14" width="18" height="6" rx="2"/><path d="M7 7h.01M7 17h.01"/>'),
+  navWorlds:     svg('<circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18"/>'),
+  navAgents:     svg('<ellipse cx="12" cy="14" rx="8.5" ry="6.5"/><path d="M9 10.5v7M14.5 10.5v7"/><path d="M10 7.5C9.5 4.5 10.5 3 12.5 3s3 1.5 2 4.5"/><path d="M17.5 9.5L20 6.5M18 13.5h.01"/>'),
+  navSystem:     svg('<rect x="3" y="3" width="18" height="7" rx="2"/><rect x="3" y="14" width="18" height="7" rx="2"/><path d="M7 6.5h.01M7 17.5h.01"/>'),
   navAutomation: svg('<rect x="3" y="3" width="6" height="6" rx="1.5"/><rect x="15" y="15" width="6" height="6" rx="1.5"/><path d="M9 6h3a3 3 0 013 3v6"/>', 16),
   navConnectors: svg('<path d="M9 2v6M15 2v6"/><path d="M6 8h12v3a6 6 0 01-12 0z"/><path d="M12 17v5"/>', 16),
   navOperations: svg('<rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M7 10l3 2.5L7 15M13 15h4"/>', 16),
@@ -1176,7 +1176,7 @@ const SUM = {
     const l = settings.memoryLong, s = settings.memoryShort;
     return l && s ? 'Long & Short' : l ? 'Long-Term' : s ? 'Short-Term' : 'Off';
   },
-  memsys:     () => (settings.memDms || settings.memMds || settings.memSls ? (memSysStat().split(' \u00b7 ')[0] || 'Active') : 'Off'),
+
   warnings:   () => (settings.warnOn ? 'On' : 'Off'),
   series:     () => 'Pluthos',
   versions:   () => settings.version || '1.00',
@@ -1319,14 +1319,12 @@ const memListHtml = () => (settings.memoryNotes?.length
 let AssistanceSection = () => Section('assistance', 'Assistance', [
   Item('memory', ICONS.setMemory, 'Memory',
     SubSwitch('Long-Term', 'memoryLong') + SubSwitch('Short-Term', 'memoryShort') +
-    '<button class="btn-line danger" type="button" data-act="clear-memory">Clear Memory</button>' +
-    `<div class="mem-list" id="mem-list">${memListHtml()}</div>`),
-
-  Item('memsys', ICONS.layers, 'Memory Systems',
     SubSwitch('DMS \u00b7 Dimensional Memory', 'memDms') +
     SubSwitch('MDS \u00b7 Memory Database', 'memMds') +
     SubSwitch('SLS \u00b7 State Logtracker', 'memSls') +
     Field('Stored', `<span class="field-note" data-memsys-stat>${esc(memSysStat())}</span>`) +
+    '<button class="btn-line danger" type="button" data-act="clear-memory">Clear Memory</button>' +
+    `<div class="mem-list" id="mem-list">${memListHtml()}</div>` +
     '<button class="btn-line danger" type="button" data-act="clear-log">Clear Log</button>'),
 
   Item('storage', ICONS.database, 'Storage',
@@ -3944,10 +3942,10 @@ const MemSys = (() => {
 
   function paint() {
     try {
-      const on = settings.memDms || settings.memMds || settings.memSls;
+
       const s = stat();
       document.querySelectorAll('[data-memsys-stat]').forEach((el) => { el.textContent = s; });
-      document.querySelectorAll('[data-sum="memsys"]').forEach((el) => { el.textContent = on ? s.split(' \u00b7 ')[0] : 'Off'; });
+
     } catch (_) {}
   }
 
