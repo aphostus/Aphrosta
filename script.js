@@ -795,6 +795,42 @@ Object.assign(ICONS, {
   flame:    svg('<path d="M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 11-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 002.5 2.5z"/>')
 });
 
+/* ---------- UNIQUE ICONS (one per spot, no shared copies) ---------- */
+Object.assign(ICONS, {
+  navWorlds:     svg('<circle cx="12" cy="12" r="5"/><path d="M3.6 15.4c-1.3-2.4 2.9-6.4 9.4-8.8M20.4 8.6c1.3 2.4-2.9 6.4-9.4 8.8"/>'),
+  navAgents:     svg('<rect x="5" y="9" width="14" height="10" rx="3"/><path d="M12 5v4M10 4h4"/><path d="M9.5 14h.01M14.5 14h.01M10 17h4"/>'),
+  navSystem:     svg('<rect x="3" y="4" width="18" height="6" rx="2"/><rect x="3" y="14" width="18" height="6" rx="2"/><path d="M7 7h.01M7 17h.01"/>'),
+  navAutomation: svg('<rect x="3" y="3" width="6" height="6" rx="1.5"/><rect x="15" y="15" width="6" height="6" rx="1.5"/><path d="M9 6h3a3 3 0 013 3v6"/>', 16),
+  navConnectors: svg('<path d="M9 2v6M15 2v6"/><path d="M6 8h12v3a6 6 0 01-12 0z"/><path d="M12 17v5"/>', 16),
+  navOperations: svg('<rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M7 10l3 2.5L7 15M13 15h4"/>', 16),
+  setMemory:     svg('<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h6M9 11h6M9 15h3"/>', 16),
+  setResponses:  svg('<path d="M21 12a8 8 0 01-8 8H4l2.5-3.5A8 8 0 1121 12z"/><path d="M9 11h6M9 14h4"/>', 16),
+  setSounds:     svg('<path d="M3 10v4M7 7v10M11 4v16M15 8v8M19 10v4"/>', 16),
+  setStreaming:  svg('<path d="M4 7h9M4 12h16M4 17h12"/><path d="M17 4l3 3-3 3"/>', 16),
+  acctConn:      svg('<circle cx="6" cy="12" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><path d="M8.6 10.5l6.8-3M8.6 13.5l6.8 3"/>', 16),
+  closeSettings: svg('<path d="M5 5l14 14M19 5L5 19"/>', 16),
+  closeAttach:   svg('<path d="M7 7l10 10M17 7L7 17"/>', 14),
+  usageInfo:     svg('<path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/><path d="M11 11h1v6M12 7.5h.01"/>', 16),
+  toolFetch:     svg('<path d="M4 4h16v6H4z"/><path d="M4 14h10M4 18h6"/><path d="M17 15l3 3-3 3"/>', 16),
+  toolCalc:      svg('<rect x="5" y="2" width="14" height="20" rx="2"/><path d="M8 6h8M8 11h.01M12 11h.01M16 11h.01M8 15h.01M12 15h.01M16 15h.01M8 19h.01M12 19h.01M16 19h.01"/>', 16),
+  toolOk:        svg('<path d="M3 12l5 5L21 6"/>', 14),
+  toolFail:      svg('<path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/><path d="M12 9v4M12 17h.01"/>', 14),
+  attachFile:    svg('<path d="M6 2h8l5 5v15H6z"/><path d="M14 2v5h5"/>', 16),
+  cardFile:      svg('<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/>', 16),
+  msgFile:       svg('<path d="M4 4h10l6 6v10H4z"/><path d="M14 4v6h6"/>', 16),
+  copiedCheck:   svg('<path d="M20 6L9 17l-5-5"/>', 15),
+  searchModels:  svg('<circle cx="10" cy="10" r="6"/><path d="M15 15l5 5M8 10h4"/>', 16),
+  searchPage:    svg('<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5M8.5 11h5M11 8.5v5"/>', 16),
+  abolishAcct:   svg('<circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0114 0M17 8l5 5M22 8l-5 5"/>', 16),
+  cardRemove:    svg('<circle cx="12" cy="12" r="9"/><path d="M8 12h8"/>', 16),
+  renameChat:    svg('<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13 7l4 4"/>', 15)
+});
+/* fix identical-drawing clones */
+ICONS.newChat = svg('<path d="M21 12a8 8 0 01-8 8H4l2.5-3.5A8 8 0 1121 12z"/><path d="M12 9v6M9 12h6"/>');
+ICONS.closeLg = svg('<circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/>', 20);
+ICONS.infoSm  = svg('<path d="M4 4h16v12H8l-4 4z"/><path d="M12 8v3M12 13h.01"/>', 14);
+delete ICONS.memory; delete ICONS.pen;
+
 /* ---------- BRAND MARK ---------- */
 let _amN = 0;
 function aphMark({ animated = false, cls = '', ink = 'currentColor', eye = 'var(--bg)', bg = '' } = {}) {
@@ -1040,14 +1076,14 @@ const Sidebar = (user) => `
     </div>
 
     <nav class="side-nav" aria-label="Workspace">
-      <button class="side-btn" type="button" data-action="nav-worlds">${ICONS.folder}<span>Worlds</span></button>
-      <button class="side-btn" type="button" data-action="nav-agent">${ICONS.agent}<span>Agents</span></button>
-      <button class="side-btn" type="button" data-action="nav-data">${ICONS.memory}<span>System</span></button>
+      <button class="side-btn" type="button" data-action="nav-worlds">${ICONS.navWorlds}<span>Worlds</span></button>
+      <button class="side-btn" type="button" data-action="nav-agent">${ICONS.navAgents}<span>Agents</span></button>
+      <button class="side-btn" type="button" data-action="nav-data">${ICONS.navSystem}<span>System</span></button>
     </nav>
 
     <div class="side-tools" aria-label="Workspace tools">
       <button class="side-tool" type="button" data-action="nav-automation">
-        <span class="side-tool-ico">${ICONS.zap}</span>
+        <span class="side-tool-ico">${ICONS.navAutomation}</span>
         <span class="side-tool-text">
           <b>Automation</b>
           <i>Build flows and routines</i>
@@ -1056,10 +1092,19 @@ const Sidebar = (user) => `
       </button>
 
       <button class="side-tool" type="button" data-action="nav-connectors">
-        <span class="side-tool-ico">${ICONS.link}</span>
+        <span class="side-tool-ico">${ICONS.navConnectors}</span>
         <span class="side-tool-text">
           <b>Connectors</b>
           <i>Link apps and data</i>
+        </span>
+        <span class="side-tool-chev">${ICONS.chevronR}</span>
+      </button>
+
+      <button class="side-tool" type="button" data-action="nav-operations">
+        <span class="side-tool-ico">${ICONS.navOperations}</span>
+        <span class="side-tool-text">
+          <b>Operations</b>
+          <i>Run tasks and tools</i>
         </span>
         <span class="side-tool-chev">${ICONS.chevronR}</span>
       </button>
@@ -1250,7 +1295,7 @@ let ThemeSection = () => Section('theme', 'Theme', [
   Item('language', ICONS.globe, 'Language',
     Field('Input (word check)', Chips('langIn', LANGUAGES, settings.langIn)) +
     Field('Output (replies)', Chips('langOut', LANGUAGES, settings.langOut))),
-  Item('sounds', ICONS.volume, 'Sounds',
+  Item('sounds', ICONS.setSounds, 'Sounds',
     SubSwitch('Music', 'soundMusic') + SubSwitch('Effects', 'soundEffects') +
     Field('Effects volume', Chips('sfxVolume', [{ id: 'low', name: 'Low' }, { id: 'normal', name: 'Normal' }, { id: 'high', name: 'High' }], settings.sfxVolume))),
   VoiceItem(),
@@ -1272,7 +1317,7 @@ const memListHtml = () => (settings.memoryNotes?.length
   : '<p class="field-note">No saved memories yet.</p>');
 
 let AssistanceSection = () => Section('assistance', 'Assistance', [
-  Item('memory', ICONS.layers, 'Memory',
+  Item('memory', ICONS.setMemory, 'Memory',
     SubSwitch('Long-Term', 'memoryLong') + SubSwitch('Short-Term', 'memoryShort') +
     '<button class="btn-line danger" type="button" data-act="clear-memory">Clear Memory</button>' +
     `<div class="mem-list" id="mem-list">${memListHtml()}</div>`),
@@ -1304,7 +1349,7 @@ let AssistanceSection = () => Section('assistance', 'Assistance', [
     </div>
     <p class="field-note">1.00 is the current version. 1.01 to 1.05 are shown for reference and unlock as they release.</p>`),
 
-  ToggleRow('streaming', ICONS.zap, 'Streaming', 'streaming'),
+  ToggleRow('streaming', ICONS.setStreaming, 'Streaming', 'streaming'),
 
   Item('personalize', ICONS.sparkles, 'Personalize',
     Field('Nickname', `<input class="input" data-text="nickname" maxlength="40" placeholder="What should I call you?" value="${esc(settings.nickname || '')}">`) +
@@ -1314,7 +1359,7 @@ let AssistanceSection = () => Section('assistance', 'Assistance', [
     Field('Format', Chips('persFormat', [{ id: 'auto', name: 'Auto' }, { id: 'plain', name: 'Plain' }, { id: 'markdown', name: 'Markdown' }, { id: 'bullets', name: 'Bullets' }], settings.persFormat)) +
     Field('Custom instructions', `<textarea class="input" data-text="instructions" maxlength="600" rows="3">${esc(settings.instructions || '')}</textarea>`)),
 
-  Item('responses', ICONS.pen, 'Responses',
+  Item('responses', ICONS.setResponses, 'Responses',
     Field('Length', Seg('length', LENGTHS, settings.length)) +
     Field('Tone & Moods', Chips('tone', TONES, settings.tone))),
 
@@ -1377,7 +1422,7 @@ let AccountPage = function (user) {
     </div>
     <div class="panel-scroll">
       <div class="panel-group">
-        ${Item('connections', ICONS.link, 'Connections',
+        ${Item('connections', ICONS.acctConn, 'Connections',
           Field('Email (display only)', `<span class="static-val" data-mask="email">${esc(shownEmail(user.email, 'Not set'))}</span>`) +
           Field('Phone', `<div class="phone-row">
             <select class="input" data-text="phoneCc" aria-label="Country code">${ccOptions()}</select>
@@ -1409,7 +1454,7 @@ let AccountPage = function (user) {
           ? LinkRow('activation', ICONS.power, 'Deactivate account', { act: 'deactivate', value: 'Active' })
           : LinkRow('activation', ICONS.power, 'Activate account', { act: 'activate', value: 'Paused' })}
         ${LinkRow('abandon', ICONS.exit, 'Abandon account', { act: 'abandon', danger: true })}
-        ${LinkRow('abolish', ICONS.trash, 'Abolish account', { act: 'abolish', danger: true })}
+        ${LinkRow('abolish', ICONS.abolishAcct, 'Abolish account', { act: 'abolish', danger: true })}
         ${LinkRow('destruct', ICONS.flame, 'Destruct account', { act: 'destruct', danger: true })}
       </div>
     </div>
@@ -1424,7 +1469,7 @@ const SettingsPanel = (user) => `
   <aside class="settings-panel" id="settings-panel" aria-label="Settings">
     <div class="panel-head">
       <h2 class="panel-title">Settings</h2>
-      <button class="icon-btn" type="button" data-action="settings-close" aria-label="Close">${ICONS.close}</button>
+      <button class="icon-btn" type="button" data-action="settings-close" aria-label="Close">${ICONS.closeSettings}</button>
     </div>
 
     <div class="panel-scroll">
@@ -1433,7 +1478,7 @@ const SettingsPanel = (user) => `
           <span class="usage-title">${ICONS.zap}<span>Usage</span></span>
           <span class="usage-head-r">
             <span class="usage-sub" data-usage-sub>Today</span>
-            <button class="usage-info" type="button" data-act="usage-info" aria-label="Usage details">${ICONS.info}</button>
+            <button class="usage-info" type="button" data-act="usage-info" aria-label="Usage details">${ICONS.usageInfo}</button>
           </span>
         </div>
         <div class="usage-figure">
@@ -2855,9 +2900,9 @@ async function addFiles(list) {
 
 const trayHtml = () => pendingFiles.map((f) => `
   <div class="attach-chip" data-fid="${esc(f.id)}">
-    ${f.kind === 'image' ? `<img src="${f.dataUrl}" alt="">` : `<span class="attach-ico">${ICONS.file}</span>`}
+    ${f.kind === 'image' ? `<img src="${f.dataUrl}" alt="">` : `<span class="attach-ico">${ICONS.attachFile}</span>`}
     <span class="attach-meta"><b>${esc(f.name)}</b><i>${fmtSize(f.size)}${f.cut ? ' \u00b7 trimmed' : ''}</i></span>
-    <button type="button" class="attach-x" data-attach-remove="${esc(f.id)}" aria-label="Remove ${esc(f.name)}">${ICONS.close}</button>
+    <button type="button" class="attach-x" data-attach-remove="${esc(f.id)}" aria-label="Remove ${esc(f.name)}">${ICONS.closeAttach}</button>
   </div>`).join('');
 
 function openAttach() {
@@ -4637,7 +4682,7 @@ function parseFence(raw, idx) {
 }
 
 const fileCardHtml = (f, i, extra) =>
-  `<button class="file-card${extra ? ' is-extra' : ''}" type="button" data-fi="${i}" aria-label="Open ${esc(f.name)}"><span class="file-card-ico">${ICONS.file}</span><span class="file-card-meta"><span class="file-card-name">${esc(f.name)}</span><span class="file-card-sub">${esc((f.ext || f.lang || 'text').toUpperCase())} \u00b7 ${f.lines} lines</span></span></button>`;
+  `<button class="file-card${extra ? ' is-extra' : ''}" type="button" data-fi="${i}" aria-label="Open ${esc(f.name)}"><span class="file-card-ico">${ICONS.cardFile}</span><span class="file-card-meta"><span class="file-card-name">${esc(f.name)}</span><span class="file-card-sub">${esc((f.ext || f.lang || 'text').toUpperCase())} \u00b7 ${f.lines} lines</span></span></button>`;
 
 /* ---------- RICH TEXT RENDERER ---------- */
 const GREEK = { alpha: 'α', beta: 'β', gamma: 'γ', delta: 'δ', theta: 'θ', lambda: 'λ', mu: 'μ', pi: 'π', sigma: 'σ', phi: 'φ', omega: 'ω', Delta: 'Δ', Sigma: 'Σ', Omega: 'Ω' };
@@ -4961,11 +5006,11 @@ function buildStepCards(msgs) {
   });
 }
 const GLOBE_ANIM = '<svg class="tool-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19"/><ellipse class="globe-mer" cx="12" cy="12" rx="4.5" ry="9.5"/></svg>';
-const TOOL_ICON = { web_search: GLOBE_ANIM, fetch_url: ICONS.link, calculator: ICONS.cpu, current_time: ICONS.clock };
+const TOOL_ICON = { web_search: GLOBE_ANIM, fetch_url: ICONS.toolFetch, calculator: ICONS.toolCalc, current_time: ICONS.clock };
 function cardsEl(cards) {
   const d = document.createElement('div');
   d.className = 'tool-cards';
-  d.innerHTML = cards.map((c) => `<div class="tool-card${c.ok ? '' : ' bad'}"><span class="tool-ico">${c.ok ? (TOOL_ICON[c.name] || ICONS.check) : ICONS.info}</span> ${esc(TOOL_LABEL[c.name] || c.name)} <em>${esc(String(c.arg).slice(0, 70))}</em></div>`).join('');
+  d.innerHTML = cards.map((c) => `<div class="tool-card${c.ok ? '' : ' bad'}"><span class="tool-ico">${c.ok ? (TOOL_ICON[c.name] || ICONS.toolOk) : ICONS.toolFail}</span> ${esc(TOOL_LABEL[c.name] || c.name)} <em>${esc(String(c.arg).slice(0, 70))}</em></div>`).join('');
   return d;
 }
 
@@ -4980,7 +5025,7 @@ function msgEl(m, i) {
       files.className = 'msg-files';
       files.innerHTML = m.attachments.map((a) => a.kind === 'image'
         ? `<img class="msg-img" src="${a.dataUrl}" alt="${esc(a.name || '')}">`
-        : `<span class="msg-file">${ICONS.file}<span>${esc(a.name || 'file')}</span></span>`
+        : `<span class="msg-file">${ICONS.msgFile}<span>${esc(a.name || 'file')}</span></span>`
       ).join('');
       el.appendChild(files);
     }
@@ -5051,7 +5096,7 @@ function sessionItem(s) {
   return `<div class="chat-item${s.id === currentSession.id ? ' is-active' : ''}" data-id="${esc(s.id)}">
     <button class="chat-open" type="button" title="${esc(s.title)}">${esc(s.title)}</button>
     <span class="chat-actions">
-      <button class="chat-act" type="button" data-act="rename" aria-label="Rename session">${ICONS.pencil}</button>
+      <button class="chat-act" type="button" data-act="rename" aria-label="Rename session">${ICONS.renameChat}</button>
       <button class="chat-act${s.pinned ? ' on' : ''}" type="button" data-act="pin" aria-label="${s.pinned ? 'Unpin' : 'Pin'} session">${s.pinned ? ICONS.pushpinOn : ICONS.pushpin}</button>
       <button class="chat-act" type="button" data-act="del" aria-label="Delete session">${ICONS.trash}</button>
     </span>
@@ -5213,7 +5258,7 @@ async function onMessageAction(btn) {
   const a = btn.dataset.a;
   if (a === 'copy') {
     if (await copyText(m.content)) {
-      btn.innerHTML = ICONS.check;
+      btn.innerHTML = ICONS.copiedCheck;
       sfx('copy'); haptic(8);
       setTimeout(() => { btn.innerHTML = ICONS.copy; }, 1400);
     } else toast('Couldn\u2019t copy.');
@@ -6194,7 +6239,7 @@ function openModelPicker() {
     <div class="dialog model-picker" role="dialog" aria-modal="true" aria-label="Select model">
       <h3 class="dialog-title">${esc(activeProviderName)} models</h3>
       <label class="picker-search">
-        ${ICONS.search}
+        ${ICONS.searchModels}
         <input type="search" placeholder="Search models" aria-label="Search models" autocomplete="off" data-role="picker-search">
       </label>
       <div class="picker-empty dialog-msg" hidden>No models match.</div>
@@ -6512,7 +6557,7 @@ function initShell() {
     else if (action === 'attach') openAttach();
     else if (action === 'replay-tour') { closeSettings(); setTimeout(() => startOnboarding(true), 350); }
     else if (action === 'upgrade') toast('Paid plans are coming soon.', 'info', 1800);
-    else if (action === 'nav-worlds' || action === 'nav-agent' || action === 'nav-data' || action === 'nav-automation' || action === 'nav-connectors') toast('Coming soon.', 'info', 1800);
+    else if (action === 'nav-worlds' || action === 'nav-agent' || action === 'nav-data' || action === 'nav-automation' || action === 'nav-connectors' || action === 'nav-operations') toast('Coming soon.', 'info', 1800);
   });
 
   appEl.addEventListener('click', (e) => {
@@ -7077,7 +7122,7 @@ function abBillingCards() {
         <span class="ab-brand">${ICONS.card}</span>
         <span class="ab-pay-meta"><b>${esc(c.brand)} \u2022\u2022\u2022\u2022 ${esc(c.last4)}</b><small>${esc(c.name || 'Card')} \u00b7 exp ${esc(c.exp)}</small></span>
         ${c.def ? '<em class="ab-pill">Default</em>' : `<button class="ab-mini" type="button" data-ab="card-default" data-id="${c.id}">Set default</button>`}
-        <button class="ab-mini danger" type="button" data-ab="card-del" data-id="${c.id}" aria-label="Remove card">${ICONS.trash}</button>
+        <button class="ab-mini danger" type="button" data-ab="card-del" data-id="${c.id}" aria-label="Remove card">${ICONS.cardRemove}</button>
       </div>`).join('')
     : '<p class="ab-muted">No cards saved yet.</p>';
   const hist = b.history.length
@@ -7193,7 +7238,7 @@ function openAboutPage(key) {
         <h2 class="ab-title">${esc(def.title)}</h2>
         <button class="ab-back" type="button" data-ab="back" aria-label="Back">${ICONS.back}<span>Back</span></button>
       </div>
-      <label class="ab-search">${ICONS.search}<input type="search" placeholder="Search" aria-label="Search this page" autocomplete="off"></label>
+      <label class="ab-search">${ICONS.searchPage}<input type="search" placeholder="Search" aria-label="Search this page" autocomplete="off"></label>
     </div>
     <div class="ab-body"></div>
   </div>`;
