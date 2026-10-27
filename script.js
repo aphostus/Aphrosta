@@ -795,7 +795,7 @@ ICONS.closeLg = svg('<circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"
 Object.assign(ICONS, {
   stUsage:       svg('<path d="M4 17a8 8 0 1116 0"/><path d="M12 17l4-5M12 3v2M4.9 6.9l1.4 1.4M19.1 6.9l-1.4 1.4"/>', 16),
   stUsageDetail: svg('<path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/>', 16),
-  stClose:       svg('<rect x="3" y="3" width="18" height="18" rx="5"/><path d="M9 9l6 6M15 9l-6 6"/>', 16),
+  stClose:       svg('<path d="M6 6l12 12M6 18L18 6"/>', 16),  
   stBack:        svg('<path d="M19 12H5M11 6l-6 6 6 6"/>', 16),
   stReset:       svg('<path d="M4 12a8 8 0 108-8H8"/><path d="M11 1L8 4l3 3"/>', 16),
   stAppearance:  svg('<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 000 18z"/>', 16),
