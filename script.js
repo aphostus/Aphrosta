@@ -1609,7 +1609,7 @@ const PAGES = {
   },
   system: {
     title: 'System', icon: () => ICONS.navSystem, search: null,
-    empty: { title: 'Control room', text: 'Models, memory, limits, and status will appear here.', cta: null }
+    empty: null
   },
   automations: {
     title: 'Automations', icon: () => ICONS.navAutomation, search: 'Search Automations',
@@ -1684,6 +1684,7 @@ function renderPageBody(key) {
   if (key === 'worlds') { body.innerHTML = renderWorldsGrid(); return; }
   if (key === 'agents') { body.innerHTML = renderAgentsList(); return; }
   if (key === 'operations') { body.innerHTML = renderOperationsList(); return; }
+  if (key === 'system') { body.innerHTML = renderSystemPage(); return; }
   const page = PAGES[key];
   if (!page || !page.empty) { body.innerHTML = ''; return; }
   const e = page.empty;
@@ -1715,6 +1716,139 @@ function renderWorldsGrid() {
     </div>
     ${cards}
   </div>`;
+}
+
+function renderSystemPage() {
+  const activeProv = MODEL_PROVIDERS.find(p => p.id === activeModel);
+  const activeModelName = activeProv ? currentVariant(activeModel).name : 'None';
+  const todayTokens = LimitWindow.used();
+  const limit = dayLimit();
+  const tokenPct = limit ? Math.min(100, (todayTokens / limit) * 100) : 0;
+  
+  const keysHtml = MODEL_PROVIDERS.map(p => {
+    const hasKey = !!apiKeys[p.id];
+    const isActive = activeModel === p.id;
+    const tag = isActive ? '<span class="sys-tag ok">Active</span>' : hasKey ? '<span class="sys-tag ok">Saved</span>' : '<span class="sys-tag miss">No key</span>';
+    return `<div class="sys-provider-row">
+      <div><div class="sys-provider-name">${p.name}</div>${isActive ? `<div class="sys-provider-model">${activeModelName}</div>` : ''}</div>
+      ${tag}
+    </div>`;
+  }).join('');
+
+  return `
+    <div class="sys-strip">
+      <div class="sys-strip-row">
+        <div class="sys-strip-label">${ICONS.stStreaming} Sync</div>
+        <div class="sys-strip-val" style="color:var(--ok);">Connected</div>
+      </div>
+      <div class="sys-strip-row">
+        <div class="sys-strip-label">${ICONS.stConnect} Keys</div>
+        <div class="sys-strip-val">${Object.keys(apiKeys).length} saved</div>
+      </div>
+      <div class="sys-strip-row">
+        <div class="sys-strip-label">${ICONS.stUsage} Today</div>
+        <div class="sys-strip-val">${fmtTokens(todayTokens)} ${limit ? `/ ${fmtTokens(limit)}` : ''}</div>
+      </div>
+      ${limit ? `<div class="sys-strip-bar"><i style="width:${tokenPct}%"></i></div>` : ''}
+    </div>
+
+    <div class="sys-card">
+      <div class="sys-card-head">
+        <div class="sys-card-title">Models & Providers</div>
+        <div class="sys-card-desc">API keys stay on this device.</div>
+      </div>
+      <div class="sys-card-body" style="padding-top:0;padding-bottom:0;">
+        ${keysHtml}
+      </div>
+    </div>
+
+    <div class="sys-card">
+      <div class="sys-card-head">
+        <div class="sys-card-title">Memory</div>
+        <div class="sys-card-desc">Aphrosta remembers useful details so you don't have to repeat yourself.</div>
+      </div>
+      <div class="sys-card-body">
+        <label class="sub-switch"><span>Long-Term memory</span><span class="switch"><input type="checkbox" data-set="memoryLong" ${settings.memoryLong?'checked':''}><i></i></span></label>
+        <label class="sub-switch"><span>Short-Term memory</span><span class="switch"><input type="checkbox" data-set="memoryShort" ${settings.memoryShort?'checked':''}><i></i></span></label>
+        <label class="sub-switch"><span>State Log</span><span class="switch"><input type="checkbox" data-set="memSls" ${settings.memSls?'checked':''}><i></i></span></label>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
+          <span style="font-size:calc(12px*var(--ts));color:var(--gray-mid);">${memSysStat()}</span>
+          <button class="btn-line" style="width:auto;padding:6px 12px;font-size:calc(11px*var(--ts));" data-act="clear-memory">Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="sys-card">
+      <div class="sys-card-head">
+        <div class="sys-card-title">Limits & Usage</div>
+        <div class="sys-card-desc">Daily token limit pauses chatting when reached.</div>
+      </div>
+      <div class="sys-card-body">
+        <div class="field-inline">
+          <span class="field-label">Daily Limit</span>
+          <input class="input" data-token-limit style="width:100px;text-align:right;" value="${settings.tokenLimit ? fmtTokens(settings.tokenLimit) : ''}" placeholder="Off">
+        </div>
+        <div class="field-inline">
+          <span class="field-label">Resets In</span>
+          <span style="font-size:calc(13px*var(--ts));font-variant-numeric:tabular-nums;">${settings.tokenLimit ? fmtHMS(timerMins()*60000) : 'N/A'}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sys-card">
+      <div class="sys-card-head">
+        <div class="sys-card-title">Agent Engine</div>
+        <div class="sys-card-desc">Default tools for new agents.</div>
+      </div>
+      <div class="sys-card-body">
+        <label class="sub-switch"><span>Web search</span><span class="switch"><input type="checkbox" data-set="skillWeb" ${settings.skillWeb?'checked':''}><i></i></span></label>
+        <label class="sub-switch"><span>URL reader</span><span class="switch"><input type="checkbox" data-set="agentTools" ${settings.agentTools?'checked':''}><i></i></span></label>
+        <label class="sub-switch"><span>Show plans</span><span class="switch"><input type="checkbox" data-set="agentPlan" ${settings.agentPlan?'checked':''}><i></i></span></label>
+      </div>
+    </div>
+
+    <div class="sys-card">
+      <div class="sys-card-head">
+        <div class="sys-card-title">Permissions & Privacy</div>
+      </div>
+      <div class="sys-card-body" style="padding:0;">
+        <button class="panel-row" style="border-bottom:1px solid var(--glass-border);" data-act="sys-perm">
+          <span class="row-label">Permissions</span><span class="row-chev">${ICONS.stChevItem}</span>
+        </button>
+        <button class="panel-row" style="border-bottom:1px solid var(--glass-border);" data-act="sys-storage">
+          <span class="row-label">Storage & Privacy</span><span class="row-chev">${ICONS.stChevItem}</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="sys-card">
+      <div class="sys-card-head">
+        <div class="sys-card-title">Status</div>
+      </div>
+      <div class="sys-card-body">
+        <div class="field-inline"><span class="field-label">Account</span><span class="static-val">${esc(shownEmail(currentUser?.email, 'Signed in'))}</span></div>
+        <div class="field-inline"><span class="field-label">App Version</span><span class="static-val">${settings.version}</span></div>
+      </div>
+    </div>
+
+    <div class="sys-card" style="margin-bottom:24px;">
+      <div class="sys-card-head">
+        <div class="sys-card-title">Data</div>
+        <div class="sys-card-desc">Worlds, Agents, and Automations sync to your account. Keys stay on this device.</div>
+      </div>
+      <div class="sys-card-body" style="padding:0;">
+        <button class="panel-row" style="border-bottom:1px solid var(--glass-border);" data-act="export-data">
+          <span class="row-label">Export all data</span><span class="row-chev">${ICONS.stChevItem}</span>
+        </button>
+        <label class="panel-row" style="border-bottom:1px solid var(--glass-border);">
+          <span class="row-label">Import data</span><input type="file" accept="application/json,.json" data-import hidden><span class="row-chev">${ICONS.stChevItem}</span>
+        </label>
+        <button class="panel-row" style="color:var(--bad);" data-act="wipe-local">
+          <span class="row-label">Delete local data</span><span class="row-chev" style="color:var(--bad);">${ICONS.stChevItem}</span>
+        </button>
+      </div>
+    </div>
+  `;
 }
 
 function renderOperationsList() {
@@ -2108,6 +2242,26 @@ function onSettingsClick(e) {
   if (oAct) {
     e.stopPropagation();
     if (oAct.dataset.act === 'ops-open') openRunDetail(oAct.dataset.id);
+    return;
+  }
+
+  const sysAct = t.closest('[data-act^="sys-"]');
+  if (sysAct) {
+    e.stopPropagation();
+    if (sysAct.dataset.act === 'sys-perm') {
+      openSettings();
+      setTimeout(() => {
+        const el = document.querySelector('[data-item="permissions"]');
+        if (el) { el.classList.add('open'); el.scrollIntoView({ behavior: 'smooth' }); }
+      }, 400);
+    }
+    if (sysAct.dataset.act === 'sys-storage') {
+      openSettings();
+      setTimeout(() => {
+        const el = document.querySelector('[data-item="storage"]');
+        if (el) { el.classList.add('open'); el.scrollIntoView({ behavior: 'smooth' }); refreshStorage(); }
+      }, 400);
+    }
     return;
   }
 

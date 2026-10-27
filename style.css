@@ -3189,3 +3189,35 @@ mark.ab-mark {
 .ops-meta span { display: flex; align-items: center; gap: 4px; }
 .ops-meta-chip { padding: 2px 6px; background: rgba(var(--fg-rgb), 0.06); border-radius: 6px; }
 .ops-error { margin-top: 4px; font-size: calc(12px * var(--ts)); color: var(--bad); }
+
+/* ---------- Phase 4: System ---------- */
+.sys-strip {
+  display: flex; flex-direction: column; gap: 12px; padding: 14px; margin-bottom: 16px;
+  background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 16px;
+}
+.sys-strip-row { display: flex; align-items: center; justify-content: space-between; font-size: calc(13px * var(--ts)); }
+.sys-strip-label { display: flex; align-items: center; gap: 8px; color: var(--gray-light); }
+.sys-strip-label svg { width: 16px; height: 16px; color: var(--gray-mid); }
+.sys-strip-val { font-weight: 600; font-variant-numeric: tabular-nums; }
+.sys-strip-bar { height: 4px; background: rgba(var(--fg-rgb), 0.1); border-radius: 4px; overflow: hidden; margin-top: 6px; }
+.sys-strip-bar i { display: block; height: 100%; background: var(--accent); transition: width 0.5s var(--ease-spring); }
+
+.sys-card {
+  background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 16px;
+  margin-bottom: 12px; overflow: hidden;
+}
+.sys-card-head {
+  padding: 14px 16px; border-bottom: 1px solid var(--glass-border);
+}
+.sys-card-title { font-size: calc(15px * var(--ts)); font-weight: 600; color: var(--fg); margin-bottom: 4px; }
+.sys-card-desc { font-size: calc(12px * var(--ts)); color: var(--gray-mid); line-height: 1.4; }
+.sys-card-body { padding: 12px 16px; display: flex; flex-direction: column; gap: 12px; }
+
+.sys-provider-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--glass-border); font-size: calc(13px * var(--ts)); }
+.sys-provider-row:last-child { border-bottom: 0; }
+.sys-provider-name { font-weight: 600; }
+.sys-provider-model { font-size: calc(11px * var(--ts)); color: var(--gray-mid); }
+.sys-tag { font-size: calc(10px * var(--ts)); font-weight: 600; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; }
+.sys-tag.ok { background: rgba(48,209,88,.15); color: #30d158; }
+.sys-tag.bad { background: rgba(255,69,58,.15); color: #ff453a; }
+.sys-tag.miss { background: rgba(255,255,255,.1); color: var(--gray-mid); }
