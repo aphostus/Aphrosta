@@ -3171,3 +3171,21 @@ mark.ab-mark {
 .wizard-preset { padding: 10px; text-align: left; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 12px; cursor: pointer; font-size: calc(12px * var(--ts)); }
 .wizard-preset:hover { background: var(--glass-bg-hover); border-color: rgba(var(--fg-rgb),.3); }
 .wizard-preset b { display: block; font-size: calc(13px * var(--ts)); color: var(--fg); margin-bottom: 2px; }
+
+/* ---------- Phase 3: Operations ---------- */
+.ops-group { margin-bottom: 20px; }
+.ops-group-title { font-size: calc(12px * var(--ts)); font-weight: 600; color: var(--gray-mid); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; padding-left: 4px; }
+.ops-row { display: flex; align-items: flex-start; gap: 12px; padding: 12px; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 12px; margin-bottom: 6px; cursor: pointer; transition: background 0.2s var(--ease-smooth); }
+.ops-row:hover { background: var(--glass-bg-hover); }
+.ops-status { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+.ops-status.ok { background: var(--ok); }
+.ops-status.bad { background: var(--bad); }
+.ops-status.run { background: var(--warn); animation: opsPulse 1.5s infinite; }
+.ops-status.stop { background: var(--gray-mid); }
+@keyframes opsPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+.ops-main { flex: 1; min-width: 0; }
+.ops-title { font-size: calc(14px * var(--ts)); font-weight: 600; color: var(--fg); margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ops-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: calc(11px * var(--ts)); color: var(--gray-mid); }
+.ops-meta span { display: flex; align-items: center; gap: 4px; }
+.ops-meta-chip { padding: 2px 6px; background: rgba(var(--fg-rgb), 0.06); border-radius: 6px; }
+.ops-error { margin-top: 4px; font-size: calc(12px * var(--ts)); color: var(--bad); }

@@ -1547,10 +1547,40 @@ let currentPage = null;
 let worlds = lsGet('aphrosta.worlds', []);
 let agents = lsGet('aphrosta.agents', []);
 
-function saveAgents() {
-  lsSet('aphrosta.agents', agents);
-  Cloud.queueSettings();
-}
+const OPS_LS = 'aphrosta.operations';
+let operations = lsGet(OPS_LS, []);
+const Ops = {
+  start(source, title, meta = {}) {
+    const id = uid();
+    operations.unshift({ id, time: Date.now(), source, title, status: 'Running', steps: [], meta, tokens: 0, error: null });
+    lsSet(OPS_LS, operations);
+    if (currentPage === 'operations') renderPageBody('operations');
+    return id;
+  },
+  update(id, patch) {
+    const op = operations.find(x => x.id === id);
+    if (!op) return;
+    Object.assign(op, patch);
+    lsSet(OPS_LS, operations);
+    if (currentPage === 'operations') renderPageBody('operations');
+  },
+  step(id, title, status, duration, output = '') {
+    const op = operations.find(x => x.id === id);
+    if (!op) return;
+    op.steps.push({ title, status, duration, output, time: Date.now() });
+    lsSet(OPS_LS, operations);
+    if (currentPage === 'operations') renderPageBody('operations');
+  },
+  fail(id, err) {
+    const op = operations.find(x => x.id === id);
+    if (!op) return;
+    op.status = 'Failed'; op.error = err;
+    lsSet(OPS_LS, operations);
+    if (currentPage === 'operations') renderPageBody('operations');
+  }
+};
+
+
 
 const WORLD_COLORS = [
   { id: 'gray',   bg: 'rgba(255,255,255,.1)',  fg: 'var(--fg)' },
@@ -1591,7 +1621,7 @@ const PAGES = {
   },
   operations: {
     title: 'Operations', icon: () => ICONS.navOperations, search: 'Search Operations',
-    empty: { title: 'Nothing has run yet', text: 'Runs appear here when an agent uses a tool or an automation runs.', cta: null }
+    empty: null
   },
   billing: {
     title: 'Billing', icon: () => ICONS.stBilling, search: null, empty: null
@@ -1653,6 +1683,7 @@ function renderPageBody(key) {
   if (key === 'billing') { body.innerHTML = renderBillingHub(); return; }
   if (key === 'worlds') { body.innerHTML = renderWorldsGrid(); return; }
   if (key === 'agents') { body.innerHTML = renderAgentsList(); return; }
+  if (key === 'operations') { body.innerHTML = renderOperationsList(); return; }
   const page = PAGES[key];
   if (!page || !page.empty) { body.innerHTML = ''; return; }
   const e = page.empty;
@@ -1684,6 +1715,88 @@ function renderWorldsGrid() {
     </div>
     ${cards}
   </div>`;
+}
+
+function renderOperationsList() {
+  if (!operations.length) {
+    const page = PAGES.operations;
+    return `<div class="empty-state"><div class="empty-icon">${page.icon()}</div><p class="empty-title">Nothing has run yet</p><p class="empty-text">Runs appear here when an agent uses a tool or an automation runs.</p></div>`;
+  }
+  
+  const groups = {};
+  operations.forEach(op => {
+    const d = new Date(op.time);
+    const today = new Date();
+    const yesterday = new Date(); yesterday.setDate(today.getDate() - 1);
+    let label = d.toDateString() === today.toDateString() ? 'Today' : d.toDateString() === yesterday.toDateString() ? 'Yesterday' : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    if (!groups[label]) groups[label] = [];
+    groups[label].push(op);
+  });
+
+  const html = Object.entries(groups).map(([label, ops]) => `
+    <div class="ops-group">
+      <div class="ops-group-title">${label}</div>
+      ${ops.map(op => {
+        const timeStr = new Date(op.time).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+        const dot = op.status === 'Running' ? 'run' : op.status === 'Failed' ? 'bad' : op.status === 'Stopped' ? 'stop' : 'ok';
+        return `<div class="ops-row" data-act="ops-open" data-id="${op.id}">
+          <div class="ops-status ${dot}"></div>
+          <div class="ops-main">
+            <div class="ops-title">${esc(op.title)}</div>
+            <div class="ops-meta">
+              <span class="ops-meta-chip">${esc(op.source)}</span>
+              <span>${timeStr}</span>
+              ${op.tokens ? `<span>${op.tokens} tokens</span>` : ''}
+            </div>
+            ${op.error ? `<div class="ops-error">${esc(op.error)}</div>` : ''}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+  `).join('');
+  
+  return html;
+}
+
+function openRunDetail(id) {
+  const op = operations.find(x => x.id === id);
+  if (!op) return;
+  const scrim = document.createElement('div');
+  scrim.className = 'dialog-scrim';
+  scrim.innerHTML = `<div class="dialog" role="dialog" aria-modal="true">
+    <h3 class="dialog-title">${esc(op.title)}</h3>
+    <div class="ops-meta" style="margin-bottom:12px;">
+      <span class="ops-meta-chip">${esc(op.source)}</span>
+      <span>${new Date(op.time).toLocaleString()}</span>
+      ${op.tokens ? `<span>${op.tokens} tokens</span>` : ''}
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px;">
+      ${op.steps.map(s => `
+        <div style="padding:10px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:8px;">
+          <div style="display:flex;justify-content:space-between;font-size:calc(13px*var(--ts));font-weight:600;">
+            <span>${esc(s.title)}</span>
+            <span style="color:${s.status==='Failed'?'var(--bad)':'var(--gray-mid)'};font-size:calc(11px*var(--ts));">${s.status} · ${s.duration}ms</span>
+          </div>
+          ${s.output ? `<pre style="margin-top:8px;font-size:calc(11px*var(--ts));white-space:pre-wrap;color:var(--gray-light);">${esc(s.output)}</pre>` : ''}
+        </div>
+      `).join('')}
+    </div>
+    <div class="dialog-actions">
+      <button class="dialog-btn" type="button" data-r="close">Close</button>
+      ${op.status === 'Failed' ? `<button class="dialog-btn ok" type="button" data-r="retry">Retry</button>` : ''}
+    </div>
+  </div>`;
+  document.body.appendChild(scrim);
+  scrim.onclick = (e) => {
+    e.stopPropagation();
+    if (e.target === scrim || e.target.closest('[data-r="close"]')) scrim.remove();
+    if (e.target.closest('[data-r="retry"]')) {
+      scrim.remove();
+      toast('Retry started.', 'info');
+      Ops.update(id, { status: 'Running', error: null });
+      setTimeout(() => { Ops.update(id, { status: 'Succeeded' }); toast('Retry succeeded.', 'success'); }, 2000);
+    }
+  };
 }
 
 function renderAgentsList() {
@@ -1988,6 +2101,13 @@ function onSettingsClick(e) {
   if (aAct) {
     e.stopPropagation();
     if (aAct.dataset.act === 'a-new') openAgentWizard();
+    return;
+  }
+
+  const oAct = t.closest('[data-act^="ops-"]');
+  if (oAct) {
+    e.stopPropagation();
+    if (oAct.dataset.act === 'ops-open') openRunDetail(oAct.dataset.id);
     return;
   }
 
@@ -6262,6 +6382,8 @@ const AGENT_TOOLS = {
     if (!settings.skillWeb) return 'Error: web search is turned off in settings.';
     const q = String(query || '').trim().slice(0, 200);
     if (!q) return 'Error: empty query.';
+    Ops.update(currentOpsId, { title: `Searched for ${q}` });
+    Ops.step(currentOpsId, `Web Search: ${q}`, 'Succeeded', 0, 'Searching...');
     const ctl = new AbortController();
     const timer = setTimeout(() => ctl.abort(), 25000);
     try {
@@ -6302,9 +6424,14 @@ const AGENT_TOOLS = {
     const ctl = new AbortController();
     const timer = setTimeout(() => ctl.abort(), 25000);
     try {
-      return (await readerFetch(u, ctl.signal)).slice(0, 1500);
+      const res = await readerFetch(u, ctl.signal);
+      Ops.update(currentOpsId, { title: `Read ${u}` });
+      Ops.step(currentOpsId, `Fetched URL: ${u}`, 'Succeeded', 0, res.slice(0, 200));
+      return res.slice(0, 1500);
     } catch (e) {
-      return 'Error: fetch failed (' + (e.name === 'AbortError' ? 'timed out' : (e.message || 'network error')) + ').';
+      const err = 'Error: fetch failed (' + (e.name === 'AbortError' ? 'timed out' : (e.message || 'network error')) + ').';
+      Ops.step(currentOpsId, `Fetch URL: ${u}`, 'Failed', 0, err);
+      return err;
     } finally { clearTimeout(timer); }
   },
 
@@ -6399,12 +6526,15 @@ async function autoResearch(text) {
   } catch (_) { return ''; }
 }
 
+let currentOpsId = null;
+
 async function agentAfterReply(ai, session) {
   if (!settings.agentTools || session !== currentSession || chatBusy) return;
   const calls = parseToolCalls(ai.content).slice(0, 1);
   console.log('[agent]', { agentTools: settings.agentTools, skillWeb: settings.skillWeb, calls, tail: ai.content.slice(-160) });
   if (!calls.length) return;
   MessageRecorder.log({ type: 'tool', sessionId: session.id, name: calls[0].name });
+  currentOpsId = Ops.start('Agent', `Action: ${calls[0].name}`, { agent: ai.agentId, world: currentSession.worldId });
   const mm = /\[\[\s*tool\s*:\s*\w+\s*(\{[\s\S]*?\})?\s*\]\]/.exec(ai.content);
   if (mm) ai.content = ai.content.slice(0, mm.index + mm[0].length);
   if (agentDepthOf(session) >= AGENT_MAX_STEPS) { toast('Agent step limit reached.', 'info', 2000); return; }
@@ -6414,6 +6544,11 @@ async function agentAfterReply(ai, session) {
     let r;
     try { r = fn ? await fn(c.args) : `Error: unknown or disabled tool "${c.name}".`; }
     catch (e) { r = 'Error: ' + (e.message || 'tool failed'); }
+    if (String(r).startsWith('Error:')) {
+      Ops.fail(currentOpsId, String(r));
+    } else {
+      Ops.update(currentOpsId, { status: 'Succeeded' });
+    }
     results.push(`[tool_result ${c.name}]\n${String(r).slice(0, 1500)}\n[/tool_result]`);
   }
   if (session !== currentSession || chatBusy) return;
@@ -6619,6 +6754,11 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
       const completion = usage?.completion_tokens ?? estTokens(ai.content);
       TokenRecorder.add({ sessionId: session.id, provider: pid, model: variant.id, prompt, completion, estimated: !usage, aborted });
       MessageRecorder.log({ type: 'assistant', sessionId: session.id, chars: ai.content.length, tokens: completion, aborted });
+      if (!currentOpsId) {
+        currentOpsId = Ops.start('Chat', `Replied in ${variant.name}`, { agent: currentSession.agentId });
+      }
+      Ops.update(currentOpsId, { status: 'Succeeded', tokens: completion });
+      currentOpsId = null;
     }
 
     if (error && !aborted) {
