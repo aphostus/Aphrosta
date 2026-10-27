@@ -1355,7 +1355,7 @@ let ThemeSection = () => Section('theme', 'Theme', [
 ], 6);
 
 const ResetGroup = () => Section('reset', 'Defaults', [
-  LinkRow('reset-defaults', ICONS.stReset, 'Reset All', { act: 'reset-defaults' })
+  LinkRow('reset-defaults', ICONS.stReset, 'Default', { act: 'reset-defaults' })
 ], 1);
 
 const memListHtml = () => (settings.memoryNotes?.length
@@ -1409,7 +1409,7 @@ let AssistanceSection = () => Section('assistance', 'Assistance', [
     SubSwitch('Wrap Code', 'codeWrap') +
     SubSwitch('Rich Output', 'richFormat')),
 
-  Item('agentskills', ICONS.stSkills, 'Agent Skills',
+  Item('agentskills', ICONS.stSkills, 'Tailorship',
     SubSwitch('Tool Use', 'agentTools') +
     SubSwitch('Show Plans', 'agentPlan') +
     SubSwitch('Slides', 'skillPresentations') +
@@ -1427,15 +1427,15 @@ let AssistanceSection = () => Section('assistance', 'Assistance', [
     SubSwitch('Haptics', 'haptics')),
 
   Item('status', ICONS.stStatus, 'Status', Field('State', Seg('status', STATUSES, settings.status)))
-], 13);
+], 12);
 
 const AboutSection = () => Section('about', 'About', [
   LinkRow('terms', ICONS.stTerms, 'Terms & Conditions', { act: 'about-terms' }),
   LinkRow('rules', ICONS.stRules, 'Rules & Policies', { act: 'about-rules' }),
-  LinkRow('licenses', ICONS.stLicense, 'About & Licenses', { act: 'about-licenses' }),
+  LinkRow('licenses', ICONS.stLicense, 'About & Licenses', { act: 'about-licenses', value: `v${settings.version || '1.00'}` }),
   LinkRow('help', ICONS.stHelp, 'Help & Support', { act: 'about-help' }),
   LinkRow('billing', ICONS.stBilling, 'Billing & Payment', { act: 'about-billing' }),
-  LinkRow('feedback', ICONS.stFeedback, 'Feedback', { act: 'feedback' })
+  LinkRow('feedback', ICONS.stFeedback, 'Feedback', { act: 'feedback', value: 'Bug or idea' })
 ], 6);
 
 let OthersSection = () => Section('others', 'Others', [
@@ -1522,25 +1522,32 @@ const SettingsPanel = (user) => `
           </span>
         </div>
         <div class="usage-figure">
-          <b class="day-total" data-day-total>0</b><span class="token-unit">tokens</span>
-          <span class="usage-of" data-day-of hidden></span>
+          <span class="usage-pct" data-day-pct hidden></span>
+          <b class="day-total" data-day-total>0</b>
+          <span class="usage-unit">
+            <span class="usage-of" data-day-of hidden></span>
+            <span class="token-unit">tokens</span>
+          </span>
         </div>
         <span class="usage-stack" data-usage-stack role="img" aria-label="Tokens used today by model"></span>
         <div class="usage-legend">${UsageLegend()}</div>
-        <label class="usage-limit">
-          <span>Token limit</span>
-          <input class="input" data-token-limit inputmode="text" enterkeyhint="done" placeholder="Off"
-            value="${settings.tokenLimit ? fmtTokens(settings.tokenLimit) : ''}" aria-label="Token limit">
-        </label>
-        <div class="usage-limit">
-          <span>Reset timer</span>
-          <div class="timer-input" role="group" aria-label="Limit reset timer, hours and minutes">
-            <input data-timer-h inputmode="numeric" maxlength="2" aria-label="Hours"   value="${String(Math.floor(timerMins() / 60)).padStart(2, '0')}">
-            <b>:</b>
-            <input data-timer-m inputmode="numeric" maxlength="2" aria-label="Minutes" value="${String(timerMins() % 60).padStart(2, '0')}">
+        <p class="usage-note">Counts every model together. Resets at 00:00 UTC.</p>
+        <div class="usage-custom">
+          <span class="usage-custom-label">Customize</span>
+          <div class="usage-custom-r">
+            <label class="usage-mini" title="Token limit">
+              <span class="usage-mini-k">Limit</span>
+              <input class="usage-mini-input" data-token-limit inputmode="text" enterkeyhint="done" placeholder="Off"
+                value="${settings.tokenLimit ? fmtTokens(settings.tokenLimit) : ''}" aria-label="Token limit">
+            </label>
+            <div class="usage-mini timer-input" role="group" aria-label="Limit reset timer, hours and minutes" title="Reset timer">
+              <span class="usage-mini-k">Reset</span>
+              <input data-timer-h inputmode="numeric" maxlength="2" aria-label="Hours"   value="${String(Math.floor(timerMins() / 60)).padStart(2, '0')}">
+              <b>:</b>
+              <input data-timer-m inputmode="numeric" maxlength="2" aria-label="Minutes" value="${String(timerMins() % 60).padStart(2, '0')}">
+            </div>
           </div>
         </div>
-        <p class="field-note">Counts every model together. Resets at 00:00 UTC.</p>
       </section>
 
       ${ResetGroup()}
@@ -1648,9 +1655,9 @@ function onSettingsClick(e) {
       return;
     case 'reset-defaults':
       confirmDialog({
-        title: 'Reset all settings?',
+        title: 'Restore default settings?',
         message: 'All settings will return to their defaults. Your account, API keys and sessions are kept.',
-        confirmLabel: 'Reset',
+        confirmLabel: 'Default',
         danger: true
       }).then((yes) => {
         if (!yes) return;
@@ -1673,7 +1680,7 @@ function onSettingsClick(e) {
         updateModelButton?.();
         updateEffortButton?.();
         refreshTokenMeter();
-        toast('Settings reset to default.', 'success');
+        toast('Settings restored to default.', 'success');
       });
       return;
     case 'deactivate':
@@ -1814,10 +1821,11 @@ function onSettingsChange(e) {
 
   if (t.matches?.('[data-text="phone"]')) {
     if (t.dataset.masked === '1') return;
-    const d = t.value.replace(/\D/g, '').replace(/^0+/, '');
-    if (d && (d.length < 6 || d.length > 12)) return toast('Enter a valid phone number (6 to 12 digits).');
-    t.value = d;
-    return setSetting('phone', d);
+    return commitPhone(t);
+  }
+  if (t.matches?.('[data-text="phoneCc"]')) {
+    setSetting('phoneCc', t.value);
+    return syncPhoneFull();
   }
   if (t.matches?.('[data-text="username"]')) {
     const v = t.value.trim();
@@ -2020,7 +2028,13 @@ function paintUsageCard() {
   card.querySelector('[data-day-total]').textContent = fmtTokens(total);
   const of = card.querySelector('[data-day-of]');
   of.hidden = !limit;
-  of.textContent = limit ? `of ${fmtTokens(limit)}` : '';
+  of.textContent = limit ? `/${fmtTokens(limit)}` : '';
+  const pc = card.querySelector('[data-day-pct]');
+  if (pc) {
+    const p = limit ? (total / limit) * 100 : 0;
+    pc.hidden = !limit;
+    pc.textContent = !limit ? '' : p > 0 && p < 1 ? '<1%' : `${Math.round(p)}%`;
+  }
   const denom = Math.max(limit, total) || 1;
   card.querySelector('[data-usage-stack]').innerHTML = MODEL_PROVIDERS
     .filter((p) => by[p.id] > 0)
@@ -2095,6 +2109,23 @@ const HomeScreen = (user) => `
 
 const maskEmail = (e = '') => e.replace(/^(.).*(@.*)$/, '$1•••$2');
 const maskPhone = (p = '') => (p.length > 4 ? '•'.repeat(p.length - 4) + p.slice(-4) : '••••');
+const phoneDigits = (v = '') => String(v).replace(/\D/g, '').replace(/^0+/, '');
+/* keeps one full international number (+63 9XX...) beside phone + phoneCc so the cloud copy is complete */
+function syncPhoneFull() {
+  const full = settings.phone ? `${settings.phoneCc || ''}${settings.phone}` : '';
+  if ((settings.phoneFull || '') !== full) setSetting('phoneFull', full);
+}
+function commitPhone(el) {
+  const d = phoneDigits(el.value);
+  if (d && (d.length < 6 || d.length > 12)) {
+    toast('Enter a valid phone number (6 to 12 digits).');
+    el.value = settings.phone || '';
+    return;
+  }
+  el.value = d;
+  if ((settings.phone || '') !== d) setSetting('phone', d);
+  syncPhoneFull();
+}
 const shownEmail = (e, fallback) => (e ? (settings.privMask ? maskEmail(e) : e) : fallback);
 const profileName = (u) => settings.username || u?.displayName || 'User';
 
@@ -2134,6 +2165,21 @@ document.addEventListener('focusout', (e) => {
     t.value = maskPhone(settings.phone);
     t.dataset.masked = '1';
   }
+});
+
+/* save a valid phone number while typing, so closing the panel never loses it */
+let phoneTimer = 0;
+document.addEventListener('input', (e) => {
+  const t = e.target;
+  if (!t.matches?.('[data-text="phone"]') || t.dataset.masked === '1') return;
+  clearTimeout(phoneTimer);
+  phoneTimer = setTimeout(() => {
+    const d = phoneDigits(t.value);
+    if (d.length >= 6 && d.length <= 12 && d !== (settings.phone || '')) {
+      setSetting('phone', d);
+      syncPhoneFull();
+    }
+  }, 700);
 });
 
 function handleAvatar(file, input) {
@@ -2548,38 +2594,80 @@ async function clearCache() {
 
 const FB_COOLDOWN_MS = 60 * 60 * 1000; /* 1 feedback per hour, stops Firestore spam */
 const FB_LAST_LS = 'aphrosta.feedbackLast';
+const FB_ERR_LS = 'aphrosta.feedbackErrors';
 function fbCooldownLeft() {
   const last = +(localStorage.getItem(FB_LAST_LS) || 0);
   return Math.max(0, last + FB_COOLDOWN_MS - Date.now());
 }
 
+/* error log: keeps the last 20 failures on this device and prints them to the console */
+function fbErrors() {
+  try { const l = JSON.parse(localStorage.getItem(FB_ERR_LS) || '[]'); return Array.isArray(l) ? l : []; } catch (_) { return []; }
+}
+function fbLogError(err, step) {
+  const code = err?.code || err?.name || 'unknown';
+  const entry = { at: Date.now(), step, code, msg: String(err?.message || err || '').slice(0, 200) };
+  console.error(`Feedback error [${step}] ${code}:`, err);
+  try { localStorage.setItem(FB_ERR_LS, JSON.stringify([...fbErrors(), entry].slice(-20))); } catch (_) {}
+  return entry;
+}
+const fbErrText = (e) => {
+  if (!e) return '';
+  const hint = e.code === 'permission-denied' ? ' Firestore rules are blocking writes to users/{uid}/feedback.'
+    : e.code === 'unavailable' ? ' No connection to the server.'
+    : e.code === 'no-user' ? ' You are not signed in.' : '';
+  return `Error: ${e.code}.${hint}`;
+};
+
 function openFeedback() {
   if (document.querySelector('.feedback-scrim')) return;
-  const wait = fbCooldownLeft();
-  if (wait > 0) { toast(`Feedback limit: 1 per hour. Try again in ${Math.ceil(wait / 60000)} min.`, 'info', 3000); return; }
   let kind = 'bug';
   const scrim = document.createElement('div');
   scrim.className = 'dialog-scrim feedback-scrim';
+  const lastErr = fbErrors().slice(-1)[0];
   scrim.innerHTML = `<div class="dialog" role="dialog" aria-modal="true" aria-label="Feedback">
     <h3 class="dialog-title">Send feedback</h3>
-    <div class="chips">${[['bug', 'Bug'], ['idea', 'Idea'], ['other', 'Other']].map(([id, n]) => `<button class="chip${id === kind ? ' on' : ''}" type="button" data-kind="${id}">${n}</button>`).join('')}</div>
-    <textarea class="input fb-text" rows="5" maxlength="1500" placeholder="What happened? What did you expect?" aria-label="Feedback message"></textarea>
-    <label class="sub-switch"><span>Include device info</span><span class="switch"><input type="checkbox" class="fb-device" checked><i></i></span></label>
+    <p class="field-note fb-lock" role="status" hidden></p>
+    <div class="fb-composer">
+      <div class="chips">${[['bug', 'Bug'], ['idea', 'Idea'], ['other', 'Other']].map(([id, n]) => `<button class="chip${id === kind ? ' on' : ''}" type="button" data-kind="${id}">${n}</button>`).join('')}</div>
+      <textarea class="input fb-text" rows="5" maxlength="1500" placeholder="What happened? What did you expect?" aria-label="Feedback message"></textarea>
+      <label class="sub-switch"><span>Include device info</span><span class="switch"><input type="checkbox" class="fb-device" checked><i></i></span></label>
+    </div>
+    <p class="field-note fb-err" role="alert"${lastErr ? '' : ' hidden'}>${lastErr ? esc(`Last send failed. ${fbErrText(lastErr)}`) : ''}</p>
     <div class="dialog-actions">
-      <button class="dialog-btn" type="button" data-r="0">Cancel</button>
+      <button class="dialog-btn" type="button" data-r="0">Close</button>
       <button class="dialog-btn ok" type="button" data-r="1" disabled>Send</button>
     </div></div>`;
   const text = scrim.querySelector('.fb-text');
   const send = scrim.querySelector('[data-r="1"]');
-  const done = () => { document.removeEventListener('keydown', onKey, true); scrim.remove(); };
+  const box = scrim.querySelector('.fb-composer');
+  const lockNote = scrim.querySelector('.fb-lock');
+  const errNote = scrim.querySelector('.fb-err');
+  let busy = false;
+
+  /* the dialog always opens; only the composer is locked while the 1 hour limit runs */
+  const applyLock = () => {
+    const wait = fbCooldownLeft();
+    const locked = wait > 0;
+    box.toggleAttribute('data-locked', locked);
+    text.disabled = locked;
+    box.querySelectorAll('[data-kind], .fb-device').forEach((el) => { el.disabled = locked; });
+    lockNote.hidden = !locked;
+    if (locked) lockNote.textContent = `Feedback limit: 1 per hour. The composer opens again in ${Math.max(1, Math.ceil(wait / 60000))} min.`;
+    send.disabled = locked || busy || text.value.trim().length < 5;
+    return locked;
+  };
+  const tick = setInterval(applyLock, 15000);
+  const done = () => { clearInterval(tick); document.removeEventListener('keydown', onKey, true); scrim.remove(); };
   const onKey = (e) => { if (e.key === 'Escape') { e.stopPropagation(); done(); } };
   document.addEventListener('keydown', onKey, true);
-  text.addEventListener('input', () => { send.disabled = text.value.trim().length < 5; });
+  text.addEventListener('input', applyLock);
   scrim.addEventListener('click', async (e) => {
     e.stopPropagation();
     if (e.target === scrim) return done();
     const chip = e.target.closest('[data-kind]');
     if (chip) {
+      if (chip.disabled) return;
       kind = chip.dataset.kind;
       scrim.querySelectorAll('[data-kind]').forEach((c) => c.classList.toggle('on', c === chip));
       return;
@@ -2587,9 +2675,13 @@ function openFeedback() {
     const b = e.target.closest('[data-r]');
     if (!b || b.disabled) return;
     if (b.dataset.r === '0') return done();
+    if (applyLock()) return;
+    busy = true;
+    errNote.hidden = true;
     send.disabled = true;
     send.textContent = 'Sending\u2026';
     try {
+      if (!currentUser?.uid) throw Object.assign(new Error('Not signed in'), { code: 'no-user' });
       const id = uid();
       await setDoc(doc(db, 'users', currentUser.uid, 'feedback', id), {
         type: kind,
@@ -2602,13 +2694,18 @@ function openFeedback() {
       toast('Thanks! Feedback sent.', 'success', 2200);
       done();
     } catch (err) {
-      send.disabled = false;
+      const entry = fbLogError(err, 'send');
+      busy = false;
       send.textContent = 'Send';
-      toast('Couldn\u2019t send feedback. Check your connection and try again.', 'error', 4000);
+      applyLock();
+      errNote.hidden = false;
+      errNote.textContent = fbErrText(entry);
+      toast(`Couldn\u2019t send feedback (${entry.code}).`, 'error', 4000);
     }
   });
   document.body.appendChild(scrim);
-  if (canAutoFocus()) text.focus();
+  applyLock();
+  if (!text.disabled && canAutoFocus()) text.focus();
 }
 
 const IMPORT_MAX_BYTES = 25 * 1024 * 1024;
@@ -4397,6 +4494,7 @@ const Cloud = (() => {
       s.persRole = '';
       s.persInterests = '';
       s.phone = '';
+      s.phoneFull = '';
       s.username = '';
       s.avatar = '';
     }
@@ -4573,7 +4671,16 @@ const Cloud = (() => {
           if ((c.updated || 0) > localTs || otherAccount) {
             pushBack = false;
             try {
-              if (c.settings) localStorage.setItem(SETTINGS_LS, JSON.stringify(c.settings));
+              if (c.settings) {
+                const incoming = { ...c.settings };
+                /* the cloud copy is blank when Share Usage is off; never wipe this device's own number with it */
+                if (!otherAccount && !incoming.phone && settings.phone) {
+                  incoming.phone = settings.phone;
+                  incoming.phoneCc = settings.phoneCc;
+                  incoming.phoneFull = settings.phoneFull || '';
+                }
+                localStorage.setItem(SETTINGS_LS, JSON.stringify(incoming));
+              }
               if (c.effort) localStorage.setItem(ACTIVE_EFFORT_LS, c.effort);
               if (c.modelVariants) localStorage.setItem(MODEL_VARIANT_LS, JSON.stringify(c.modelVariants));
               Object.entries(c.knownWords || {}).forEach(([l, w]) => {
@@ -6768,7 +6875,7 @@ const TOUR_STEPS = [
   { sel: '.composer', title: 'Ask anything', text: 'Type, speak, or attach files. Ask for a deck, a document or a spreadsheet and it arrives as a file card.' },
   { sel: '.agent-btn', title: 'Watch it think', text: 'Tap to follow the reasoning and the agent’s steps as they stream in.' },
   { sel: '[data-action="menu"]', title: 'Your sessions', text: 'Chats, agents and tools live in the sidebar.', sidebar: true },
-  { sel: '[data-action="settings"]', title: 'Make it yours', text: 'Themes, fonts, rich-text options, agent tools and skills.', sidebar: true }
+  { sel: '[data-action="settings"]', title: 'Make it yours', text: 'Themes, fonts, rich-text options and Tailorship.', sidebar: true }
 ];
 
 function maybeStartOnboarding() {

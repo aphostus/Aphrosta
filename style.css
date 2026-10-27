@@ -1128,8 +1128,11 @@ html.has-vv #app-shell { height: var(--app-h); }
 }
 .usage-title svg { width: 14px; height: 14px; }
 .usage-sub { font-size: calc(11.5px * var(--ts)); color: var(--gray-mid); }
-.usage-figure { font-size: calc(22px * var(--ts)); letter-spacing: -0.02em; }
-.usage-figure .token-unit { font-size: calc(10px * var(--ts)); margin-left: 4px; }
+.usage-card { gap: 8px; }
+.usage-figure { display: flex; align-items: center; gap: 6px; font-size: calc(22px * var(--ts)); line-height: 1.1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.usage-pct { font-weight: 600; color: var(--gray-light); padding-right: 10px; margin-right: 4px; border-right: 1px solid var(--glass-border); }
+.usage-unit { display: inline-flex; flex-direction: column; justify-content: center; gap: 2px; line-height: 1; letter-spacing: 0; }
+.usage-figure .token-unit { font-size: calc(10px * var(--ts)); margin-left: 0; }
 
 /* account card */
 .account-card {
@@ -1218,7 +1221,7 @@ html.has-vv #app-shell { height: var(--app-h); }
   border-radius: 8px;
 }
 .row-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.row-value { font-size: calc(12.5px * var(--ts)); color: var(--gray-mid); }
+.row-value { flex-shrink: 0; max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: calc(12.5px * var(--ts)); color: var(--gray-mid); }
 .row-chev { display: inline-flex; color: var(--gray-mid); opacity: 0.55; }
 
 .panel-row.is-danger { color: var(--bad); }
@@ -1319,6 +1322,9 @@ html.has-vv #app-shell { height: var(--app-h); }
 select.input { width: 100%; appearance: none; -webkit-appearance: none; }
 
 .field { display: flex; flex-direction: column; gap: 7px; }
+/* Men / Women voice groups were stacked with no gap, so WOMEN sat cramped under the Men chips */
+[data-el-panel]:not([hidden]) { display: flex; flex-direction: column; gap: 14px; }
+[data-el-panel] .field-label { letter-spacing: 0.06em; line-height: 1.3; }
 .field-label { font-size: calc(11px * var(--ts)); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--gray-mid); }
 .field-inline { flex-direction: row; align-items: center; justify-content: space-between; gap: 10px; }
 .field-inline .field-label { text-transform: none; letter-spacing: 0; font-size: calc(13px * var(--ts)); font-weight: 500; color: var(--fg); }
@@ -2313,14 +2319,14 @@ html[data-motion="reduce"] .think-panel { transition: none; }
 }
 
 .usage-figure .day-total { font-weight: 600; color: var(--fg); }
-.usage-of { margin-left: 6px; font-size: calc(12px * var(--ts)); color: var(--gray-mid); }
+.usage-of { margin: 0; font-size: calc(11px * var(--ts)); font-weight: 600; color: var(--gray-mid); }
 .usage-stack {
   display: flex; height: 8px; border-radius: 99px; overflow: hidden;
-  background: rgba(var(--fg-rgb), 0.08); margin-top: 8px;
+  background: rgba(var(--fg-rgb), 0.08); margin-top: 2px;
 }
 .usage-stack i { display: block; height: 100%; transition: width 0.6s var(--ease-spring); }
 .usage-stack i + i { margin-left: 1px; }
-.usage-legend { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.usage-legend { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
 .legend-ico {
   width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
   box-shadow: inset 0 0 0 2px var(--c); opacity: 0.4; transition: opacity 0.25s var(--ease-smooth);
@@ -2358,8 +2364,38 @@ html[data-motion="reduce"] .think-panel { transition: none; }
 .timer-input b { color: var(--gray-mid); font-weight: 600; }
 
 .usage-limit { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; font-size: calc(12px * var(--ts)); color: var(--gray-light); }
-.usage-card[data-state="warn"] .day-total { color: var(--warn); }
-.usage-card[data-state="over"] .day-total { color: var(--bad); }
+.usage-card[data-state="warn"] .day-total,
+.usage-card[data-state="warn"] .usage-pct { color: var(--warn); }
+.usage-card[data-state="over"] .day-total,
+.usage-card[data-state="over"] .usage-pct { color: var(--bad); }
+
+/* usage notice, centered under the model icons */
+.usage-note { margin: 0; text-align: center; font-size: calc(11.5px * var(--ts)); line-height: 1.4; color: var(--gray-mid); }
+
+/* Customize bar: label on the left, small limit + reset bars on the right */
+.usage-custom {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px;
+  padding: 6px 6px 6px 14px;
+  background: rgba(var(--fg-rgb), 0.04); border: 1px solid var(--glass-border); border-radius: 18px;
+}
+.usage-custom-label { font-size: calc(12.5px * var(--ts)); font-weight: 600; color: var(--gray-light); }
+.usage-custom-r { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+.usage-mini,
+.usage-mini.timer-input {
+  box-sizing: border-box; height: 30px; padding: 0 10px; gap: 5px;
+  display: inline-flex; align-items: center;
+  font: inherit; font-size: calc(12px * var(--ts)); font-variant-numeric: tabular-nums; color: var(--fg);
+  background: rgba(var(--fg-rgb), 0.07); border: 1px solid transparent; border-radius: 99px;
+  transition: border-color 0.2s var(--ease-smooth);
+}
+.usage-mini:focus-within { border-color: rgba(var(--fg-rgb), 0.28); }
+.usage-mini-k { font-size: calc(10px * var(--ts)); font-weight: 600; letter-spacing: 0.04em; color: var(--gray-mid); }
+.usage-mini-input {
+  width: 6ch; min-width: 0; padding: 0; border: 0; outline: none; background: transparent;
+  font: inherit; color: inherit; text-align: right;
+}
+.usage-mini-input::placeholder { color: var(--gray-mid); }
+.usage-mini.timer-input input { width: 2ch; }
 .usage-card[data-locked] { border-color: var(--bad); }
 
 /* ============================================================
@@ -2482,6 +2518,10 @@ html[data-motion="reduce"] .aph-mark * { animation: none !important; }
   transition: border-color 0.2s var(--ease-smooth);
 }
 .fb-text:focus { border-color: rgba(var(--fg-rgb), 0.28); }
+.fb-composer { display: flex; flex-direction: column; gap: 10px; transition: opacity 0.2s var(--ease-smooth); }
+.fb-composer[data-locked] { opacity: 0.4; pointer-events: none; }
+.fb-text:disabled { resize: none; cursor: not-allowed; }
+.fb-err { color: var(--bad); }
 
 /* ---------- Task 20.5: usage head info button + usage popup ---------- */
 .usage-head-r { display: inline-flex; align-items: center; gap: 6px; }
