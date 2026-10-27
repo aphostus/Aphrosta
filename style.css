@@ -2723,6 +2723,28 @@ html[data-motion="reduce"] .tool-globe .globe-mer { animation: none; }
 /* ============================================================
    ABOUT PAGES (Terms, Rules, Licenses, Help, Billing)
    ============================================================ */
+.ab-card-content h4 {
+  margin: 14px 0 6px;
+  font-size: calc(12.5px * var(--ts));
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--fg);
+}
+.ab-card-content h4:first-child { margin-top: 0; }
+.ab-card-content p + p { margin-top: 8px; }
+.ab-tag {
+  display: inline-block;
+  padding: 1px 8px;
+  margin-left: 4px;
+  font-size: calc(10px * var(--ts));
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.14);
+  border-radius: 999px;
+  vertical-align: middle;
+}
 .settings-panel.show-about .about-page { transform: none; visibility: visible; }
 .about-page, .about-page * { box-sizing: border-box; }
 .about-page { gap: 0; min-width: 0; overflow: hidden; }
