@@ -4823,7 +4823,12 @@ const FILE_EXT = {
   js: 'js', javascript: 'js', mjs: 'js', ts: 'ts', typescript: 'ts', jsx: 'jsx', tsx: 'tsx', html: 'html', css: 'css',
   json: 'json', py: 'py', python: 'py', md: 'md', markdown: 'md', sh: 'sh', bash: 'sh', sql: 'sql', yaml: 'yaml',
   yml: 'yml', java: 'java', c: 'c', cpp: 'cpp', cs: 'cs', go: 'go', rs: 'rs', rust: 'rs', php: 'php', rb: 'rb',
-  txt: 'txt', xml: 'xml', csv: 'csv'
+  txt: 'txt', xml: 'xml', csv: 'csv', tsv: 'tsv', log: 'log', ini: 'ini', toml: 'toml', env: 'env', svg: 'svg',
+  text: 'txt', plaintext: 'txt', htm: 'html', jsonc: 'json', ipynb: 'ipynb', vue: 'vue', svelte: 'svelte',
+  scss: 'scss', less: 'less', kt: 'kt', swift: 'swift', dart: 'dart', lua: 'lua', r: 'r',
+  doc: 'doc', docx: 'docx', word: 'docx', rtf: 'rtf', odt: 'odt', pdf: 'pdf', pages: 'pages',
+  xls: 'xls', xlsx: 'xlsx', excel: 'xlsx', ods: 'ods', numbers: 'numbers', sheets: 'csv', sheet: 'csv',
+  ppt: 'ppt', pptx: 'pptx', slides: 'pptx', presentation: 'pptx', odp: 'odp', key: 'key', keynote: 'key'
 };
 
 function parseFence(raw, idx) {
@@ -4849,8 +4854,17 @@ function parseFence(raw, idx) {
   return { lang: lang.toLowerCase(), ext, name, code, lines, isFile: named || lines >= 12 };
 }
 
+const FILE_KIND = {
+  doc: 'doc', docx: 'doc', rtf: 'doc', odt: 'doc', pdf: 'doc', pages: 'doc', md: 'doc', markdown: 'doc', txt: 'doc',
+  xls: 'sheet', xlsx: 'sheet', ods: 'sheet', numbers: 'sheet', csv: 'sheet', tsv: 'sheet',
+  ppt: 'slide', pptx: 'slide', odp: 'slide', key: 'slide',
+  html: 'web', htm: 'web', css: 'web', scss: 'web', less: 'web', js: 'web', jsx: 'web', ts: 'web', tsx: 'web', vue: 'web', svelte: 'web',
+  json: 'data', jsonc: 'data', xml: 'data', yaml: 'data', yml: 'data', toml: 'data', ini: 'data', log: 'data', env: 'data',
+  svg: 'image'
+};
+const fileKind = (f) => FILE_KIND[(f.ext || '').toLowerCase()] || 'code';
 const fileCardHtml = (f, i, extra) =>
-  `<button class="file-card${extra ? ' is-extra' : ''}" type="button" data-fi="${i}" aria-label="Open ${esc(f.name)}"><span class="file-card-ico">${ICONS.cardFile}</span><span class="file-card-meta"><span class="file-card-name">${esc(f.name)}</span><span class="file-card-sub">${esc((f.ext || f.lang || 'text').toUpperCase())} \u00b7 ${f.lines} lines</span></span></button>`;
+  `<button class="file-card file-card--${fileKind(f)}${extra ? ' is-extra' : ''}" type="button" data-fi="${i}" aria-label="Open ${esc(f.name)}"><span class="file-card-ico">${ICONS.cardFile}</span><span class="file-card-meta"><span class="file-card-name">${esc(f.name)}</span><span class="file-card-sub">${esc((f.ext || f.lang || 'text').toUpperCase())} \u00b7 ${f.lines} lines</span></span></button>`;
 
 /* ---------- RICH TEXT RENDERER ---------- */
 const GREEK = { alpha: 'α', beta: 'β', gamma: 'γ', delta: 'δ', theta: 'θ', lambda: 'λ', mu: 'μ', pi: 'π', sigma: 'σ', phi: 'φ', omega: 'ω', Delta: 'Δ', Sigma: 'Σ', Omega: 'Ω' };

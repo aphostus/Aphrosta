@@ -2587,11 +2587,13 @@ html[data-motion="reduce"] .think-panel { transition: none; }
   background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 14px;
   transition: background 0.2s var(--ease-smooth), transform 0.2s var(--ease-bounce);
 }
-.file-card:hover { background: var(--glass-bg-hover); }
+.file-card { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12); }
+.file-card:hover { background: var(--glass-bg-hover); border-color: rgba(var(--fg-rgb), 0.16); }
+.file-card:focus-visible { outline: 2px solid var(--file-c, var(--gray-light)); outline-offset: 2px; }
 .file-card:active { transform: scale(0.97); }
 .file-card-ico {
   flex-shrink: 0; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
-  color: var(--gray-light); background: rgba(var(--fg-rgb), 0.06); border-radius: 10px;
+  color: var(--file-c, var(--gray-light)); background: var(--file-bg, rgba(var(--fg-rgb), 0.06)); border-radius: 10px;
 }
 .file-card-meta { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
 .file-card-name { font-size: calc(13px * var(--ts)); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2599,6 +2601,14 @@ html[data-motion="reduce"] .think-panel { transition: none; }
 .file-more { justify-content: center; color: var(--gray-light); font-size: calc(12.5px * var(--ts)); font-weight: 600; }
 .file-grid:not(.expanded) .is-extra { display: none; }
 .file-grid.expanded .file-more { display: none; }
+
+.file-card--doc   { --file-c: #6fa6ff; --file-bg: rgba(79, 140, 255, 0.16); }
+.file-card--sheet { --file-c: #3fd08a; --file-bg: rgba(52, 199, 123, 0.16); }
+.file-card--slide { --file-c: #ffb066; --file-bg: rgba(255, 159, 67, 0.16); }
+.file-card--web   { --file-c: #b59cff; --file-bg: rgba(167, 139, 250, 0.16); }
+.file-card--data  { --file-c: #4ee0cc; --file-bg: rgba(45, 212, 191, 0.16); }
+.file-card--image { --file-c: #ff8fc7; --file-bg: rgba(244, 114, 182, 0.16); }
+.file-card[class*="file-card--"] .file-card-sub { color: var(--file-c); }
 
 .file-viewer { max-width: 560px; max-height: 82vh; }
 .file-viewer-head { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
