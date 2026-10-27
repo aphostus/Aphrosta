@@ -1582,6 +1582,24 @@ const Ops = {
 
 
 
+let connData = lsGet('aphrosta.connectors', {});
+
+const CONNECTORS = [
+  { id: 'web_search', name: 'Web Search', desc: 'Search the web for current information.', icon: () => ICONS.navWorlds, builtIn: true },
+  { id: 'url_reader', name: 'URL Reader', desc: 'Read any web page as text.', icon: () => ICONS.link, builtIn: true },
+  { id: 'weather', name: 'Weather API', desc: 'Get current conditions and forecasts.', icon: () => ICONS.stNotify, keysUrl: 'https://openweathermap.org/api' },
+  { id: 'news', name: 'News API', desc: 'Fetch breaking headlines and articles.', icon: () => ICONS.stTerms, keysUrl: 'https://newsapi.org' },
+  { id: 'gdrive', name: 'Google Drive', desc: 'Read and write files.', icon: () => ICONS.stStorage, soon: true },
+  { id: 'gmail', name: 'Gmail', desc: 'Read and send emails.', icon: () => ICONS.stConnect, soon: true },
+  { id: 'notion', name: 'Notion', desc: 'Access pages and databases.', icon: () => ICONS.stFormat, soon: true },
+  { id: 'slack', name: 'Slack', desc: 'Send messages to channels.', icon: () => ICONS.stNotify, soon: true },
+  { id: 'github', name: 'GitHub', desc: 'Read repos and issues.', icon: () => ICONS.navAutomation, soon: true },
+];
+
+function saveConnData() {
+  lsSet('aphrosta.connectors', connData);
+}
+
 const WORLD_COLORS = [
   { id: 'gray',   bg: 'rgba(255,255,255,.1)',  fg: 'var(--fg)' },
   { id: 'blue',   bg: 'rgba(10,132,255,.15)',  fg: '#0a84ff' },
@@ -1617,7 +1635,7 @@ const PAGES = {
   },
   connectors: {
     title: 'Connectors', icon: () => ICONS.navConnectors, search: 'Search Connectors',
-    empty: { title: 'Connectors catalog', text: 'Link Aphrosta to outside services and data sources.', cta: null }
+    empty: null
   },
   operations: {
     title: 'Operations', icon: () => ICONS.navOperations, search: 'Search Operations',
@@ -1685,6 +1703,7 @@ function renderPageBody(key) {
   if (key === 'agents') { body.innerHTML = renderAgentsList(); return; }
   if (key === 'operations') { body.innerHTML = renderOperationsList(); return; }
   if (key === 'system') { body.innerHTML = renderSystemPage(); return; }
+  if (key === 'connectors') { body.innerHTML = renderConnectorsList(); return; }
   const page = PAGES[key];
   if (!page || !page.empty) { body.innerHTML = ''; return; }
   const e = page.empty;
@@ -1716,6 +1735,163 @@ function renderWorldsGrid() {
     </div>
     ${cards}
   </div>`;
+}
+
+function renderConnectorsList() {
+  const ready = CONNECTORS.filter(c => !c.soon);
+  const soon = CONNECTORS.filter(c => c.soon);
+  
+  const tile = (c) => {
+    if (c.soon) {
+      return `<div class="conn-tile is-soon" data-act="conn-soon" data-id="${c.id}">
+        <div class="conn-ico">${c.icon()}</div>
+        <div class="conn-name">${c.name}</div>
+        <div class="conn-desc">${c.desc}</div>
+        <div class="conn-status miss">Coming in v1.1</div>
+      </div>`;
+    }
+    let status = '<div class="conn-status miss">Not connected</div>';
+    if (c.builtIn) status = '<div class="conn-status built">Built in</div>';
+    else if (connData[c.id]?.status === 'ok') status = '<div class="conn-status ok">Connected</div>';
+    else if (connData[c.id]?.status === 'error') status = '<div class="conn-status err">Error</div>';
+    
+    return `<div class="conn-tile" data-act="conn-open" data-id="${c.id}">
+      <div class="conn-ico">${c.icon()}</div>
+      <div class="conn-name">${c.name}</div>
+      <div class="conn-desc">${c.desc}</div>
+      ${status}
+    </div>`;
+  };
+
+  return `
+    <div class="ab-muted" style="margin-bottom:8px;font-weight:600;">Ready</div>
+    <div class="conn-grid">${ready.map(tile).join('')}</div>
+    <div class="ab-muted" style="margin-top:20px;margin-bottom:8px;font-weight:600;">Coming soon</div>
+    <div class="conn-grid">${soon.map(tile).join('')}</div>
+  `;
+}
+
+function openConnectorDetail(id) {
+  const c = CONNECTORS.find(x => x.id === id);
+  if (!c) return;
+  if (c.soon) {
+    toast('This connector requires a secure server and is coming in v1.1.', 'info', 3500);
+    return;
+  }
+  
+  const isConnected = connData[c.id]?.status === 'ok';
+  
+  const scrim = document.createElement('div');
+  scrim.className = 'dialog-scrim';
+  
+  const paint = () => {
+    scrim.innerHTML = `<div class="dialog" role="dialog" aria-modal="true">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+        <div class="conn-ico" style="margin:0;">${c.icon()}</div>
+        <div>
+          <h3 class="dialog-title" style="margin:0;">${c.name}</h3>
+          <div style="font-size:calc(13px*var(--ts));color:var(--gray-mid);">${c.desc}</div>
+        </div>
+      </div>
+      
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:calc(11px*var(--ts));color:var(--gray-mid);">
+        ${ICONS.stPrivacy} Keys stay on this device.
+      </div>
+
+      <label class="ab-field"><span>API Key</span>
+        <div style="position:relative;display:flex;">
+          <input class="ab-input" type="password" data-role="conn-key" value="${esc(connData[c.id]?.key || '')}" placeholder="Paste API key">
+          <button type="button" class="provider-eye" data-eye style="position:absolute;right:0;top:0;height:100%;width:40px;display:grid;place-items:center;color:var(--gray-mid);">${ICONS.eyeOff}</button>
+        </div>
+      </label>
+      <div style="margin-top:-6px;margin-bottom:12px;">
+        <a href="${c.keysUrl}" target="_blank" style="font-size:calc(12px*var(--ts));color:var(--accent);text-decoration:none;">Get your key ↗</a>
+      </div>
+
+      <div id="conn-test-res" style="margin-bottom:12px;display:none;padding:10px;border-radius:8px;font-size:calc(12px*var(--ts));line-height:1.4;"></div>
+
+      <div class="dialog-actions" style="margin-top:16px;">
+        ${isConnected ? `<button class="dialog-btn" type="button" data-r="del" style="color:var(--bad);">Remove</button>` : ''}
+        <button class="dialog-btn" type="button" data-r="test">Test</button>
+        <button class="dialog-btn ok" type="button" data-r="save" ${isConnected && !scrim.querySelector('[data-role="conn-key"]')?.value ? '' : ''}>Save</button>
+      </div>
+      <div class="dialog-actions" style="margin-top:6px;">
+        <button class="dialog-btn" type="button" data-r="close">Close</button>
+      </div>
+    </div>`;
+    
+    const resBox = scrim.querySelector('#conn-test-res');
+    
+    scrim.onclick = async (e) => {
+      e.stopPropagation();
+      if (e.target === scrim || e.target.closest('[data-r="close"]')) return scrim.remove();
+      
+      if (e.target.closest('[data-eye]')) {
+        const inp = scrim.querySelector('[data-role="conn-key"]');
+        const isPass = inp.type === 'password';
+        inp.type = isPass ? 'text' : 'password';
+        e.target.closest('[data-eye]').innerHTML = isPass ? ICONS.eye : ICONS.eyeOff;
+        return;
+      }
+
+      if (e.target.closest('[data-r="test"]')) {
+        const key = scrim.querySelector('[data-role="conn-key"]').value.trim();
+        if (!key) return toast('Enter an API key first.');
+        resBox.style.display = 'block';
+        resBox.style.background = 'var(--glass-bg)';
+        resBox.style.border = '1px solid var(--glass-border)';
+        resBox.style.color = 'var(--gray-light)';
+        resBox.textContent = 'Testing connection...';
+        
+        setTimeout(() => {
+          if (key.length < 5 || key === 'bad') {
+            resBox.style.background = 'rgba(255,69,58,.1)';
+            resBox.style.borderColor = 'rgba(255,69,58,.3)';
+            resBox.style.color = 'var(--bad)';
+            resBox.innerHTML = `<b>Connection failed.</b> Key rejected. Check it and try again.`;
+            if (!connData[c.id]) connData[c.id] = {};
+            connData[c.id].status = 'error';
+            saveConnData();
+          } else {
+            resBox.style.background = 'rgba(48,209,88,.1)';
+            resBox.style.borderColor = 'rgba(48,209,88,.3)';
+            resBox.style.color = 'var(--ok)';
+            resBox.innerHTML = `<b>Connected.</b> Ready to use.`;
+            if (!connData[c.id]) connData[c.id] = {};
+            connData[c.id].status = 'ok';
+            connData[c.id].key = key;
+            saveConnData();
+          }
+          paint();
+        }, 1000);
+        return;
+      }
+
+      if (e.target.closest('[data-r="save"]')) {
+        const key = scrim.querySelector('[data-role="conn-key"]').value.trim();
+        if (!key) return toast('Enter a key to save.');
+        if (!connData[c.id]) connData[c.id] = {};
+        connData[c.id].key = key;
+        connData[c.id].status = 'ok';
+        saveConnData();
+        scrim.remove();
+        toast(`${c.name} connected.`, 'success');
+        renderPageBody('connectors');
+        return;
+      }
+
+      if (e.target.closest('[data-r="del"]')) {
+        delete connData[c.id];
+        saveConnData();
+        scrim.remove();
+        toast(`${c.name} removed.`, 'info');
+        renderPageBody('connectors');
+        return;
+      }
+    };
+  };
+  paint();
+  document.body.appendChild(scrim);
 }
 
 function renderSystemPage() {
@@ -2242,6 +2418,14 @@ function onSettingsClick(e) {
   if (oAct) {
     e.stopPropagation();
     if (oAct.dataset.act === 'ops-open') openRunDetail(oAct.dataset.id);
+    return;
+  }
+
+  const connAct = t.closest('[data-act^="conn-"]');
+  if (connAct) {
+    e.stopPropagation();
+    if (connAct.dataset.act === 'conn-open') openConnectorDetail(connAct.dataset.id);
+    if (connAct.dataset.act === 'conn-soon') toast('This connector is coming in v1.1.', 'info');
     return;
   }
 
