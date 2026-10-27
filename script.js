@@ -716,6 +716,7 @@ const svg = (body, size = 18) =>
 const ICONS = {
   menu:     svg('<path d="M4 7h16M4 12h16M4 17h10"/>'),
   close:    svg('<path d="M6 6l12 12M6 18L18 6"/>', 16),
+  plus:     svg('<path d="M12 5v14M5 12h14"/>', 16),
   pause:    svg('<rect x="6" y="5" width="4" height="14" rx="1.2"/><rect x="14" y="5" width="4" height="14" rx="1.2"/>', 20),
   play:     svg('<path d="M8 5.2v13.6a.7.7 0 001.07.6l10.6-6.8a.7.7 0 000-1.2L9.07 4.6A.7.7 0 008 5.2z"/>', 20),
   search:   svg('<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>', 16),
@@ -1527,6 +1528,54 @@ const SettingsPanel = (user) => `
 
 const soon = () => toast('Coming soon.', 'info', 1800);
 
+/* ---------- NAV SIDE PANEL (Alpha placeholder) ---------- */
+const NAV_PANELS = {
+  'nav-connectors': { title: 'Connectors',  icon: 'navConnectors', desc: 'Linked apps and data sources will show up here.' },
+  'nav-operations': { title: 'Operations',  icon: 'navOperations', desc: 'Running tasks and tools will show up here.' },
+  'nav-automation': { title: 'Automations', icon: 'navAutomation', desc: 'Saved flows and routines will show up here.' },
+  'nav-worlds':     { title: 'Worlds',      icon: 'navWorlds',     desc: 'Your worlds will show up here.' },
+  'nav-agent':      { title: 'Agents',      icon: 'navAgents',     desc: 'Your agents will show up here.' },
+  'nav-data':       { title: 'System',      icon: 'navSystem',     desc: 'System tools and status will show up here.' }
+};
+
+function navPanelHtml(def) {
+  const icon = ICONS[def.icon];
+  return `
+    <div class="np-head">
+      <div class="np-bar">
+        <span class="np-ico">${icon}</span>
+        <h2 class="np-title">${esc(def.title)}</h2>
+        <button class="icon-btn" type="button" data-action="nav-plus" aria-label="Add">${ICONS.plus}</button>
+        <button class="icon-btn" type="button" data-action="nav-close" aria-label="Slide away">${ICONS.stClose}</button>
+      </div>
+      <label class="np-search">${ICONS.search}<input type="search" placeholder="Search ${esc(def.title)}" aria-label="Search ${esc(def.title)}" autocomplete="off"></label>
+    </div>
+    <div class="np-body">
+      <div class="np-empty">
+        <span class="np-empty-ico">${icon}</span>
+        <h3 class="np-empty-title">Nothing Placed Yet</h3>
+        <p class="np-empty-desc">${esc(def.desc)}</p>
+      </div>
+    </div>`;
+}
+
+function openNavPanel(key) {
+  const def = NAV_PANELS[key];
+  const panel = document.getElementById('nav-panel');
+  if (!def || !panel) return;
+  closeModelMenu();
+  closeEffortMenu();
+  closeSettings();
+  document.getElementById('sidebar')?.classList.remove('open');
+  panel.setAttribute('aria-label', def.title);
+  panel.innerHTML = navPanelHtml(def);
+  panel.classList.add('open');
+}
+
+function closeNavPanel() {
+  document.getElementById('nav-panel')?.classList.remove('open');
+}
+
 function openAccountPage() { document.getElementById('settings-panel')?.classList.add('show-account'); }
 function closeAccountPage() { document.getElementById('settings-panel')?.classList.remove('show-account'); }
 function rebuildAccountPage() {
@@ -2069,6 +2118,7 @@ const HomeScreen = (user) => `
       ${Composer()}
     </div>
     ${SettingsPanel(user)}
+    <aside class="nav-panel" id="nav-panel" aria-label="Workspace panel"></aside>
   </section>
 `;
 
@@ -6621,6 +6671,7 @@ function toggleModelMenu() {
 function openSettings() {
   closeModelMenu();
   closeEffortMenu();
+  closeNavPanel();
   document.getElementById('settings-panel')?.classList.add('open');
   document.getElementById('sidebar')?.classList.remove('open');
   refreshSummaries();
@@ -6642,7 +6693,7 @@ function toggleSidebar() {
   const willOpen = !sb.classList.contains('open');
   if (willOpen) { closeModelMenu(); closeEffortMenu(); }
   sb.classList.toggle('open', willOpen);
-  if (willOpen) closeSettings();
+  if (willOpen) { closeSettings(); closeNavPanel(); }
 }
 
 let shellBound = false;
@@ -6675,7 +6726,9 @@ function initShell() {
     else if (action === 'attach') openAttach();
     else if (action === 'replay-tour') { closeSettings(); setTimeout(() => startOnboarding(true), 350); }
     else if (action === 'upgrade') toast('Paid plans are coming soon.', 'info', 1800);
-    else if (action === 'nav-worlds' || action === 'nav-agent' || action === 'nav-data' || action === 'nav-automation' || action === 'nav-connectors' || action === 'nav-operations') toast('Coming soon.', 'info', 1800);
+    else if (NAV_PANELS[action]) openNavPanel(action);
+    else if (action === 'nav-close') closeNavPanel();
+    else if (action === 'nav-plus') soon();
   });
 
   appEl.addEventListener('click', (e) => {
