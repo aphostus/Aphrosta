@@ -1544,10 +1544,28 @@ function rebuildAccountPage() {
 /* ---------- SUB-PAGE SHELL (Phase 0) ---------- */
 let currentPage = null;
 
+let worlds = lsGet('aphrosta.worlds', []);
+
+const WORLD_COLORS = [
+  { id: 'gray',   bg: 'rgba(255,255,255,.1)',  fg: 'var(--fg)' },
+  { id: 'blue',   bg: 'rgba(10,132,255,.15)',  fg: '#0a84ff' },
+  { id: 'green',  bg: 'rgba(48,209,88,.15)',   fg: '#30d158' },
+  { id: 'red',    bg: 'rgba(255,69,58,.15)',   fg: '#ff453a' },
+  { id: 'purple', bg: 'rgba(191,90,242,.15)',  fg: '#bf5af2' },
+  { id: 'orange', bg: 'rgba(255,159,10,.15)',  fg: '#ff9f0a' },
+];
+
+const WORLD_ICONS = [ICONS.navWorlds, ICONS.brain, ICONS.stSkills, ICONS.rocket, ICONS.stDevices, ICONS.navAgents];
+
+function saveWorlds() {
+  lsSet('aphrosta.worlds', worlds);
+  Cloud.queueSettings();
+}
+
 const PAGES = {
   worlds: {
     title: 'Worlds', icon: () => ICONS.navWorlds, search: 'Search Worlds',
-    empty: { title: 'No Worlds yet', text: 'Worlds are themed workspaces that hold their own agents, chats, and rules.', cta: 'Create World' }
+    empty: null
   },
   agents: {
     title: 'Agents', icon: () => ICONS.navAgents, search: 'Search Agents',
@@ -1627,6 +1645,7 @@ function renderPageBody(key) {
   const body = document.getElementById('page-body');
   if (!body) return;
   if (key === 'billing') { body.innerHTML = renderBillingHub(); return; }
+  if (key === 'worlds') { body.innerHTML = renderWorldsGrid(); return; }
   const page = PAGES[key];
   if (!page || !page.empty) { body.innerHTML = ''; return; }
   const e = page.empty;
@@ -1637,6 +1656,93 @@ function renderPageBody(key) {
       <p class="empty-text">${esc(e.text)}</p>
       ${e.cta ? `<button class="ab-btn" type="button">${esc(e.cta)}</button>` : ''}
     </div>`;
+}
+
+function renderWorldsGrid() {
+  const cards = worlds.map(w => {
+    const c = WORLD_COLORS.find(x => x.id === w.color) || WORLD_COLORS[0];
+    const chatCount = sessions.filter(s => s.worldId === w.id).length;
+    return `<div class="world-card" data-id="${esc(w.id)}">
+      <div class="world-more" data-act="w-menu" data-id="${esc(w.id)}">${ICONS.settings}</div>
+      <div class="world-icon-box" style="background:${c.bg};color:${c.fg}">${WORLD_ICONS[w.iconIdx || 0]}</div>
+      <div class="world-name">${esc(w.name)}</div>
+      <div class="world-desc">${esc(w.desc || 'No description')}</div>
+      <div class="world-stats"><span>${chatCount} chats</span></div>
+    </div>`;
+  }).join('');
+  return `<div class="worlds-grid">
+    <div class="world-card is-new" data-act="w-new">
+      <div class="world-icon-box" style="background:var(--glass-bg-hover);">${ICONS.newChat}</div>
+      <div class="world-name" style="font-weight:500;color:var(--gray-mid)">New World</div>
+    </div>
+    ${cards}
+  </div>`;
+}
+
+function openWorldForm(id = null) {
+  const w = id ? worlds.find(x => x.id === id) : null;
+  const isEdit = !!w;
+  const current = w || { name: '', desc: '', color: 'gray', iconIdx: 0 };
+  
+  const scrim = document.createElement('div');
+  scrim.className = 'dialog-scrim';
+  scrim.innerHTML = `<div class="dialog" role="dialog" aria-modal="true">
+    <h3 class="dialog-title">${isEdit ? 'Edit World' : 'New World'}</h3>
+    <label class="ab-field"><span>Name</span><input class="ab-input" data-role="w-name" maxlength="40" value="${esc(current.name)}" placeholder="e.g. Research"></label>
+    <label class="ab-field"><span>Description (optional)</span><input class="ab-input" data-role="w-desc" maxlength="160" value="${esc(current.desc)}" placeholder="What is this World for?"></label>
+    <div class="ab-field"><span>Icon & Color</span>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">
+        <select class="ab-input" data-role="w-icon" style="width:auto;flex:1;">
+          ${WORLD_ICONS.map((svg, i) => `<option value="${i}" ${i === current.iconIdx ? 'selected' : ''}>Icon ${i+1}</option>`).join('')}
+        </select>
+        <select class="ab-input" data-role="w-color" style="width:auto;flex:1;">
+          ${WORLD_COLORS.map(c => `<option value="${c.id}" ${c.id === current.color ? 'selected' : ''}>${c.id.toUpperCase()}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="dialog-actions" style="margin-top:12px;">
+      <button class="dialog-btn" type="button" data-r="0">Cancel</button>
+      <button class="dialog-btn ok" type="button" data-r="1">Save</button>
+    </div>
+  </div>`;
+  document.body.appendChild(scrim);
+  
+  scrim.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (e.target === scrim || e.target.closest('[data-r="0"]')) return scrim.remove();
+    if (e.target.closest('[data-r="1"]')) {
+      const name = scrim.querySelector('[data-role="w-name"]').value.trim();
+      if (!name) return toast('Give your World a name.');
+      const desc = scrim.querySelector('[data-role="w-desc"]').value.trim();
+      const iconIdx = parseInt(scrim.querySelector('[data-role="w-icon"]').value, 10);
+      const color = scrim.querySelector('[data-role="w-color"]').value;
+      
+      if (isEdit) {
+        Object.assign(w, { name, desc, iconIdx, color });
+      } else {
+        worlds.push({ id: uid(), name, desc, iconIdx, color });
+      }
+      saveWorlds();
+      scrim.remove();
+      toast(isEdit ? 'World updated.' : 'World created.', 'success');
+      renderPageBody('worlds');
+    }
+  });
+}
+
+function deleteWorld(id) {
+  const w = worlds.find(x => x.id === id);
+  if (!w) return;
+  confirmDialog({ title: `Delete ${w.name}?`, message: 'Chats in this World will move to Unassigned.', confirmLabel: 'Delete', danger: true }).then(yes => {
+    if (!yes) return;
+    worlds = worlds.filter(x => x.id !== id);
+    sessions.forEach(s => { if (s.worldId === id) s.worldId = null; });
+    saveWorlds();
+    persistSessions();
+    renderPageBody('worlds');
+    renderSessionList();
+    toast('World deleted.', 'success');
+  });
 }
 
 function renderBillingHub() {
@@ -1683,6 +1789,19 @@ function renderBillingHub() {
 
 function onSettingsClick(e) {
   const t = e.target;
+
+  const wAct = t.closest('[data-act^="w-"]');
+  if (wAct) {
+    e.stopPropagation();
+    const id = wAct.dataset.id;
+    if (wAct.dataset.act === 'w-new') openWorldForm();
+    else if (wAct.dataset.act === 'w-menu') {
+      const isEdit = confirm('Edit this World? Cancel to delete.');
+      if (isEdit) openWorldForm(id);
+      else deleteWorld(id);
+    }
+    return;
+  }
 
   const head = t.closest('[data-toggle-item]');
   if (head) {
@@ -6991,6 +7110,7 @@ const TOUR_STEPS = [
   { sel: '.composer', title: 'Ask anything', text: 'Type, speak, or attach files. Ask for a deck, a document or a spreadsheet and it arrives as a file card.' },
   { sel: '.agent-btn', title: 'Watch it think', text: 'Tap to follow the reasoning and the agent’s steps as they stream in.' },
   { sel: '[data-action="menu"]', title: 'Your sessions', text: 'Chats, agents and tools live in the sidebar.', sidebar: true },
+    { sel: '[data-action="nav-worlds"]', title: 'Worlds', text: 'Keep projects separate with their own rules and chats.', sidebar: true },
   { sel: '[data-action="settings"]', title: 'Make it yours', text: 'Themes, fonts, rich-text options and Tailorship.', sidebar: true }
 ];
 

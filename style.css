@@ -3049,3 +3049,93 @@ mark.ab-mark {
   background: var(--glass-bg-hover);
   color: var(--fg);
 }
+
+/* ---------- Phase 1: Worlds ---------- */
+.worlds-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 4px;
+  margin-top: 4px;
+}
+.world-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: background 0.2s var(--ease-smooth), transform 0.2s var(--ease-bounce);
+  position: relative;
+}
+.world-card:hover { background: var(--glass-bg-hover); }
+.world-card:active { transform: scale(0.97); }
+.world-card.is-new {
+  align-items: center;
+  justify-content: center;
+  border-style: dashed;
+  background: transparent;
+  min-height: 140px;
+}
+.world-card.is-new:hover { background: var(--glass-bg); }
+.world-icon-box {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  color: var(--fg);
+}
+.world-icon-box svg { width: 20px; height: 20px; }
+.world-name {
+  font-size: calc(15px * var(--ts));
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.world-desc {
+  font-size: calc(12px * var(--ts));
+  color: var(--gray-mid);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.world-stats {
+  display: flex;
+  justify-content: space-between;
+  font-size: calc(11px * var(--ts));
+  color: var(--gray-mid);
+  margin-top: auto;
+}
+.world-more {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  color: var(--gray-mid);
+  border-radius: 6px;
+}
+.world-more:hover { background: var(--glass-bg-hover); color: var(--fg); }
+
+.world-filter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  margin-bottom: 12px;
+  font-size: calc(12px * var(--ts));
+  font-weight: 600;
+  color: var(--gray-light);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.world-filter:hover { background: var(--glass-bg-hover); }
+.world-filter svg { width: 14px; height: 14px; }
