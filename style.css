@@ -2980,3 +2980,72 @@ mark.ab-mark {
 .ab-pill { padding: 3px 8px; font-style: normal; font-size: calc(10.5px * var(--ts)); font-weight: 700; color: var(--accent); background: rgba(var(--accent-rgb), 0.14); border-radius: 999px; }
 .ab-mini { flex-shrink: 0; min-height: 34px; padding: 6px 10px; font-size: calc(11.5px * var(--ts)); font-weight: 600; white-space: nowrap; color: var(--gray-light); background: var(--glass-bg-hover); border-radius: 8px; }
 .ab-mini.danger { display: grid; place-items: center; color: var(--bad); }
+
+/* ============================================================
+   SUB-PAGE SHELL (Phase 0)
+   ============================================================ */
+.page-panel {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  z-index: 22;
+  width: min(360px, 94vw);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: calc(16px + var(--safe-top)) 14px calc(14px + var(--safe-bottom));
+  background: var(--surface-1);
+  border-left: 1px solid var(--glass-border);
+  transform: translateX(100%);
+  visibility: hidden;
+  transition: transform 0.35s var(--ease-spring), visibility 0.35s;
+}
+.page-panel.open { transform: none; visibility: visible; }
+.page-panel .panel-head { justify-content: flex-start; gap: 10px; padding: 2px 0 4px; }
+.page-panel .panel-title { flex: 1; font-size: calc(16px * var(--ts)); }
+.page-panel .side-search { margin: 0 0 2px; }
+
+.empty-state {
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 48px 20px;
+  gap: 10px;
+}
+.empty-icon {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  color: var(--gray-light);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+}
+.empty-icon svg { width: 24px; height: 24px; }
+.empty-title { font-size: calc(15px * var(--ts)); font-weight: 600; color: var(--fg); margin: 0; }
+.empty-text { font-size: calc(13px * var(--ts)); color: var(--gray-mid); max-width: 280px; line-height: 1.5; margin: 0; }
+.empty-state .ab-btn { width: auto; padding: 10px 22px; margin-top: 4px; }
+
+.profile-meta .profile-plan {
+  align-self: flex-start;
+  text-align: left;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+  line-height: inherit;
+  transition: color 0.2s var(--ease-smooth);
+}
+.profile-meta .profile-plan:hover { color: var(--gray-light); }
+
+.side-btn.is-active,
+.side-tool.is-active {
+  background: var(--glass-bg-hover);
+  color: var(--fg);
+}

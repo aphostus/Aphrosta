@@ -1092,7 +1092,7 @@ const Sidebar = (user) => `
       <button class="side-tool" type="button" data-action="nav-automation">
         <span class="side-tool-ico">${ICONS.navAutomation}</span>
         <span class="side-tool-text">
-          <b>Automation</b>
+          <b>Automations</b>
           <i>Build flows and routines</i>
         </span>
         <span class="side-tool-chev">${ICONS.chevronR}</span>
@@ -1132,7 +1132,7 @@ const Sidebar = (user) => `
       ${Avatar(user)}
       <div class="profile-meta">
         <span class="profile-name">${esc(user.displayName || 'User')}</span>
-        <span class="profile-plan">Free plan</span>
+        <button class="profile-plan" type="button" data-action="open-billing" aria-label="Current plan">${esc(planLabel())}</button>
       </div>
       <button class="pill-btn" type="button" data-action="upgrade">Upgrade</button>
     </div>
@@ -1539,6 +1539,146 @@ function rebuildAccountPage() {
   wrap.innerHTML = AccountPage(currentUser);
   panel.appendChild(wrap.firstElementChild);
   if (wasOpen) panel.classList.add('show-account');
+}
+
+/* ---------- SUB-PAGE SHELL (Phase 0) ---------- */
+let currentPage = null;
+
+const PAGES = {
+  worlds: {
+    title: 'Worlds', icon: () => ICONS.navWorlds, search: 'Search Worlds',
+    empty: { title: 'No Worlds yet', text: 'Worlds are themed workspaces that hold their own agents, chats, and rules.', cta: 'Create World' }
+  },
+  agents: {
+    title: 'Agents', icon: () => ICONS.navAgents, search: 'Search Agents',
+    empty: { title: 'No agents yet', text: 'Agents are saved helpers with their own instructions, model, and tools.', cta: 'Create agent' }
+  },
+  system: {
+    title: 'System', icon: () => ICONS.navSystem, search: null,
+    empty: { title: 'Control room', text: 'Models, memory, limits, and status will appear here.', cta: null }
+  },
+  automations: {
+    title: 'Automations', icon: () => ICONS.navAutomation, search: 'Search Automations',
+    empty: { title: 'No automations yet', text: 'Automations run a set of steps for you, on a schedule or on demand.', cta: 'New automation' }
+  },
+  connectors: {
+    title: 'Connectors', icon: () => ICONS.navConnectors, search: 'Search Connectors',
+    empty: { title: 'Connectors catalog', text: 'Link Aphrosta to outside services and data sources.', cta: null }
+  },
+  operations: {
+    title: 'Operations', icon: () => ICONS.navOperations, search: 'Search Operations',
+    empty: { title: 'Nothing has run yet', text: 'Runs appear here when an agent uses a tool or an automation runs.', cta: null }
+  },
+  billing: {
+    title: 'Billing', icon: () => ICONS.stBilling, search: null, empty: null
+  }
+};
+
+function planLabel() {
+  /* Phase 7 will replace this with the real plan state from the server. */
+  return 'Free plan';
+}
+
+function openPage(key) {
+  if (!PAGES[key]) return;
+  const old = document.getElementById('page-panel');
+  if (old) old.remove();
+  document.getElementById('settings-panel')?.classList.remove('open');
+  if (!window.matchMedia('(min-width: 860px)').matches) {
+    document.getElementById('sidebar')?.classList.remove('open');
+  }
+  currentPage = key;
+
+  /* Mark the active sidebar row */
+  document.querySelectorAll('.side-btn.is-active, .side-tool.is-active').forEach((el) => el.classList.remove('is-active'));
+  const actionMap = { worlds: 'nav-worlds', agents: 'nav-agent', system: 'nav-data', automations: 'nav-automation', connectors: 'nav-connectors', operations: 'nav-operations' };
+  const action = actionMap[key];
+  if (action) document.querySelector(`[data-action="${action}"]`)?.classList.add('is-active');
+
+  const page = PAGES[key];
+  const panel = document.createElement('aside');
+  panel.className = 'page-panel';
+  panel.id = 'page-panel';
+  panel.setAttribute('aria-label', page.title);
+  panel.innerHTML = `
+    <div class="panel-head">
+      <span class="ab-ico">${page.icon()}</span>
+      <h2 class="panel-title">${esc(page.title)}</h2>
+      <button class="ab-back" type="button" data-action="page-close" aria-label="Back">${ICONS.back}<span>Back</span></button>
+    </div>
+    ${page.search ? `<label class="side-search" style="margin: 0 4px 4px;"><input type="search" placeholder="${esc(page.search)}" aria-label="${esc(page.search)}" data-role="page-search" autocomplete="off"></label>` : ''}
+    <div class="panel-scroll" id="page-body"></div>
+  `;
+  appEl.appendChild(panel);
+  requestAnimationFrame(() => panel.classList.add('open'));
+  renderPageBody(key);
+}
+
+function closePage() {
+  const panel = document.getElementById('page-panel');
+  if (!panel) { currentPage = null; return; }
+  panel.classList.remove('open');
+  document.querySelectorAll('.side-btn.is-active, .side-tool.is-active').forEach((el) => el.classList.remove('is-active'));
+  setTimeout(() => panel.remove(), 350);
+  currentPage = null;
+}
+
+function renderPageBody(key) {
+  const body = document.getElementById('page-body');
+  if (!body) return;
+  if (key === 'billing') { body.innerHTML = renderBillingHub(); return; }
+  const page = PAGES[key];
+  if (!page || !page.empty) { body.innerHTML = ''; return; }
+  const e = page.empty;
+  body.innerHTML = `
+    <div class="empty-state">
+      <div class="empty-icon">${page.icon()}</div>
+      <p class="empty-title">${esc(e.title)}</p>
+      <p class="empty-text">${esc(e.text)}</p>
+      ${e.cta ? `<button class="ab-btn" type="button">${esc(e.cta)}</button>` : ''}
+    </div>`;
+}
+
+function renderBillingHub() {
+  return `
+    <section class="ab-card open static">
+      <div class="ab-card-body"><div class="ab-card-inner"><div class="ab-card-content">
+        <div style="font-size: calc(22px * var(--ts)); font-weight: 700; letter-spacing: -0.01em;">${esc(planLabel())}</div>
+        <p class="ab-muted" style="margin: 0;">$0 / month</p>
+        <button class="ab-btn" type="button">Upgrade to Pro</button>
+      </div></div></div>
+    </section>
+    <section class="ab-card open static">
+      <div class="ab-card-body"><div class="ab-card-inner"><div class="ab-card-content">
+        <h4>Usage</h4>
+        <div class="ab-kv"><span>Worlds</span><b>0 of 2</b></div>
+        <div class="ab-kv"><span>Agents</span><b>0 of 3</b></div>
+        <div class="ab-kv"><span>Active automations</span><b>0 of 2</b></div>
+        <div class="ab-kv"><span>Connectors</span><b>0 of 1</b></div>
+      </div></div></div>
+    </section>
+    <section class="ab-card open static">
+      <div class="ab-card-body"><div class="ab-card-inner"><div class="ab-card-content">
+        <h4>Compare plans</h4>
+        <div class="ab-kv"><span>Worlds</span><b>2 · Unlimited</b></div>
+        <div class="ab-kv"><span>Agents</span><b>3 · 50</b></div>
+        <div class="ab-kv"><span>Automations</span><b>2 · 25</b></div>
+        <div class="ab-kv"><span>History</span><b>7 days · 90 days</b></div>
+      </div></div></div>
+    </section>
+    <section class="ab-card open static">
+      <div class="ab-card-body"><div class="ab-card-inner"><div class="ab-card-content">
+        <h4>Payment method</h4>
+        <p class="ab-muted">No payment method. Card details are handled by our payment provider. Aphrosta never sees them.</p>
+      </div></div></div>
+    </section>
+    <section class="ab-card open static">
+      <div class="ab-card-body"><div class="ab-card-inner"><div class="ab-card-content">
+        <h4>Invoices</h4>
+        <p class="ab-muted">No invoices yet.</p>
+      </div></div></div>
+    </section>
+  `;
 }
 
 function onSettingsClick(e) {
@@ -6619,6 +6759,10 @@ function toggleModelMenu() {
 }
 
 function openSettings() {
+  /* Force-remove any open sub-page so the two right-side panels never stack */
+  const pagePanel = document.getElementById('page-panel');
+  if (pagePanel) pagePanel.remove();
+  currentPage = null;
   closeModelMenu();
   closeEffortMenu();
   document.getElementById('settings-panel')?.classList.add('open');
@@ -6674,8 +6818,15 @@ function initShell() {
     else if (action === 'new-chat') newSession();
     else if (action === 'attach') openAttach();
     else if (action === 'replay-tour') { closeSettings(); setTimeout(() => startOnboarding(true), 350); }
-    else if (action === 'upgrade') toast('Paid plans are coming soon.', 'info', 1800);
-    else if (action === 'nav-worlds' || action === 'nav-agent' || action === 'nav-data' || action === 'nav-automation' || action === 'nav-connectors' || action === 'nav-operations') toast('Coming soon.', 'info', 1800);
+    else if (action === 'upgrade') openPage('billing');
+    else if (action === 'open-billing') openPage('billing');
+    else if (action === 'page-close') closePage();
+    else if (action === 'nav-worlds') openPage('worlds');
+    else if (action === 'nav-agent') openPage('agents');
+    else if (action === 'nav-data') openPage('system');
+    else if (action === 'nav-automation') openPage('automations');
+    else if (action === 'nav-connectors') openPage('connectors');
+    else if (action === 'nav-operations') openPage('operations');
   });
 
   appEl.addEventListener('click', (e) => {
@@ -6816,6 +6967,7 @@ function initShell() {
       closeModelMenu();
       closeEffortMenu();
       closeSettings();
+      closePage();
       document.getElementById('sidebar')?.classList.remove('open');
       if (window.speechSynthesis?.speaking || !elAudio.paused) stopSpeaking();
     }
