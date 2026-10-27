@@ -1086,14 +1086,14 @@ const Sidebar = (user) => `
     <nav class="side-nav" aria-label="Workspace">
       <button class="side-btn" type="button" data-action="nav-worlds">${ICONS.navWorlds}<span>Worlds</span></button>
       <button class="side-btn" type="button" data-action="nav-agent">${ICONS.navAgents}<span>Agents</span></button>
-      <button class="side-btn" type="button" data-action="nav-data">${ICONS.navSystem}<span>System</span></button>
+      <button class="side-btn" type="button" data-action="nav-data">${ICONS.navSystem}<span>Systems</span></button>
     </nav>
 
     <div class="side-tools" aria-label="Workspace tools">
       <button class="side-tool" type="button" data-action="nav-automation">
         <span class="side-tool-ico">${ICONS.navAutomation}</span>
         <span class="side-tool-text">
-          <b>Automation</b>
+          <b>Automations</b>
           <i>Build flows and routines</i>
         </span>
         <span class="side-tool-chev">${ICONS.chevronR}</span>
@@ -1535,7 +1535,7 @@ const NAV_PANELS = {
   'nav-automation': { title: 'Automations', icon: 'navAutomation', desc: 'Saved flows and routines will show up here.' },
   'nav-worlds':     { title: 'Worlds',      icon: 'navWorlds',     desc: 'Your worlds will show up here.' },
   'nav-agent':      { title: 'Agents',      icon: 'navAgents',     desc: 'Your agents will show up here.' },
-  'nav-data':       { title: 'System',      icon: 'navSystem',     desc: 'System tools and status will show up here.' }
+  'nav-data':       { title: 'Systems',      icon: 'navSystem',     desc: 'System tools and status will show up here.' }
 };
 
 function navPanelHtml(def) {
