@@ -1092,7 +1092,7 @@ const Sidebar = (user) => `
       <button class="side-tool" type="button" data-action="nav-automation">
         <span class="side-tool-ico">${ICONS.navAutomation}</span>
         <span class="side-tool-text">
-          <b>Automations</b>
+          <b>Automation</b>
           <i>Build flows and routines</i>
         </span>
         <span class="side-tool-chev">${ICONS.chevronR}</span>
@@ -1132,7 +1132,7 @@ const Sidebar = (user) => `
       ${Avatar(user)}
       <div class="profile-meta">
         <span class="profile-name">${esc(user.displayName || 'User')}</span>
-        <button class="profile-plan" type="button" data-action="open-billing" aria-label="Current plan">${esc(planLabel())}</button>
+        <span class="profile-plan">Free plan</span>
       </div>
       <button class="pill-btn" type="button" data-action="upgrade">Upgrade</button>
     </div>
@@ -1541,1276 +1541,8 @@ function rebuildAccountPage() {
   if (wasOpen) panel.classList.add('show-account');
 }
 
-/* ---------- SUB-PAGE SHELL (Phase 0) ---------- */
-let currentPage = null;
-
-let worlds = lsGet('aphrosta.worlds', []);
-let agents = lsGet('aphrosta.agents', []);
-
-const OPS_LS = 'aphrosta.operations';
-let operations = lsGet(OPS_LS, []);
-const Ops = {
-  start(source, title, meta = {}) {
-    const id = uid();
-    operations.unshift({ id, time: Date.now(), source, title, status: 'Running', steps: [], meta, tokens: 0, error: null });
-    lsSet(OPS_LS, operations);
-    if (currentPage === 'operations') renderPageBody('operations');
-    return id;
-  },
-  update(id, patch) {
-    const op = operations.find(x => x.id === id);
-    if (!op) return;
-    Object.assign(op, patch);
-    lsSet(OPS_LS, operations);
-    if (currentPage === 'operations') renderPageBody('operations');
-  },
-  step(id, title, status, duration, output = '') {
-    const op = operations.find(x => x.id === id);
-    if (!op) return;
-    op.steps.push({ title, status, duration, output, time: Date.now() });
-    lsSet(OPS_LS, operations);
-    if (currentPage === 'operations') renderPageBody('operations');
-  },
-  fail(id, err) {
-    const op = operations.find(x => x.id === id);
-    if (!op) return;
-    op.status = 'Failed'; op.error = err;
-    lsSet(OPS_LS, operations);
-    if (currentPage === 'operations') renderPageBody('operations');
-  }
-};
-
-
-
-let connData = lsGet('aphrosta.connectors', {});
-let plan = lsGet('aphrosta.plan', 'Free');
-
-function savePlan(newPlan) {
-  plan = newPlan;
-  lsSet('aphrosta.plan', plan);
-  document.querySelectorAll('.profile-plan').forEach(el => el.textContent = plan === 'Pro' ? 'Pro Plan' : 'Free plan');
-  if (currentPage === 'billing') renderPageBody('billing');
-}
-let automations = lsGet('aphrosta.automations', []);
-
-function saveAutomations() {
-  lsSet('aphrosta.automations', automations);
-  Cloud.queueSettings();
-}
-
-const CONNECTORS = [
-  { id: 'web_search', name: 'Web Search', desc: 'Search the web for current information.', icon: () => ICONS.navWorlds, builtIn: true },
-  { id: 'url_reader', name: 'URL Reader', desc: 'Read any web page as text.', icon: () => ICONS.link, builtIn: true },
-  { id: 'weather', name: 'Weather API', desc: 'Get current conditions and forecasts.', icon: () => ICONS.stNotify, keysUrl: 'https://openweathermap.org/api' },
-  { id: 'news', name: 'News API', desc: 'Fetch breaking headlines and articles.', icon: () => ICONS.stTerms, keysUrl: 'https://newsapi.org' },
-  { id: 'gdrive', name: 'Google Drive', desc: 'Read and write files.', icon: () => ICONS.stStorage, soon: true },
-  { id: 'gmail', name: 'Gmail', desc: 'Read and send emails.', icon: () => ICONS.stConnect, soon: true },
-  { id: 'notion', name: 'Notion', desc: 'Access pages and databases.', icon: () => ICONS.stFormat, soon: true },
-  { id: 'slack', name: 'Slack', desc: 'Send messages to channels.', icon: () => ICONS.stNotify, soon: true },
-  { id: 'github', name: 'GitHub', desc: 'Read repos and issues.', icon: () => ICONS.navAutomation, soon: true },
-];
-
-function saveConnData() {
-  lsSet('aphrosta.connectors', connData);
-}
-
-const WORLD_COLORS = [
-  { id: 'gray',   bg: 'rgba(255,255,255,.1)',  fg: 'var(--fg)' },
-  { id: 'blue',   bg: 'rgba(10,132,255,.15)',  fg: '#0a84ff' },
-  { id: 'green',  bg: 'rgba(48,209,88,.15)',   fg: '#30d158' },
-  { id: 'red',    bg: 'rgba(255,69,58,.15)',   fg: '#ff453a' },
-  { id: 'purple', bg: 'rgba(191,90,242,.15)',  fg: '#bf5af2' },
-  { id: 'orange', bg: 'rgba(255,159,10,.15)',  fg: '#ff9f0a' },
-];
-
-const WORLD_ICONS = [ICONS.navWorlds, ICONS.brain, ICONS.stSkills, ICONS.rocket, ICONS.stDevices, ICONS.navAgents];
-
-function saveWorlds() {
-  lsSet('aphrosta.worlds', worlds);
-  Cloud.queueSettings();
-}
-
-const PAGES = {
-  worlds: {
-    title: 'Worlds', icon: () => ICONS.navWorlds, search: 'Search Worlds',
-    empty: null
-  },
-  agents: {
-    title: 'Agents', icon: () => ICONS.navAgents, search: 'Search Agents',
-    empty: null
-  },
-  system: {
-    title: 'System', icon: () => ICONS.navSystem, search: null,
-    empty: null
-  },
-  automations: {
-    title: 'Automations', icon: () => ICONS.navAutomation, search: 'Search Automations',
-    empty: null
-  },
-  connectors: {
-    title: 'Connectors', icon: () => ICONS.navConnectors, search: 'Search Connectors',
-    empty: null
-  },
-  operations: {
-    title: 'Operations', icon: () => ICONS.navOperations, search: 'Search Operations',
-    empty: null
-  },
-  billing: {
-    title: 'Billing', icon: () => ICONS.stBilling, search: null, empty: null
-  }
-};
-
-function planLabel() {
-  return plan === 'Pro' ? 'Pro Plan' : 'Free plan';
-}
-
-function openPage(key) {
-  if (!PAGES[key]) return;
-  const old = document.getElementById('page-panel');
-  if (old) old.remove();
-  document.getElementById('settings-panel')?.classList.remove('open');
-  if (!window.matchMedia('(min-width: 860px)').matches) {
-    document.getElementById('sidebar')?.classList.remove('open');
-  }
-  currentPage = key;
-
-  /* Mark the active sidebar row */
-  document.querySelectorAll('.side-btn.is-active, .side-tool.is-active').forEach((el) => el.classList.remove('is-active'));
-  const actionMap = { worlds: 'nav-worlds', agents: 'nav-agent', system: 'nav-data', automations: 'nav-automation', connectors: 'nav-connectors', operations: 'nav-operations' };
-  const action = actionMap[key];
-  if (action) document.querySelector(`[data-action="${action}"]`)?.classList.add('is-active');
-
-  const page = PAGES[key];
-  const panel = document.createElement('aside');
-  panel.className = 'page-panel';
-  panel.id = 'page-panel';
-  panel.setAttribute('aria-label', page.title);
-  panel.innerHTML = `
-    <div class="panel-head">
-      <span class="ab-ico">${page.icon()}</span>
-      <h2 class="panel-title">${esc(page.title)}</h2>
-      <button class="ab-back" type="button" data-action="page-close" aria-label="Back">${ICONS.back}<span>Back</span></button>
-    </div>
-    ${page.search ? `<label class="side-search" style="margin: 0 4px 4px;"><input type="search" placeholder="${esc(page.search)}" aria-label="${esc(page.search)}" data-role="page-search" autocomplete="off"></label>` : ''}
-    <div class="panel-scroll" id="page-body"></div>
-  `;
-  appEl.appendChild(panel);
-  requestAnimationFrame(() => panel.classList.add('open'));
-  renderPageBody(key);
-}
-
-function closePage() {
-  const panel = document.getElementById('page-panel');
-  if (!panel) { currentPage = null; return; }
-  panel.classList.remove('open');
-  document.querySelectorAll('.side-btn.is-active, .side-tool.is-active').forEach((el) => el.classList.remove('is-active'));
-  setTimeout(() => panel.remove(), 350);
-  currentPage = null;
-}
-
-function renderPageBody(key) {
-  const body = document.getElementById('page-body');
-  if (!body) return;
-  if (key === 'billing') { body.innerHTML = renderBillingHub(); return; }
-  if (key === 'worlds') { body.innerHTML = renderWorldsGrid(); return; }
-  if (key === 'agents') { body.innerHTML = renderAgentsList(); return; }
-  if (key === 'operations') { body.innerHTML = renderOperationsList(); return; }
-  if (key === 'system') { body.innerHTML = renderSystemPage(); return; }
-  if (key === 'connectors') { body.innerHTML = renderConnectorsList(); return; }
-  if (key === 'automations') { body.innerHTML = renderAutomationsList(); return; }
-  const page = PAGES[key];
-  if (!page || !page.empty) { body.innerHTML = ''; return; }
-  const e = page.empty;
-  body.innerHTML = `
-    <div class="empty-state">
-      <div class="empty-icon">${page.icon()}</div>
-      <p class="empty-title">${esc(e.title)}</p>
-      <p class="empty-text">${esc(e.text)}</p>
-      ${e.cta ? `<button class="ab-btn" type="button">${esc(e.cta)}</button>` : ''}
-    </div>`;
-}
-
-function renderWorldsGrid() {
-  const cards = worlds.map(w => {
-    const c = WORLD_COLORS.find(x => x.id === w.color) || WORLD_COLORS[0];
-    const chatCount = sessions.filter(s => s.worldId === w.id).length;
-    return `<div class="world-card" data-id="${esc(w.id)}">
-      <div class="world-more" data-act="w-menu" data-id="${esc(w.id)}">${ICONS.settings}</div>
-      <div class="world-icon-box" style="background:${c.bg};color:${c.fg}">${WORLD_ICONS[w.iconIdx || 0]}</div>
-      <div class="world-name">${esc(w.name)}</div>
-      <div class="world-desc">${esc(w.desc || 'No description')}</div>
-      <div class="world-stats"><span>${chatCount} chats</span></div>
-    </div>`;
-  }).join('');
-  return `<div class="worlds-grid">
-    <div class="world-card is-new" data-act="w-new">
-      <div class="world-icon-box" style="background:var(--glass-bg-hover);">${ICONS.newChat}</div>
-      <div class="world-name" style="font-weight:500;color:var(--gray-mid)">New World</div>
-    </div>
-    ${cards}
-  </div>`;
-}
-
-function renderAutomationsList() {
-  if (!automations.length) {
-    const page = PAGES.automations;
-    return `<div class="empty-state">
-      <div class="empty-icon">${page.icon()}</div>
-      <p class="empty-title">No automations yet</p>
-      <p class="empty-text">Automations run a set of steps for you, on a schedule or on demand.</p>
-      <button class="ab-btn" data-act="a-new">New automation</button>
-    </div>`;
-  }
-
-  const cards = automations.map(a => {
-    const isPaused = a.status === 'Paused';
-    const lastRun = a.lastRun ? (a.lastRun.success ? `<div class="auto-last ok">${ICONS.toolOk} Last run succeeded</div>` : `<div class="auto-last bad">${ICONS.toolFail} Last run failed</div>`) : '';
-    
-    let triggerStr = 'Run manually';
-    if (a.trigger === 'schedule') triggerStr = `Schedule: ${a.scheduleTime}`;
-    if (a.trigger === 'open') triggerStr = `On open after ${a.scheduleTime}`;
-
-    return `<div class="auto-card ${isPaused ? 'is-paused' : ''}" data-act="auto-edit" data-id="${esc(a.id)}">
-      <div class="auto-head">
-        <div class="auto-name">${esc(a.name)}</div>
-        <span class="sys-tag ${isPaused ? 'miss' : 'ok'}">${a.status}</span>
-      </div>
-      <div class="auto-trigger">${ICONS.clock} ${triggerStr}</div>
-      ${lastRun}
-    </div>`;
-  }).join('');
-
-  return `<div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
-    <button class="ab-btn" data-act="a-new" style="width:auto;padding:6px 14px;font-size:calc(12px*var(--ts));">New automation</button>
-  </div>
-  <div class="auto-list">${cards}</div>`;
-}
-
-function openAutomationBuilder(id = null) {
-  const a = id ? automations.find(x => x.id === id) : null;
-  const isEdit = !!a;
-  const draft = a ? JSON.parse(JSON.stringify(a)) : { id: uid(), name: '', trigger: 'manual', scheduleTime: '08:00', steps: [], status: 'Active', lastRun: null };
-
-  const scrim = document.createElement('div');
-  scrim.className = 'dialog-scrim';
-  
-  const renderBuilder = () => {
-    const stepsHtml = draft.steps.map((s, i) => `
-      <div class="auto-step">
-        <div class="auto-step-head">
-          <span>Step ${i + 1}</span>
-          <button class="auto-step-del" data-step-del="${i}" aria-label="Remove step">${ICONS.trash}</button>
-        </div>
-        <select class="ab-input" data-step="${i}" data-field="type">
-          <option value="prompt" ${s.type==='prompt'?'selected':''}>Ask an agent</option>
-          <option value="web" ${s.type==='web'?'selected':''}>Read a web page</option>
-        </select>
-        ${s.type === 'prompt' ? `<input class="ab-input" data-step="${i}" data-field="val" value="${esc(s.val||'')}" placeholder="Prompt for the agent">` : `<input class="ab-input" data-step="${i}" data-field="val" value="${esc(s.val||'')}" placeholder="https://example.com">`}
-      </div>
-    `).join('');
-
-    scrim.innerHTML = `<div class="dialog" role="dialog" aria-modal="true" style="max-width:440px;max-height:85vh;">
-      <h3 class="dialog-title">${isEdit ? 'Edit Automation' : 'New Automation'}</h3>
-      
-      <div class="panel-scroll" style="gap:12px;padding-right:4px;">
-        <div class="auto-block">
-          <div class="auto-block-title">Name & Trigger</div>
-          <input class="ab-input" data-draft="name" value="${esc(draft.name)}" placeholder="e.g. Daily digest" style="margin-bottom:8px;">
-          <select class="ab-input" data-draft="trigger">
-            <option value="manual" ${draft.trigger==='manual'?'selected':''}>Manual</option>
-            <option value="schedule" ${draft.trigger==='schedule'?'selected':''}>Schedule</option>
-            <option value="open" ${draft.trigger==='open'?'selected':''}>On open</option>
-          </select>
-          ${draft.trigger !== 'manual' ? `<input class="ab-input" data-draft="scheduleTime" value="${esc(draft.scheduleTime)}" placeholder="HH:MM" style="margin-top:8px;">` : ''}
-        </div>
-
-        <div class="auto-block">
-          <div class="auto-block-title">Steps (Max 5)</div>
-          ${stepsHtml}
-          ${draft.steps.length < 5 ? `<button class="btn-line" data-act="auto-add-step">+ Add step</button>` : ''}
-        </div>
-
-        <div class="auto-block">
-          <div class="auto-block-title">Status</div>
-          <select class="ab-input" data-draft="status">
-            <option value="Active" ${draft.status==='Active'?'selected':''}>Active</option>
-            <option value="Paused" ${draft.status==='Paused'?'selected':''}>Paused</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="dialog-actions" style="margin-top:16px;">
-        <button class="dialog-btn" type="button" data-r="close">Cancel</button>
-        <button class="dialog-btn ok" type="button" data-r="save">Save</button>
-      </div>
-    </div>`;
-
-    scrim.onclick = (e) => {
-      e.stopPropagation();
-      if (e.target === scrim || e.target.closest('[data-r="close"]')) return scrim.remove();
-      
-      if (e.target.closest('[data-act="auto-add-step"]')) {
-        draft.steps.push({ type: 'prompt', val: '' });
-        renderBuilder();
-        return;
-      }
-      
-      const delBtn = e.target.closest('[data-step-del]');
-      if (delBtn) {
-        draft.steps.splice(parseInt(delBtn.dataset.stepDel, 10), 1);
-        renderBuilder();
-        return;
-      }
-
-      if (e.target.closest('[data-r="save"]')) {
-        if (!draft.name) return toast('Give the automation a name.');
-        if (!draft.steps.length) return toast('Add at least one step.');
-        if (isEdit) Object.assign(a, draft);
-        else automations.push(draft);
-        saveAutomations();
-        scrim.remove();
-        renderPageBody('automations');
-        toast('Automation saved.', 'success');
-      }
-    };
-
-    scrim.oninput = (e) => {
-      if (e.target.dataset.draft) {
-        draft[e.target.dataset.draft] = e.target.value;
-        if (e.target.dataset.draft === 'trigger') renderBuilder();
-      }
-      if (e.target.dataset.step) {
-        draft.steps[parseInt(e.target.dataset.step, 10)][e.target.dataset.field] = e.target.value;
-      }
-    };
-  };
-  
-  renderBuilder();
-  document.body.appendChild(scrim);
-}
-
-async function runAutomation(id) {
-  const a = automations.find(x => x.id === id);
-  if (!a || a.status === 'Paused') return;
-  
-  const opId = Ops.start('Automation', a.name);
-  let success = true;
-  let lastOutput = '';
-
-  for (let i = 0; i < a.steps.length; i++) {
-    const s = a.steps[i];
-    const t0 = Date.now();
-    try {
-      let result = '';
-      if (s.type === 'web') {
-        result = await AGENT_TOOLS.fetch_url({ url: s.val });
-      } else {
-        /* A real prompt step would call the active model here. For this local engine we simulate a successful step. */
-        result = `Simulated agent reply for: "${s.val}". Previous: ${lastOutput.slice(0, 50)}`;
-      }
-      lastOutput = result;
-      Ops.step(opId, `Step ${i + 1}: ${s.type}`, 'Succeeded', Date.now() - t0, result.slice(0, 100));
-    } catch (e) {
-      success = false;
-      Ops.fail(opId, String(e));
-      break;
-    }
-  }
-
-  Ops.update(opId, { status: success ? 'Succeeded' : 'Failed' });
-  a.lastRun = { time: Date.now(), success };
-  saveAutomations();
-  if (currentPage === 'automations') renderPageBody('automations');
-  toast(success ? `${a.name} completed.` : `${a.name} failed. Check Operations.`, success ? 'success' : 'error');
-}
-
-function renderConnectorsList() {
-  const ready = CONNECTORS.filter(c => !c.soon);
-  const soon = CONNECTORS.filter(c => c.soon);
-  
-  const tile = (c) => {
-    if (c.soon) {
-      return `<div class="conn-tile is-soon" data-act="conn-soon" data-id="${c.id}">
-        <div class="conn-ico">${c.icon()}</div>
-        <div class="conn-name">${c.name}</div>
-        <div class="conn-desc">${c.desc}</div>
-        <div class="conn-status miss">Coming in v1.1</div>
-      </div>`;
-    }
-    let status = '<div class="conn-status miss">Not connected</div>';
-    if (c.builtIn) status = '<div class="conn-status built">Built in</div>';
-    else if (connData[c.id]?.status === 'ok') status = '<div class="conn-status ok">Connected</div>';
-    else if (connData[c.id]?.status === 'error') status = '<div class="conn-status err">Error</div>';
-    
-    return `<div class="conn-tile" data-act="conn-open" data-id="${c.id}">
-      <div class="conn-ico">${c.icon()}</div>
-      <div class="conn-name">${c.name}</div>
-      <div class="conn-desc">${c.desc}</div>
-      ${status}
-    </div>`;
-  };
-
-  return `
-    <div class="ab-muted" style="margin-bottom:8px;font-weight:600;">Ready</div>
-    <div class="conn-grid">${ready.map(tile).join('')}</div>
-    <div class="ab-muted" style="margin-top:20px;margin-bottom:8px;font-weight:600;">Coming soon</div>
-    <div class="conn-grid">${soon.map(tile).join('')}</div>
-  `;
-}
-
-function openConnectorDetail(id) {
-  const c = CONNECTORS.find(x => x.id === id);
-  if (!c) return;
-  if (c.soon) {
-    toast('This connector requires a secure server and is coming in v1.1.', 'info', 3500);
-    return;
-  }
-  
-  const isConnected = connData[c.id]?.status === 'ok';
-  
-  const scrim = document.createElement('div');
-  scrim.className = 'dialog-scrim';
-  
-  const paint = () => {
-    scrim.innerHTML = `<div class="dialog" role="dialog" aria-modal="true">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-        <div class="conn-ico" style="margin:0;">${c.icon()}</div>
-        <div>
-          <h3 class="dialog-title" style="margin:0;">${c.name}</h3>
-          <div style="font-size:calc(13px*var(--ts));color:var(--gray-mid);">${c.desc}</div>
-        </div>
-      </div>
-      
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:calc(11px*var(--ts));color:var(--gray-mid);">
-        ${ICONS.stPrivacy} Keys stay on this device.
-      </div>
-
-      <label class="ab-field"><span>API Key</span>
-        <div style="position:relative;display:flex;">
-          <input class="ab-input" type="password" data-role="conn-key" value="${esc(connData[c.id]?.key || '')}" placeholder="Paste API key">
-          <button type="button" class="provider-eye" data-eye style="position:absolute;right:0;top:0;height:100%;width:40px;display:grid;place-items:center;color:var(--gray-mid);">${ICONS.eyeOff}</button>
-        </div>
-      </label>
-      <div style="margin-top:-6px;margin-bottom:12px;">
-        <a href="${c.keysUrl}" target="_blank" style="font-size:calc(12px*var(--ts));color:var(--accent);text-decoration:none;">Get your key ↗</a>
-      </div>
-
-      <div id="conn-test-res" style="margin-bottom:12px;display:none;padding:10px;border-radius:8px;font-size:calc(12px*var(--ts));line-height:1.4;"></div>
-
-      <div class="dialog-actions" style="margin-top:16px;">
-        ${isConnected ? `<button class="dialog-btn" type="button" data-r="del" style="color:var(--bad);">Remove</button>` : ''}
-        <button class="dialog-btn" type="button" data-r="test">Test</button>
-        <button class="dialog-btn ok" type="button" data-r="save" ${isConnected && !scrim.querySelector('[data-role="conn-key"]')?.value ? '' : ''}>Save</button>
-      </div>
-      <div class="dialog-actions" style="margin-top:6px;">
-        <button class="dialog-btn" type="button" data-r="close">Close</button>
-      </div>
-    </div>`;
-    
-    const resBox = scrim.querySelector('#conn-test-res');
-    
-    scrim.onclick = async (e) => {
-      e.stopPropagation();
-      if (e.target === scrim || e.target.closest('[data-r="close"]')) return scrim.remove();
-      
-      if (e.target.closest('[data-eye]')) {
-        const inp = scrim.querySelector('[data-role="conn-key"]');
-        const isPass = inp.type === 'password';
-        inp.type = isPass ? 'text' : 'password';
-        e.target.closest('[data-eye]').innerHTML = isPass ? ICONS.eye : ICONS.eyeOff;
-        return;
-      }
-
-      if (e.target.closest('[data-r="test"]')) {
-        const key = scrim.querySelector('[data-role="conn-key"]').value.trim();
-        if (!key) return toast('Enter an API key first.');
-        resBox.style.display = 'block';
-        resBox.style.background = 'var(--glass-bg)';
-        resBox.style.border = '1px solid var(--glass-border)';
-        resBox.style.color = 'var(--gray-light)';
-        resBox.textContent = 'Testing connection...';
-        
-        setTimeout(() => {
-          if (key.length < 5 || key === 'bad') {
-            resBox.style.background = 'rgba(255,69,58,.1)';
-            resBox.style.borderColor = 'rgba(255,69,58,.3)';
-            resBox.style.color = 'var(--bad)';
-            resBox.innerHTML = `<b>Connection failed.</b> Key rejected. Check it and try again.`;
-            if (!connData[c.id]) connData[c.id] = {};
-            connData[c.id].status = 'error';
-            saveConnData();
-          } else {
-            resBox.style.background = 'rgba(48,209,88,.1)';
-            resBox.style.borderColor = 'rgba(48,209,88,.3)';
-            resBox.style.color = 'var(--ok)';
-            resBox.innerHTML = `<b>Connected.</b> Ready to use.`;
-            if (!connData[c.id]) connData[c.id] = {};
-            connData[c.id].status = 'ok';
-            connData[c.id].key = key;
-            saveConnData();
-          }
-          paint();
-        }, 1000);
-        return;
-      }
-
-      if (e.target.closest('[data-r="save"]')) {
-        const key = scrim.querySelector('[data-role="conn-key"]').value.trim();
-        if (!key) return toast('Enter a key to save.');
-        if (!connData[c.id]) connData[c.id] = {};
-        connData[c.id].key = key;
-        connData[c.id].status = 'ok';
-        saveConnData();
-        scrim.remove();
-        toast(`${c.name} connected.`, 'success');
-        renderPageBody('connectors');
-        return;
-      }
-
-      if (e.target.closest('[data-r="del"]')) {
-        delete connData[c.id];
-        saveConnData();
-        scrim.remove();
-        toast(`${c.name} removed.`, 'info');
-        renderPageBody('connectors');
-        return;
-      }
-    };
-  };
-  paint();
-  document.body.appendChild(scrim);
-}
-
-function renderSystemPage() {
-  const activeProv = MODEL_PROVIDERS.find(p => p.id === activeModel);
-  const activeModelName = activeProv ? currentVariant(activeModel).name : 'None';
-  const todayTokens = LimitWindow.used();
-  const limit = dayLimit();
-  const tokenPct = limit ? Math.min(100, (todayTokens / limit) * 100) : 0;
-  
-  const keysHtml = MODEL_PROVIDERS.map(p => {
-    const hasKey = !!apiKeys[p.id];
-    const isActive = activeModel === p.id;
-    const tag = isActive ? '<span class="sys-tag ok">Active</span>' : hasKey ? '<span class="sys-tag ok">Saved</span>' : '<span class="sys-tag miss">No key</span>';
-    return `<div class="sys-provider-row">
-      <div><div class="sys-provider-name">${p.name}</div>${isActive ? `<div class="sys-provider-model">${activeModelName}</div>` : ''}</div>
-      ${tag}
-    </div>`;
-  }).join('');
-
-  return `
-    <div class="sys-strip">
-      <div class="sys-strip-row">
-        <div class="sys-strip-label">${ICONS.stStreaming} Sync</div>
-        <div class="sys-strip-val" style="color:var(--ok);">Connected</div>
-      </div>
-      <div class="sys-strip-row">
-        <div class="sys-strip-label">${ICONS.stConnect} Keys</div>
-        <div class="sys-strip-val">${Object.keys(apiKeys).length} saved</div>
-      </div>
-      <div class="sys-strip-row">
-        <div class="sys-strip-label">${ICONS.stUsage} Today</div>
-        <div class="sys-strip-val">${fmtTokens(todayTokens)} ${limit ? `/ ${fmtTokens(limit)}` : ''}</div>
-      </div>
-      ${limit ? `<div class="sys-strip-bar"><i style="width:${tokenPct}%"></i></div>` : ''}
-    </div>
-
-    <div class="sys-card">
-      <div class="sys-card-head">
-        <div class="sys-card-title">Models & Providers</div>
-        <div class="sys-card-desc">API keys stay on this device.</div>
-      </div>
-      <div class="sys-card-body" style="padding-top:0;padding-bottom:0;">
-        ${keysHtml}
-      </div>
-    </div>
-
-    <div class="sys-card">
-      <div class="sys-card-head">
-        <div class="sys-card-title">Memory</div>
-        <div class="sys-card-desc">Aphrosta remembers useful details so you don't have to repeat yourself.</div>
-      </div>
-      <div class="sys-card-body">
-        <label class="sub-switch"><span>Long-Term memory</span><span class="switch"><input type="checkbox" data-set="memoryLong" ${settings.memoryLong?'checked':''}><i></i></span></label>
-        <label class="sub-switch"><span>Short-Term memory</span><span class="switch"><input type="checkbox" data-set="memoryShort" ${settings.memoryShort?'checked':''}><i></i></span></label>
-        <label class="sub-switch"><span>State Log</span><span class="switch"><input type="checkbox" data-set="memSls" ${settings.memSls?'checked':''}><i></i></span></label>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
-          <span style="font-size:calc(12px*var(--ts));color:var(--gray-mid);">${memSysStat()}</span>
-          <button class="btn-line" style="width:auto;padding:6px 12px;font-size:calc(11px*var(--ts));" data-act="clear-memory">Clear</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="sys-card">
-      <div class="sys-card-head">
-        <div class="sys-card-title">Limits & Usage</div>
-        <div class="sys-card-desc">Daily token limit pauses chatting when reached.</div>
-      </div>
-      <div class="sys-card-body">
-        <div class="field-inline">
-          <span class="field-label">Daily Limit</span>
-          <input class="input" data-token-limit style="width:100px;text-align:right;" value="${settings.tokenLimit ? fmtTokens(settings.tokenLimit) : ''}" placeholder="Off">
-        </div>
-        <div class="field-inline">
-          <span class="field-label">Resets In</span>
-          <span style="font-size:calc(13px*var(--ts));font-variant-numeric:tabular-nums;">${settings.tokenLimit ? fmtHMS(timerMins()*60000) : 'N/A'}</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="sys-card">
-      <div class="sys-card-head">
-        <div class="sys-card-title">Agent Engine</div>
-        <div class="sys-card-desc">Default tools for new agents.</div>
-      </div>
-      <div class="sys-card-body">
-        <label class="sub-switch"><span>Web search</span><span class="switch"><input type="checkbox" data-set="skillWeb" ${settings.skillWeb?'checked':''}><i></i></span></label>
-        <label class="sub-switch"><span>URL reader</span><span class="switch"><input type="checkbox" data-set="agentTools" ${settings.agentTools?'checked':''}><i></i></span></label>
-        <label class="sub-switch"><span>Show plans</span><span class="switch"><input type="checkbox" data-set="agentPlan" ${settings.agentPlan?'checked':''}><i></i></span></label>
-      </div>
-    </div>
-
-    <div class="sys-card">
-      <div class="sys-card-head">
-        <div class="sys-card-title">Permissions & Privacy</div>
-      </div>
-      <div class="sys-card-body" style="padding:0;">
-        <button class="panel-row" style="border-bottom:1px solid var(--glass-border);" data-act="sys-perm">
-          <span class="row-label">Permissions</span><span class="row-chev">${ICONS.stChevItem}</span>
-        </button>
-        <button class="panel-row" style="border-bottom:1px solid var(--glass-border);" data-act="sys-storage">
-          <span class="row-label">Storage & Privacy</span><span class="row-chev">${ICONS.stChevItem}</span>
-        </button>
-      </div>
-    </div>
-
-    <div class="sys-card">
-      <div class="sys-card-head">
-        <div class="sys-card-title">Status</div>
-      </div>
-      <div class="sys-card-body">
-        <div class="field-inline"><span class="field-label">Account</span><span class="static-val">${esc(shownEmail(currentUser?.email, 'Signed in'))}</span></div>
-        <div class="field-inline"><span class="field-label">App Version</span><span class="static-val">${settings.version}</span></div>
-      </div>
-    </div>
-
-    <div class="sys-card" style="margin-bottom:24px;">
-      <div class="sys-card-head">
-        <div class="sys-card-title">Data</div>
-        <div class="sys-card-desc">Worlds, Agents, and Automations sync to your account. Keys stay on this device.</div>
-      </div>
-      <div class="sys-card-body" style="padding:0;">
-        <button class="panel-row" style="border-bottom:1px solid var(--glass-border);" data-act="export-data">
-          <span class="row-label">Export all data</span><span class="row-chev">${ICONS.stChevItem}</span>
-        </button>
-        <label class="panel-row" style="border-bottom:1px solid var(--glass-border);">
-          <span class="row-label">Import data</span><input type="file" accept="application/json,.json" data-import hidden><span class="row-chev">${ICONS.stChevItem}</span>
-        </label>
-        <button class="panel-row" style="color:var(--bad);" data-act="wipe-local">
-          <span class="row-label">Delete local data</span><span class="row-chev" style="color:var(--bad);">${ICONS.stChevItem}</span>
-        </button>
-      </div>
-    </div>
-  `;
-}
-
-function renderOperationsList() {
-  if (!operations.length) {
-    const page = PAGES.operations;
-    return `<div class="empty-state"><div class="empty-icon">${page.icon()}</div><p class="empty-title">Nothing has run yet</p><p class="empty-text">Runs appear here when an agent uses a tool or an automation runs.</p></div>`;
-  }
-  
-  const groups = {};
-  operations.forEach(op => {
-    const d = new Date(op.time);
-    const today = new Date();
-    const yesterday = new Date(); yesterday.setDate(today.getDate() - 1);
-    let label = d.toDateString() === today.toDateString() ? 'Today' : d.toDateString() === yesterday.toDateString() ? 'Yesterday' : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-    if (!groups[label]) groups[label] = [];
-    groups[label].push(op);
-  });
-
-  const html = Object.entries(groups).map(([label, ops]) => `
-    <div class="ops-group">
-      <div class="ops-group-title">${label}</div>
-      ${ops.map(op => {
-        const timeStr = new Date(op.time).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
-        const dot = op.status === 'Running' ? 'run' : op.status === 'Failed' ? 'bad' : op.status === 'Stopped' ? 'stop' : 'ok';
-        return `<div class="ops-row" data-act="ops-open" data-id="${op.id}">
-          <div class="ops-status ${dot}"></div>
-          <div class="ops-main">
-            <div class="ops-title">${esc(op.title)}</div>
-            <div class="ops-meta">
-              <span class="ops-meta-chip">${esc(op.source)}</span>
-              <span>${timeStr}</span>
-              ${op.tokens ? `<span>${op.tokens} tokens</span>` : ''}
-            </div>
-            ${op.error ? `<div class="ops-error">${esc(op.error)}</div>` : ''}
-          </div>
-        </div>`;
-      }).join('')}
-    </div>
-  `).join('');
-  
-  return html;
-}
-
-function openRunDetail(id) {
-  const op = operations.find(x => x.id === id);
-  if (!op) return;
-  const scrim = document.createElement('div');
-  scrim.className = 'dialog-scrim';
-  scrim.innerHTML = `<div class="dialog" role="dialog" aria-modal="true">
-    <h3 class="dialog-title">${esc(op.title)}</h3>
-    <div class="ops-meta" style="margin-bottom:12px;">
-      <span class="ops-meta-chip">${esc(op.source)}</span>
-      <span>${new Date(op.time).toLocaleString()}</span>
-      ${op.tokens ? `<span>${op.tokens} tokens</span>` : ''}
-    </div>
-    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px;">
-      ${op.steps.map(s => `
-        <div style="padding:10px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:8px;">
-          <div style="display:flex;justify-content:space-between;font-size:calc(13px*var(--ts));font-weight:600;">
-            <span>${esc(s.title)}</span>
-            <span style="color:${s.status==='Failed'?'var(--bad)':'var(--gray-mid)'};font-size:calc(11px*var(--ts));">${s.status} · ${s.duration}ms</span>
-          </div>
-          ${s.output ? `<pre style="margin-top:8px;font-size:calc(11px*var(--ts));white-space:pre-wrap;color:var(--gray-light);">${esc(s.output)}</pre>` : ''}
-        </div>
-      `).join('')}
-    </div>
-    <div class="dialog-actions">
-      <button class="dialog-btn" type="button" data-r="close">Close</button>
-      ${op.status === 'Failed' ? `<button class="dialog-btn ok" type="button" data-r="retry">Retry</button>` : ''}
-    </div>
-  </div>`;
-  document.body.appendChild(scrim);
-  scrim.onclick = (e) => {
-    e.stopPropagation();
-    if (e.target === scrim || e.target.closest('[data-r="close"]')) scrim.remove();
-    if (e.target.closest('[data-r="retry"]')) {
-      scrim.remove();
-      toast('Retry started.', 'info');
-      Ops.update(id, { status: 'Running', error: null });
-      setTimeout(() => { Ops.update(id, { status: 'Succeeded' }); toast('Retry succeeded.', 'success'); }, 2000);
-    }
-  };
-}
-
-function renderAgentsList() {
-  const cards = agents.map(a => {
-    const c = WORLD_COLORS.find(x => x.id === a.color) || WORLD_COLORS[0];
-    const tools = [];
-    if (a.web) tools.push(ICONS.navWorlds);
-    if (a.url) tools.push(ICONS.link);
-    const toolHtml = tools.length ? `<div class="agent-tools">${tools.join('')}</div>` : '';
-    
-    return `<div class="agent-card" data-id="${esc(a.id)}">
-      <div class="agent-avatar" style="background:${c.bg};color:${c.fg}">${ICONS.brain}</div>
-      <div class="agent-info">
-        <div class="agent-name">${esc(a.name)}</div>
-        <div class="agent-role">${esc(a.role || 'No role')}</div>
-        ${toolHtml}
-      </div>
-    </div>`;
-  }).join('');
-  return `<div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
-    <button class="ab-btn" data-act="a-new" style="width:auto;padding:6px 14px;font-size:calc(12px*var(--ts));">New agent</button>
-  </div>
-  <div class="agents-list">${cards}</div>`;
-}
-
-function openAgentWizard(id = null) {
-  const a = id ? agents.find(x => x.id === id) : null;
-  const isEdit = !!a;
-  const current = a || { name: '', role: '', instr: '', model: 'inherit', effort: 'inherit', web: true, url: true, plan: false, color: 'blue' };
-  
-  let step = 1;
-  const scrim = document.createElement('div');
-  scrim.className = 'dialog-scrim';
-  
-  const paint = () => {
-    scrim.innerHTML = `<div class="dialog" role="dialog" aria-modal="true">
-      <h3 class="dialog-title">${isEdit ? 'Edit Agent' : 'New Agent'}</h3>
-      <div class="wizard-steps">
-        <div class="wizard-step ${step===1?'on':''}">Identity</div>
-        <div class="wizard-step ${step===2?'on':''}">Behaviour</div>
-        <div class="wizard-step ${step===3?'on':''}">Tools</div>
-      </div>
-      <div class="wizard-body" style="display:flex;flex-direction:column;gap:10px;">
-        ${step===1 ? `
-          ${!isEdit ? `<div class="wizard-presets">
-            <button class="wizard-preset" data-preset="res"><b>Researcher</b>Finds and summarizes sources</button>
-            <button class="wizard-preset" data-preset="wri"><b>Writer</b>Drafts and edits text</button>
-            <button class="wizard-preset" data-preset="pla"><b>Planner</b>Breaks goals into steps</button>
-            <button class="wizard-preset" data-preset="bla"><b>Blank</b>Start from scratch</button>
-          </div>` : ''}
-          <label class="ab-field"><span>Name</span><input class="ab-input" data-role="a-name" maxlength="40" value="${esc(current.name)}" placeholder="e.g. Researcher"></label>
-          <label class="ab-field"><span>Role (optional)</span><input class="ab-input" data-role="a-role" maxlength="80" value="${esc(current.role)}" placeholder="e.g. Market research assistant"></label>
-          <label class="ab-field"><span>Color</span>
-            <select class="ab-input" data-role="a-color">
-              ${WORLD_COLORS.map(c => `<option value="${c.id}" ${c.id === current.color ? 'selected' : ''}>${c.id.toUpperCase()}</option>`).join('')}
-            </select>
-          </label>
-        ` : step===2 ? `
-          <label class="ab-field"><span>Instructions</span><textarea class="ab-input" data-role="a-instr" style="min-height:80px;resize:none;" placeholder="Tell the agent how to behave...">${esc(current.instr)}</textarea></label>
-          <div class="ab-field"><span>Model</span>
-            <select class="ab-input" data-role="a-model">
-              <option value="inherit" ${current.model==='inherit'?'selected':''}>Inherit from app</option>
-            </select>
-          </div>
-          <div class="ab-field"><span>Effort</span>
-            <select class="ab-input" data-role="a-effort">
-              <option value="inherit" ${current.effort==='inherit'?'selected':''}>Inherit from app</option>
-              <option value="low" ${current.effort==='low'?'selected':''}>Low</option>
-              <option value="medium" ${current.effort==='medium'?'selected':''}>Medium</option>
-              <option value="high" ${current.effort==='high'?'selected':''}>High</option>
-            </select>
-          </div>
-        ` : `
-          <label class="sub-switch" style="padding:8px 0;">
-            <span>Web search</span>
-            <span class="switch"><input type="checkbox" data-role="a-web" ${current.web?'checked':''}><i></i></span>
-          </label>
-          <label class="sub-switch" style="padding:8px 0;">
-            <span>URL reader</span>
-            <span class="switch"><input type="checkbox" data-role="a-url" ${current.url?'checked':''}><i></i></span>
-          </label>
-          <label class="sub-switch" style="padding:8px 0;">
-            <span>Show plans</span>
-            <span class="switch"><input type="checkbox" data-role="a-plan" ${current.plan?'checked':''}><i></i></span>
-          </label>
-        `}
-      </div>
-      <div class="dialog-actions" style="margin-top:12px;">
-        <button class="dialog-btn" type="button" data-r="cancel">Cancel</button>
-        ${step > 1 ? `<button class="dialog-btn" type="button" data-r="back">Back</button>` : ''}
-        <button class="dialog-btn ok" type="button" data-r="next">${step === 3 ? 'Save' : 'Next'}</button>
-      </div>
-    </div>`;
-    
-    scrim.onclick = (e) => {
-      e.stopPropagation();
-      if (e.target === scrim || e.target.closest('[data-r="cancel"]')) return scrim.remove();
-      if (e.target.closest('[data-preset]')) {
-        const p = e.target.closest('[data-preset]').dataset.preset;
-        if (p === 'res') Object.assign(current, { name: 'Researcher', role: 'Finds and summarizes sources', instr: 'Always cite your sources and summarize clearly.', web: true, url: true, plan: false });
-        if (p === 'wri') Object.assign(current, { name: 'Writer', role: 'Drafts and edits text', instr: 'Write clearly, edit ruthlessly.', web: false, url: false, plan: false });
-        if (p === 'pla') Object.assign(current, { name: 'Planner', role: 'Breaks goals into steps', instr: 'Break complex goals into actionable steps.', web: false, url: false, plan: true });
-        if (p === 'bla') Object.assign(current, { name: '', role: '', instr: '', web: false, url: false, plan: false });
-        paint();
-        return;
-      }
-      if (e.target.closest('[data-r="next"]')) {
-        if (step === 1) {
-          current.name = scrim.querySelector('[data-role="a-name"]').value.trim();
-          current.role = scrim.querySelector('[data-role="a-role"]').value.trim();
-          current.color = scrim.querySelector('[data-role="a-color"]').value;
-          if (!current.name) return toast('Give your agent a name.');
-        } else if (step === 2) {
-          current.instr = scrim.querySelector('[data-role="a-instr"]').value.trim();
-          current.model = scrim.querySelector('[data-role="a-model"]').value;
-          current.effort = scrim.querySelector('[data-role="a-effort"]').value;
-        }
-        
-        if (step < 3) { step++; paint(); return; }
-        
-        current.web = scrim.querySelector('[data-role="a-web"]').checked;
-        current.url = scrim.querySelector('[data-role="a-url"]').checked;
-        current.plan = scrim.querySelector('[data-role="a-plan"]').checked;
-        
-        if (isEdit) Object.assign(a, current);
-        else agents.push({ id: uid(), ...current });
-        
-        saveAgents();
-        scrim.remove();
-        toast(isEdit ? 'Agent updated.' : 'Agent created.', 'success');
-        renderPageBody('agents');
-        return;
-      }
-      if (e.target.closest('[data-r="back"]')) {
-        if (step > 1) { step--; paint(); }
-      }
-    };
-  };
-  paint();
-  document.body.appendChild(scrim);
-}
-
-function openAgentDetail(id) {
-  const a = agents.find(x => x.id === id);
-  if (!a) return;
-  const c = WORLD_COLORS.find(x => x.id === a.color) || WORLD_COLORS[0];
-  const scrim = document.createElement('div');
-  scrim.className = 'dialog-scrim';
-  scrim.innerHTML = `<div class="dialog" role="dialog" aria-modal="true">
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
-      <div class="agent-avatar" style="background:${c.bg};color:${c.fg};width:56px;height:56px;">${ICONS.brain}</div>
-      <div>
-        <h3 class="dialog-title" style="margin:0;">${esc(a.name)}</h3>
-        <div style="font-size:calc(13px*var(--ts));color:var(--gray-mid);">${esc(a.role || 'No role')}</div>
-      </div>
-    </div>
-    <p style="font-size:calc(13px*var(--ts));color:var(--gray-light);margin:0 0 12px;line-height:1.5;">${esc(a.instr || 'No instructions set.')}</p>
-    <div class="dialog-actions">
-      <button class="dialog-btn" type="button" data-r="del" style="color:var(--bad);">Delete</button>
-      <button class="dialog-btn" type="button" data-r="edit">Edit</button>
-      <button class="dialog-btn ok" type="button" data-r="chat">Start chat</button>
-    </div>
-  </div>`;
-  document.body.appendChild(scrim);
-  scrim.onclick = (e) => {
-    e.stopPropagation();
-    if (e.target === scrim) return scrim.remove();
-    if (e.target.closest('[data-r="edit"]')) { scrim.remove(); openAgentWizard(id); }
-    if (e.target.closest('[data-r="chat"]')) {
-      scrim.remove();
-      closePage();
-      newSession(a);
-    }
-    if (e.target.closest('[data-r="del"]')) {
-      confirmDialog({ title: `Delete ${a.name}?`, message: 'The agent will be removed. Chats stay.', confirmLabel: 'Delete', danger: true }).then(yes => {
-        if (!yes) return;
-        agents = agents.filter(x => x.id !== id);
-        saveAgents();
-        scrim.remove();
-        renderPageBody('agents');
-        toast('Agent deleted.', 'success');
-      });
-    }
-  };
-}
-
-function openWorldForm(id = null) {
-  const w = id ? worlds.find(x => x.id === id) : null;
-  const isEdit = !!w;
-  const current = w || { name: '', desc: '', color: 'gray', iconIdx: 0 };
-  
-  const scrim = document.createElement('div');
-  scrim.className = 'dialog-scrim';
-  scrim.innerHTML = `<div class="dialog" role="dialog" aria-modal="true">
-    <h3 class="dialog-title">${isEdit ? 'Edit World' : 'New World'}</h3>
-    <label class="ab-field"><span>Name</span><input class="ab-input" data-role="w-name" maxlength="40" value="${esc(current.name)}" placeholder="e.g. Research"></label>
-    <label class="ab-field"><span>Description (optional)</span><input class="ab-input" data-role="w-desc" maxlength="160" value="${esc(current.desc)}" placeholder="What is this World for?"></label>
-    <div class="ab-field"><span>Icon & Color</span>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">
-        <select class="ab-input" data-role="w-icon" style="width:auto;flex:1;">
-          ${WORLD_ICONS.map((svg, i) => `<option value="${i}" ${i === current.iconIdx ? 'selected' : ''}>Icon ${i+1}</option>`).join('')}
-        </select>
-        <select class="ab-input" data-role="w-color" style="width:auto;flex:1;">
-          ${WORLD_COLORS.map(c => `<option value="${c.id}" ${c.id === current.color ? 'selected' : ''}>${c.id.toUpperCase()}</option>`).join('')}
-        </select>
-      </div>
-    </div>
-    <div class="dialog-actions" style="margin-top:12px;">
-      <button class="dialog-btn" type="button" data-r="0">Cancel</button>
-      <button class="dialog-btn ok" type="button" data-r="1">Save</button>
-    </div>
-  </div>`;
-  document.body.appendChild(scrim);
-  
-  scrim.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (e.target === scrim || e.target.closest('[data-r="0"]')) return scrim.remove();
-    if (e.target.closest('[data-r="1"]')) {
-      const name = scrim.querySelector('[data-role="w-name"]').value.trim();
-      if (!name) return toast('Give your World a name.');
-      const desc = scrim.querySelector('[data-role="w-desc"]').value.trim();
-      const iconIdx = parseInt(scrim.querySelector('[data-role="w-icon"]').value, 10);
-      const color = scrim.querySelector('[data-role="w-color"]').value;
-      
-      if (isEdit) {
-        Object.assign(w, { name, desc, iconIdx, color });
-      } else {
-        worlds.push({ id: uid(), name, desc, iconIdx, color });
-      }
-      saveWorlds();
-      scrim.remove();
-      toast(isEdit ? 'World updated.' : 'World created.', 'success');
-      renderPageBody('worlds');
-    }
-  });
-}
-
-function deleteWorld(id) {
-  const w = worlds.find(x => x.id === id);
-  if (!w) return;
-  confirmDialog({ title: `Delete ${w.name}?`, message: 'Chats in this World will move to Unassigned.', confirmLabel: 'Delete', danger: true }).then(yes => {
-    if (!yes) return;
-    worlds = worlds.filter(x => x.id !== id);
-    sessions.forEach(s => { if (s.worldId === id) s.worldId = null; });
-    saveWorlds();
-    persistSessions();
-    renderPageBody('worlds');
-    renderSessionList();
-    toast('World deleted.', 'success');
-  });
-}
-
-function renderBillingHub() {
-  const isPro = plan === 'Pro';
-  const planName = isPro ? 'Pro' : 'Free';
-  const planPrice = isPro ? '$12 / month' : '$0 / month';
-  
-  const wCount = worlds.length;
-  const aCount = agents.length;
-  const autoCount = automations.filter(a => a.status === 'Active').length;
-  const cCount = Object.keys(connData).filter(k => connData[k].status === 'ok' && !CONNECTORS.find(c => c.id === k)?.builtIn).length;
-
-  const usageHtml = `
-    <div class="bill-meter-row">
-      <div style="flex:1;">
-        <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>Worlds</span><span>${wCount} / ${isPro ? '∞' : '2'}</span></div>
-        <div class="bill-meter-bar"><i style="width:${isPro ? 0 : Math.min(100, (wCount/2)*100)}%"></i></div>
-      </div>
-    </div>
-    <div class="bill-meter-row">
-      <div style="flex:1;">
-        <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>Agents</span><span>${aCount} / ${isPro ? '50' : '3'}</span></div>
-        <div class="bill-meter-bar"><i style="width:${isPro ? Math.min(100,(aCount/50)*100) : Math.min(100, (aCount/3)*100)}%"></i></div>
-      </div>
-    </div>
-    <div class="bill-meter-row">
-      <div style="flex:1;">
-        <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>Active automations</span><span>${autoCount} / ${isPro ? '25' : '2'}</span></div>
-        <div class="bill-meter-bar"><i style="width:${isPro ? Math.min(100,(autoCount/25)*100) : Math.min(100, (autoCount/2)*100)}%"></i></div>
-      </div>
-    </div>
-    <div class="bill-meter-row" style="border-bottom:0;">
-      <div style="flex:1;">
-        <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>Connectors</span><span>${cCount} / ${isPro ? '∞' : '1'}</span></div>
-        <div class="bill-meter-bar"><i style="width:${isPro ? 0 : Math.min(100, (cCount/1)*100)}%"></i></div>
-      </div>
-    </div>
-  `;
-
-  const compareHtml = `
-    <div class="bill-compare">
-      <div class="bill-compare-col">
-        <div class="bill-compare-head">Feature</div>
-        <div class="bill-compare-cell">Worlds</div>
-        <div class="bill-compare-cell">Agents</div>
-        <div class="bill-compare-cell">Automations</div>
-        <div class="bill-compare-cell">History</div>
-      </div>
-      <div class="bill-compare-col">
-        <div class="bill-compare-head">Free</div>
-        <div class="bill-compare-cell">2</div>
-        <div class="bill-compare-cell">3</div>
-        <div class="bill-compare-cell">2</div>
-        <div class="bill-compare-cell">7 days</div>
-      </div>
-      <div class="bill-compare-col">
-        <div class="bill-compare-head" style="color:var(--accent);">Pro</div>
-        <div class="bill-compare-cell highlight">Unlimited</div>
-        <div class="bill-compare-cell highlight">50</div>
-        <div class="bill-compare-cell highlight">25</div>
-        <div class="bill-compare-cell highlight">90 days</div>
-      </div>
-    </div>
-  `;
-
-  return `
-    <div class="bill-plan-card">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-        <div>
-          <div class="bill-plan-name">${planName}</div>
-          <div class="bill-plan-price">${planPrice}</div>
-        </div>
-        <div class="bill-plan-status active">Active</div>
-      </div>
-      <div class="bill-plan-actions">
-        ${isPro ? 
-          `<button class="ab-btn" style="background:var(--glass-bg);color:var(--fg);border:1px solid var(--glass-border);" data-act="bill-manage">Manage</button>
-           <button class="ab-btn" style="color:var(--bad);background:transparent;border:1px solid transparent;" data-act="bill-cancel">Cancel</button>` : 
-          '<button class="ab-btn" data-act="bill-upgrade">Upgrade to Pro</button>'}
-      </div>
-    </div>
-
-    <section class="ab-card open static">
-      <div class="ab-card-body"><div class="ab-card-inner"><div class="ab-card-content" style="gap:0;">
-        <h4>Usage</h4>
-        ${usageHtml}
-        <div style="margin-top:8px;font-size:calc(12px*var(--ts));color:var(--gray-mid);">Today: ${fmtTokens(LimitWindow.used())} tokens</div>
-      </div></div></div>
-    </section>
-
-    <section class="ab-card open static">
-      <div class="ab-card-body"><div class="ab-card-inner"><div class="ab-card-content">
-        <h4>Compare plans</h4>
-        ${compareHtml}
-      </div></div></div>
-    </section>
-
-    <section class="ab-card open static">
-      <div class="ab-card-body"><div class="ab-card-inner"><div class="ab-card-content">
-        <h4>Payment method</h4>
-        <p class="ab-muted" style="margin-bottom:12px;">Card details are handled securely. Aphrosta never sees them.</p>
-        <button class="btn-line">${isPro ? 'Visa ending 4242' : 'Add payment method'}</button>
-      </div></div></div>
-    </section>
-
-    <section class="ab-card open static">
-      <div class="ab-card-body"><div class="ab-card-inner"><div class="ab-card-content">
-        <h4>Invoices</h4>
-        ${isPro ? `<div class="bill-invoice-row"><span class="bill-invoice-date">${new Date().toLocaleDateString()}</span><span class="bill-invoice-amt">$12.00</span></div>` : '<p class="ab-muted">No invoices yet.</p>'}
-      </div></div></div>
-    </section>
-
-    <section class="ab-card open static">
-      <div class="ab-card-body"><div class="ab-card-inner"><div class="ab-card-content">
-        <h4>Billing details</h4>
-        <div class="ab-form">
-          <label class="ab-field"><span>Name</span><input class="ab-input" placeholder="Full name"></label>
-          <label class="ab-field"><span>Country</span><input class="ab-input" placeholder="Country"></label>
-          <button class="ab-btn" style="margin-top:4px;">Save details</button>
-        </div>
-      </div></div></div>
-    </section>
-  `;
-}
-
-function checkPlanLimits(action, max) {
-  if (plan === 'Pro') return true;
-  if (action === 'worlds' && worlds.length >= max) { toast(`Free plan allows ${max} Worlds. Upgrade to Pro.`, 'info', 3000); openPage('billing'); return false; }
-  if (action === 'agents' && agents.length >= max) { toast(`Free plan allows ${max} Agents. Upgrade to Pro.`, 'info', 3000); openPage('billing'); return false; }
-  if (action === 'automations' && automations.filter(a => a.status === 'Active').length >= max) { toast(`Free plan allows ${max} Active Automations. Upgrade to Pro.`, 'info', 3000); openPage('billing'); return false; }
-  return true;
-}
-
-function openCheckout() {
-  const scrim = document.createElement('div');
-  scrim.className = 'pay-sheet';
-  scrim.innerHTML = `<div class="pay-card" role="dialog" aria-modal="true">
-    <h3 style="font-size:24px;font-weight:700;margin:0;">Upgrade to Pro</h3>
-    <p style="font-size:14px;color:var(--gray-mid);margin:0;">$12 / month. Cancel anytime.</p>
-    
-    <div class="pay-row">
-      <input type="text" placeholder="Card number (e.g. 4242 4242 4242 4242)" id="pay-num">
-    </div>
-    <div class="pay-row">
-      <input type="text" placeholder="MM / YY" id="pay-exp">
-      <input type="text" placeholder="CVC" id="pay-cvc">
-    </div>
-    <div class="pay-row">
-      <input type="text" placeholder="Name on card" id="pay-name">
-    </div>
-    
-    <button class="pay-btn" id="pay-submit">Pay $12.00</button>
-    <button class="btn-line" id="pay-cancel" style="border:none;background:transparent;">Cancel</button>
-    
-    <p style="font-size:10px;color:var(--gray-mid);text-align:center;margin-top:-8px;">This is a secure sandbox payment. No real money will be charged.</p>
-  </div>`;
-  
-  document.body.appendChild(scrim);
-
-  scrim.querySelector('#pay-cancel').onclick = () => scrim.remove();
-  
-  const submitBtn = scrim.querySelector('#pay-submit');
-  submitBtn.onclick = () => {
-    const num = scrim.querySelector('#pay-num').value.replace(/\s/g, '');
-    if (num.length < 15) return toast('Enter a valid test card number.');
-    
-    submitBtn.textContent = 'Processing...';
-    submitBtn.disabled = true;
-    
-    setTimeout(() => {
-      savePlan('Pro');
-      scrim.remove();
-      sfx('done'); haptic(20);
-      toast('Upgraded to Pro! Enjoy your new limits.', 'success', 4000);
-    }, 1500);
-  };
-}
-
 function onSettingsClick(e) {
   const t = e.target;
-
-  const aCard = t.closest('.agent-card');
-  if (aCard) return openAgentDetail(aCard.dataset.id);
-
-  const aAct = t.closest('[data-act^="a-"]');
-  if (aAct) {
-    e.stopPropagation();
-    if (aAct.dataset.act === 'a-new') {
-      if (checkPlanLimits('agents', 3)) openAgentWizard();
-    }
-    return;
-  }
-
-  const oAct = t.closest('[data-act^="ops-"]');
-  if (oAct) {
-    e.stopPropagation();
-    if (oAct.dataset.act === 'ops-open') openRunDetail(oAct.dataset.id);
-    return;
-  }
-
-  const connAct = t.closest('[data-act^="conn-"]');
-  if (connAct) {
-    e.stopPropagation();
-    if (connAct.dataset.act === 'conn-open') openConnectorDetail(connAct.dataset.id);
-    if (connAct.dataset.act === 'conn-soon') toast('This connector is coming in v1.1.', 'info');
-    return;
-  }
-
-  const autoAct = t.closest('[data-act^="auto-"]');
-  if (autoAct) {
-    e.stopPropagation();
-    if (autoAct.dataset.act === 'auto-new') {
-      if (checkPlanLimits('automations', 2)) openAutomationBuilder();
-    }
-    if (autoAct.dataset.act === 'bill-upgrade') {
-      openCheckout();
-    }
-    if (autoAct.dataset.act === 'bill-cancel') {
-      confirmDialog({ title: 'Cancel Pro?', message: 'You will lose access to unlimited Worlds and Agents.', confirmLabel: 'Cancel Pro', danger: true }).then(yes => {
-        if (yes) { savePlan('Free'); toast('Downgraded to Free.', 'info'); }
-      });
-    }
-    if (autoAct.dataset.act === 'bill-manage') {
-      toast('Customer portal coming in v1.1', 'info');
-    }
-    if (autoAct.dataset.act === 'auto-edit') {
-      const isRun = confirm('Run this automation now? Cancel to edit.');
-      if (isRun) runAutomation(autoAct.dataset.id);
-      else openAutomationBuilder(autoAct.dataset.id);
-    }
-    return;
-  }
-
-  const sysAct = t.closest('[data-act^="sys-"]');
-  if (sysAct) {
-    e.stopPropagation();
-    if (sysAct.dataset.act === 'sys-perm') {
-      openSettings();
-      setTimeout(() => {
-        const el = document.querySelector('[data-item="permissions"]');
-        if (el) { el.classList.add('open'); el.scrollIntoView({ behavior: 'smooth' }); }
-      }, 400);
-    }
-    if (sysAct.dataset.act === 'sys-storage') {
-      openSettings();
-      setTimeout(() => {
-        const el = document.querySelector('[data-item="storage"]');
-        if (el) { el.classList.add('open'); el.scrollIntoView({ behavior: 'smooth' }); refreshStorage(); }
-      }, 400);
-    }
-    return;
-  }
-
-  const wAct = t.closest('[data-act^="w-"]');
-  if (wAct) {
-    e.stopPropagation();
-    const id = wAct.dataset.id;
-    if (wAct.dataset.act === 'w-new') {
-        if (checkPlanLimits('worlds', 2)) openWorldForm();
-      }
-    else if (wAct.dataset.act === 'w-menu') {
-      const isEdit = confirm('Edit this World? Cancel to delete.');
-      if (isEdit) openWorldForm(id);
-      else deleteWorld(id);
-    }
-    return;
-  }
 
   const head = t.closest('[data-toggle-item]');
   if (head) {
@@ -6474,20 +5206,6 @@ function renderMessages() {
   const n = currentSession.messages.length;
   buildStepCards(currentSession.messages);
   box.replaceChildren(...currentSession.messages.map((m, i) => (m.hidden || stepMsgs.has(m) ? null : msgEl(m, i))).filter(Boolean));
-  
-  let headerHtml = '';
-  if (currentSession.agentId) {
-    const a = agents.find(x => x.id === currentSession.agentId);
-    if (a) headerHtml += `<div class="chat-header-chip">${ICONS.brain} ${esc(a.name)}</div>`;
-  }
-  if (currentSession.worldId) {
-    const w = worlds.find(x => x.id === currentSession.worldId);
-    if (w) headerHtml += `<div class="chat-header-chip">${ICONS.navWorlds} ${esc(w.name)}</div>`;
-  }
-  if (headerHtml && n > 0) {
-    box.insertAdjacentHTML('afterbegin', `<div class="chat-header">${headerHtml}</div>`);
-  }
-
   box.classList.toggle('hidden', n === 0);
   welcome?.classList.toggle('hidden', n > 0);
 }
@@ -6549,7 +5267,7 @@ const nearBottom = () => { const s = stageEl(); return !s || s.scrollHeight - s.
 let scrollDown = (force) => { const s = stageEl(); if (s && (force || (chatStick && settings.autoScroll))) s.scrollTop = s.scrollHeight; };
 const closeSidebarMobile = () => document.getElementById('sidebar')?.classList.remove('open');
 
-function newSession(agentObj = null) {
+function newSession() {
   if (chatBusy) { toast('Stop the response before switching sessions.', 'info'); return; }
   if (currentSession.draft && currentSession.messages.length === 0) {
     toast('You\u2019re already in a new session.', 'info', 1800);
@@ -6558,10 +5276,6 @@ function newSession(agentObj = null) {
     return;
   }
   currentSession = newDraft();
-  if (agentObj) {
-    currentSession.agentId = agentObj.id;
-    currentSession.agentName = agentObj.name;
-  }
   chatStick = true;
   clearDraft();
   renderSessionUi();
@@ -7070,8 +5784,6 @@ const AGENT_TOOLS = {
     if (!settings.skillWeb) return 'Error: web search is turned off in settings.';
     const q = String(query || '').trim().slice(0, 200);
     if (!q) return 'Error: empty query.';
-    Ops.update(currentOpsId, { title: `Searched for ${q}` });
-    Ops.step(currentOpsId, `Web Search: ${q}`, 'Succeeded', 0, 'Searching...');
     const ctl = new AbortController();
     const timer = setTimeout(() => ctl.abort(), 25000);
     try {
@@ -7112,14 +5824,9 @@ const AGENT_TOOLS = {
     const ctl = new AbortController();
     const timer = setTimeout(() => ctl.abort(), 25000);
     try {
-      const res = await readerFetch(u, ctl.signal);
-      Ops.update(currentOpsId, { title: `Read ${u}` });
-      Ops.step(currentOpsId, `Fetched URL: ${u}`, 'Succeeded', 0, res.slice(0, 200));
-      return res.slice(0, 1500);
+      return (await readerFetch(u, ctl.signal)).slice(0, 1500);
     } catch (e) {
-      const err = 'Error: fetch failed (' + (e.name === 'AbortError' ? 'timed out' : (e.message || 'network error')) + ').';
-      Ops.step(currentOpsId, `Fetch URL: ${u}`, 'Failed', 0, err);
-      return err;
+      return 'Error: fetch failed (' + (e.name === 'AbortError' ? 'timed out' : (e.message || 'network error')) + ').';
     } finally { clearTimeout(timer); }
   },
 
@@ -7214,15 +5921,12 @@ async function autoResearch(text) {
   } catch (_) { return ''; }
 }
 
-let currentOpsId = null;
-
 async function agentAfterReply(ai, session) {
   if (!settings.agentTools || session !== currentSession || chatBusy) return;
   const calls = parseToolCalls(ai.content).slice(0, 1);
   console.log('[agent]', { agentTools: settings.agentTools, skillWeb: settings.skillWeb, calls, tail: ai.content.slice(-160) });
   if (!calls.length) return;
   MessageRecorder.log({ type: 'tool', sessionId: session.id, name: calls[0].name });
-  currentOpsId = Ops.start('Agent', `Action: ${calls[0].name}`, { agent: ai.agentId, world: currentSession.worldId });
   const mm = /\[\[\s*tool\s*:\s*\w+\s*(\{[\s\S]*?\})?\s*\]\]/.exec(ai.content);
   if (mm) ai.content = ai.content.slice(0, mm.index + mm[0].length);
   if (agentDepthOf(session) >= AGENT_MAX_STEPS) { toast('Agent step limit reached.', 'info', 2000); return; }
@@ -7232,11 +5936,6 @@ async function agentAfterReply(ai, session) {
     let r;
     try { r = fn ? await fn(c.args) : `Error: unknown or disabled tool "${c.name}".`; }
     catch (e) { r = 'Error: ' + (e.message || 'tool failed'); }
-    if (String(r).startsWith('Error:')) {
-      Ops.fail(currentOpsId, String(r));
-    } else {
-      Ops.update(currentOpsId, { status: 'Succeeded' });
-    }
     results.push(`[tool_result ${c.name}]\n${String(r).slice(0, 1500)}\n[/tool_result]`);
   }
   if (session !== currentSession || chatBusy) return;
@@ -7442,11 +6141,6 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
       const completion = usage?.completion_tokens ?? estTokens(ai.content);
       TokenRecorder.add({ sessionId: session.id, provider: pid, model: variant.id, prompt, completion, estimated: !usage, aborted });
       MessageRecorder.log({ type: 'assistant', sessionId: session.id, chars: ai.content.length, tokens: completion, aborted });
-      if (!currentOpsId) {
-        currentOpsId = Ops.start('Chat', `Replied in ${variant.name}`, { agent: currentSession.agentId });
-      }
-      Ops.update(currentOpsId, { status: 'Succeeded', tokens: completion });
-      currentOpsId = null;
     }
 
     if (error && !aborted) {
@@ -7925,10 +6619,6 @@ function toggleModelMenu() {
 }
 
 function openSettings() {
-  /* Force-remove any open sub-page so the two right-side panels never stack */
-  const pagePanel = document.getElementById('page-panel');
-  if (pagePanel) pagePanel.remove();
-  currentPage = null;
   closeModelMenu();
   closeEffortMenu();
   document.getElementById('settings-panel')?.classList.add('open');
@@ -7984,15 +6674,8 @@ function initShell() {
     else if (action === 'new-chat') newSession();
     else if (action === 'attach') openAttach();
     else if (action === 'replay-tour') { closeSettings(); setTimeout(() => startOnboarding(true), 350); }
-    else if (action === 'upgrade') openPage('billing');
-    else if (action === 'open-billing') openPage('billing');
-    else if (action === 'page-close') closePage();
-    else if (action === 'nav-worlds') openPage('worlds');
-    else if (action === 'nav-agent') openPage('agents');
-    else if (action === 'nav-data') openPage('system');
-    else if (action === 'nav-automation') openPage('automations');
-    else if (action === 'nav-connectors') openPage('connectors');
-    else if (action === 'nav-operations') openPage('operations');
+    else if (action === 'upgrade') toast('Paid plans are coming soon.', 'info', 1800);
+    else if (action === 'nav-worlds' || action === 'nav-agent' || action === 'nav-data' || action === 'nav-automation' || action === 'nav-connectors' || action === 'nav-operations') toast('Coming soon.', 'info', 1800);
   });
 
   appEl.addEventListener('click', (e) => {
@@ -8133,7 +6816,6 @@ function initShell() {
       closeModelMenu();
       closeEffortMenu();
       closeSettings();
-      closePage();
       document.getElementById('sidebar')?.classList.remove('open');
       if (window.speechSynthesis?.speaking || !elAudio.paused) stopSpeaking();
     }
@@ -8155,12 +6837,8 @@ const TOUR_STEPS = [
   { sel: '[data-action="model-select"]', title: 'Pick a model', text: 'Once a key is saved, switch providers and models from here any time.' },
   { sel: '[data-action="effort-select"]', title: 'Set the effort', text: 'Minima is fastest. Maxima thinks longest and uses more tokens. Medium suits most chats.' },
   { sel: '.composer', title: 'Ask anything', text: 'Type, speak, or attach files. Ask for a deck, a document or a spreadsheet and it arrives as a file card.' },
-    { sel: '.pill-btn', title: 'Upgrade to Pro', text: 'Tap here to see your plan limits and upgrade to unlock unlimited Worlds and Agents.' },
   { sel: '.agent-btn', title: 'Watch it think', text: 'Tap to follow the reasoning and the agent’s steps as they stream in.' },
   { sel: '[data-action="menu"]', title: 'Your sessions', text: 'Chats, agents and tools live in the sidebar.', sidebar: true },
-    { sel: '[data-action="nav-worlds"]', title: 'Worlds', text: 'Keep projects separate with their own rules and chats.', sidebar: true },
-    { sel: '[data-action="nav-agent"]', title: 'Agents', text: 'Save specialists with their own instructions, model, and tools.', sidebar: true },
-    { sel: '[data-action="nav-automation"]', title: 'Automations', text: 'Build flows and routines that run on a schedule.', sidebar: true },
   { sel: '[data-action="settings"]', title: 'Make it yours', text: 'Themes, fonts, rich-text options and Tailorship.', sidebar: true }
 ];
 
@@ -8278,7 +6956,6 @@ function startOnboarding(force = false) {
 
 function renderHome(user) {
   currentUser = user;
-  document.querySelectorAll('.profile-plan').forEach(el => el.textContent = plan === 'Pro' ? 'Pro Plan' : 'Free plan');
   stopSpeaking();
   LIVE_VOICES.forEach((stop) => { try { stop(); } catch (_) {} });
   LIVE_VOICES.clear();
@@ -8549,15 +7226,7 @@ const AB_PAGES = {
     { t: 'Third-Party AI Providers', st: 1, kw: 'ai keys api provider terms',
       b: `<p>Aphrosta talks to AI providers such as Groq, Google, DeepSeek, xAI, Anthropic, OpenAI, Moonshot and Perplexity using API keys that you add yourself. Those providers have their own terms, prices and privacy policies.</p>
       <h4>Your responsibility</h4><p>Using a provider through Aphrosta means you agree to that provider's terms. Any spending on your own API keys is your responsibility.</p>
-      <h4>Data Sharing</h4><p>When you send a message, it goes directly from your device to the provider you selected. Aphrosta does not intercept or store your prompts on our servers.</p>` },
-    { t: 'Indemnification', st: 1, kw: 'indemnify defend hold harmless',
-      b: `<p>You agree to defend, indemnify, and hold harmless Aphrosta and its developers from any claims, damages, obligations, losses, liabilities, costs, or debt, and expenses (including but not limited to attorney's fees) arising from your use of the app.</p>
-      <h4>Scope of Indemnity</h4><p>This includes any claim that your content or your use of the app violates these Terms, any law, or the rights of a third party, such as copyright or privacy rights.</p>
-      <h4>Cooperation</h4><p>We will provide reasonable cooperation in the defense of any such claim, at your expense, and you agree to keep us informed of any such claims.</p>` },
-    { t: 'Governing Law', st: 1, kw: 'jurisdiction legal dispute court',
-      b: `<p>These Terms and Conditions are governed by and construed in accordance with the laws of your local jurisdiction, without regard to its conflict of law principles.</p>
-      <h4>Dispute Resolution</h4><p>Any dispute arising from these Terms shall be resolved exclusively by the competent courts in your jurisdiction, unless applicable mandatory local law provides otherwise.</p>
-      <h4>Exceptions</h4><p>Nothing in this section shall prevent either party from seeking injunctive or other equitable relief in any court of competent jurisdiction.</p>` }
+      <h4>Data Sharing</h4><p>When you send a message, it goes directly from your device to the provider you selected. Aphrosta does not intercept or store your prompts on our servers.</p>` }
   ] },
   rules: { title: 'Rules & Policies', icon: () => ICONS.stRules, cards: [
     { t: 'Acceptable Use Policy', st: 1, kw: 'abuse spam bad behavior',
@@ -8583,15 +7252,7 @@ const AB_PAGES = {
     { t: 'Changes and Reporting', st: 1, kw: 'report update rules',
       b: `<p>We may update these rules as the app changes. The current version always lives in the app, so check here if you are unsure. Continuing to use Aphrosta after a change means you accept it.</p>
       <h4>Reporting</h4><p>If you see content or behaviour that breaks these rules, send feedback from Settings → Feedback. Reports are reviewed and, where warranted, access is removed.</p>
-      <h4>False Reports</h4><p>Abusing the reporting system to harass others or spam our inbox is a violation of the acceptable use policy.</p>` },
-    { t: 'Prohibited Activities', st: 1, kw: 'hacking reverse engineer attacks',
-      b: `<p>You may not attempt to reverse engineer, decompile, or disassemble any part of the Aphrosta app that is not open source. You may not use automated systems or bots to access the service in a manner that sends more request messages than a human can reasonably produce.</p>
-      <h4>Network Abuse</h4><p>Taking any action that imposes, or may impose, an unreasonable or disproportionately large load on our infrastructure is strictly prohibited.</p>
-      <h4>Security Probes</h4><p>Scanning or testing the vulnerability of our systems, or breaching any authentication or security measures without proper authorization, is prohibited.</p>` },
-    { t: 'Copyright & DMCA', st: 1, kw: 'copyright takedown dmca fair use',
-      b: `<p>We respect the intellectual property rights of others and expect you to do the same. If you believe that your work has been copied in a way that constitutes copyright infringement, please provide us with the relevant details via feedback.</p>
-      <h4>Fair Use</h4><p>Your use of AI-generated content may be subject to the copyright laws of your jurisdiction. Aphrosta does not claim ownership over the outputs generated by third-party models.</p>
-      <h4>Takedown Response</h4><p>We will respond expeditiously to claims of copyright infringement committed using the app by removing or disabling access to the material in question.</p>` }
+      <h4>False Reports</h4><p>Abusing the reporting system to harass others or spam our inbox is a violation of the acceptable use policy.</p>` }
   ] },
   licenses: { title: 'About & Licenses', icon: () => ICONS.stLicense, cards: [
     abTextCard("About Aphrosta", "Who we are and what we make", "Aphrosta is a mobile web app built to make everyday tools and AI assistance feel simple, fast, and easy to use. It runs entirely in your browser, talks to model providers you choose, and keeps your work yours.", "Design goals", "Every screen is designed for one hand on a phone first. Big targets, readable type, safe motion, and fast transitions. Thank you for using Aphrosta. We work to keep the experience clear, reliable, and comfortable on every screen size."),
@@ -8609,11 +7270,7 @@ const AB_PAGES = {
       ${abLic('thinking panel', 'MIT', 'The collapsible thought panel that streams reasoning, plans and task lists while a reply is being written.')}
       ${abLic('onboarding tour', 'MIT', 'The step-by-step spotlight tour with keyboard support and reduced-motion handling.')}
       ${abLic('accessibility tree', 'MIT', 'The ARIA labels, focus traps, keyboard navigation, and screen-reader announcements built into every component.')}
-      ${abLic('motion engine', 'MIT', 'The spring animations, staggered reveals, and the reduced-motion fallbacks driven by CSS variables and data attributes.')}
-      ${abLic('theme variables', 'MIT', 'The CSS custom properties that drive light/dark mode, font sizes, accent colors, and spacing scales.')}
-      ${abLic('responsive grid', 'MIT', 'The media queries and layout shifts that make the app usable on phones, tablets, and desktops.')}
-      ${abLic('modal system', 'MIT', 'The backdrop, focus trap, and animation logic for dialogs, popups, and the model picker.')}
-      ${abLic('toast notifications', 'MIT', 'The queued notification host that displays success, error, and info messages without interrupting the user.')}` },
+      ${abLic('motion engine', 'MIT', 'The spring animations, staggered reveals, and the reduced-motion fallbacks driven by CSS variables and data attributes.')}` },
 
     { t: 'Settings, Profile and Account', st: 1, kw: 'settings account profile privacy license MIT',
       b: `${abLic('settings panel', 'MIT', 'Every settings row, the usage card, the reset controls, and the expandable item pattern used across the panel.')}
@@ -8621,10 +7278,7 @@ const AB_PAGES = {
       ${abLic('billing and payment screens', 'MIT', 'The billing date, saved cards, billing details and history screens. Card data stays on this device and is never sent to the cloud.')}
       ${abLic('permissions manager', 'MIT', 'The UI for requesting and tracking microphone, camera, location, and notification permissions.')}
       ${abLic('device registry', 'MIT', 'The local and cloud list of devices connected to your account, including remove-device logic.')}
-      ${abLic('data export/import', 'MIT', 'The JSON serialization, validation, and merging logic that lets you back up and restore your settings and sessions.')}
-      ${abLic('font selector', 'MIT', 'The visual preview grid that lets you apply custom font stacks to the entire app interface.')}
-      ${abLic('accent picker', 'MIT', 'The color swatch grid that dynamically updates CSS variables for highlights, buttons, and focus rings.')}
-      ${abLic('storage meter', 'MIT', 'The usage bar that estimates local and cloud data sizes and triggers cache clearing.')}` },
+      ${abLic('data export/import', 'MIT', 'The JSON serialization, validation, and merging logic that lets you back up and restore your settings and sessions.')}` },
 
     { t: 'Chat Engine and Sessions', st: 1, kw: 'chat engine sessions firebase provider license MIT',
       b: `${abLic('chat engine', 'MIT', 'The send, stream, regenerate, edit and retry flow, including the per-provider adapters, the retry-on-400 fallback and the friendly error messages.')}
@@ -8632,18 +7286,14 @@ const AB_PAGES = {
       ${abLic('token recorder', 'MIT', 'The per-provider token counter, the rolling limit window and the pause logic when a limit is reached.')}
       ${abLic('provider adapters', 'MIT', 'The specific formatting logic for OpenAI, Anthropic, Google Gemini, and other API shapes so they all speak the same internal language.')}
       ${abLic('prompt builder', 'MIT', 'The logic that assembles system prompts from your settings, effort level, memories, and enabled skills.')}
-      ${abLic('stream parser', 'MIT', 'The chunked reader that processes server-sent events (SSE) and updates the UI as text arrives.')}
-      ${abLic('message actions', 'MIT', 'The buttons for copying, regenerating, rating, and editing messages, including the inline edit flow.')}
-      ${abLic('auto-scroll logic', 'MIT', 'The smart scrolling that keeps the chat pinned to the bottom unless the user scrolls up to read.')}` },
+      ${abLic('stream parser', 'MIT', 'The chunked reader that processes server-sent events (SSE) and updates the UI as text arrives.')}` },
 
     { t: 'Memory and Agent', st: 1, kw: 'memory agent tools license MIT',
       b: `${abLic('memory systems', 'MIT', 'The fact store, the scoped database and the compact state log, including their cloud sync, retention rules and clearing actions.')}
       ${abLic('agent and tools', 'MIT', 'The tool-call protocol, the web search, page reader, calculator and clock tools, and the auto-research step that runs before a reply is written.')}
       ${abLic('skills library', 'MIT', 'The Presentations, Documents, Spreadsheets and Web search skill prompts that teach the assistant to build decks, docs, sheets and researched answers.')}
       ${abLic('file blocks', 'MIT', 'The parser that detects fenced code blocks with filenames and turns them into the downloadable/previewable file cards.')}
-      ${abLic('web reader', 'MIT', 'The proxy-based HTML-to-text extractor used by the fetch_url tool to read web pages without CORS issues.')}
-      ${abLic('auto-research engine', 'MIT', 'The pre-flight logic that detects when a user prompt needs fresh web data and runs a search before the model replies.')}
-      ${abLic('synonym matcher', 'MIT', 'The lightweight keyword extraction used to find related memories and past context without semantic search.')}` },
+      ${abLic('web reader', 'MIT', 'The proxy-based HTML-to-text extractor used by the fetch_url tool to read web pages without CORS issues.')}` },
 
     { t: 'Auth, Voice and Extras', st: 1, kw: 'auth firebase elevenlabs voice fonts apache',
       b: `${abLic('authentication', 'MIT', 'Firebase sign-in, persistence, the locked-account check and the switch-account flow.')}
@@ -8685,20 +7335,7 @@ const AB_PAGES = {
     { t: 'Contact and Feedback', st: 1, kw: 'contact feedback bug',
       b: `<p>If something is not working as expected, send us feedback from the app so our team can look into it. Feedback is limited to once per hour to keep the inbox tidy.</p>
       <h4>What to include</h4><p>Include a short description of what you were doing and what happened. Leave device info on so we can match your report to the browser and screen size.</p>
-      <h4>Error Codes</h4><p>If you see an error message with a code, include it in your feedback. It helps us find the exact issue faster.</p>` },
-    { t: 'Keyboard Shortcuts', st: 1, kw: 'keyboard shortcuts hotkeys',
-      b: `<p>Aphrosta is designed for touch, but it works great with a physical keyboard on a tablet or desktop.</p>
-      <h4>Global</h4><p><b>Esc</b> closes menus, dialogs, and stops voice playback. <b>Enter</b> sends a message, <b>Shift + Enter</b> adds a new line.</p>
-      <h4>Navigation</h4><p>Use <b>Tab</b> to move through the sidebar and settings. You can fully control the app without a mouse.</p>` },
-    { t: 'Troubleshooting', st: 1, kw: 'fix errors broken not working',
-      b: `<p>If the app feels stuck or shows an error, try these steps before sending feedback.</p>
-      <h4>1. Refresh</h4><p>Close the tab and open the app again. This clears temporary memory and reloads the script.</p>
-      <h4>2. Check your key</h4><p>Go to Settings → Models and make sure your API key is still there and hasn't expired.</p>
-      <h4>3. Clear cache</h4><p>Settings → Assistance → Storage → Clear Cache removes broken downloads without deleting your chats.</p>` },
-    { t: 'Using Agent Mode', st: 1, kw: 'agent tools search browse',
-      b: `<p>Agent mode lets the assistant use tools to answer questions. Tap the robot icon in the composer to toggle it on.</p>
-      <h4>How it works</h4><p>When the model needs fresh information, it will search the web or read a page. You will see the steps as they happen.</p>
-      <h4>Skills</h4><p>You can turn specific skills on or off in Settings → Tailorship. If you turn off Web Search, the model won't be able to browse.</p>` }
+      <h4>Error Codes</h4><p>If you see an error message with a code, include it in your feedback. It helps us find the exact issue faster.</p>` }
   ] }
 };
 
