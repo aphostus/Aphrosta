@@ -1545,6 +1545,12 @@ function rebuildAccountPage() {
 let currentPage = null;
 
 let worlds = lsGet('aphrosta.worlds', []);
+let agents = lsGet('aphrosta.agents', []);
+
+function saveAgents() {
+  lsSet('aphrosta.agents', agents);
+  Cloud.queueSettings();
+}
 
 const WORLD_COLORS = [
   { id: 'gray',   bg: 'rgba(255,255,255,.1)',  fg: 'var(--fg)' },
@@ -1569,7 +1575,7 @@ const PAGES = {
   },
   agents: {
     title: 'Agents', icon: () => ICONS.navAgents, search: 'Search Agents',
-    empty: { title: 'No agents yet', text: 'Agents are saved helpers with their own instructions, model, and tools.', cta: 'Create agent' }
+    empty: null
   },
   system: {
     title: 'System', icon: () => ICONS.navSystem, search: null,
@@ -1646,6 +1652,7 @@ function renderPageBody(key) {
   if (!body) return;
   if (key === 'billing') { body.innerHTML = renderBillingHub(); return; }
   if (key === 'worlds') { body.innerHTML = renderWorldsGrid(); return; }
+  if (key === 'agents') { body.innerHTML = renderAgentsList(); return; }
   const page = PAGES[key];
   if (!page || !page.empty) { body.innerHTML = ''; return; }
   const e = page.empty;
@@ -1677,6 +1684,190 @@ function renderWorldsGrid() {
     </div>
     ${cards}
   </div>`;
+}
+
+function renderAgentsList() {
+  const cards = agents.map(a => {
+    const c = WORLD_COLORS.find(x => x.id === a.color) || WORLD_COLORS[0];
+    const tools = [];
+    if (a.web) tools.push(ICONS.navWorlds);
+    if (a.url) tools.push(ICONS.link);
+    const toolHtml = tools.length ? `<div class="agent-tools">${tools.join('')}</div>` : '';
+    
+    return `<div class="agent-card" data-id="${esc(a.id)}">
+      <div class="agent-avatar" style="background:${c.bg};color:${c.fg}">${ICONS.brain}</div>
+      <div class="agent-info">
+        <div class="agent-name">${esc(a.name)}</div>
+        <div class="agent-role">${esc(a.role || 'No role')}</div>
+        ${toolHtml}
+      </div>
+    </div>`;
+  }).join('');
+  return `<div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
+    <button class="ab-btn" data-act="a-new" style="width:auto;padding:6px 14px;font-size:calc(12px*var(--ts));">New agent</button>
+  </div>
+  <div class="agents-list">${cards}</div>`;
+}
+
+function openAgentWizard(id = null) {
+  const a = id ? agents.find(x => x.id === id) : null;
+  const isEdit = !!a;
+  const current = a || { name: '', role: '', instr: '', model: 'inherit', effort: 'inherit', web: true, url: true, plan: false, color: 'blue' };
+  
+  let step = 1;
+  const scrim = document.createElement('div');
+  scrim.className = 'dialog-scrim';
+  
+  const paint = () => {
+    scrim.innerHTML = `<div class="dialog" role="dialog" aria-modal="true">
+      <h3 class="dialog-title">${isEdit ? 'Edit Agent' : 'New Agent'}</h3>
+      <div class="wizard-steps">
+        <div class="wizard-step ${step===1?'on':''}">Identity</div>
+        <div class="wizard-step ${step===2?'on':''}">Behaviour</div>
+        <div class="wizard-step ${step===3?'on':''}">Tools</div>
+      </div>
+      <div class="wizard-body" style="display:flex;flex-direction:column;gap:10px;">
+        ${step===1 ? `
+          ${!isEdit ? `<div class="wizard-presets">
+            <button class="wizard-preset" data-preset="res"><b>Researcher</b>Finds and summarizes sources</button>
+            <button class="wizard-preset" data-preset="wri"><b>Writer</b>Drafts and edits text</button>
+            <button class="wizard-preset" data-preset="pla"><b>Planner</b>Breaks goals into steps</button>
+            <button class="wizard-preset" data-preset="bla"><b>Blank</b>Start from scratch</button>
+          </div>` : ''}
+          <label class="ab-field"><span>Name</span><input class="ab-input" data-role="a-name" maxlength="40" value="${esc(current.name)}" placeholder="e.g. Researcher"></label>
+          <label class="ab-field"><span>Role (optional)</span><input class="ab-input" data-role="a-role" maxlength="80" value="${esc(current.role)}" placeholder="e.g. Market research assistant"></label>
+          <label class="ab-field"><span>Color</span>
+            <select class="ab-input" data-role="a-color">
+              ${WORLD_COLORS.map(c => `<option value="${c.id}" ${c.id === current.color ? 'selected' : ''}>${c.id.toUpperCase()}</option>`).join('')}
+            </select>
+          </label>
+        ` : step===2 ? `
+          <label class="ab-field"><span>Instructions</span><textarea class="ab-input" data-role="a-instr" style="min-height:80px;resize:none;" placeholder="Tell the agent how to behave...">${esc(current.instr)}</textarea></label>
+          <div class="ab-field"><span>Model</span>
+            <select class="ab-input" data-role="a-model">
+              <option value="inherit" ${current.model==='inherit'?'selected':''}>Inherit from app</option>
+            </select>
+          </div>
+          <div class="ab-field"><span>Effort</span>
+            <select class="ab-input" data-role="a-effort">
+              <option value="inherit" ${current.effort==='inherit'?'selected':''}>Inherit from app</option>
+              <option value="low" ${current.effort==='low'?'selected':''}>Low</option>
+              <option value="medium" ${current.effort==='medium'?'selected':''}>Medium</option>
+              <option value="high" ${current.effort==='high'?'selected':''}>High</option>
+            </select>
+          </div>
+        ` : `
+          <label class="sub-switch" style="padding:8px 0;">
+            <span>Web search</span>
+            <span class="switch"><input type="checkbox" data-role="a-web" ${current.web?'checked':''}><i></i></span>
+          </label>
+          <label class="sub-switch" style="padding:8px 0;">
+            <span>URL reader</span>
+            <span class="switch"><input type="checkbox" data-role="a-url" ${current.url?'checked':''}><i></i></span>
+          </label>
+          <label class="sub-switch" style="padding:8px 0;">
+            <span>Show plans</span>
+            <span class="switch"><input type="checkbox" data-role="a-plan" ${current.plan?'checked':''}><i></i></span>
+          </label>
+        `}
+      </div>
+      <div class="dialog-actions" style="margin-top:12px;">
+        <button class="dialog-btn" type="button" data-r="cancel">Cancel</button>
+        ${step > 1 ? `<button class="dialog-btn" type="button" data-r="back">Back</button>` : ''}
+        <button class="dialog-btn ok" type="button" data-r="next">${step === 3 ? 'Save' : 'Next'}</button>
+      </div>
+    </div>`;
+    
+    scrim.onclick = (e) => {
+      e.stopPropagation();
+      if (e.target === scrim || e.target.closest('[data-r="cancel"]')) return scrim.remove();
+      if (e.target.closest('[data-preset]')) {
+        const p = e.target.closest('[data-preset]').dataset.preset;
+        if (p === 'res') Object.assign(current, { name: 'Researcher', role: 'Finds and summarizes sources', instr: 'Always cite your sources and summarize clearly.', web: true, url: true, plan: false });
+        if (p === 'wri') Object.assign(current, { name: 'Writer', role: 'Drafts and edits text', instr: 'Write clearly, edit ruthlessly.', web: false, url: false, plan: false });
+        if (p === 'pla') Object.assign(current, { name: 'Planner', role: 'Breaks goals into steps', instr: 'Break complex goals into actionable steps.', web: false, url: false, plan: true });
+        if (p === 'bla') Object.assign(current, { name: '', role: '', instr: '', web: false, url: false, plan: false });
+        paint();
+        return;
+      }
+      if (e.target.closest('[data-r="next"]')) {
+        if (step === 1) {
+          current.name = scrim.querySelector('[data-role="a-name"]').value.trim();
+          current.role = scrim.querySelector('[data-role="a-role"]').value.trim();
+          current.color = scrim.querySelector('[data-role="a-color"]').value;
+          if (!current.name) return toast('Give your agent a name.');
+        } else if (step === 2) {
+          current.instr = scrim.querySelector('[data-role="a-instr"]').value.trim();
+          current.model = scrim.querySelector('[data-role="a-model"]').value;
+          current.effort = scrim.querySelector('[data-role="a-effort"]').value;
+        }
+        
+        if (step < 3) { step++; paint(); return; }
+        
+        current.web = scrim.querySelector('[data-role="a-web"]').checked;
+        current.url = scrim.querySelector('[data-role="a-url"]').checked;
+        current.plan = scrim.querySelector('[data-role="a-plan"]').checked;
+        
+        if (isEdit) Object.assign(a, current);
+        else agents.push({ id: uid(), ...current });
+        
+        saveAgents();
+        scrim.remove();
+        toast(isEdit ? 'Agent updated.' : 'Agent created.', 'success');
+        renderPageBody('agents');
+        return;
+      }
+      if (e.target.closest('[data-r="back"]')) {
+        if (step > 1) { step--; paint(); }
+      }
+    };
+  };
+  paint();
+  document.body.appendChild(scrim);
+}
+
+function openAgentDetail(id) {
+  const a = agents.find(x => x.id === id);
+  if (!a) return;
+  const c = WORLD_COLORS.find(x => x.id === a.color) || WORLD_COLORS[0];
+  const scrim = document.createElement('div');
+  scrim.className = 'dialog-scrim';
+  scrim.innerHTML = `<div class="dialog" role="dialog" aria-modal="true">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+      <div class="agent-avatar" style="background:${c.bg};color:${c.fg};width:56px;height:56px;">${ICONS.brain}</div>
+      <div>
+        <h3 class="dialog-title" style="margin:0;">${esc(a.name)}</h3>
+        <div style="font-size:calc(13px*var(--ts));color:var(--gray-mid);">${esc(a.role || 'No role')}</div>
+      </div>
+    </div>
+    <p style="font-size:calc(13px*var(--ts));color:var(--gray-light);margin:0 0 12px;line-height:1.5;">${esc(a.instr || 'No instructions set.')}</p>
+    <div class="dialog-actions">
+      <button class="dialog-btn" type="button" data-r="del" style="color:var(--bad);">Delete</button>
+      <button class="dialog-btn" type="button" data-r="edit">Edit</button>
+      <button class="dialog-btn ok" type="button" data-r="chat">Start chat</button>
+    </div>
+  </div>`;
+  document.body.appendChild(scrim);
+  scrim.onclick = (e) => {
+    e.stopPropagation();
+    if (e.target === scrim) return scrim.remove();
+    if (e.target.closest('[data-r="edit"]')) { scrim.remove(); openAgentWizard(id); }
+    if (e.target.closest('[data-r="chat"]')) {
+      scrim.remove();
+      closePage();
+      newSession(a);
+    }
+    if (e.target.closest('[data-r="del"]')) {
+      confirmDialog({ title: `Delete ${a.name}?`, message: 'The agent will be removed. Chats stay.', confirmLabel: 'Delete', danger: true }).then(yes => {
+        if (!yes) return;
+        agents = agents.filter(x => x.id !== id);
+        saveAgents();
+        scrim.remove();
+        renderPageBody('agents');
+        toast('Agent deleted.', 'success');
+      });
+    }
+  };
 }
 
 function openWorldForm(id = null) {
@@ -1789,6 +1980,16 @@ function renderBillingHub() {
 
 function onSettingsClick(e) {
   const t = e.target;
+
+  const aCard = t.closest('.agent-card');
+  if (aCard) return openAgentDetail(aCard.dataset.id);
+
+  const aAct = t.closest('[data-act^="a-"]');
+  if (aAct) {
+    e.stopPropagation();
+    if (aAct.dataset.act === 'a-new') openAgentWizard();
+    return;
+  }
 
   const wAct = t.closest('[data-act^="w-"]');
   if (wAct) {
@@ -5465,6 +5666,20 @@ function renderMessages() {
   const n = currentSession.messages.length;
   buildStepCards(currentSession.messages);
   box.replaceChildren(...currentSession.messages.map((m, i) => (m.hidden || stepMsgs.has(m) ? null : msgEl(m, i))).filter(Boolean));
+  
+  let headerHtml = '';
+  if (currentSession.agentId) {
+    const a = agents.find(x => x.id === currentSession.agentId);
+    if (a) headerHtml += `<div class="chat-header-chip">${ICONS.brain} ${esc(a.name)}</div>`;
+  }
+  if (currentSession.worldId) {
+    const w = worlds.find(x => x.id === currentSession.worldId);
+    if (w) headerHtml += `<div class="chat-header-chip">${ICONS.navWorlds} ${esc(w.name)}</div>`;
+  }
+  if (headerHtml && n > 0) {
+    box.insertAdjacentHTML('afterbegin', `<div class="chat-header">${headerHtml}</div>`);
+  }
+
   box.classList.toggle('hidden', n === 0);
   welcome?.classList.toggle('hidden', n > 0);
 }
@@ -5526,7 +5741,7 @@ const nearBottom = () => { const s = stageEl(); return !s || s.scrollHeight - s.
 let scrollDown = (force) => { const s = stageEl(); if (s && (force || (chatStick && settings.autoScroll))) s.scrollTop = s.scrollHeight; };
 const closeSidebarMobile = () => document.getElementById('sidebar')?.classList.remove('open');
 
-function newSession() {
+function newSession(agentObj = null) {
   if (chatBusy) { toast('Stop the response before switching sessions.', 'info'); return; }
   if (currentSession.draft && currentSession.messages.length === 0) {
     toast('You\u2019re already in a new session.', 'info', 1800);
@@ -5535,6 +5750,10 @@ function newSession() {
     return;
   }
   currentSession = newDraft();
+  if (agentObj) {
+    currentSession.agentId = agentObj.id;
+    currentSession.agentName = agentObj.name;
+  }
   chatStick = true;
   clearDraft();
   renderSessionUi();
@@ -7111,6 +7330,7 @@ const TOUR_STEPS = [
   { sel: '.agent-btn', title: 'Watch it think', text: 'Tap to follow the reasoning and the agent’s steps as they stream in.' },
   { sel: '[data-action="menu"]', title: 'Your sessions', text: 'Chats, agents and tools live in the sidebar.', sidebar: true },
     { sel: '[data-action="nav-worlds"]', title: 'Worlds', text: 'Keep projects separate with their own rules and chats.', sidebar: true },
+    { sel: '[data-action="nav-agent"]', title: 'Agents', text: 'Save specialists with their own instructions, model, and tools.', sidebar: true },
   { sel: '[data-action="settings"]', title: 'Make it yours', text: 'Themes, fonts, rich-text options and Tailorship.', sidebar: true }
 ];
 

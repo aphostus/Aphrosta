@@ -3139,3 +3139,35 @@ mark.ab-mark {
 }
 .world-filter:hover { background: var(--glass-bg-hover); }
 .world-filter svg { width: 14px; height: 14px; }
+
+/* ---------- Phase 2: Agents ---------- */
+.agents-list { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+.agent-card {
+  display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--glass-bg);
+  border: 1px solid var(--glass-border); border-radius: 16px; cursor: pointer;
+  transition: background 0.2s var(--ease-smooth);
+}
+.agent-card:hover { background: var(--glass-bg-hover); }
+.agent-avatar {
+  width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center;
+  color: var(--fg); flex-shrink: 0;
+}
+.agent-avatar svg { width: 22px; height: 22px; }
+.agent-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.agent-name { font-size: calc(15px * var(--ts)); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.agent-role { font-size: calc(12px * var(--ts)); color: var(--gray-mid); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.agent-tools { display: flex; gap: 4px; margin-top: 4px; color: var(--gray-mid); }
+.agent-tools svg { width: 12px; height: 12px; }
+
+.chat-header { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 4px 0 10px; font-size: calc(12px * var(--ts)); color: var(--gray-mid); }
+.chat-header-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 999px; cursor: pointer; }
+.chat-header-chip:hover { background: var(--glass-bg-hover); color: var(--fg); }
+
+.wizard-steps { display: flex; gap: 6px; margin-bottom: 12px; }
+.wizard-step { flex: 1; padding: 6px; text-align: center; font-size: calc(11px * var(--ts)); font-weight: 600; color: var(--gray-mid); border-bottom: 2px solid var(--glass-border); }
+.wizard-step.on { color: var(--fg); border-bottom-color: var(--accent); }
+
+.wizard-presets { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 12px; }
+.wizard-preset { padding: 10px; text-align: left; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 12px; cursor: pointer; font-size: calc(12px * var(--ts)); }
+.wizard-preset:hover { background: var(--glass-bg-hover); border-color: rgba(var(--fg-rgb),.3); }
+.wizard-preset b { display: block; font-size: calc(13px * var(--ts)); color: var(--fg); margin-bottom: 2px; }
