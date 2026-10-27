@@ -718,11 +718,8 @@ const ICONS = {
   close:    svg('<path d="M6 6l12 12M6 18L18 6"/>', 16),
   pause:    svg('<rect x="6" y="5" width="4" height="14" rx="1.2"/><rect x="14" y="5" width="4" height="14" rx="1.2"/>', 20),
   play:     svg('<path d="M8 5.2v13.6a.7.7 0 001.07.6l10.6-6.8a.7.7 0 000-1.2L9.07 4.6A.7.7 0 008 5.2z"/>', 20),
-  closeLg:  svg('<path d="M6 6l12 12M6 18L18 6"/>', 20),
-  newChat:  svg('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/>'),
   search:   svg('<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>', 16),
   folder:   svg('<path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>'),
-  agent:    svg('<rect x="4" y="8" width="16" height="11" rx="3"/><path d="M12 4v4"/><path d="M9 13h.01M15 13h.01"/>'),
   memory:   svg('<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>'),
   chevron:  svg('<path d="M6 9l6 6 6-6"/>', 14),
   brain:    svg('<path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"/><path d="M17.599 6.5a3 3 0 0 0 .399-1.375"/><path d="M6.003 5.125A3 3 0 0 0 6.401 6.5"/><path d="M3.477 10.896a4 4 0 0 1 .585-.396"/><path d="M19.938 10.5a4 4 0 0 1 .585.396"/><path d="M6 18a4 4 0 0 1-1.967-.516"/><path d="M19.967 17.484A4 4 0 0 1 18 18"/>', 22),
@@ -732,43 +729,19 @@ const ICONS = {
   grip:     svg('<path d="M10 3l11 11M16 3l5 5"/>', 16),
   check:    svg('<path d="M4 12l5 5L20 6"/>', 14),
   chevronR: svg('<path d="M9 6l6 6-6 6"/>', 14),
-  moon:     svg('<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>', 16),
-  globe:    svg('<circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/>', 16),
-  bell:     svg('<path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"/>', 16),
-  phone:    svg('<rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/>', 16),
-  cpu:      svg('<rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3"/>', 16),
   sliders:  svg('<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>', 16),
 
   pen:      svg('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/>', 16),
-  mic:      svg('<path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4"/>', 16),
   volume:   svg('<path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 010 7M19 5a10 10 0 010 14"/>', 16),
-  shield:   svg('<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>', 16),
-  database: svg('<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>', 16),
-  download: svg('<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>', 16),
   trash:    svg('<path d="M3 6h18M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6M10 11v6M14 11v6M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>', 16),
-  help:     svg('<circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 015.8 1c0 2-3 3-3 3M12 17h.01"/>', 16),
-  file:     svg('<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8"/>', 16),
-  info:     svg('<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>', 16),
   clock:    svg('<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>', 16),
-  zap:      svg('<path d="M13 2L3 14h9l-1 8 10-12h-9z"/>', 16),
   settings: svg('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.6 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>'),
   switchAcct: svg('<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0111-4.6"/><path d="M22 14h-6l2-2M16 18h6l-2 2"/>', 16),
   back:     svg('<path d="M15 6l-6 6 6 6"/>', 18),
-  palette:  svg('<circle cx="13.5" cy="6.5" r="1"/><circle cx="17.5" cy="10.5" r="1"/><circle cx="8.5" cy="7.5" r="1"/><circle cx="6.5" cy="12.5" r="1"/><path d="M12 2a10 10 0 000 20c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.3 0-1.1.9-2 2-2H18a4 4 0 004-4c0-5-4.5-9-10-9z"/>', 16),
-  type:     svg('<path d="M4 7V4h16v3M9 20h6M12 4v16"/>', 16),
-  user:     svg('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/>', 16),
-  power:    svg('<path d="M18.4 6.6a9 9 0 11-12.8 0M12 2v10"/>', 16),
-  tag:      svg('<path d="M20.6 13.4l-7.2 7.2a2 2 0 01-2.8 0L3 13V3h10l7.6 7.6a2 2 0 010 2.8z"/><path d="M7.5 7.5h.01"/>', 16),
-  list:     svg('<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>', 16),
-  pulse:    svg('<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>', 16),
   card:     svg('<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>', 16),
-  lock:     svg('<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/>', 16),
   link:     svg('<path d="M10 13a5 5 0 007.5.5l3-3a5 5 0 00-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 00-7.5-.5l-3 3a5 5 0 007 7l1.7-1.7"/>', 16),
-  pin:      svg('<path d="M12 22s7-6.2 7-12a7 7 0 10-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/>', 16),
-  exit:     svg('<path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>', 16),
   alert:    svg('<circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/>', 14),
   okc:      svg('<circle cx="12" cy="12" r="10"/><path d="M8 12.5l3 3 5-6"/>', 14),
-  infoSm:   svg('<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>', 14)
 };
 
 Object.assign(ICONS, {
@@ -783,16 +756,11 @@ Object.assign(ICONS, {
   pencil:   svg('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/>', 15)
 });
 ICONS.thumbUpOn   = ICONS.thumbUp.replace('fill="none"', 'fill="currentColor"');
-ICONS.bug = svg('<path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path d="M20.97 5c0 2.1-1.6 3.8-3.5 4"/><path d="M22 13h-4"/><path d="M17.2 17c2.1.1 3.8 1.9 3.8 4"/>', 18);
 ICONS.thumbDownOn = ICONS.thumbDown.replace('fill="none"', 'fill="currentColor"');
 ICONS.pushpinOn   = ICONS.pushpin.replace('fill="none"', 'fill="currentColor"');
 
 /* ---------- NEW ICONS (Fix 4) ---------- */
 Object.assign(ICONS, {
-  sparkles: svg('<path d="M9.937 15.5A2 2 0 008.5 14.063l-6.135-1.582a.5.5 0 010-.962L8.5 9.936A2 2 0 009.937 8.5l1.582-6.135a.5.5 0 01.963 0L14.063 8.5A2 2 0 0015.5 9.937l6.135 1.581a.5.5 0 010 .964L15.5 14.063a2 2 0 00-1.437 1.437l-1.582 6.135a.5.5 0 01-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/>'),
-  pilcrow:  svg('<path d="M13 4v16"/><path d="M17 4v16"/><path d="M19 4H9.5a4.5 4.5 0 000 9H13"/>'),
-  scale:    svg('<path d="M16 16l3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1z"/><path d="M2 16l3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/>'),
-  flame:    svg('<path d="M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 11-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 002.5 2.5z"/>')
 });
 
 /* ---------- UNIQUE ICONS (one per spot, no shared copies) ---------- */
@@ -803,14 +771,7 @@ Object.assign(ICONS, {
   navAutomation: svg('<rect x="3" y="3" width="6" height="6" rx="1.5"/><rect x="15" y="15" width="6" height="6" rx="1.5"/><path d="M9 6h3a3 3 0 013 3v6"/>', 16),
   navConnectors: svg('<path d="M9 2v6M15 2v6"/><path d="M6 8h12v3a6 6 0 01-12 0z"/><path d="M12 17v5"/>', 16),
   navOperations: svg('<rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M7 10l3 2.5L7 15M13 15h4"/>', 16),
-  setMemory:     svg('<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h6M9 11h6M9 15h3"/>', 16),
-  setResponses:  svg('<path d="M21 12a8 8 0 01-8 8H4l2.5-3.5A8 8 0 1121 12z"/><path d="M9 11h6M9 14h4"/>', 16),
-  setSounds:     svg('<path d="M3 10v4M7 7v10M11 4v16M15 8v8M19 10v4"/>', 16),
-  setStreaming:  svg('<path d="M4 7h9M4 12h16M4 17h12"/><path d="M17 4l3 3-3 3"/>', 16),
-  acctConn:      svg('<circle cx="6" cy="12" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><path d="M8.6 10.5l6.8-3M8.6 13.5l6.8 3"/>', 16),
-  closeSettings: svg('<path d="M5 5l14 14M19 5L5 19"/>', 16),
   closeAttach:   svg('<path d="M7 7l10 10M17 7L7 17"/>', 14),
-  usageInfo:     svg('<path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/><path d="M11 11h1v6M12 7.5h.01"/>', 16),
   toolFetch:     svg('<path d="M4 4h16v6H4z"/><path d="M4 14h10M4 18h6"/><path d="M17 15l3 3-3 3"/>', 16),
   toolCalc:      svg('<rect x="5" y="2" width="14" height="20" rx="2"/><path d="M8 6h8M8 11h.01M12 11h.01M16 11h.01M8 15h.01M12 15h.01M16 15h.01M8 19h.01M12 19h.01M16 19h.01"/>', 16),
   toolOk:        svg('<path d="M3 12l5 5L21 6"/>', 14),
@@ -1656,12 +1617,16 @@ function onSettingsClick(e) {
     case 'reset-defaults':
       confirmDialog({
         title: 'Restore default settings?',
-        message: 'All settings will return to their defaults. Your account, API keys and sessions are kept.',
+        message: 'Look, voice and assistant settings return to their defaults. Your profile, privacy choices, token limit, API keys and sessions are kept.',
         confirmLabel: 'Default',
         danger: true
       }).then((yes) => {
         if (!yes) return;
-        settings = { ...SETTINGS_DEFAULTS };
+        const KEEP = ['username', 'avatar', 'phone', 'phoneCc', 'phoneFull', 'memoryNotes', 'memInit',
+          'privUsage', 'privTrain', 'privMask', 'perms', 'tokenLimit', 'tokenWindowMins'];
+        const kept = {};
+        KEEP.forEach((k) => { if (settings[k] !== undefined) kept[k] = settings[k]; });
+        settings = { ...SETTINGS_DEFAULTS, ...kept };
         activeEffort = DEFAULT_EFFORT;
         saveSettings();
         persistEffort();
@@ -2966,7 +2931,6 @@ document.addEventListener('visibilitychange', () => {
 });
 
 /* ---------- ATTACHMENTS ---------- */
-ICONS.file = svg('<path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z"/><path d="M14 3v5h5"/>', 16);
 
 const ATTACH_MAX = 4;
 const ATTACH_TEXT_EXT = /\.(txt|md|markdown|json|csv|tsv|log|xml|yml|yaml|toml|ini|html|htm|css|js|mjs|ts|jsx|tsx|py|java|c|h|cpp|cs|go|rs|rb|php|sh|sql)$/i;
@@ -7235,10 +7199,10 @@ const abP = (t) => `<p>${t}</p>`;
 
 
 const AB_PAGES = {
-  terms: { title: 'Terms & Conditions', icon: () => ICONS.file, cards: [] },
-  rules: { title: 'Rules & Policies', icon: () => ICONS.scale, cards: [] },
-  licenses: { title: 'About & Licenses', icon: () => ICONS.info, cards: [] },
-  help: { title: 'Help & Support', icon: () => ICONS.help, cards: [] }
+  terms: { title: 'Terms & Conditions', icon: () => ICONS.stTerms, cards: [] },
+  rules: { title: 'Rules & Policies', icon: () => ICONS.stRules, cards: [] },
+  licenses: { title: 'About & Licenses', icon: () => ICONS.stLicense, cards: [] },
+  help: { title: 'Help & Support', icon: () => ICONS.stHelp, cards: [] }
 };
 
 /* ----- billing storage (localStorage + in-memory cache) ----- */
@@ -7380,7 +7344,7 @@ function abRender(page) {
 
 function openAboutPage(key) {
   const panel = document.getElementById('settings-panel');
-  const def = key === 'billing' ? { title: 'Billing & Payment', icon: () => ICONS.card } : AB_PAGES[key];
+  const def = key === 'billing' ? { title: 'Billing & Payment', icon: () => ICONS.stBilling } : AB_PAGES[key];
   if (!panel || !def) return;
   panel.querySelector('#about-page')?.remove();
   const wrap = document.createElement('div');
