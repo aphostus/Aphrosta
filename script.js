@@ -1583,6 +1583,14 @@ const Ops = {
 
 
 let connData = lsGet('aphrosta.connectors', {});
+let plan = lsGet('aphrosta.plan', 'Free');
+
+function savePlan(newPlan) {
+  plan = newPlan;
+  lsSet('aphrosta.plan', plan);
+  document.querySelectorAll('.profile-plan').forEach(el => el.textContent = plan === 'Pro' ? 'Pro Plan' : 'Free plan');
+  if (currentPage === 'billing') renderPageBody('billing');
+}
 let automations = lsGet('aphrosta.automations', []);
 
 function saveAutomations() {
@@ -1653,8 +1661,7 @@ const PAGES = {
 };
 
 function planLabel() {
-  /* Phase 7 will replace this with the real plan state from the server. */
-  return 'Free plan';
+  return plan === 'Pro' ? 'Pro Plan' : 'Free plan';
 }
 
 function openPage(key) {
@@ -2540,7 +2547,7 @@ function deleteWorld(id) {
 }
 
 function renderBillingHub() {
-  const isPro = false; /* Phase 8 will pull this from the server */
+  const isPro = plan === 'Pro';
   const planName = isPro ? 'Pro' : 'Free';
   const planPrice = isPro ? '$12 / month' : '$0 / month';
   
@@ -2612,7 +2619,10 @@ function renderBillingHub() {
         <div class="bill-plan-status active">Active</div>
       </div>
       <div class="bill-plan-actions">
-        ${isPro ? '<button class="ab-btn" style="background:var(--glass-bg);color:var(--fg);border:1px solid var(--glass-border);">Manage</button>' : '<button class="ab-btn" data-act="bill-upgrade">Upgrade to Pro</button>'}
+        ${isPro ? 
+          `<button class="ab-btn" style="background:var(--glass-bg);color:var(--fg);border:1px solid var(--glass-border);" data-act="bill-manage">Manage</button>
+           <button class="ab-btn" style="color:var(--bad);background:transparent;border:1px solid transparent;" data-act="bill-cancel">Cancel</button>` : 
+          '<button class="ab-btn" data-act="bill-upgrade">Upgrade to Pro</button>'}
       </div>
     </div>
 
@@ -2634,8 +2644,15 @@ function renderBillingHub() {
     <section class="ab-card open static">
       <div class="ab-card-body"><div class="ab-card-inner"><div class="ab-card-content">
         <h4>Payment method</h4>
-        <p class="ab-muted" style="margin-bottom:12px;">Card details are handled by our payment provider. Aphrosta never sees them.</p>
-        <button class="btn-line">Add payment method</button>
+        <p class="ab-muted" style="margin-bottom:12px;">Card details are handled securely. Aphrosta never sees them.</p>
+        <button class="btn-line">${isPro ? 'Visa ending 4242' : 'Add payment method'}</button>
+      </div></div></div>
+    </section>
+
+    <section class="ab-card open static">
+      <div class="ab-card-body"><div class="ab-card-inner"><div class="ab-card-content">
+        <h4>Invoices</h4>
+        ${isPro ? `<div class="bill-invoice-row"><span class="bill-invoice-date">${new Date().toLocaleDateString()}</span><span class="bill-invoice-amt">$12.00</span></div>` : '<p class="ab-muted">No invoices yet.</p>'}
       </div></div></div>
     </section>
 
@@ -2649,21 +2666,60 @@ function renderBillingHub() {
         </div>
       </div></div></div>
     </section>
-
-    <section class="ab-card open static">
-      <div class="ab-card-body"><div class="ab-card-inner"><div class="ab-card-content">
-        <h4>Invoices</h4>
-        <p class="ab-muted">No invoices yet.</p>
-      </div></div></div>
-    </section>
   `;
 }
 
 function checkPlanLimits(action, max) {
+  if (plan === 'Pro') return true;
   if (action === 'worlds' && worlds.length >= max) { toast(`Free plan allows ${max} Worlds. Upgrade to Pro.`, 'info', 3000); openPage('billing'); return false; }
   if (action === 'agents' && agents.length >= max) { toast(`Free plan allows ${max} Agents. Upgrade to Pro.`, 'info', 3000); openPage('billing'); return false; }
   if (action === 'automations' && automations.filter(a => a.status === 'Active').length >= max) { toast(`Free plan allows ${max} Active Automations. Upgrade to Pro.`, 'info', 3000); openPage('billing'); return false; }
   return true;
+}
+
+function openCheckout() {
+  const scrim = document.createElement('div');
+  scrim.className = 'pay-sheet';
+  scrim.innerHTML = `<div class="pay-card" role="dialog" aria-modal="true">
+    <h3 style="font-size:24px;font-weight:700;margin:0;">Upgrade to Pro</h3>
+    <p style="font-size:14px;color:var(--gray-mid);margin:0;">$12 / month. Cancel anytime.</p>
+    
+    <div class="pay-row">
+      <input type="text" placeholder="Card number (e.g. 4242 4242 4242 4242)" id="pay-num">
+    </div>
+    <div class="pay-row">
+      <input type="text" placeholder="MM / YY" id="pay-exp">
+      <input type="text" placeholder="CVC" id="pay-cvc">
+    </div>
+    <div class="pay-row">
+      <input type="text" placeholder="Name on card" id="pay-name">
+    </div>
+    
+    <button class="pay-btn" id="pay-submit">Pay $12.00</button>
+    <button class="btn-line" id="pay-cancel" style="border:none;background:transparent;">Cancel</button>
+    
+    <p style="font-size:10px;color:var(--gray-mid);text-align:center;margin-top:-8px;">This is a secure sandbox payment. No real money will be charged.</p>
+  </div>`;
+  
+  document.body.appendChild(scrim);
+
+  scrim.querySelector('#pay-cancel').onclick = () => scrim.remove();
+  
+  const submitBtn = scrim.querySelector('#pay-submit');
+  submitBtn.onclick = () => {
+    const num = scrim.querySelector('#pay-num').value.replace(/\s/g, '');
+    if (num.length < 15) return toast('Enter a valid test card number.');
+    
+    submitBtn.textContent = 'Processing...';
+    submitBtn.disabled = true;
+    
+    setTimeout(() => {
+      savePlan('Pro');
+      scrim.remove();
+      sfx('done'); haptic(20);
+      toast('Upgraded to Pro! Enjoy your new limits.', 'success', 4000);
+    }, 1500);
+  };
 }
 
 function onSettingsClick(e) {
@@ -2703,7 +2759,15 @@ function onSettingsClick(e) {
       if (checkPlanLimits('automations', 2)) openAutomationBuilder();
     }
     if (autoAct.dataset.act === 'bill-upgrade') {
-      toast('Payments will be connected in Phase 8.', 'info');
+      openCheckout();
+    }
+    if (autoAct.dataset.act === 'bill-cancel') {
+      confirmDialog({ title: 'Cancel Pro?', message: 'You will lose access to unlimited Worlds and Agents.', confirmLabel: 'Cancel Pro', danger: true }).then(yes => {
+        if (yes) { savePlan('Free'); toast('Downgraded to Free.', 'info'); }
+      });
+    }
+    if (autoAct.dataset.act === 'bill-manage') {
+      toast('Customer portal coming in v1.1', 'info');
     }
     if (autoAct.dataset.act === 'auto-edit') {
       const isRun = confirm('Run this automation now? Cancel to edit.');
@@ -8091,6 +8155,7 @@ const TOUR_STEPS = [
   { sel: '[data-action="model-select"]', title: 'Pick a model', text: 'Once a key is saved, switch providers and models from here any time.' },
   { sel: '[data-action="effort-select"]', title: 'Set the effort', text: 'Minima is fastest. Maxima thinks longest and uses more tokens. Medium suits most chats.' },
   { sel: '.composer', title: 'Ask anything', text: 'Type, speak, or attach files. Ask for a deck, a document or a spreadsheet and it arrives as a file card.' },
+    { sel: '.pill-btn', title: 'Upgrade to Pro', text: 'Tap here to see your plan limits and upgrade to unlock unlimited Worlds and Agents.' },
   { sel: '.agent-btn', title: 'Watch it think', text: 'Tap to follow the reasoning and the agent’s steps as they stream in.' },
   { sel: '[data-action="menu"]', title: 'Your sessions', text: 'Chats, agents and tools live in the sidebar.', sidebar: true },
     { sel: '[data-action="nav-worlds"]', title: 'Worlds', text: 'Keep projects separate with their own rules and chats.', sidebar: true },
@@ -8213,6 +8278,7 @@ function startOnboarding(force = false) {
 
 function renderHome(user) {
   currentUser = user;
+  document.querySelectorAll('.profile-plan').forEach(el => el.textContent = plan === 'Pro' ? 'Pro Plan' : 'Free plan');
   stopSpeaking();
   LIVE_VOICES.forEach((stop) => { try { stop(); } catch (_) {} });
   LIVE_VOICES.clear();
