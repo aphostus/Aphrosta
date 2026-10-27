@@ -2540,38 +2540,116 @@ function deleteWorld(id) {
 }
 
 function renderBillingHub() {
+  const isPro = false; /* Phase 8 will pull this from the server */
+  const planName = isPro ? 'Pro' : 'Free';
+  const planPrice = isPro ? '$12 / month' : '$0 / month';
+  
+  const wCount = worlds.length;
+  const aCount = agents.length;
+  const autoCount = automations.filter(a => a.status === 'Active').length;
+  const cCount = Object.keys(connData).filter(k => connData[k].status === 'ok' && !CONNECTORS.find(c => c.id === k)?.builtIn).length;
+
+  const usageHtml = `
+    <div class="bill-meter-row">
+      <div style="flex:1;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>Worlds</span><span>${wCount} / ${isPro ? '∞' : '2'}</span></div>
+        <div class="bill-meter-bar"><i style="width:${isPro ? 0 : Math.min(100, (wCount/2)*100)}%"></i></div>
+      </div>
+    </div>
+    <div class="bill-meter-row">
+      <div style="flex:1;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>Agents</span><span>${aCount} / ${isPro ? '50' : '3'}</span></div>
+        <div class="bill-meter-bar"><i style="width:${isPro ? Math.min(100,(aCount/50)*100) : Math.min(100, (aCount/3)*100)}%"></i></div>
+      </div>
+    </div>
+    <div class="bill-meter-row">
+      <div style="flex:1;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>Active automations</span><span>${autoCount} / ${isPro ? '25' : '2'}</span></div>
+        <div class="bill-meter-bar"><i style="width:${isPro ? Math.min(100,(autoCount/25)*100) : Math.min(100, (autoCount/2)*100)}%"></i></div>
+      </div>
+    </div>
+    <div class="bill-meter-row" style="border-bottom:0;">
+      <div style="flex:1;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>Connectors</span><span>${cCount} / ${isPro ? '∞' : '1'}</span></div>
+        <div class="bill-meter-bar"><i style="width:${isPro ? 0 : Math.min(100, (cCount/1)*100)}%"></i></div>
+      </div>
+    </div>
+  `;
+
+  const compareHtml = `
+    <div class="bill-compare">
+      <div class="bill-compare-col">
+        <div class="bill-compare-head">Feature</div>
+        <div class="bill-compare-cell">Worlds</div>
+        <div class="bill-compare-cell">Agents</div>
+        <div class="bill-compare-cell">Automations</div>
+        <div class="bill-compare-cell">History</div>
+      </div>
+      <div class="bill-compare-col">
+        <div class="bill-compare-head">Free</div>
+        <div class="bill-compare-cell">2</div>
+        <div class="bill-compare-cell">3</div>
+        <div class="bill-compare-cell">2</div>
+        <div class="bill-compare-cell">7 days</div>
+      </div>
+      <div class="bill-compare-col">
+        <div class="bill-compare-head" style="color:var(--accent);">Pro</div>
+        <div class="bill-compare-cell highlight">Unlimited</div>
+        <div class="bill-compare-cell highlight">50</div>
+        <div class="bill-compare-cell highlight">25</div>
+        <div class="bill-compare-cell highlight">90 days</div>
+      </div>
+    </div>
+  `;
+
   return `
+    <div class="bill-plan-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div>
+          <div class="bill-plan-name">${planName}</div>
+          <div class="bill-plan-price">${planPrice}</div>
+        </div>
+        <div class="bill-plan-status active">Active</div>
+      </div>
+      <div class="bill-plan-actions">
+        ${isPro ? '<button class="ab-btn" style="background:var(--glass-bg);color:var(--fg);border:1px solid var(--glass-border);">Manage</button>' : '<button class="ab-btn" data-act="bill-upgrade">Upgrade to Pro</button>'}
+      </div>
+    </div>
+
     <section class="ab-card open static">
-      <div class="ab-card-body"><div class="ab-card-inner"><div class="ab-card-content">
-        <div style="font-size: calc(22px * var(--ts)); font-weight: 700; letter-spacing: -0.01em;">${esc(planLabel())}</div>
-        <p class="ab-muted" style="margin: 0;">$0 / month</p>
-        <button class="ab-btn" type="button">Upgrade to Pro</button>
-      </div></div></div>
-    </section>
-    <section class="ab-card open static">
-      <div class="ab-card-body"><div class="ab-card-inner"><div class="ab-card-content">
+      <div class="ab-card-body"><div class="ab-card-inner"><div class="ab-card-content" style="gap:0;">
         <h4>Usage</h4>
-        <div class="ab-kv"><span>Worlds</span><b>0 of 2</b></div>
-        <div class="ab-kv"><span>Agents</span><b>0 of 3</b></div>
-        <div class="ab-kv"><span>Active automations</span><b>0 of 2</b></div>
-        <div class="ab-kv"><span>Connectors</span><b>0 of 1</b></div>
+        ${usageHtml}
+        <div style="margin-top:8px;font-size:calc(12px*var(--ts));color:var(--gray-mid);">Today: ${fmtTokens(LimitWindow.used())} tokens</div>
       </div></div></div>
     </section>
+
     <section class="ab-card open static">
       <div class="ab-card-body"><div class="ab-card-inner"><div class="ab-card-content">
         <h4>Compare plans</h4>
-        <div class="ab-kv"><span>Worlds</span><b>2 · Unlimited</b></div>
-        <div class="ab-kv"><span>Agents</span><b>3 · 50</b></div>
-        <div class="ab-kv"><span>Automations</span><b>2 · 25</b></div>
-        <div class="ab-kv"><span>History</span><b>7 days · 90 days</b></div>
+        ${compareHtml}
       </div></div></div>
     </section>
+
     <section class="ab-card open static">
       <div class="ab-card-body"><div class="ab-card-inner"><div class="ab-card-content">
         <h4>Payment method</h4>
-        <p class="ab-muted">No payment method. Card details are handled by our payment provider. Aphrosta never sees them.</p>
+        <p class="ab-muted" style="margin-bottom:12px;">Card details are handled by our payment provider. Aphrosta never sees them.</p>
+        <button class="btn-line">Add payment method</button>
       </div></div></div>
     </section>
+
+    <section class="ab-card open static">
+      <div class="ab-card-body"><div class="ab-card-inner"><div class="ab-card-content">
+        <h4>Billing details</h4>
+        <div class="ab-form">
+          <label class="ab-field"><span>Name</span><input class="ab-input" placeholder="Full name"></label>
+          <label class="ab-field"><span>Country</span><input class="ab-input" placeholder="Country"></label>
+          <button class="ab-btn" style="margin-top:4px;">Save details</button>
+        </div>
+      </div></div></div>
+    </section>
+
     <section class="ab-card open static">
       <div class="ab-card-body"><div class="ab-card-inner"><div class="ab-card-content">
         <h4>Invoices</h4>
@@ -2579,6 +2657,13 @@ function renderBillingHub() {
       </div></div></div>
     </section>
   `;
+}
+
+function checkPlanLimits(action, max) {
+  if (action === 'worlds' && worlds.length >= max) { toast(`Free plan allows ${max} Worlds. Upgrade to Pro.`, 'info', 3000); openPage('billing'); return false; }
+  if (action === 'agents' && agents.length >= max) { toast(`Free plan allows ${max} Agents. Upgrade to Pro.`, 'info', 3000); openPage('billing'); return false; }
+  if (action === 'automations' && automations.filter(a => a.status === 'Active').length >= max) { toast(`Free plan allows ${max} Active Automations. Upgrade to Pro.`, 'info', 3000); openPage('billing'); return false; }
+  return true;
 }
 
 function onSettingsClick(e) {
@@ -2590,7 +2675,9 @@ function onSettingsClick(e) {
   const aAct = t.closest('[data-act^="a-"]');
   if (aAct) {
     e.stopPropagation();
-    if (aAct.dataset.act === 'a-new') openAgentWizard();
+    if (aAct.dataset.act === 'a-new') {
+      if (checkPlanLimits('agents', 3)) openAgentWizard();
+    }
     return;
   }
 
@@ -2612,7 +2699,12 @@ function onSettingsClick(e) {
   const autoAct = t.closest('[data-act^="auto-"]');
   if (autoAct) {
     e.stopPropagation();
-    if (autoAct.dataset.act === 'auto-new') openAutomationBuilder();
+    if (autoAct.dataset.act === 'auto-new') {
+      if (checkPlanLimits('automations', 2)) openAutomationBuilder();
+    }
+    if (autoAct.dataset.act === 'bill-upgrade') {
+      toast('Payments will be connected in Phase 8.', 'info');
+    }
     if (autoAct.dataset.act === 'auto-edit') {
       const isRun = confirm('Run this automation now? Cancel to edit.');
       if (isRun) runAutomation(autoAct.dataset.id);
@@ -2645,7 +2737,9 @@ function onSettingsClick(e) {
   if (wAct) {
     e.stopPropagation();
     const id = wAct.dataset.id;
-    if (wAct.dataset.act === 'w-new') openWorldForm();
+    if (wAct.dataset.act === 'w-new') {
+        if (checkPlanLimits('worlds', 2)) openWorldForm();
+      }
     else if (wAct.dataset.act === 'w-menu') {
       const isEdit = confirm('Edit this World? Cancel to delete.');
       if (isEdit) openWorldForm(id);

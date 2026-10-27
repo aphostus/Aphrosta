@@ -3263,3 +3263,31 @@ mark.ab-mark {
 .auto-step { display: flex; flex-direction: column; gap: 8px; padding: 12px; background: rgba(var(--fg-rgb), 0.03); border: 1px solid var(--glass-border); border-radius: 12px; margin-bottom: 8px; position: relative; }
 .auto-step-head { display: flex; justify-content: space-between; align-items: center; font-size: calc(12px * var(--ts)); font-weight: 600; color: var(--gray-light); }
 .auto-step-del { color: var(--bad); background: none; border: 0; cursor: pointer; padding: 4px; }
+
+/* ---------- Phase 7: Billing Hub ---------- */
+.bill-plan-card {
+  padding: 20px; background: var(--glass-bg); border: 1px solid var(--glass-border);
+  border-radius: 16px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px;
+}
+.bill-plan-name { font-size: calc(24px * var(--ts)); font-weight: 700; letter-spacing: -0.02em; }
+.bill-plan-price { font-size: calc(14px * var(--ts)); color: var(--gray-mid); }
+.bill-plan-status { display: inline-flex; padding: 3px 8px; border-radius: 999px; font-size: calc(10px * var(--ts)); font-weight: 600; width: max-content; }
+.bill-plan-status.active { background: rgba(48,209,88,.15); color: #30d158; }
+.bill-plan-actions { display: flex; gap: 8px; margin-top: 8px; }
+.bill-plan-actions button { flex: 1; }
+
+.bill-meter-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; font-size: calc(13px * var(--ts)); border-bottom: 1px solid var(--glass-border); }
+.bill-meter-row:last-child { border-bottom: 0; }
+.bill-meter-bar { height: 4px; background: rgba(var(--fg-rgb), 0.1); border-radius: 4px; overflow: hidden; width: 100%; margin-top: 6px; }
+.bill-meter-bar i { display: block; height: 100%; background: var(--accent); transition: width 0.4s var(--ease-smooth); }
+
+.bill-compare { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 8px; padding: 12px; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 16px; margin-bottom: 12px; }
+.bill-compare-col { display: flex; flex-direction: column; gap: 12px; }
+.bill-compare-head { font-size: calc(14px * var(--ts)); font-weight: 700; padding-bottom: 8px; border-bottom: 1px solid var(--glass-border); }
+.bill-compare-cell { font-size: calc(12px * var(--ts)); color: var(--gray-light); }
+.bill-compare-cell.highlight { color: var(--fg); font-weight: 600; }
+
+.bill-invoice-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--glass-border); font-size: calc(13px * var(--ts)); }
+.bill-invoice-row:last-child { border-bottom: 0; }
+.bill-invoice-date { color: var(--gray-mid); }
+.bill-invoice-amt { font-weight: 600; }
