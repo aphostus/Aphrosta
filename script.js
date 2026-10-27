@@ -7198,11 +7198,28 @@ const AB_BILL_LS = 'aphrosta.billing'; /* local only: never synced to Firebase *
 const abP = (t) => `<p>${t}</p>`;
 
 
+const abTextCard = (title, tagline, desc, sub, desc2) => ({
+  t: title, st: 1, kw: `${title} ${tagline}`,
+  b: `<div style="font-size:calc(15px * var(--ts));font-weight:600;color:var(--fg)">${title}</div><div style="font-size:calc(12.5px * var(--ts));color:var(--gray-mid)">${tagline}</div><p style="margin:0">${desc}</p><div style="font-size:calc(12.5px * var(--ts));font-weight:600;color:var(--gray-mid)">${sub}</div><p style="margin:0">${desc2}</p>`
+});
+
 const AB_PAGES = {
-  terms: { title: 'Terms & Conditions', icon: () => ICONS.stTerms, cards: [] },
-  rules: { title: 'Rules & Policies', icon: () => ICONS.stRules, cards: [] },
-  licenses: { title: 'About & Licenses', icon: () => ICONS.stLicense, cards: [] },
-  help: { title: 'Help & Support', icon: () => ICONS.stHelp, cards: [] }
+  terms: { title: 'Terms & Conditions', icon: () => ICONS.stTerms, cards: [
+    abTextCard("Acceptance of Terms", "Please read these before using Aphrosta", "By creating an account or using Aphrosta, you agree to these Terms and Conditions. If you do not agree, please stop using the app.", "More", "These terms apply to everyone who accesses or uses the app, including visitors who have not signed in."),
+    abTextCard("Your Account", "Keep your sign-in details safe", "You are responsible for the activity on your account and for keeping your sign-in details private.", "More", "Tell us right away if you think someone else has used your account so we can help you secure it.")
+  ] },
+  rules: { title: 'Rules & Policies', icon: () => ICONS.stRules, cards: [
+    abTextCard("Acceptable Use", "How to use Aphrosta responsibly", "Use Aphrosta for lawful purposes only. Do not attempt to disrupt the service, access data that is not yours, or misuse its features.", "More", "Content you create stays yours, but you agree not to use the app to share material that is harmful, abusive, or illegal."),
+    abTextCard("Privacy and Data", "What we keep and why", "We only keep the information needed to run the app, keep your settings in sync, and improve your experience.", "More", "Billing details and saved card information on this device stay on this device. They are never sent to the cloud, and full card numbers and security codes are never stored.")
+  ] },
+  licenses: { title: 'About & Licenses', icon: () => ICONS.stLicense, cards: [
+    abTextCard("About Aphrosta", "Who we are and what we make", "Aphrosta is a mobile web app built to make everyday tools and AI assistance feel simple, fast, and easy to use.", "More", "Thank you for using Aphrosta. We work to keep the experience clear, reliable, and comfortable on every screen size."),
+    abTextCard("Open Source and Licenses", "Third-party software we use", "Aphrosta is built with open-source libraries and fonts. Each one is used under its own license, and that license applies to that component.", "More", "Full license texts are available from each project's official website. Thank you to the developers who make this work possible.")
+  ] },
+  help: { title: 'Help & Support', icon: () => ICONS.stHelp, cards: [
+    abTextCard("Getting Started", "Quick tips for your first visit", "Open Settings to change your text size, theme, and account details. Use the search bar on each page to find what you need quickly.", "More", "Your changes save automatically, so you can pick up right where you left off the next time you open the app."),
+    abTextCard("Contact and Feedback", "We are happy to help", "If something is not working as expected, send us feedback from the app so our team can look into it.", "More", "Include a short description of what you were doing and what happened. This helps us fix issues faster.")
+  ] }
 };
 
 /* ----- billing storage (localStorage + in-memory cache) ----- */
@@ -7282,7 +7299,7 @@ function abCardHtml(c) {
 }
 
 function abBodyHtml(key) {
-  if (key !== 'billing') return '';
+  if (key !== 'billing') return (AB_PAGES[key]?.cards || []).map(abCardHtml).join('');
   return `${abBillingCards().map(abCardHtml).join('')}<p class="ab-empty" hidden>No results found.</p>`;
 }
 
