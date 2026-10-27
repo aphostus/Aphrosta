@@ -3243,3 +3243,23 @@ mark.ab-mark {
 .conn-status.miss { background: var(--glass-bg-hover); color: var(--gray-mid); }
 .conn-status.err { background: rgba(255,69,58,.15); color: #ff453a; }
 .conn-status.built { background: rgba(255,255,255,.1); color: var(--fg); }
+
+/* ---------- Phase 6: Automations ---------- */
+.auto-list { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+.auto-card { display: flex; flex-direction: column; gap: 8px; padding: 14px; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 16px; cursor: pointer; transition: background 0.2s var(--ease-smooth); position: relative; }
+.auto-card:hover { background: var(--glass-bg-hover); }
+.auto-card.is-paused { opacity: 0.6; }
+.auto-head { display: flex; justify-content: space-between; align-items: flex-start; }
+.auto-name { font-size: calc(15px * var(--ts)); font-weight: 600; color: var(--fg); }
+.auto-trigger { font-size: calc(12px * var(--ts)); color: var(--gray-mid); display: flex; align-items: center; gap: 4px; }
+.auto-last { font-size: calc(11px * var(--ts)); display: flex; align-items: center; gap: 4px; }
+.auto-last.ok { color: var(--ok); }
+.auto-last.bad { color: var(--bad); }
+.auto-last svg { width: 12px; height: 12px; }
+
+.auto-builder { display: flex; flex-direction: column; gap: 16px; padding-bottom: 24px; }
+.auto-block { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 16px; padding: 16px; }
+.auto-block-title { font-size: calc(13px * var(--ts)); font-weight: 600; color: var(--fg); margin-bottom: 10px; }
+.auto-step { display: flex; flex-direction: column; gap: 8px; padding: 12px; background: rgba(var(--fg-rgb), 0.03); border: 1px solid var(--glass-border); border-radius: 12px; margin-bottom: 8px; position: relative; }
+.auto-step-head { display: flex; justify-content: space-between; align-items: center; font-size: calc(12px * var(--ts)); font-weight: 600; color: var(--gray-light); }
+.auto-step-del { color: var(--bad); background: none; border: 0; cursor: pointer; padding: 4px; }

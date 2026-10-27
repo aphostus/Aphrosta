@@ -1583,6 +1583,12 @@ const Ops = {
 
 
 let connData = lsGet('aphrosta.connectors', {});
+let automations = lsGet('aphrosta.automations', []);
+
+function saveAutomations() {
+  lsSet('aphrosta.automations', automations);
+  Cloud.queueSettings();
+}
 
 const CONNECTORS = [
   { id: 'web_search', name: 'Web Search', desc: 'Search the web for current information.', icon: () => ICONS.navWorlds, builtIn: true },
@@ -1631,7 +1637,7 @@ const PAGES = {
   },
   automations: {
     title: 'Automations', icon: () => ICONS.navAutomation, search: 'Search Automations',
-    empty: { title: 'No automations yet', text: 'Automations run a set of steps for you, on a schedule or on demand.', cta: 'New automation' }
+    empty: null
   },
   connectors: {
     title: 'Connectors', icon: () => ICONS.navConnectors, search: 'Search Connectors',
@@ -1704,6 +1710,7 @@ function renderPageBody(key) {
   if (key === 'operations') { body.innerHTML = renderOperationsList(); return; }
   if (key === 'system') { body.innerHTML = renderSystemPage(); return; }
   if (key === 'connectors') { body.innerHTML = renderConnectorsList(); return; }
+  if (key === 'automations') { body.innerHTML = renderAutomationsList(); return; }
   const page = PAGES[key];
   if (!page || !page.empty) { body.innerHTML = ''; return; }
   const e = page.empty;
@@ -1735,6 +1742,179 @@ function renderWorldsGrid() {
     </div>
     ${cards}
   </div>`;
+}
+
+function renderAutomationsList() {
+  if (!automations.length) {
+    const page = PAGES.automations;
+    return `<div class="empty-state">
+      <div class="empty-icon">${page.icon()}</div>
+      <p class="empty-title">No automations yet</p>
+      <p class="empty-text">Automations run a set of steps for you, on a schedule or on demand.</p>
+      <button class="ab-btn" data-act="a-new">New automation</button>
+    </div>`;
+  }
+
+  const cards = automations.map(a => {
+    const isPaused = a.status === 'Paused';
+    const lastRun = a.lastRun ? (a.lastRun.success ? `<div class="auto-last ok">${ICONS.toolOk} Last run succeeded</div>` : `<div class="auto-last bad">${ICONS.toolFail} Last run failed</div>`) : '';
+    
+    let triggerStr = 'Run manually';
+    if (a.trigger === 'schedule') triggerStr = `Schedule: ${a.scheduleTime}`;
+    if (a.trigger === 'open') triggerStr = `On open after ${a.scheduleTime}`;
+
+    return `<div class="auto-card ${isPaused ? 'is-paused' : ''}" data-act="auto-edit" data-id="${esc(a.id)}">
+      <div class="auto-head">
+        <div class="auto-name">${esc(a.name)}</div>
+        <span class="sys-tag ${isPaused ? 'miss' : 'ok'}">${a.status}</span>
+      </div>
+      <div class="auto-trigger">${ICONS.clock} ${triggerStr}</div>
+      ${lastRun}
+    </div>`;
+  }).join('');
+
+  return `<div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
+    <button class="ab-btn" data-act="a-new" style="width:auto;padding:6px 14px;font-size:calc(12px*var(--ts));">New automation</button>
+  </div>
+  <div class="auto-list">${cards}</div>`;
+}
+
+function openAutomationBuilder(id = null) {
+  const a = id ? automations.find(x => x.id === id) : null;
+  const isEdit = !!a;
+  const draft = a ? JSON.parse(JSON.stringify(a)) : { id: uid(), name: '', trigger: 'manual', scheduleTime: '08:00', steps: [], status: 'Active', lastRun: null };
+
+  const scrim = document.createElement('div');
+  scrim.className = 'dialog-scrim';
+  
+  const renderBuilder = () => {
+    const stepsHtml = draft.steps.map((s, i) => `
+      <div class="auto-step">
+        <div class="auto-step-head">
+          <span>Step ${i + 1}</span>
+          <button class="auto-step-del" data-step-del="${i}" aria-label="Remove step">${ICONS.trash}</button>
+        </div>
+        <select class="ab-input" data-step="${i}" data-field="type">
+          <option value="prompt" ${s.type==='prompt'?'selected':''}>Ask an agent</option>
+          <option value="web" ${s.type==='web'?'selected':''}>Read a web page</option>
+        </select>
+        ${s.type === 'prompt' ? `<input class="ab-input" data-step="${i}" data-field="val" value="${esc(s.val||'')}" placeholder="Prompt for the agent">` : `<input class="ab-input" data-step="${i}" data-field="val" value="${esc(s.val||'')}" placeholder="https://example.com">`}
+      </div>
+    `).join('');
+
+    scrim.innerHTML = `<div class="dialog" role="dialog" aria-modal="true" style="max-width:440px;max-height:85vh;">
+      <h3 class="dialog-title">${isEdit ? 'Edit Automation' : 'New Automation'}</h3>
+      
+      <div class="panel-scroll" style="gap:12px;padding-right:4px;">
+        <div class="auto-block">
+          <div class="auto-block-title">Name & Trigger</div>
+          <input class="ab-input" data-draft="name" value="${esc(draft.name)}" placeholder="e.g. Daily digest" style="margin-bottom:8px;">
+          <select class="ab-input" data-draft="trigger">
+            <option value="manual" ${draft.trigger==='manual'?'selected':''}>Manual</option>
+            <option value="schedule" ${draft.trigger==='schedule'?'selected':''}>Schedule</option>
+            <option value="open" ${draft.trigger==='open'?'selected':''}>On open</option>
+          </select>
+          ${draft.trigger !== 'manual' ? `<input class="ab-input" data-draft="scheduleTime" value="${esc(draft.scheduleTime)}" placeholder="HH:MM" style="margin-top:8px;">` : ''}
+        </div>
+
+        <div class="auto-block">
+          <div class="auto-block-title">Steps (Max 5)</div>
+          ${stepsHtml}
+          ${draft.steps.length < 5 ? `<button class="btn-line" data-act="auto-add-step">+ Add step</button>` : ''}
+        </div>
+
+        <div class="auto-block">
+          <div class="auto-block-title">Status</div>
+          <select class="ab-input" data-draft="status">
+            <option value="Active" ${draft.status==='Active'?'selected':''}>Active</option>
+            <option value="Paused" ${draft.status==='Paused'?'selected':''}>Paused</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="dialog-actions" style="margin-top:16px;">
+        <button class="dialog-btn" type="button" data-r="close">Cancel</button>
+        <button class="dialog-btn ok" type="button" data-r="save">Save</button>
+      </div>
+    </div>`;
+
+    scrim.onclick = (e) => {
+      e.stopPropagation();
+      if (e.target === scrim || e.target.closest('[data-r="close"]')) return scrim.remove();
+      
+      if (e.target.closest('[data-act="auto-add-step"]')) {
+        draft.steps.push({ type: 'prompt', val: '' });
+        renderBuilder();
+        return;
+      }
+      
+      const delBtn = e.target.closest('[data-step-del]');
+      if (delBtn) {
+        draft.steps.splice(parseInt(delBtn.dataset.stepDel, 10), 1);
+        renderBuilder();
+        return;
+      }
+
+      if (e.target.closest('[data-r="save"]')) {
+        if (!draft.name) return toast('Give the automation a name.');
+        if (!draft.steps.length) return toast('Add at least one step.');
+        if (isEdit) Object.assign(a, draft);
+        else automations.push(draft);
+        saveAutomations();
+        scrim.remove();
+        renderPageBody('automations');
+        toast('Automation saved.', 'success');
+      }
+    };
+
+    scrim.oninput = (e) => {
+      if (e.target.dataset.draft) {
+        draft[e.target.dataset.draft] = e.target.value;
+        if (e.target.dataset.draft === 'trigger') renderBuilder();
+      }
+      if (e.target.dataset.step) {
+        draft.steps[parseInt(e.target.dataset.step, 10)][e.target.dataset.field] = e.target.value;
+      }
+    };
+  };
+  
+  renderBuilder();
+  document.body.appendChild(scrim);
+}
+
+async function runAutomation(id) {
+  const a = automations.find(x => x.id === id);
+  if (!a || a.status === 'Paused') return;
+  
+  const opId = Ops.start('Automation', a.name);
+  let success = true;
+  let lastOutput = '';
+
+  for (let i = 0; i < a.steps.length; i++) {
+    const s = a.steps[i];
+    const t0 = Date.now();
+    try {
+      let result = '';
+      if (s.type === 'web') {
+        result = await AGENT_TOOLS.fetch_url({ url: s.val });
+      } else {
+        /* A real prompt step would call the active model here. For this local engine we simulate a successful step. */
+        result = `Simulated agent reply for: "${s.val}". Previous: ${lastOutput.slice(0, 50)}`;
+      }
+      lastOutput = result;
+      Ops.step(opId, `Step ${i + 1}: ${s.type}`, 'Succeeded', Date.now() - t0, result.slice(0, 100));
+    } catch (e) {
+      success = false;
+      Ops.fail(opId, String(e));
+      break;
+    }
+  }
+
+  Ops.update(opId, { status: success ? 'Succeeded' : 'Failed' });
+  a.lastRun = { time: Date.now(), success };
+  saveAutomations();
+  if (currentPage === 'automations') renderPageBody('automations');
+  toast(success ? `${a.name} completed.` : `${a.name} failed. Check Operations.`, success ? 'success' : 'error');
 }
 
 function renderConnectorsList() {
@@ -2426,6 +2606,18 @@ function onSettingsClick(e) {
     e.stopPropagation();
     if (connAct.dataset.act === 'conn-open') openConnectorDetail(connAct.dataset.id);
     if (connAct.dataset.act === 'conn-soon') toast('This connector is coming in v1.1.', 'info');
+    return;
+  }
+
+  const autoAct = t.closest('[data-act^="auto-"]');
+  if (autoAct) {
+    e.stopPropagation();
+    if (autoAct.dataset.act === 'auto-new') openAutomationBuilder();
+    if (autoAct.dataset.act === 'auto-edit') {
+      const isRun = confirm('Run this automation now? Cancel to edit.');
+      if (isRun) runAutomation(autoAct.dataset.id);
+      else openAutomationBuilder(autoAct.dataset.id);
+    }
     return;
   }
 
@@ -7809,6 +8001,7 @@ const TOUR_STEPS = [
   { sel: '[data-action="menu"]', title: 'Your sessions', text: 'Chats, agents and tools live in the sidebar.', sidebar: true },
     { sel: '[data-action="nav-worlds"]', title: 'Worlds', text: 'Keep projects separate with their own rules and chats.', sidebar: true },
     { sel: '[data-action="nav-agent"]', title: 'Agents', text: 'Save specialists with their own instructions, model, and tools.', sidebar: true },
+    { sel: '[data-action="nav-automation"]', title: 'Automations', text: 'Build flows and routines that run on a schedule.', sidebar: true },
   { sel: '[data-action="settings"]', title: 'Make it yours', text: 'Themes, fonts, rich-text options and Tailorship.', sidebar: true }
 ];
 
