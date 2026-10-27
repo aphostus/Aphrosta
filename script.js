@@ -7207,19 +7207,52 @@ const abLic = (name, lic, what) => `<h4>${esc(name)}<span class="ab-tag">${esc(l
 
 const AB_PAGES = {
   terms: { title: 'Terms & Conditions', icon: () => ICONS.stTerms, cards: [
-    abTextCard("Acceptance of Terms", "Please read these before using Aphrosta", "By creating an account or using Aphrosta, you agree to these Terms and Conditions. If you do not agree, please stop using the app and remove any local data you have saved.", "What this covers", "These terms apply to everyone who accesses or uses the app, including visitors who have not signed in. They cover the app itself, your account, your content, and the limits of what we promise. Continuing to use Aphrosta after an update to these terms means you accept the updated version."),
-    abTextCard("Your Account", "Keep your sign-in details safe", "You are responsible for the activity on your account and for keeping your sign-in details private. One person should use one account.", "Staying secure", "Tell us right away if you think someone else has used your account so we can help you secure it. Do not share your Google sign-in, your API keys, or your device with people you do not trust. You can deactivate, abandon or abolish your account from Settings at any time."),
-    abTextCard("Using the App", "What you can expect from us", "Aphrosta is provided as it is. We work hard to keep it fast and reliable, but we cannot promise that every feature will always be available, error-free, or fit for a particular purpose.", "Limits of liability", "To the fullest extent allowed by law, Aphrosta and its makers are not liable for indirect or consequential losses, for data you have not backed up, or for costs you incur by using third-party AI providers through your own API keys."),
-    abTextCard("Your Content", "You keep what you make", "Anything you type, upload, or generate in Aphrosta belongs to you. You give us only the minimum permission needed to store and sync your sessions, settings and memories so the app can work across your devices.", "What you must not do", "Do not use Aphrosta to break the law, to harm other people, to infringe copyright, or to build tools that do the same. We may limit or remove access where abuse is clear."),
-    abTextCard("Third-Party AI Providers", "Your keys, their terms", "Aphrosta talks to AI providers such as Groq, Google, DeepSeek, xAI, Anthropic, OpenAI, Moonshot and Perplexity using API keys that you add yourself. Those providers have their own terms, prices and privacy policies.", "Your responsibility", "Using a provider through Aphrosta means you agree to that provider's terms. Any spending on your own API keys is your responsibility. Aphrosta does not resell access to those models and does not see your keys beyond this device and your private cloud copy.")
+    { t: 'Agreement to Terms', st: 1, kw: 'terms acceptance agreement',
+      b: `<p>By creating an account or using Aphrosta, you agree to these Terms and Conditions. If you do not agree, please stop using the app and remove any local data you have saved.</p>
+      <h4>What this covers</h4><p>These terms apply to everyone who accesses or uses the app, including visitors who have not signed in. They cover the app itself, your account, your content, and the limits of what we promise.</p>
+      <h4>Changes to Terms</h4><p>Continuing to use Aphrosta after an update to these terms means you accept the updated version. We will try to highlight significant changes when they happen.</p>` },
+    { t: 'Account Responsibilities', st: 1, kw: 'account secure password login',
+      b: `<p>You are responsible for the activity on your account and for keeping your sign-in details private. One person should use one account. Sharing accounts can lead to data loss or confusion.</p>
+      <h4>Staying secure</h4><p>Tell us right away if you think someone else has used your account so we can help you secure it. Do not share your Google sign-in, your API keys, or your device with people you do not trust.</p>
+      <h4>Account Removal</h4><p>You can deactivate, abandon or abolish your account from Settings at any time. Review the differences carefully before confirming, as some actions are permanent.</p>` },
+    { t: 'Using the App', st: 1, kw: 'liability app service warranty',
+      b: `<p>Aphrosta is provided as it is. We work hard to keep it fast and reliable, but we cannot promise that every feature will always be available, error-free, or fit for a particular purpose.</p>
+      <h4>Limits of liability</h4><p>To the fullest extent allowed by law, Aphrosta and its makers are not liable for indirect or consequential losses, for data you have not backed up, or for costs you incur by using third-party AI providers through your own API keys.</p>
+      <h4>Availability</h4><p>We may pause or stop the service for maintenance or updates without notice. We do not guarantee that data stored in the cloud will be available forever.</p>` },
+    { t: 'Your Content', st: 1, kw: 'content rights own',
+      b: `<p>Anything you type, upload, or generate in Aphrosta belongs to you. You give us only the minimum permission needed to store and sync your sessions, settings and memories so the app can work across your devices.</p>
+      <h4>What you must not do</h4><p>Do not use Aphrosta to break the law, to harm other people, to infringe copyright, or to build tools that do the same. We may limit or remove access where abuse is clear.</p>
+      <h4>AI Generated Content</h4><p>AI models can make mistakes. You are responsible for verifying any code, advice, or information generated by the app before you rely on it in the real world.</p>` },
+    { t: 'Third-Party AI Providers', st: 1, kw: 'ai keys api provider terms',
+      b: `<p>Aphrosta talks to AI providers such as Groq, Google, DeepSeek, xAI, Anthropic, OpenAI, Moonshot and Perplexity using API keys that you add yourself. Those providers have their own terms, prices and privacy policies.</p>
+      <h4>Your responsibility</h4><p>Using a provider through Aphrosta means you agree to that provider's terms. Any spending on your own API keys is your responsibility.</p>
+      <h4>Data Sharing</h4><p>When you send a message, it goes directly from your device to the provider you selected. Aphrosta does not intercept or store your prompts on our servers.</p>` }
   ] },
   rules: { title: 'Rules & Policies', icon: () => ICONS.stRules, cards: [
-    abTextCard("Acceptable Use", "How to use Aphrosta responsibly", "Use Aphrosta for lawful purposes only. Do not attempt to disrupt the service, access data that is not yours, or misuse its features. Do not try to overload the model providers with automated spam.", "Content limits", "Content you create stays yours, but you agree not to use the app to share material that is harmful, abusive, or illegal. This includes harassment, threats, sexual content involving minors, malware, and attempts to bypass provider safety systems."),
-    abTextCard("Privacy and Data", "What we keep and why", "We only keep the information needed to run the app, keep your settings in sync, and improve your experience. Sessions, settings, memories, token usage and registered devices are stored in your private Firestore space under your account.", "What stays on this device", "Billing details and saved card information on this device stay on this device. They are never sent to the cloud, and full card numbers and security codes are never stored. API keys live in this device's storage and are never written to the cloud."),
-    abTextCard("Memory Systems", "How memories are stored", "Aphrosta's memory has three parts: a fact store, a scoped database, and a compact state log. Memories respect your Memory settings. Long-term and short-term memory can be switched off at any time.", "Clearing memory", "Settings → Assistance → Memory lets you delete individual memories or clear everything. Clearing memory also clears the remote copy in your private cloud space. Turning memory off stops new memories from being learned."),
-    abTextCard("Token Limits", "How counting works", "Token usage is recorded on this device and, when Share Usage is on, in your private cloud space. A custom limit and reset timer can pause chatting until the timer ends. Provider limits are separate and still apply.", "Estimates", "Some providers do not report exact usage. When that happens Aphrosta estimates the count from the size of the text. The number you see is a close guide, not a billing statement from the provider."),
-    abTextCard("Account Deactivation and Locking", "What each option does", "Deactivate pauses chatting without deleting anything. Abandon locks the account so it can never be signed into again. Abolish deletes your data but lets you start fresh later. Destruct deletes your data and locks the account permanently.", "Irreversible actions", "Abandon and Destruct are permanent and cannot be undone by support. Read the confirmation carefully before typing the confirmation phrase."),
-    abTextCard("Changes to These Rules", "Staying up to date", "We may update these rules as the app changes. The current version always lives in the app, so check here if you are unsure. Continuing to use Aphrosta after a change means you accept it.", "Reporting", "If you see content or behaviour that breaks these rules, send feedback from Settings → Feedback. Reports are reviewed and, where warranted, access is removed.")
+    { t: 'Acceptable Use Policy', st: 1, kw: 'abuse spam bad behavior',
+      b: `<p>Use Aphrosta for lawful purposes only. Do not attempt to disrupt the service, access data that is not yours, or misuse its features. Do not try to overload the model providers with automated spam or scripts.</p>
+      <h4>Content limits</h4><p>Content you create stays yours, but you agree not to use the app to share material that is harmful, abusive, or illegal. This includes harassment, threats, sexual content involving minors, malware, and attempts to bypass provider safety systems.</p>
+      <h4>Consequences</h4><p>Violating these rules may result in your API keys being removed from the app or your account being locked. Severe violations may be reported to the relevant authorities.</p>` },
+    { t: 'Privacy and Data Collection', st: 1, kw: 'privacy data tracking',
+      b: `<p>We only keep the information needed to run the app, keep your settings in sync, and improve your experience. Sessions, settings, memories, token usage and registered devices are stored in your private Firestore space under your account.</p>
+      <h4>What stays on this device</h4><p>Billing details and saved card information on this device stay on this device. They are never sent to the cloud, and full card numbers and security codes are never stored.</p>
+      <h4>API Keys</h4><p>Your API keys live in this device's local storage. When syncing to the cloud, keys are never included. You must re-enter them if you switch devices.</p>` },
+    { t: 'Memory Systems Details', st: 1, kw: 'memory short long term context',
+      b: `<p>Aphrosta's memory has three parts: a fact store (long-term), a scoped database (short-term), and a compact state log. Memories respect your Memory settings.</p>
+      <h4>What is stored</h4><p>Long-term memory extracts facts like your name, preferences, and ongoing projects. Short-term memory keeps track of the current chat context so you don't have to repeat yourself.</p>
+      <h4>Clearing memory</h4><p>Settings → Assistance → Memory lets you delete individual memories or clear everything. Clearing memory also clears the remote copy in your private cloud space. Turning memory off stops new memories from being learned.</p>` },
+    { t: 'Token Limits and Usage', st: 1, kw: 'token limit usage tracking',
+      b: `<p>Token usage is recorded on this device and, when Share Usage is on, in your private cloud space. A custom limit and reset timer can pause chatting until the timer ends. Provider limits are separate and still apply.</p>
+      <h4>How it works</h4><p>Every message you send and every reply you receive uses tokens. Some providers report exact usage, while others do not. When they don't, Aphrosta estimates the count from the size of the text.</p>
+      <h4>Estimates</h4><p>The number you see is a close guide, not a billing statement from the provider. Always check your provider's dashboard for exact billing and limits.</p>` },
+    { t: 'Account Status and Locking', st: 1, kw: 'delete deactivate lock abandon destruct',
+      b: `<p>Deactivate pauses chatting without deleting anything. Abandon locks the account so it can never be signed into again. Abolish deletes your data but lets you start fresh later. Destruct deletes your data and locks the account permanently.</p>
+      <h4>Irreversible actions</h4><p>Abandon and Destruct are permanent and cannot be undone by support. Read the confirmation carefully before typing the confirmation phrase.</p>
+      <h4>What is deleted</h4><p>Abolish and Destruct delete your sessions, settings, memories, and usage records. Abandon keeps the data but prevents any future sign-in.</p>` },
+    { t: 'Changes and Reporting', st: 1, kw: 'report update rules',
+      b: `<p>We may update these rules as the app changes. The current version always lives in the app, so check here if you are unsure. Continuing to use Aphrosta after a change means you accept it.</p>
+      <h4>Reporting</h4><p>If you see content or behaviour that breaks these rules, send feedback from Settings → Feedback. Reports are reviewed and, where warranted, access is removed.</p>
+      <h4>False Reports</h4><p>Abusing the reporting system to harass others or spam our inbox is a violation of the acceptable use policy.</p>` }
   ] },
   licenses: { title: 'About & Licenses', icon: () => ICONS.stLicense, cards: [
     abTextCard("About Aphrosta", "Who we are and what we make", "Aphrosta is a mobile web app built to make everyday tools and AI assistance feel simple, fast, and easy to use. It runs entirely in your browser, talks to model providers you choose, and keeps your work yours.", "Design goals", "Every screen is designed for one hand on a phone first. Big targets, readable type, safe motion, and fast transitions. Thank you for using Aphrosta. We work to keep the experience clear, reliable, and comfortable on every screen size."),
@@ -7231,25 +7264,36 @@ const AB_PAGES = {
       <p>If you are unsure, treat the file as MIT. The three Apache 2.0 pieces are called out by name below.</p>` },
 
     { t: 'App Shell and Layout', st: 1, kw: 'layout sidebar topbar composer stage license MIT',
-      b: `${abLic('app shell and layout', 'MIT', 'The sidebar, top bar, stage, composer shell and responsive rules that arrange every screen. Reuse it as a starting point for your own app.')}
+      b: `${abLic('app shell', 'MIT', 'The sidebar, top bar, stage, and responsive CSS grid/flex rules that arrange every screen. Reuse it as a starting point for your own app.')}
       ${abLic('messages and rich text', 'MIT', 'The message bubbles, action buttons, and the rich-text renderer that turns markdown, tables, task lists, callouts, math and file cards into clean HTML.')}
       ${abLic('composer and pill', 'MIT', 'The textarea, attach tray, word-state pill, token meter, live speech wave and the resize handle.')}
-      ${abLic('thinking panel', 'MIT', 'The collapsible thought panel that streams reasoning, plans and task lists while a reply is being written.')}` },
+      ${abLic('thinking panel', 'MIT', 'The collapsible thought panel that streams reasoning, plans and task lists while a reply is being written.')}
+      ${abLic('onboarding tour', 'MIT', 'The step-by-step spotlight tour with keyboard support and reduced-motion handling.')}
+      ${abLic('accessibility tree', 'MIT', 'The ARIA labels, focus traps, keyboard navigation, and screen-reader announcements built into every component.')}
+      ${abLic('motion engine', 'MIT', 'The spring animations, staggered reveals, and the reduced-motion fallbacks driven by CSS variables and data attributes.')}` },
 
     { t: 'Settings, Profile and Account', st: 1, kw: 'settings account profile privacy license MIT',
       b: `${abLic('settings panel', 'MIT', 'Every settings row, the usage card, the reset controls, and the expandable item pattern used across the panel.')}
       ${abLic('profile and account page', 'MIT', 'The avatar editor, phone and email masking, device list, permissions grid, deactivation and locking flows.')}
-      ${abLic('billing and payment screens', 'MIT', 'The billing date, saved cards, billing details and history screens. Card data stays on this device and is never sent to the cloud.')}` },
+      ${abLic('billing and payment screens', 'MIT', 'The billing date, saved cards, billing details and history screens. Card data stays on this device and is never sent to the cloud.')}
+      ${abLic('permissions manager', 'MIT', 'The UI for requesting and tracking microphone, camera, location, and notification permissions.')}
+      ${abLic('device registry', 'MIT', 'The local and cloud list of devices connected to your account, including remove-device logic.')}
+      ${abLic('data export/import', 'MIT', 'The JSON serialization, validation, and merging logic that lets you back up and restore your settings and sessions.')}` },
 
     { t: 'Chat Engine and Sessions', st: 1, kw: 'chat engine sessions firebase provider license MIT',
       b: `${abLic('chat engine', 'MIT', 'The send, stream, regenerate, edit and retry flow, including the per-provider adapters, the retry-on-400 fallback and the friendly error messages.')}
       ${abLic('session storage', 'MIT', 'The local session list, drafts, pinning, rename and delete, plus the cloud sync helpers.')}
-      ${abLic('token recorder and limit window', 'MIT', 'The per-provider token counter, the rolling limit window and the pause logic when a limit is reached.')}` },
+      ${abLic('token recorder', 'MIT', 'The per-provider token counter, the rolling limit window and the pause logic when a limit is reached.')}
+      ${abLic('provider adapters', 'MIT', 'The specific formatting logic for OpenAI, Anthropic, Google Gemini, and other API shapes so they all speak the same internal language.')}
+      ${abLic('prompt builder', 'MIT', 'The logic that assembles system prompts from your settings, effort level, memories, and enabled skills.')}
+      ${abLic('stream parser', 'MIT', 'The chunked reader that processes server-sent events (SSE) and updates the UI as text arrives.')}` },
 
     { t: 'Memory and Agent', st: 1, kw: 'memory agent tools license MIT',
       b: `${abLic('memory systems', 'MIT', 'The fact store, the scoped database and the compact state log, including their cloud sync, retention rules and clearing actions.')}
       ${abLic('agent and tools', 'MIT', 'The tool-call protocol, the web search, page reader, calculator and clock tools, and the auto-research step that runs before a reply is written.')}
-      ${abLic('skills library', 'MIT', 'The Presentations, Documents, Spreadsheets and Web search skill prompts that teach the assistant to build decks, docs, sheets and researched answers.')}` },
+      ${abLic('skills library', 'MIT', 'The Presentations, Documents, Spreadsheets and Web search skill prompts that teach the assistant to build decks, docs, sheets and researched answers.')}
+      ${abLic('file blocks', 'MIT', 'The parser that detects fenced code blocks with filenames and turns them into the downloadable/previewable file cards.')}
+      ${abLic('web reader', 'MIT', 'The proxy-based HTML-to-text extractor used by the fetch_url tool to read web pages without CORS issues.')}` },
 
     { t: 'Auth, Voice and Extras', st: 1, kw: 'auth firebase elevenlabs voice fonts apache',
       b: `${abLic('authentication', 'MIT', 'Firebase sign-in, persistence, the locked-account check and the switch-account flow.')}
@@ -7264,13 +7308,34 @@ const AB_PAGES = {
   ] },
 
   help: { title: 'Help & Support', icon: () => ICONS.stHelp, cards: [
-    abTextCard("Getting Started", "Quick tips for your first visit", "Open Settings to change your text size, theme, and account details. Use the search bar on each page to find what you need quickly.", "Making it yours", "Your changes save automatically, so you can pick up right where you left off the next time you open the app. Try the Replay Tour button under Settings → Tailorship if you want the first-run guide again."),
-    abTextCard("Connecting a Model", "Bring your own API key", "Tap the model button at the top of the chat. Pick a provider, tap Get your API key, sign in there, create a key, then paste it back into Aphrosta and tap Save.", "If it does not work", "Most key problems are one of three things: no billing set up on the provider, the key was copied with extra spaces, or the provider has no access to that specific model. The model picker greys out any model your key cannot use."),
-    abTextCard("Effort and Length", "Getting the reply you want", "Effort controls how deeply the assistant thinks. Minima is fastest and uses the fewest tokens. Maxima is slowest but picks up edge cases. Length controls how long the final answer is.", "When replies cut off", "If a reply stops mid-sentence, lower the Effort or the Length, or switch to a non-reasoning model. Reasoning models spend part of the budget on thinking before they write anything."),
-    abTextCard("Files and Attachments", "What you can drop in", "You can attach images and text or code files up to 4 at a time. Ask for a deck, a document or a spreadsheet and it arrives as a file card you can preview, copy and download.", "Limits", "Images only work on vision models. Text files are trimmed to about 12,000 characters. Images are shrunk on this device before they are sent so your phone does not waste data."),
-    abTextCard("Memory and Privacy", "What the app remembers", "Memory has three parts: facts about you, a scoped database and a compact state log. All three can be switched off in Settings → Assistance → Memory.", "Clearing everything", "Clear Memory forgets facts and per-chat context. Clear Sessions deletes every saved session. Delete Local removes settings, sessions and API keys from this device without touching the cloud copy."),
-    abTextCard("Account Actions", "Deactivate, Abandon, Abolish, Destruct", "Deactivate pauses chatting. Abandon locks the account forever but keeps the data. Abolish deletes the data but lets you start fresh. Destruct deletes the data and locks the account forever.", "Which one to choose", "If you are just taking a break, Deactivate. If you are moving on but want the data back later, do nothing. Abandon and Destruct are for cases where the account must never be used again."),
-    abTextCard("Contact and Feedback", "We are happy to help", "If something is not working as expected, send us feedback from the app so our team can look into it. Feedback is limited to once per hour to keep the inbox tidy.", "What to include", "Include a short description of what you were doing and what happened. Leave device info on so we can match your report to the browser and screen size. Error codes from the failure message help a lot.")
+    { t: 'Getting Started', st: 1, kw: 'start first time basics',
+      b: `<p>Open Settings to change your text size, theme, and account details. Use the search bar on each page to find what you need quickly. Your changes save automatically.</p>
+      <h4>Making it yours</h4><p>You can pick your accent color, choose a font, change the text size, and toggle off animations from the Settings panel.</p>
+      <h4>Replay Tour</h4><p>Try the Replay Tour button under Settings → Tailorship if you want the first-run guide again.</p>` },
+    { t: 'Connecting a Model', st: 1, kw: 'api key model provider setup',
+      b: `<p>Tap the model button at the top of the chat. Pick a provider, tap Get your API key, sign in there, create a key, then paste it back into Aphrosta and tap Save.</p>
+      <h4>Common Issues</h4><p>Most key problems are one of three things: no billing set up on the provider, the key was copied with extra spaces, or the provider has no access to that specific model.</p>
+      <h4>Unsupported Models</h4><p>If a model fails with a 404 or "not found" error, Aphrosta will mark it as unsupported for that key and grey it out in the model picker.</p>` },
+    { t: 'Effort and Length Controls', st: 1, kw: 'effort length tokens response',
+      b: `<p>Effort controls how deeply the assistant thinks. Minima is fastest and uses the fewest tokens. Maxima is slowest but picks up edge cases. Length controls how long the final answer is.</p>
+      <h4>When replies cut off</h4><p>If a reply stops mid-sentence, lower the Effort or the Length, or switch to a non-reasoning model. Reasoning models spend part of the budget on thinking before they write anything.</p>
+      <h4>Reasoning Models</h4><p>Models like DeepSeek V4 Pro or Claude Opus 5 will output their thought process before the final answer. You can watch this in the thought panel.</p>` },
+    { t: 'Files and Attachments', st: 1, kw: 'images files attach upload',
+      b: `<p>You can attach images and text or code files up to 4 at a time. Ask for a deck, a document or a spreadsheet and it arrives as a file card you can preview, copy and download.</p>
+      <h4>Limits</h4><p>Images only work on vision models. Text files are trimmed to about 12,000 characters. Images are shrunk on this device before they are sent so your phone does not waste data.</p>
+      <h4>Supported Text Files</h4><p>Most code files, .txt, .md, .json, and .csv files are supported. They will be inserted into the chat as plain text so the model can read them.</p>` },
+    { t: 'Memory and Privacy', st: 1, kw: 'memory privacy clear delete',
+      b: `<p>Memory has three parts: facts about you, a scoped database and a compact state log. All three can be switched off in Settings → Assistance → Memory.</p>
+      <h4>Clearing everything</h4><p>Clear Memory forgets facts and per-chat context. Clear Sessions deletes every saved session. Delete Local removes settings, sessions and API keys from this device.</p>
+      <h4>Cloud Sync</h4><p>If you are signed in, your memory syncs across devices. Turning off Share Usage prevents memory from being stored in the cloud.</p>` },
+    { t: 'Account Actions', st: 1, kw: 'account deactivate abandon abolish destruct',
+      b: `<p>Deactivate pauses chatting. Abandon locks the account forever but keeps the data. Abolish deletes the data but lets you start fresh. Destruct deletes the data and locks the account forever.</p>
+      <h4>Which one to choose</h4><p>If you are just taking a break, Deactivate. If you are moving on but want the data back later, do nothing. Abandon and Destruct are for cases where the account must never be used again.</p>
+      <h4>Data Recovery</h4><p>Once an account is abolished or destructed, the data cannot be recovered. Please be absolutely sure before confirming.</p>` },
+    { t: 'Contact and Feedback', st: 1, kw: 'contact feedback bug',
+      b: `<p>If something is not working as expected, send us feedback from the app so our team can look into it. Feedback is limited to once per hour to keep the inbox tidy.</p>
+      <h4>What to include</h4><p>Include a short description of what you were doing and what happened. Leave device info on so we can match your report to the browser and screen size.</p>
+      <h4>Error Codes</h4><p>If you see an error message with a code, include it in your feedback. It helps us find the exact issue faster.</p>` }
   ] }
 };
 

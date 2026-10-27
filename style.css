@@ -2745,6 +2745,16 @@ html[data-motion="reduce"] .tool-globe .globe-mer { animation: none; }
   border-radius: 999px;
   vertical-align: middle;
 }
+.ab-alert {
+  margin: 12px 0;
+  padding: 10px 14px;
+  background: rgba(var(--accent-rgb), 0.08);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  font-size: calc(12.5px * var(--ts));
+  color: var(--gray-light);
+}
+.ab-alert b { color: var(--fg); }
 .settings-panel.show-about .about-page { transform: none; visibility: visible; }
 .about-page, .about-page * { box-sizing: border-box; }
 .about-page { gap: 0; min-width: 0; overflow: hidden; }
