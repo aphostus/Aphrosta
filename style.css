@@ -7,7 +7,7 @@
    ============================================================ */
 :root {
   --black: #000000;
-  --gray-mid: #888888;
+  --gray-mid: #9a9a9a;
   --gray-light: #cccccc;
   --white: #ffffff;
 
@@ -60,11 +60,11 @@
   --bg: #ffffff;
   --fg: #0a0a0a;
   --fg-rgb: 10, 10, 10;
-  --gray-mid: #777777;
+  --gray-mid: #6b6b6b;
   --gray-light: #484848;
   --surface-1: #f6f6f6;
   --surface-2: #f1f1f1;
-  --surface-3: #ffffff;
+  --surface-3: #fafafa;
   --surface-4: #ffffff;
   --ok: #1fa347;
   --warn: #c79a00;
