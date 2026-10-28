@@ -829,6 +829,7 @@ Object.assign(ICONS, {
   thumbUp:  svg('<path d="M7 10v12"/><path d="M15 5.88L14 10h5.83a2 2 0 011.92 2.56l-2.33 8A2 2 0 0117.5 22H4a2 2 0 01-2-2v-8a2 2 0 012-2h2.76a2 2 0 001.79-1.11L12 2a3.13 3.13 0 013 3.88z"/>', 15),
   thumbDown:svg('<path d="M17 14V2"/><path d="M9 18.12L10 14H4.17a2 2 0 01-1.92-2.56l2.33-8A2 2 0 016.5 2H20a2 2 0 012 2v8a2 2 0 01-2 2h-2.76a2 2 0 00-1.79 1.11L12 22a3.13 3.13 0 01-3-3.88z"/>', 15),
   regen:    svg('<path d="M21 12a9 9 0 11-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>', 15),
+  continueReply: svg('<path d="M20 11a8 8 0 10.6 4.5"/><path d="M20 5v6h-6"/>', 15),
   eye:      svg('<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>', 18),
   eyeOff:   svg('<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/><path d="M3 3l18 18"/>', 18),
   pushpin:  svg('<path d="M12 17v5"/><path d="M9 10.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24V16a1 1 0 001 1h12a1 1 0 001-1v-.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V7a1 1 0 011-1 2 2 0 000-4H8a2 2 0 000 4 1 1 0 011 1z"/>', 15),
@@ -3723,6 +3724,10 @@ function initComposer() {
   const syncAgentLabel = () => {
     const ai = currentThinkAi();
     const hasThink = sameThinkModel(ai) && ((ai.reasoning && ai.reasoning.length > 0) || (settings.agentPlan && splitPlanParts(ai.content || '').plan));
+    if (mode === 'speech' && !agentOn) {
+      agentBtn.setAttribute('aria-label', voiceState === 'paused' ? 'Continue recording' : 'Pause recording');
+      return;
+    }
     if (hasThink) {
       agentBtn.setAttribute('aria-label', thinkOpen ? 'Hide thinking' : 'Show thinking');
       return;
@@ -4117,13 +4122,13 @@ function initComposer() {
     const ai = currentThinkAi();
     const hasPlan = ai && settings.agentPlan && splitPlanParts(ai.content || '').plan;
     const hasThink = sameThinkModel(ai) && ((ai.reasoning && ai.reasoning.length > 0) || hasPlan);
+    if (mode === 'speech' && !agentOn) { togglePause(); return; }
     if (hasThink) {
       const opening = !thinkOpen;
       setThinkOpen(!thinkOpen);
       if (opening) markThinkSeen();
       return;
     }
-    if (mode === 'speech' && !agentOn) { togglePause(); return; }
     setAgent(!agentOn);
   });
 
@@ -5580,10 +5585,12 @@ function stopStatusRotor() {
 }
 
 const NO_REPLY_TEXT = 'No reply was generated. The response may have been stopped, or the model ran out of space. Try again or switch models.';
-const stepCards = new WeakMap();
-const stepMsgs = new WeakSet();
+let stepCards = new WeakMap();
+let stepMsgs = new WeakSet();
 const TOOL_LABEL = { web_search: 'Searched', fetch_url: 'Read', calculator: 'Calculated', current_time: 'Checked time' };
 function buildStepCards(msgs) {
+  stepCards = new WeakMap();
+  stepMsgs = new WeakSet();
   let pending = [];
   msgs.forEach((m, i) => {
     if (m.role !== 'assistant') return;
@@ -5665,7 +5672,7 @@ function msgEl(m, i) {
   } else {
     act.innerHTML =
       btn('copy', 'Copy', ICONS.copy) +
-      btn('continue', 'Continue', ICONS.play) +
+      (last ? btn('continue', 'Continue reply', ICONS.continueReply) : '') +
       btn('voice', 'Read aloud', ICONS.volume) +
       btn('like', 'Good response', m.feedback === 'like' ? ICONS.thumbUpOn : ICONS.thumbUp, m.feedback === 'like') +
       btn('dislike', 'Bad response', m.feedback === 'dislike' ? ICONS.thumbDownOn : ICONS.thumbDown, m.feedback === 'dislike') +
@@ -5704,7 +5711,7 @@ function renderSessionList() {
   const chatsBox = q$('[data-list="chats"]');
   if (!pinnedBox || !chatsBox) return;
   const q = sessionQuery.trim().toLowerCase();
-  const match = (s) => !q || s.title.toLowerCase().includes(q) || s.messages.some((m) => m.content.toLowerCase().includes(q));
+  const match = (s) => !q || String(s.title || '').toLowerCase().includes(q) || s.messages.some((m) => String(m.content || '').toLowerCase().includes(q));
   const pinned = sessions.filter((s) => s.pinned && match(s)).sort((a, b) => b.pinnedAt - a.pinnedAt);
   const normal = sessions.filter((s) => !s.pinned && match(s)).sort((a, b) => b.updated - a.updated);
 
