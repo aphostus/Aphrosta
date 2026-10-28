@@ -732,7 +732,7 @@ const ICONS = {
   chevronR: svg('<path d="M9 6l6 6-6 6"/>', 14),
   sliders:  svg('<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>', 16),
 
-  pen:      svg('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/>', 16),
+
   volume:   svg('<path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 010 7M19 5a10 10 0 010 14"/>', 16),
   trash:    svg('<path d="M3 6h18M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6M10 11v6M14 11v6M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>', 16),
   clock:    svg('<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>', 16),
@@ -785,7 +785,7 @@ Object.assign(ICONS, {
   searchPage:    svg('<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5M8.5 11h5M11 8.5v5"/>', 16),
   abolishAcct:   svg('<circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0114 0M17 8l5 5M22 8l-5 5"/>', 16),
   cardRemove:    svg('<circle cx="12" cy="12" r="9"/><path d="M8 12h8"/>', 16),
-  renameChat:    svg('<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13 7l4 4"/>', 15)
+  renameChat:    svg('<path d="M16 4l4 4"/><path d="M4 20l4-1 10-10-4-4L4 16z"/><path d="M9 6H5a1 1 0 00-1 1v12a1 1 0 001 1h12a1 1 0 001-1v-4"/>', 15)
 });
 /* fix identical-drawing clones */
 ICONS.newChat = svg('<path d="M21 12a8 8 0 01-8 8H4l2.5-3.5A8 8 0 1121 12z"/><path d="M12 9v6M9 12h6"/>');
@@ -5276,9 +5276,11 @@ function renderMessages() {
 
 function sessionItem(s) {
   return `<div class="chat-item${s.id === currentSession.id ? ' is-active' : ''}" data-id="${esc(s.id)}">
-    <button class="chat-open" type="button" title="${esc(s.title)}">${esc(s.title)}</button>
+    <button class="chat-open" type="button" title="${esc(s.title)}">
+      <span class="chat-act" data-act="rename" aria-label="Rename session" style="margin-right:2px;width:24px;height:24px;vertical-align:middle;">${ICONS.renameChat}</span>
+      <span>${esc(s.title)}</span>
+    </button>
     <span class="chat-actions">
-      <button class="chat-act" type="button" data-act="rename" aria-label="Rename session">${ICONS.renameChat}</button>
       <button class="chat-act${s.pinned ? ' on' : ''}" type="button" data-act="pin" aria-label="${s.pinned ? 'Unpin' : 'Pin'} session">${s.pinned ? ICONS.pushpinOn : ICONS.pushpin}</button>
       <button class="chat-act" type="button" data-act="del" aria-label="Delete session">${ICONS.trash}</button>
     </span>

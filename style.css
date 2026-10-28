@@ -481,6 +481,17 @@ html.has-vv #app-shell { height: var(--app-h); }
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.chat-open > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chat-open .chat-act:hover {
+  background: transparent;
+  color: var(--fg);
 }
 .chat-item.is-active .chat-open,
 .chat-item:hover .chat-open { color: var(--fg); }
