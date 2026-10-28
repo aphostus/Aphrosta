@@ -1841,25 +1841,25 @@ function openLibSheet(edit) {
   el.className = 'lib-scrim';
   el.id = 'lib-scrim';
   el.innerHTML = `
-    <div class="lib-sheet" role="dialog" aria-label="Add to Library">
+    <div class="lib-sheet" role="dialog" aria-label="Add">
       <div class="lib-grab"></div>
       <div class="lib-head">
-        <h3 class="lib-h">${edit ? 'Edit item' : 'Add to Library'}</h3>
+        <h3 class="lib-h">${edit ? 'Edit' : 'Add'}</h3>
         <button class="icon-btn" type="button" id="lib-close" aria-label="Close">${ICONS.stClose}</button>
       </div>
-      <label class="lib-lab">Title
+      <label class="lib-lab">Name
         <input class="lib-in" id="lib-title" maxlength="80" autocomplete="off" placeholder="e.g. Brand guidelines" value="${esc(edit?.title)}">
       </label>
-      <label class="lib-lab">Instructions for the AI
+      <label class="lib-lab">Instructions
         <textarea class="lib-in lib-ta" id="lib-instr" rows="5" maxlength="1500" placeholder="When and how should the AI use this? e.g. Use it when I ask about pricing. Quote exact numbers.">${esc(edit?.instructions)}</textarea>
       </label>
-      <div class="lib-lab">${edit ? 'Files' : 'Files (up to ' + LIB_MAX_FILES + ')'}
+      <div class="lib-lab">Files
         <div class="lib-flist" id="lib-flist"></div>
-        <button class="lib-file" id="lib-pick" type="button"${edit ? ' hidden' : ''}>${ICONS.attachFile}<span id="lib-fname">Add files</span></button>
+        <button class="lib-file" id="lib-pick" type="button"${edit ? ' hidden' : ''}>${ICONS.attachFile}<span id="lib-fname">Add</span></button>
         <input type="file" id="lib-file" multiple hidden accept=".txt,.md,.markdown,.json,.csv,.tsv,.log,.xml,.yml,.yaml,.toml,.ini,.html,.htm,.css,.js,.mjs,.ts,.jsx,.tsx,.py,.java,.c,.h,.cpp,.cs,.go,.rs,.rb,.php,.sh,.sql,text/*">
       </div>
       <p class="lib-note">${edit ? 'The files can\u2019t be changed. To use other files, delete this item and add a new one.' : libSize(LIB_MAX_BYTES) + ' per file, ' + libSize(LIB_MAX_TOTAL) + ' total. Text and code files only. Images, PDFs and other binary files can\u2019t be added. Big files are split into parts, and the AI only loads the parts that match your message.'}</p>
-      <button class="lib-save" id="lib-save" type="button">${edit ? 'Save changes' : 'Save to Library'}</button>
+      <button class="lib-save" id="lib-save" type="button">Save</button>
     </div>`;
   document.body.appendChild(el);
   requestAnimationFrame(() => el.classList.add('show'));
@@ -1873,7 +1873,7 @@ function openLibSheet(edit) {
   const drawFiles = () => {
     const rows = edit ? libFilesOf(edit) : picked;
     flist.innerHTML = rows.map((f, i) => `<div class="lib-frow"><span class="lib-fn">${esc(f.name)}</span><span class="lib-fs">${libSize(f.size)}</span>${edit ? '' : `<button class="icon-btn" type="button" data-lib-rm="${i}" aria-label="Remove">${ICONS.stClose}</button>`}</div>`).join('');
-    el.querySelector('#lib-fname').textContent = picked.length ? 'Add more files' : 'Add files';
+    el.querySelector('#lib-fname').textContent = picked.length ? 'More' : 'Add';
   };
   drawFiles();
   flist.addEventListener('click', (e) => {
@@ -1918,7 +1918,7 @@ function openLibSheet(edit) {
       libRender();
     } catch (_) {
       saveBtn.disabled = false;
-      saveBtn.textContent = edit ? 'Save changes' : 'Save to Library';
+      saveBtn.textContent = 'Save';
       toast('Could not save. Storage may be full. (E06)');
     }
   });
