@@ -5464,15 +5464,14 @@ async function onMessageAction(btn) {
       return;
     }
     if (!chatReady()) return;
-    currentSession.messages.pop();
-    sendChatMessage(null, true);
+    sendChatMessage(null, true, null, false);
   } else if (a === 'continue') {
     if (chatBusy || !chatReady()) return;
     if (i !== currentSession.messages.length - 1) {
       toast('You can only continue the most recent reply.', 'info');
       return;
     }
-    sendChatMessage('CONTINUE_GENERATION');
+    sendChatMessage('CONTINUE_GENERATION', true, null, true);
   } else if (a === 'retry') {
     if (chatBusy) return;
     retryFailed();
@@ -6017,7 +6016,7 @@ async function agentAfterReply(ai, session) {
   sendChatMessage(results.join('\n\n') + '\n\nContinue the task using these results.');
 }
 
-let sendChatMessage = async function (text, regen = false, attachmentsOverride = null) {
+let sendChatMessage = async function (text, regen = false, attachmentsOverride = null, isContinue = false) {
   if (chatBusy || !chatReady()) return;
   chatBusy = true;
 
@@ -6032,6 +6031,27 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
   const myAbort = new AbortController();
   chatAbort = myAbort;
 
+  if (text === 'CONTINUE_GENERATION') {
+    isContinue = true;
+    text = null;
+    regen = true;
+  }
+
+  let existingContent = '';
+  if (isContinue) {
+    const lastMsg = session.messages[session.messages.length - 1];
+    if (lastMsg && lastMsg.role === 'assistant') {
+      existingContent = lastMsg.content || '';
+    }
+  }
+
+  if (regen) {
+    const lastMsg = session.messages[session.messages.length - 1];
+    if (lastMsg && lastMsg.role === 'assistant') {
+      session.messages.pop();
+    }
+  }
+
   if (!regen) {
     const atts = (attachmentsOverride || []).map((a) => ({ ...a }));
     const hiddenMsg = agentNextHidden;
@@ -6043,7 +6063,7 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
       attachments: atts.length ? atts : undefined,
       hidden: hiddenMsg || undefined
     });
-    MessageRecorder.log({ type: 'user', sessionId: session.id, chars: text.length, files: atts.length, provider: pid, model: variant.id });
+    MessageRecorder.log({ type: 'user', sessionId: session.id, chars: text ? text.length : 0, files: atts.length, provider: pid, model: variant.id });
     if (session.draft) {
       session.draft = false;
       const seed = text || (atts[0]?.name ?? 'Attachment');
@@ -6051,28 +6071,17 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
       sessions.push(session);
       clearDraft();
     }
-    if (text === 'CONTINUE_GENERATION') {
-      session.messages.pop();
-      text = null;
-      regen = true;
-    }
     if (!hiddenMsg) { haptic(12); sfx('send'); }
-    if (settings.memoryLong && !hiddenMsg) learnMemory(text);
-    if (!hiddenMsg) MemSys.observe(text, session);
+    if (settings.memoryLong && !hiddenMsg && text) learnMemory(text);
+    if (!hiddenMsg && text) MemSys.observe(text, session);
   } else {
-    MessageRecorder.log({ type: 'regenerate', sessionId: session.id, provider: pid, model: variant.id });
+    MessageRecorder.log({ type: isContinue ? 'continue' : 'regenerate', sessionId: session.id, provider: pid, model: variant.id });
   }
   session.updated = Date.now();
 
   const lastUser = session.messages.filter((m) => m.role === 'user').slice(-1)[0];
   const seedText = text || lastUser?.content || '';
-  let existingContent = '';
-  if (text === null && regen) {
-    const prevAi = session.messages[session.messages.length - 1];
-    if (prevAi?.role === 'assistant') {
-      existingContent = prevAi.content + '\n';
-    }
-  }
+
   const ai = {
     role: 'assistant', content: existingContent, provider: pid, model: variant.id, t: Date.now(),
     reasoning: '', thinkWanted: needsThinking(seedText, pid, variant),
@@ -6089,7 +6098,9 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
 
   pendingToolContext = await autoResearch(seedText);
   const messages = buildMessages();
-  if (existingContent) messages.push({ role: 'assistant', content: existingContent + ' (Continue exactly from where you left off.)' });
+  if (existingContent) {
+    messages.push({ role: 'user', content: 'Continue exactly from where you left off. Do not repeat the previous text.' });
+  }
   pendingToolContext = '';
   const wantStream = settings.streaming !== false;
   let usage = null, error = null, raf = 0, first = true, lastTick = 0, streamErr = '';

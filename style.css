@@ -3133,3 +3133,17 @@ mark.ab-mark {
 .ab-pill { padding: 3px 8px; font-style: normal; font-size: calc(10.5px * var(--ts)); font-weight: 700; color: var(--accent); background: rgba(var(--accent-rgb), 0.14); border-radius: 999px; }
 .ab-mini { flex-shrink: 0; min-height: 34px; padding: 6px 10px; font-size: calc(11.5px * var(--ts)); font-weight: 600; white-space: nowrap; color: var(--gray-light); background: var(--glass-bg-hover); border-radius: 8px; }
 .ab-mini.danger { display: grid; place-items: center; color: var(--bad); }
+
+.chat-open {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.chat-open > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chat-open .chat-act:hover {
+  background: transparent;
+  color: var(--fg);
+}
