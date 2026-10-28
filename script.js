@@ -1545,7 +1545,7 @@ let libItems = [];
 let libContext = '';
 let libDbP = null;
 
-const libTokens = (s) => [...new Set((String(s).toLowerCase().match(/[a-z0-9\u00c0-\uffff]{3,}/g) || []).filter((w) => !LIB_STOP.has(w)))];
+const libTokens = (s) => [...new Set((String(s).replace(/([a-z0-9])([A-Z])/g, '$1 $2').toLowerCase().match(/[a-z0-9\u00c0-\uffff]{3,}/g) || []).filter((w) => !LIB_STOP.has(w)))];
 const libReq = (r) => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
 const libSize = (b) => (b < 1024 ? b + ' B' : b < 1048576 ? (b / 1024).toFixed(0) + ' KB' : (b / 1048576).toFixed(1) + ' MB');
 const libFilesOf = (it) => it.files || [{ name: it.fileName, size: it.size, parts: it.parts }];
@@ -1673,9 +1673,14 @@ async function libContextFor(query) {
   if (!libItems.length) await libLoad();
   if (!libItems.length) return '';
   const q = libTokens(query);
+  const flat = String(query).toLowerCase().replace(/[^a-z0-9\u00c0-\uffff]+/g, '');
+  const askLib = /\b(library|libraries|my files?)\b/i.test(query);
   const scored = libItems.map((it) => {
     let s = 0;
     for (const w of q) { if (it.ik.includes(w)) s += 3; else if (it.fk.includes(w)) s += 1; }
+    const tf = it.title.toLowerCase().replace(/[^a-z0-9\u00c0-\uffff]+/g, '');
+    if (tf.length >= 3 && flat.includes(tf)) s += 5;
+    if (askLib) s += 1;
     return { it, s };
   }).sort((a, b) => b.s - a.s);
 
@@ -1708,7 +1713,7 @@ async function libContextFor(query) {
     const what = it.parts ? it.parts + ' parts' : 'contents not readable';
     return '- "' + it.title + '" (' + libFilesOf(it).map((f) => f.name).join(', ').slice(0, 120) + ', ' + what + '). Instructions: ' + ins;
   });
-  let out = 'LIBRARY: the user saved reference items. Use an item only when the request relates to it, and follow its instructions. Only the excerpts below are loaded, so never claim to have read the rest of a file.\nItems:\n' + idx.join('\n');
+  let out = 'USER LIBRARY (live data, available to you right now): the user keeps saved reference files here. When the user mentions their library, a library item by name, or "the file", they mean these items. Read the instructions and excerpts below and answer from them. Never say you cannot access their files. Follow each item\u2019s instructions. If the excerpts do not cover the question, say which parts you have and ask what to look for. Only these excerpts are loaded, so never claim to have read the rest of a file.\nItems:\n' + idx.join('\n');
   if (keep.length) out += '\nExcerpts:\n' + keep.map((k) => '[' + k.it.title + (k.fn ? ' / ' + k.fn : '') + ' #' + (k.n + 1) + '] ' + k.text).join('\n\n');
   return out;
 }
@@ -6015,7 +6020,7 @@ function buildMessages() {
     images.forEach((a) => parts.push({ type: 'image_url', image_url: { url: a.dataUrl } }));
     return { role: 'user', content: parts };
   });
-  return [{ role: 'system', content: systemPrompt() + (libContext ? '\n\n' + libContext : '') + (pendingToolContext ? '\n\n' + pendingToolContext : '') }, ...ctx];
+  return [{ role: 'system', content: (libContext ? libContext + '\n\n' : '') + systemPrompt() + (libContext ? '\n\nReminder: the user\u2019s library items and excerpts are listed at the top of this message. Use them whenever the user asks about their library or files.' : '') + (pendingToolContext ? '\n\n' + pendingToolContext : '') }, ...ctx];
 }
 
 const ADAPTERS = {
@@ -6426,7 +6431,7 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
   startStatusRotor();
 
   pendingToolContext = isContinue ? '' : await autoResearch(seedText);
-  libContext = await libContextFor(seedText).catch(() => '');
+  libContext = await libContextFor(seedText).catch((e) => { console.warn('Library lookup failed:', e); return ''; });
   const messages = buildMessages();
   if (existingContent) {
     messages.push({ role: 'user', content: 'Your previous message was cut off. Output ONLY the exact next characters to seamlessly continue that exact text, without repeating anything from before, and without any meta-commentary.' });
