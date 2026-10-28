@@ -7180,6 +7180,11 @@ function initShell() {
     if (!btn) return;
     const action = btn.dataset.action;
 
+    /* Stop active reply voice before opening menus or side panels. */
+    if (action === 'menu' || action === 'settings' || NAV_PANELS[action]) {
+      stopSpeaking();
+    }
+
     if (action === 'menu') toggleSidebar();
     else if (action === 'settings') openSettings();
     else if (action === 'model-select') toggleModelMenu();
