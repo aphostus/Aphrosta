@@ -1842,10 +1842,10 @@ function openLibSheet(edit) {
   el.className = 'lib-scrim';
   el.id = 'lib-scrim';
   el.innerHTML = `
-    <div class="lib-sheet" role="dialog" aria-label="Create a Library">
+    <div class="lib-sheet" role="dialog" aria-label="Create">
       <div class="lib-grab"></div>
       <div class="lib-head">
-        <h3 class="lib-h">${edit ? 'Edit' : 'Create a Library'}</h3>
+        <h3 class="lib-h">${edit ? 'Edit' : 'Create'}</h3>
         <button class="icon-btn" type="button" id="lib-close" aria-label="Close">${ICONS.stClose}</button>
       </div>
       <label class="lib-lab">Name
