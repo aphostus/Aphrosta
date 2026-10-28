@@ -785,7 +785,7 @@ Object.assign(ICONS, {
   searchPage:    svg('<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5M8.5 11h5M11 8.5v5"/>', 16),
   abolishAcct:   svg('<circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0114 0M17 8l5 5M22 8l-5 5"/>', 16),
   cardRemove:    svg('<circle cx="12" cy="12" r="9"/><path d="M8 12h8"/>', 16),
-  renameChat:    svg('<path d="M16 4l4 4"/><path d="M4 20l4-1 10-10-4-4L4 16z"/><path d="M9 6H5a1 1 0 00-1 1v12a1 1 0 001 1h12a1 1 0 001-1v-4"/>', 15)
+  renameChat:    svg('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/>', 15)
 });
 /* fix identical-drawing clones */
 ICONS.newChat = svg('<path d="M21 12a8 8 0 01-8 8H4l2.5-3.5A8 8 0 1121 12z"/><path d="M12 9v6M9 12h6"/>');
