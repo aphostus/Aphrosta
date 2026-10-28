@@ -458,11 +458,12 @@ html.has-vv #app-shell { height: var(--app-h); }
   text-transform: uppercase;
   color: var(--gray-mid);
 }
-.chat-list { display: flex; flex-direction: column; gap: 2px; }
+.chat-list { display: flex; flex-direction: column; gap: 1px; }
 .chat-item {
   display: flex;
   align-items: center;
-  border-radius: var(--radius-md);
+  min-height: 32px;
+  border-radius: 10px;
   transition: background 0.2s var(--ease-smooth);
 }
 .chat-item:hover,
@@ -474,9 +475,9 @@ html.has-vv #app-shell { height: var(--app-h); }
 .chat-open {
   flex: 1;
   min-width: 0;
-  padding: 9px 10px;
+  padding: 6px 10px;
   text-align: left;
-  font-size: calc(14px * var(--ts));
+  font-size: calc(13.5px * var(--ts));
   color: var(--gray-light);
   white-space: nowrap;
   overflow: hidden;
@@ -500,10 +501,10 @@ html.has-vv #app-shell { height: var(--app-h); }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   color: var(--gray-mid);
-  border-radius: 8px;
+  border-radius: 7px;
   transition: color 0.2s var(--ease-smooth), background 0.2s var(--ease-smooth);
 }
 .chat-act:hover { color: var(--fg); background: var(--glass-bg-hover); }
