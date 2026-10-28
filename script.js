@@ -5254,6 +5254,7 @@ function msgEl(m, i) {
   } else {
     act.innerHTML =
       btn('copy', 'Copy', ICONS.copy) +
+      btn('continue', 'Continue', ICONS.play) +
       btn('voice', 'Read aloud', ICONS.volume) +
       btn('like', 'Good response', m.feedback === 'like' ? ICONS.thumbUpOn : ICONS.thumbUp, m.feedback === 'like') +
       btn('dislike', 'Bad response', m.feedback === 'dislike' ? ICONS.thumbDownOn : ICONS.thumbDown, m.feedback === 'dislike') +
@@ -5465,6 +5466,13 @@ async function onMessageAction(btn) {
     if (!chatReady()) return;
     currentSession.messages.pop();
     sendChatMessage(null, true);
+  } else if (a === 'continue') {
+    if (chatBusy || !chatReady()) return;
+    if (i !== currentSession.messages.length - 1) {
+      toast('You can only continue the most recent reply.', 'info');
+      return;
+    }
+    sendChatMessage('CONTINUE_GENERATION');
   } else if (a === 'retry') {
     if (chatBusy) return;
     retryFailed();
@@ -6043,6 +6051,11 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
       sessions.push(session);
       clearDraft();
     }
+    if (text === 'CONTINUE_GENERATION') {
+      session.messages.pop();
+      text = null;
+      regen = true;
+    }
     if (!hiddenMsg) { haptic(12); sfx('send'); }
     if (settings.memoryLong && !hiddenMsg) learnMemory(text);
     if (!hiddenMsg) MemSys.observe(text, session);
@@ -6053,8 +6066,15 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
 
   const lastUser = session.messages.filter((m) => m.role === 'user').slice(-1)[0];
   const seedText = text || lastUser?.content || '';
+  let existingContent = '';
+  if (text === null && regen) {
+    const prevAi = session.messages[session.messages.length - 1];
+    if (prevAi?.role === 'assistant') {
+      existingContent = prevAi.content + '\n';
+    }
+  }
   const ai = {
-    role: 'assistant', content: '', provider: pid, model: variant.id, t: Date.now(),
+    role: 'assistant', content: existingContent, provider: pid, model: variant.id, t: Date.now(),
     reasoning: '', thinkWanted: needsThinking(seedText, pid, variant),
     thinkStarted: 0, thinkMs: 0, thinkId: uid(), thinkModel: pid, thinkVariant: variant.id
   };
@@ -6069,6 +6089,7 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
 
   pendingToolContext = await autoResearch(seedText);
   const messages = buildMessages();
+  if (existingContent) messages.push({ role: 'assistant', content: existingContent + ' (Continue exactly from where you left off.)' });
   pendingToolContext = '';
   const wantStream = settings.streaming !== false;
   let usage = null, error = null, raf = 0, first = true, lastTick = 0, streamErr = '';
