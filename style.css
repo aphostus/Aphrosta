@@ -1198,6 +1198,22 @@ html.has-vv #app-shell { height: var(--app-h); }
 .lib-card-top .lib-card-title { min-width: 0; }
 .lib-card-act { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
 .lib-file:disabled { opacity: 0.6; cursor: default; }
+.lib-file[hidden] { display: none; }
+.lib-flist { display: flex; flex-direction: column; gap: 6px; }
+.lib-flist:empty { display: none; }
+.lib-frow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 6px 6px 12px;
+  font-weight: 400;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+}
+.lib-fn { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: calc(13px * var(--ts)); color: var(--fg); }
+.lib-fs { flex-shrink: 0; font-size: calc(12px * var(--ts)); color: var(--gray-mid); }
+.lib-frow .icon-btn { flex-shrink: 0; }
 .lib-card-title { font-size: calc(14px * var(--ts)); font-weight: 600; color: var(--fg); overflow-wrap: anywhere; }
 .lib-card-meta { margin-top: 2px; font-size: calc(12px * var(--ts)); color: var(--gray-mid); overflow-wrap: anywhere; }
 .lib-card-instr {

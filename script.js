@@ -1533,6 +1533,8 @@ const soon = () => toast('Coming soon.', 'info', 1800);
    IndexedDB. Per message the AI gets: a tiny index of every item, plus only
    the few best-matching parts, capped by LIB_BUDGET characters. */
 const LIB_MAX_BYTES = 8 * 1024 * 1024;
+const LIB_MAX_TOTAL = 25 * 1024 * 1024;
+const LIB_MAX_FILES = 10;
 const LIB_CHUNK = 1000;
 const LIB_INDEX_CHARS = 140;
 const LIB_HIT_CHARS = 600;
@@ -1546,6 +1548,7 @@ let libDbP = null;
 const libTokens = (s) => [...new Set((String(s).toLowerCase().match(/[a-z0-9\u00c0-\uffff]{3,}/g) || []).filter((w) => !LIB_STOP.has(w)))];
 const libReq = (r) => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
 const libSize = (b) => (b < 1024 ? b + ' B' : b < 1048576 ? (b / 1024).toFixed(0) + ' KB' : (b / 1048576).toFixed(1) + ' MB');
+const libFilesOf = (it) => it.files || [{ name: it.fileName, size: it.size, parts: it.parts }];
 
 function libDb() {
   if (!libDbP) {
@@ -1593,11 +1596,17 @@ function libSplit(text) {
   return out;
 }
 
-async function libSave({ title, instructions, file }) {
-  const text = await file.text();
-  const parts = libIsBinary(text) ? [] : libSplit(text);
+async function libSave({ title, instructions, files }) {
+  const parts = [];
+  const meta = [];
+  for (const file of files) {
+    const text = await file.text();
+    const fp = libIsBinary(text) ? [] : libSplit(text);
+    fp.forEach((p) => parts.push({ p, fn: file.name }));
+    meta.push({ name: file.name, size: file.size, parts: fp.length });
+  }
   const counts = new Map();
-  for (const p of parts) {
+  for (const { p } of parts) {
     for (const w of (p.toLowerCase().match(/[a-z0-9\u00c0-\uffff]{3,}/g) || [])) {
       if (LIB_STOP.has(w)) continue;
       if (counts.size < 40000 || counts.has(w)) counts.set(w, (counts.get(w) || 0) + 1);
@@ -1605,7 +1614,9 @@ async function libSave({ title, instructions, file }) {
   }
   const fk = [...counts].sort((a, b) => b[1] - a[1]).slice(0, 150).map((e) => e[0]);
   const item = {
-    id: uid(), title, instructions, fileName: file.name, size: file.size,
+    id: uid(), title, instructions, files: meta,
+    fileName: meta.length > 1 ? meta.length + ' files' : meta[0].name,
+    size: meta.reduce((a, f) => a + f.size, 0),
     parts: parts.length, ik: libTokens(title + ' ' + instructions), fk, t: Date.now()
   };
   const db = await libDb();
@@ -1613,7 +1624,7 @@ async function libSave({ title, instructions, file }) {
     const tx = db.transaction(['items', 'chunks'], 'readwrite');
     tx.objectStore('items').put(item);
     const cs = tx.objectStore('chunks');
-    parts.forEach((p, n) => cs.put({ id: item.id + ':' + n, item: item.id, n, text: p }));
+    parts.forEach((x, n) => cs.put({ id: item.id + ':' + n, item: item.id, n, fn: x.fn, text: x.p }));
     tx.oncomplete = () => res();
     tx.onerror = () => rej(tx.error);
     tx.onabort = () => rej(tx.error);
@@ -1677,7 +1688,7 @@ async function libContextFor(query) {
       for (const w of q) if (t.has(w)) s++;
       if (!s && c.n === 0) s = 0.5;
       if (!s) return;
-      best.push({ it, n: c.n, text: c.text, s });
+      best.push({ it, n: c.n, fn: c.fn, text: c.text, s });
       if (best.length > LIB_MAX_CHUNKS * 2) { best.sort((a, b) => b.s - a.s); best.length = LIB_MAX_CHUNKS; }
     });
     found.push(...best);
@@ -1695,10 +1706,10 @@ async function libContextFor(query) {
   const idx = scored.slice(0, 30).map(({ it, s }) => {
     const ins = it.instructions.replace(/\s+/g, ' ').slice(0, s > 0 ? LIB_HIT_CHARS : LIB_INDEX_CHARS);
     const what = it.parts ? it.parts + ' parts' : 'contents not readable';
-    return '- "' + it.title + '" (' + it.fileName + ', ' + what + '). Instructions: ' + ins;
+    return '- "' + it.title + '" (' + libFilesOf(it).map((f) => f.name).join(', ').slice(0, 120) + ', ' + what + '). Instructions: ' + ins;
   });
   let out = 'LIBRARY: the user saved reference items. Use an item only when the request relates to it, and follow its instructions. Only the excerpts below are loaded, so never claim to have read the rest of a file.\nItems:\n' + idx.join('\n');
-  if (keep.length) out += '\nExcerpts:\n' + keep.map((k) => '[' + k.it.title + ' #' + (k.n + 1) + '] ' + k.text).join('\n\n');
+  if (keep.length) out += '\nExcerpts:\n' + keep.map((k) => '[' + k.it.title + (k.fn ? ' / ' + k.fn : '') + ' #' + (k.n + 1) + '] ' + k.text).join('\n\n');
   return out;
 }
 
@@ -1721,7 +1732,7 @@ function libRender() {
           <button class="icon-btn" type="button" data-lib-del="${esc(it.id)}" aria-label="Delete">${ICONS.trash}</button>
         </div>
       </div>
-      <p class="lib-card-meta">${esc(it.fileName)} \u00b7 ${libSize(it.size)} \u00b7 ${it.parts ? it.parts + ' parts' : 'name only'}</p>
+      <p class="lib-card-meta">${libFilesOf(it).length > 1 ? libFilesOf(it).length + ' files' : esc(it.fileName)} \u00b7 ${libSize(it.size)} \u00b7 ${it.parts ? it.parts + ' parts' : 'name only'}</p>
       <p class="lib-card-instr">${esc(it.instructions)}</p>
     </div>`).join('');
 }
@@ -1756,11 +1767,12 @@ function openLibSheet(edit) {
       <label class="lib-lab">Instructions for the AI
         <textarea class="lib-in lib-ta" id="lib-instr" rows="5" maxlength="1500" placeholder="When and how should the AI use this? e.g. Use it when I ask about pricing. Quote exact numbers.">${esc(edit?.instructions)}</textarea>
       </label>
-      <div class="lib-lab">File
-        <button class="lib-file" id="lib-pick" type="button"${edit ? ' disabled' : ''}>${ICONS.attachFile}<span id="lib-fname">${edit ? esc(edit.fileName) : 'Choose a file'}</span></button>
-        <input type="file" id="lib-file" hidden>
+      <div class="lib-lab">${edit ? 'Files' : 'Files (up to ' + LIB_MAX_FILES + ')'}
+        <div class="lib-flist" id="lib-flist"></div>
+        <button class="lib-file" id="lib-pick" type="button"${edit ? ' hidden' : ''}>${ICONS.attachFile}<span id="lib-fname">Add files</span></button>
+        <input type="file" id="lib-file" multiple hidden>
       </div>
-      <p class="lib-note">${edit ? 'The file can\u2019t be changed. To use another file, delete this item and add a new one.' : 'Big files are split into parts. The AI only loads the parts that match your message.'}</p>
+      <p class="lib-note">${edit ? 'The files can\u2019t be changed. To use other files, delete this item and add a new one.' : libSize(LIB_MAX_BYTES) + ' per file, ' + libSize(LIB_MAX_TOTAL) + ' total. Big files are split into parts. The AI only loads the parts that match your message.'}</p>
       <button class="lib-save" id="lib-save" type="button">${edit ? 'Save changes' : 'Save to Library'}</button>
     </div>`;
   document.body.appendChild(el);
@@ -1770,18 +1782,39 @@ function openLibSheet(edit) {
   el.addEventListener('click', (e) => { if (e.target === el) closeLibSheet(); });
   el.querySelector('#lib-close').addEventListener('click', closeLibSheet);
   el.querySelector('#lib-pick').addEventListener('click', () => fileIn.click());
+  const picked = [];
+  const flist = el.querySelector('#lib-flist');
+  const drawFiles = () => {
+    const rows = edit ? libFilesOf(edit) : picked;
+    flist.innerHTML = rows.map((f, i) => `<div class="lib-frow"><span class="lib-fn">${esc(f.name)}</span><span class="lib-fs">${libSize(f.size)}</span>${edit ? '' : `<button class="icon-btn" type="button" data-lib-rm="${i}" aria-label="Remove">${ICONS.stClose}</button>`}</div>`).join('');
+    el.querySelector('#lib-fname').textContent = picked.length ? 'Add more files' : 'Add files';
+  };
+  drawFiles();
+  flist.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-lib-rm]');
+    if (!b) return;
+    picked.splice(Number(b.dataset.libRm), 1);
+    drawFiles();
+  });
   fileIn.addEventListener('change', () => {
-    el.querySelector('#lib-fname').textContent = fileIn.files[0]?.name || 'Choose a file';
+    for (const f of fileIn.files) {
+      if (picked.length >= LIB_MAX_FILES) { toast('Up to ' + LIB_MAX_FILES + ' files per item.', 'info', 2200); break; }
+      if (f.size > LIB_MAX_BYTES) { toast(f.name + ' is too large (max ' + libSize(LIB_MAX_BYTES) + ').'); continue; }
+      if (picked.some((p) => p.name === f.name && p.size === f.size)) continue;
+      picked.push(f);
+    }
+    fileIn.value = '';
+    drawFiles();
   });
   const saveBtn = el.querySelector('#lib-save');
   saveBtn.addEventListener('click', async () => {
     const title = el.querySelector('#lib-title').value.trim();
     const instructions = el.querySelector('#lib-instr').value.trim();
-    const file = edit ? null : fileIn.files[0];
+    const files = edit ? [] : picked.slice();
     if (!title) return toast('Add a title.', 'info', 2000);
     if (!instructions) return toast('Add instructions for the AI.', 'info', 2200);
-    if (!file && !edit) return toast('Choose a file.', 'info', 2000);
-    if (file && file.size > LIB_MAX_BYTES) return toast(file.name + ' is too large (max ' + libSize(LIB_MAX_BYTES) + ').');
+    if (!files.length && !edit) return toast('Choose at least one file.', 'info', 2000);
+    if (files.reduce((a, f) => a + f.size, 0) > LIB_MAX_TOTAL) return toast('Total size is too large (max ' + libSize(LIB_MAX_TOTAL) + ').');
     saveBtn.disabled = true;
     saveBtn.textContent = 'Saving...';
     try {
@@ -1792,7 +1825,7 @@ function openLibSheet(edit) {
         libRender();
         return;
       }
-      const item = await libSave({ title, instructions, file });
+      const item = await libSave({ title, instructions, files });
       toast(item.parts ? 'Saved in ' + item.parts + ' parts.' : 'Saved. Contents can\u2019t be read, so only the name is used.', 'success', 2200);
       closeLibSheet();
       libRender();
@@ -1814,7 +1847,6 @@ document.addEventListener('click', (e) => {
 document.addEventListener('click', async (e) => {
   const b = e.target.closest('[data-lib-del]');
   if (!b) return;
-  if (!confirm('Delete this library item?')) return;
   try { await libDelete(b.dataset.libDel); } catch (_) { toast('Could not delete.'); }
   libRender();
 });
