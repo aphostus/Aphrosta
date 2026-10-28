@@ -1622,6 +1622,21 @@ async function libSave({ title, instructions, file }) {
   return item;
 }
 
+async function libUpdate(id, title, instructions) {
+  const it = libItems.find((i) => i.id === id);
+  if (!it) throw new Error('missing');
+  const next = { ...it, title, instructions, ik: libTokens(title + ' ' + instructions) };
+  const db = await libDb();
+  await new Promise((res, rej) => {
+    const tx = db.transaction('items', 'readwrite');
+    tx.objectStore('items').put(next);
+    tx.oncomplete = () => res();
+    tx.onerror = () => rej(tx.error);
+    tx.onabort = () => rej(tx.error);
+  });
+  libItems = libItems.map((i) => (i.id === id ? next : i));
+}
+
 async function libDelete(id) {
   const db = await libDb();
   await new Promise((res, rej) => {
@@ -1701,7 +1716,10 @@ function libRender() {
     <div class="lib-card">
       <div class="lib-card-top">
         <h4 class="lib-card-title">${esc(it.title)}</h4>
-        <button class="icon-btn" type="button" data-lib-del="${esc(it.id)}" aria-label="Delete">${ICONS.stClose}</button>
+        <div class="lib-card-act">
+          <button class="icon-btn" type="button" data-lib-edit="${esc(it.id)}" aria-label="Edit">${ICONS.pencil}</button>
+          <button class="icon-btn" type="button" data-lib-del="${esc(it.id)}" aria-label="Delete">${ICONS.trash}</button>
+        </div>
       </div>
       <p class="lib-card-meta">${esc(it.fileName)} \u00b7 ${libSize(it.size)} \u00b7 ${it.parts ? it.parts + ' parts' : 'name only'}</p>
       <p class="lib-card-instr">${esc(it.instructions)}</p>
@@ -1720,7 +1738,7 @@ function closeLibSheet() {
   setTimeout(() => el.remove(), 250);
 }
 
-function openLibSheet() {
+function openLibSheet(edit) {
   document.getElementById('lib-scrim')?.remove();
   const el = document.createElement('div');
   el.className = 'lib-scrim';
@@ -1729,21 +1747,21 @@ function openLibSheet() {
     <div class="lib-sheet" role="dialog" aria-label="Add to Library">
       <div class="lib-grab"></div>
       <div class="lib-head">
-        <h3 class="lib-h">Add to Library</h3>
+        <h3 class="lib-h">${edit ? 'Edit item' : 'Add to Library'}</h3>
         <button class="icon-btn" type="button" id="lib-close" aria-label="Close">${ICONS.stClose}</button>
       </div>
       <label class="lib-lab">Title
-        <input class="lib-in" id="lib-title" maxlength="80" autocomplete="off" placeholder="e.g. Brand guidelines">
+        <input class="lib-in" id="lib-title" maxlength="80" autocomplete="off" placeholder="e.g. Brand guidelines" value="${esc(edit?.title)}">
       </label>
       <label class="lib-lab">Instructions for the AI
-        <textarea class="lib-in lib-ta" id="lib-instr" rows="5" maxlength="1500" placeholder="When and how should the AI use this? e.g. Use it when I ask about pricing. Quote exact numbers."></textarea>
+        <textarea class="lib-in lib-ta" id="lib-instr" rows="5" maxlength="1500" placeholder="When and how should the AI use this? e.g. Use it when I ask about pricing. Quote exact numbers.">${esc(edit?.instructions)}</textarea>
       </label>
       <div class="lib-lab">File
-        <button class="lib-file" id="lib-pick" type="button">${ICONS.attachFile}<span id="lib-fname">Choose a file</span></button>
+        <button class="lib-file" id="lib-pick" type="button"${edit ? ' disabled' : ''}>${ICONS.attachFile}<span id="lib-fname">${edit ? esc(edit.fileName) : 'Choose a file'}</span></button>
         <input type="file" id="lib-file" hidden>
       </div>
-      <p class="lib-note">Big files are split into parts. The AI only loads the parts that match your message.</p>
-      <button class="lib-save" id="lib-save" type="button">Save to Library</button>
+      <p class="lib-note">${edit ? 'The file can\u2019t be changed. To use another file, delete this item and add a new one.' : 'Big files are split into parts. The AI only loads the parts that match your message.'}</p>
+      <button class="lib-save" id="lib-save" type="button">${edit ? 'Save changes' : 'Save to Library'}</button>
     </div>`;
   document.body.appendChild(el);
   requestAnimationFrame(() => el.classList.add('show'));
@@ -1759,25 +1777,39 @@ function openLibSheet() {
   saveBtn.addEventListener('click', async () => {
     const title = el.querySelector('#lib-title').value.trim();
     const instructions = el.querySelector('#lib-instr').value.trim();
-    const file = fileIn.files[0];
+    const file = edit ? null : fileIn.files[0];
     if (!title) return toast('Add a title.', 'info', 2000);
     if (!instructions) return toast('Add instructions for the AI.', 'info', 2200);
-    if (!file) return toast('Choose a file.', 'info', 2000);
-    if (file.size > LIB_MAX_BYTES) return toast(file.name + ' is too large (max ' + libSize(LIB_MAX_BYTES) + ').');
+    if (!file && !edit) return toast('Choose a file.', 'info', 2000);
+    if (file && file.size > LIB_MAX_BYTES) return toast(file.name + ' is too large (max ' + libSize(LIB_MAX_BYTES) + ').');
     saveBtn.disabled = true;
     saveBtn.textContent = 'Saving...';
     try {
+      if (edit) {
+        await libUpdate(edit.id, title, instructions);
+        toast('Changes saved.', 'success', 1800);
+        closeLibSheet();
+        libRender();
+        return;
+      }
       const item = await libSave({ title, instructions, file });
       toast(item.parts ? 'Saved in ' + item.parts + ' parts.' : 'Saved. Contents can\u2019t be read, so only the name is used.', 'success', 2200);
       closeLibSheet();
       libRender();
     } catch (_) {
       saveBtn.disabled = false;
-      saveBtn.textContent = 'Save to Library';
+      saveBtn.textContent = edit ? 'Save changes' : 'Save to Library';
       toast('Could not save. Storage may be full.');
     }
   });
 }
+
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-lib-edit]');
+  if (!b) return;
+  const it = libItems.find((i) => i.id === b.dataset.libEdit);
+  if (it) openLibSheet(it);
+});
 
 document.addEventListener('click', async (e) => {
   const b = e.target.closest('[data-lib-del]');

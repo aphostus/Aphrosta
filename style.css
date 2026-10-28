@@ -1183,7 +1183,8 @@ html.has-vv #app-shell { height: var(--app-h); }
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 14px;
+  align-items: stretch;
+  padding: 2px 0 14px;
   overflow-y: auto;
   text-align: left;
 }
@@ -1194,6 +1195,9 @@ html.has-vv #app-shell { height: var(--app-h); }
   border-radius: var(--radius-md);
 }
 .lib-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.lib-card-top .lib-card-title { min-width: 0; }
+.lib-card-act { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+.lib-file:disabled { opacity: 0.6; cursor: default; }
 .lib-card-title { font-size: calc(14px * var(--ts)); font-weight: 600; color: var(--fg); overflow-wrap: anywhere; }
 .lib-card-meta { margin-top: 2px; font-size: calc(12px * var(--ts)); color: var(--gray-mid); overflow-wrap: anywhere; }
 .lib-card-instr {
