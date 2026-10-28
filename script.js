@@ -6215,12 +6215,8 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
       ai.__error = error.message || 'Something went wrong.';
       MessageRecorder.log({ type: 'error', sessionId: session.id, msg: String(ai.__error).slice(0, 60) });
     } else if (!ai.content.trim()) {
-      if (aborted) {
-        session.messages = session.messages.filter((m) => m !== ai);
-      } else {
-        ai.content = NO_REPLY_TEXT;
-        ai.__empty = true;
-      }
+      ai.content = NO_REPLY_TEXT;
+      ai.__empty = true;
     }
 
     session.updated = Date.now();
@@ -6239,13 +6235,7 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
     }
 
     const last = session.messages[session.messages.length - 1];
-    if (last && last.role === 'assistant' && !(last.content || '').trim() && !last.__failed) {
-      last.content = NO_REPLY_TEXT;
-      last.__empty = true;
-      persistSessions();
-      renderMessages();
-      scrollDown(true);
-    } else if (last && last.role === 'assistant' && last.content && !last.__empty) {
+    if (last && last.role === 'assistant' && last.content && !last.__empty) {
       sfx('done');
     }
 
