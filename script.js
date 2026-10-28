@@ -1528,6 +1528,265 @@ const SettingsPanel = (user) => `
 
 const soon = () => toast('Coming soon.', 'info', 1800);
 
+/* ---------- LIBRARY (memory-efficient) ----------
+   Metadata stays in memory. File text is split into parts and stored in
+   IndexedDB. Per message the AI gets: a tiny index of every item, plus only
+   the few best-matching parts, capped by LIB_BUDGET characters. */
+const LIB_MAX_BYTES = 8 * 1024 * 1024;
+const LIB_CHUNK = 1000;
+const LIB_INDEX_CHARS = 140;
+const LIB_HIT_CHARS = 600;
+const LIB_BUDGET = 3000;
+const LIB_MAX_CHUNKS = 4;
+const LIB_STOP = new Set('the and for you your with that this from have are was but not can how what when where about into out any all has had its our one more than then them they their there will would should could also just like make get use using'.split(' '));
+let libItems = [];
+let libContext = '';
+let libDbP = null;
+
+const libTokens = (s) => [...new Set((String(s).toLowerCase().match(/[a-z0-9\u00c0-\uffff]{3,}/g) || []).filter((w) => !LIB_STOP.has(w)))];
+const libReq = (r) => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+const libSize = (b) => (b < 1024 ? b + ' B' : b < 1048576 ? (b / 1024).toFixed(0) + ' KB' : (b / 1048576).toFixed(1) + ' MB');
+
+function libDb() {
+  if (!libDbP) {
+    libDbP = new Promise((res, rej) => {
+      const r = indexedDB.open('aphrosta-library', 1);
+      r.onupgradeneeded = () => {
+        const db = r.result;
+        db.createObjectStore('items', { keyPath: 'id' });
+        db.createObjectStore('chunks', { keyPath: 'id' }).createIndex('item', 'item');
+      };
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => rej(r.error);
+    });
+  }
+  return libDbP;
+}
+
+async function libLoad() {
+  const db = await libDb();
+  libItems = await libReq(db.transaction('items').objectStore('items').getAll());
+}
+
+function libIsBinary(t) {
+  const s = t.slice(0, 4000);
+  if (!s) return true;
+  let bad = 0;
+  for (let i = 0; i < s.length; i++) { const c = s.charCodeAt(i); if (c === 0 || c === 0xfffd) bad++; }
+  return bad / s.length > 0.02;
+}
+
+function libSplit(text) {
+  const out = [];
+  let cur = '';
+  const push = () => { if (cur.trim()) out.push(cur.trim()); cur = ''; };
+  for (const para of text.split(/\n\s*\n/)) {
+    if (para.length > LIB_CHUNK) {
+      push();
+      for (let i = 0; i < para.length; i += LIB_CHUNK) out.push(para.slice(i, i + LIB_CHUNK));
+      continue;
+    }
+    if (cur.length + para.length + 2 > LIB_CHUNK) push();
+    cur += (cur ? '\n\n' : '') + para;
+  }
+  push();
+  return out;
+}
+
+async function libSave({ title, instructions, file }) {
+  const text = await file.text();
+  const parts = libIsBinary(text) ? [] : libSplit(text);
+  const counts = new Map();
+  for (const p of parts) {
+    for (const w of (p.toLowerCase().match(/[a-z0-9\u00c0-\uffff]{3,}/g) || [])) {
+      if (LIB_STOP.has(w)) continue;
+      if (counts.size < 40000 || counts.has(w)) counts.set(w, (counts.get(w) || 0) + 1);
+    }
+  }
+  const fk = [...counts].sort((a, b) => b[1] - a[1]).slice(0, 150).map((e) => e[0]);
+  const item = {
+    id: uid(), title, instructions, fileName: file.name, size: file.size,
+    parts: parts.length, ik: libTokens(title + ' ' + instructions), fk, t: Date.now()
+  };
+  const db = await libDb();
+  await new Promise((res, rej) => {
+    const tx = db.transaction(['items', 'chunks'], 'readwrite');
+    tx.objectStore('items').put(item);
+    const cs = tx.objectStore('chunks');
+    parts.forEach((p, n) => cs.put({ id: item.id + ':' + n, item: item.id, n, text: p }));
+    tx.oncomplete = () => res();
+    tx.onerror = () => rej(tx.error);
+    tx.onabort = () => rej(tx.error);
+  });
+  libItems.push(item);
+  return item;
+}
+
+async function libDelete(id) {
+  const db = await libDb();
+  await new Promise((res, rej) => {
+    const tx = db.transaction(['items', 'chunks'], 'readwrite');
+    tx.objectStore('items').delete(id);
+    const cur = tx.objectStore('chunks').index('item').openCursor(IDBKeyRange.only(id));
+    cur.onsuccess = () => { const c = cur.result; if (c) { c.delete(); c.continue(); } };
+    tx.oncomplete = () => res();
+    tx.onerror = () => rej(tx.error);
+  });
+  libItems = libItems.filter((i) => i.id !== id);
+}
+
+function libScan(itemId, fn) {
+  return libDb().then((db) => new Promise((res, rej) => {
+    const r = db.transaction('chunks').objectStore('chunks').index('item').openCursor(IDBKeyRange.only(itemId));
+    r.onsuccess = () => { const c = r.result; if (!c) return res(); fn(c.value); c.continue(); };
+    r.onerror = () => rej(r.error);
+  }));
+}
+
+async function libContextFor(query) {
+  if (!libItems.length) await libLoad();
+  if (!libItems.length) return '';
+  const q = libTokens(query);
+  const scored = libItems.map((it) => {
+    let s = 0;
+    for (const w of q) { if (it.ik.includes(w)) s += 3; else if (it.fk.includes(w)) s += 1; }
+    return { it, s };
+  }).sort((a, b) => b.s - a.s);
+
+  const found = [];
+  for (const { it } of scored.filter((x) => x.s > 0 && x.it.parts > 0).slice(0, 3)) {
+    const best = [];
+    await libScan(it.id, (c) => {
+      const t = new Set(libTokens(c.text));
+      let s = 0;
+      for (const w of q) if (t.has(w)) s++;
+      if (!s && c.n === 0) s = 0.5;
+      if (!s) return;
+      best.push({ it, n: c.n, text: c.text, s });
+      if (best.length > LIB_MAX_CHUNKS * 2) { best.sort((a, b) => b.s - a.s); best.length = LIB_MAX_CHUNKS; }
+    });
+    found.push(...best);
+  }
+  found.sort((a, b) => b.s - a.s);
+  const keep = [];
+  let used = 0;
+  for (const f of found) {
+    if (keep.length >= LIB_MAX_CHUNKS || used + f.text.length > LIB_BUDGET) continue;
+    keep.push(f);
+    used += f.text.length;
+  }
+  keep.sort((a, b) => (a.it.id === b.it.id ? a.n - b.n : 0));
+
+  const idx = scored.slice(0, 30).map(({ it, s }) => {
+    const ins = it.instructions.replace(/\s+/g, ' ').slice(0, s > 0 ? LIB_HIT_CHARS : LIB_INDEX_CHARS);
+    const what = it.parts ? it.parts + ' parts' : 'contents not readable';
+    return '- "' + it.title + '" (' + it.fileName + ', ' + what + '). Instructions: ' + ins;
+  });
+  let out = 'LIBRARY: the user saved reference items. Use an item only when the request relates to it, and follow its instructions. Only the excerpts below are loaded, so never claim to have read the rest of a file.\nItems:\n' + idx.join('\n');
+  if (keep.length) out += '\nExcerpts:\n' + keep.map((k) => '[' + k.it.title + ' #' + (k.n + 1) + '] ' + k.text).join('\n\n');
+  return out;
+}
+
+function libEmptyHtml() {
+  return `<div class="np-empty"><span class="np-empty-ico">${ICONS.navLibrary}</span><h3 class="np-empty-title">Nothing Placed Yet</h3><p class="np-empty-desc">Your library items will show up here.</p></div>`;
+}
+
+function libRender() {
+  const panel = document.getElementById('nav-panel');
+  const body = panel?.querySelector('.np-body');
+  if (!body || panel.getAttribute('aria-label') !== 'Library') return;
+  if (!libItems.length) { body.classList.remove('lib-list'); body.innerHTML = libEmptyHtml(); return; }
+  body.classList.add('lib-list');
+  body.innerHTML = libItems.slice().sort((a, b) => b.t - a.t).map((it) => `
+    <div class="lib-card">
+      <div class="lib-card-top">
+        <h4 class="lib-card-title">${esc(it.title)}</h4>
+        <button class="icon-btn" type="button" data-lib-del="${esc(it.id)}" aria-label="Delete">${ICONS.stClose}</button>
+      </div>
+      <p class="lib-card-meta">${esc(it.fileName)} \u00b7 ${libSize(it.size)} \u00b7 ${it.parts ? it.parts + ' parts' : 'name only'}</p>
+      <p class="lib-card-instr">${esc(it.instructions)}</p>
+    </div>`).join('');
+}
+
+async function libRefresh() {
+  try { await libLoad(); } catch (_) { toast('Library storage is unavailable here.'); }
+  libRender();
+}
+
+function closeLibSheet() {
+  const el = document.getElementById('lib-scrim');
+  if (!el) return;
+  el.classList.remove('show');
+  setTimeout(() => el.remove(), 250);
+}
+
+function openLibSheet() {
+  document.getElementById('lib-scrim')?.remove();
+  const el = document.createElement('div');
+  el.className = 'lib-scrim';
+  el.id = 'lib-scrim';
+  el.innerHTML = `
+    <div class="lib-sheet" role="dialog" aria-label="Add to Library">
+      <div class="lib-grab"></div>
+      <div class="lib-head">
+        <h3 class="lib-h">Add to Library</h3>
+        <button class="icon-btn" type="button" id="lib-close" aria-label="Close">${ICONS.stClose}</button>
+      </div>
+      <label class="lib-lab">Title
+        <input class="lib-in" id="lib-title" maxlength="80" autocomplete="off" placeholder="e.g. Brand guidelines">
+      </label>
+      <label class="lib-lab">Instructions for the AI
+        <textarea class="lib-in lib-ta" id="lib-instr" rows="5" maxlength="1500" placeholder="When and how should the AI use this? e.g. Use it when I ask about pricing. Quote exact numbers."></textarea>
+      </label>
+      <div class="lib-lab">File
+        <button class="lib-file" id="lib-pick" type="button">${ICONS.attachFile}<span id="lib-fname">Choose a file</span></button>
+        <input type="file" id="lib-file" hidden>
+      </div>
+      <p class="lib-note">Big files are split into parts. The AI only loads the parts that match your message.</p>
+      <button class="lib-save" id="lib-save" type="button">Save to Library</button>
+    </div>`;
+  document.body.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+
+  const fileIn = el.querySelector('#lib-file');
+  el.addEventListener('click', (e) => { if (e.target === el) closeLibSheet(); });
+  el.querySelector('#lib-close').addEventListener('click', closeLibSheet);
+  el.querySelector('#lib-pick').addEventListener('click', () => fileIn.click());
+  fileIn.addEventListener('change', () => {
+    el.querySelector('#lib-fname').textContent = fileIn.files[0]?.name || 'Choose a file';
+  });
+  const saveBtn = el.querySelector('#lib-save');
+  saveBtn.addEventListener('click', async () => {
+    const title = el.querySelector('#lib-title').value.trim();
+    const instructions = el.querySelector('#lib-instr').value.trim();
+    const file = fileIn.files[0];
+    if (!title) return toast('Add a title.', 'info', 2000);
+    if (!instructions) return toast('Add instructions for the AI.', 'info', 2200);
+    if (!file) return toast('Choose a file.', 'info', 2000);
+    if (file.size > LIB_MAX_BYTES) return toast(file.name + ' is too large (max ' + libSize(LIB_MAX_BYTES) + ').');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
+    try {
+      const item = await libSave({ title, instructions, file });
+      toast(item.parts ? 'Saved in ' + item.parts + ' parts.' : 'Saved. Contents can\u2019t be read, so only the name is used.', 'success', 2200);
+      closeLibSheet();
+      libRender();
+    } catch (_) {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save to Library';
+      toast('Could not save. Storage may be full.');
+    }
+  });
+}
+
+document.addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-lib-del]');
+  if (!b) return;
+  if (!confirm('Delete this library item?')) return;
+  try { await libDelete(b.dataset.libDel); } catch (_) { toast('Could not delete.'); }
+  libRender();
+});
+
 /* ---------- NAV SIDE PANEL (Alpha placeholder) ---------- */
 const NAV_PANELS = {
   'nav-connectors': { title: 'Connectors',  icon: 'navConnectors', desc: 'Linked apps and data sources will show up here.' },
@@ -1570,6 +1829,7 @@ function openNavPanel(key) {
   panel.setAttribute('aria-label', def.title);
   panel.innerHTML = navPanelHtml(def);
   panel.classList.add('open');
+  if (key === 'nav-data') libRefresh();
 }
 
 function closeNavPanel() {
@@ -5691,7 +5951,7 @@ function buildMessages() {
     images.forEach((a) => parts.push({ type: 'image_url', image_url: { url: a.dataUrl } }));
     return { role: 'user', content: parts };
   });
-  return [{ role: 'system', content: systemPrompt() + (pendingToolContext ? '\n\n' + pendingToolContext : '') }, ...ctx];
+  return [{ role: 'system', content: systemPrompt() + (libContext ? '\n\n' + libContext : '') + (pendingToolContext ? '\n\n' + pendingToolContext : '') }, ...ctx];
 }
 
 const ADAPTERS = {
@@ -6102,6 +6362,7 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
   startStatusRotor();
 
   pendingToolContext = isContinue ? '' : await autoResearch(seedText);
+  libContext = await libContextFor(seedText).catch(() => '');
   const messages = buildMessages();
   if (existingContent) {
     messages.push({ role: 'user', content: 'Your previous message was cut off. Output ONLY the exact next characters to seamlessly continue that exact text, without repeating anything from before, and without any meta-commentary.' });
@@ -6771,7 +7032,10 @@ function initShell() {
     else if (action === 'upgrade') toast('Paid plans are coming soon.', 'info', 1800);
     else if (NAV_PANELS[action]) openNavPanel(action);
     else if (action === 'nav-close') closeNavPanel();
-    else if (action === 'nav-plus') soon();
+    else if (action === 'nav-plus') {
+      if (document.getElementById('nav-panel')?.getAttribute('aria-label') === 'Library') openLibSheet();
+      else soon();
+    }
   });
 
   appEl.addEventListener('click', (e) => {
