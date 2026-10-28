@@ -768,7 +768,7 @@ Object.assign(ICONS, {
 Object.assign(ICONS, {
   navWorlds:     svg('<circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18"/>'),
   navAgents:     svg('<ellipse cx="12" cy="14" rx="8.5" ry="6.5"/><path d="M9 10.5v7M14.5 10.5v7"/><path d="M10 7.5C9.5 4.5 10.5 3 12.5 3s3 1.5 2 4.5"/><path d="M17.5 9.5L20 6.5M18 13.5h.01"/>'),
-  navLibrary:    svg('<path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/><path d="M8 7h8M8 11h6"/>'),
+  navLibrary:    svg('<path d="M5 18.5A2.5 2.5 0 017.5 16H22"/><path d="M7.5 4H22v18H7.5A2.5 2.5 0 015 19.5v-13A2.5 2.5 0 017.5 4z"/><path d="M9 8h9M9 12h7"/>'),
   navAutomation: svg('<rect x="3" y="3" width="6" height="6" rx="1.5"/><rect x="15" y="15" width="6" height="6" rx="1.5"/><path d="M9 6h3a3 3 0 013 3v6"/>', 16),
   navConnectors: svg('<path d="M9 2v6M15 2v6"/><path d="M6 8h12v3a6 6 0 01-12 0z"/><path d="M12 17v5"/>', 16),
   navOperations: svg('<rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M7 10l3 2.5L7 15M13 15h4"/>', 16),
