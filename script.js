@@ -51,7 +51,7 @@ const provider = new GoogleAuthProvider();
 provider.setCustomParameters({ prompt: 'select_account' });
 
 setPersistence(auth, browserLocalPersistence).catch((err) => {
-  console.error('Persistence error:', err);
+  console.error('[A09] Persistence error:', err);
 });
 
 let appEl = null;
@@ -483,9 +483,9 @@ function lsSet(k, v) {
   } catch (err) {
     if (!_lsWarned) {
       _lsWarned = true;
-      toast('Storage is full. Older data may not be saved.', 'error', 5000);
+      toast('Storage is full. Older data may not be saved. (E01)', 'error', 5000);
     }
-    console.warn('lsSet failed:', k, err);
+    console.warn('[E01] lsSet failed:', k, err);
     return false;
   }
 }
@@ -583,6 +583,85 @@ function toast(message, type = 'error', duration = 2800) {
   setTimeout(dismiss, duration);
 }
 
+/* ---------- ERROR CODES ----------
+   Letter = area, number = problem. Popups end with (A01), the console shows [A01].
+   Every code here is listed on Help & Support > Error Codes, so keep both in step. */
+const ERR_CATS = {
+  A: 'Account and sign-in',
+  B: 'Cloud sync and devices',
+  C: 'AI provider and replies',
+  D: 'Chat and sessions',
+  E: 'Storage, library and files',
+  F: 'Feedback',
+  G: 'Voice and microphone',
+  H: 'Permissions, settings and forms'
+};
+const ERR_CODES = {
+  A01: ['Sign-in failed', 'Allow pop-ups for this site and try again. It retries on its own.'],
+  A02: ['Offline or slow sign-in', 'Check your connection. Sign-in retries automatically.'],
+  A03: ['Address not approved for sign-in', 'Open Aphrosta from its official web address.'],
+  A04: ['Too many sign-in attempts', 'Wait a few seconds. It tries again by itself.'],
+  A05: ['Could not finish sign-in', 'Try signing in again.'],
+  A06: ['Could not sign out', 'Check your connection and try again.'],
+  A07: ['Could not lock the account (Abandon)', 'The account was not locked. Check your connection and try again.'],
+  A08: ['Could not lock the account (Destruct)', 'Nothing was deleted. Try again.'],
+  A09: ['Sign-in storage error', 'Your browser may block saved sign-in. Check private mode and site-data settings.'],
+  A10: ['Account lock check failed', 'Sign in again. If it keeps happening, send feedback with this code.'],
+  B01: ['Cloud sync unavailable', 'Your data is safe on this device and syncs when the connection returns.'],
+  B02: ['Memory upload failed', 'It retries automatically. Check your connection.'],
+  B03: ['Memory download failed', 'Check your connection, then reopen the app.'],
+  B04: ['Cloud usage could not be read', 'The numbers on this device are used instead.'],
+  B05: ['Could not remove a device', 'Check your connection and try again.'],
+  C01: ['Something went wrong', 'Try again. This shows when no more specific code applies, such as a network failure.'],
+  C02: ['API key rejected', 'Copy the key again with no extra spaces, or make a new one with the provider.'],
+  C03: ['Rate limited', 'Wait a moment. Aphrosta retries once on its own.'],
+  C04: ['Out of credit', 'Add credit or billing with the provider.'],
+  C05: ['Provider is having trouble', 'Try again shortly.'],
+  C06: ['Other provider error', 'The HTTP status is shown with it. Check the provider status page.'],
+  C07: ['Empty or unexpected reply', 'Try again, lower Effort or Length, or switch to a non-reasoning model.'],
+  C08: ['Model not supported', 'Pick another model version in the model picker.'],
+  C09: ['No API key entered', 'Paste the key before saving.'],
+  D01: ['Account is deactivated', 'Activate it in Account settings to chat.'],
+  D02: ['Token limit reached', 'Raise the limit in Settings, Usage, or wait for the timer.'],
+  D03: ['No model or API key', 'Choose a model and add its API key.'],
+  D04: ['Provider not connected', 'Add an API key for that provider.'],
+  D05: ['No model version chosen', 'Pick a version in the model picker.'],
+  D06: ['A reply is still running', 'Stop the response first, then try again.'],
+  D07: ['Cannot continue that reply', 'Only the most recent reply can be continued.'],
+  D08: ['Agent step limit reached', 'The agent used all its steps. Ask again to continue.'],
+  D09: ['Could not copy', 'Your browser blocked the clipboard. Select the text and copy it by hand.'],
+  E01: ['Device storage is full', 'Delete old sessions or library items, or clear the cache.'],
+  E02: ['Library unavailable', 'Library storage is not available in this browser or mode.'],
+  E03: ['Too many files', 'Remove a file or send fewer at a time.'],
+  E04: ['File type not supported', 'Use text or code files. Images need a vision model.'],
+  E05: ['File too large', 'Use a smaller file. See Limits at a Glance.'],
+  E06: ['Could not save', 'Storage may be full. Free some space and try again.'],
+  E07: ['Could not delete', 'Try again.'],
+  E08: ['Could not read the file', 'Try another file, or re-save it and retry.'],
+  E09: ['Import file too large', 'Import files can be up to 25 MB.'],
+  E10: ['Import file is not valid', 'Use a file exported from Aphrosta.'],
+  F01: ['Feedback could not be sent', 'The reason is shown after the code. Check your connection and try again.'],
+  G01: ['ElevenLabs voice unavailable', 'The device voice is used instead.'],
+  G02: ['ElevenLabs microphone failed', 'Device transcription is used instead.'],
+  G03: ['Read aloud not supported', 'This browser has no speech output.'],
+  G04: ['Recording not supported', 'Use a browser that supports microphone recording.'],
+  G05: ['Microphone blocked', 'Allow the microphone in your browser site settings.'],
+  G06: ['Microphone turned off in Permissions', 'Turn it on in Settings, Permissions.'],
+  G07: ['Offline transcription', 'Transcription needs an internet connection.'],
+  G08: ['No microphone found', 'Plug one in, or close other apps using it.'],
+  G09: ['Speech language not supported', 'Pick another speech language.'],
+  G10: ['Live transcription not supported', 'Try Chrome.'],
+  H01: ['Location turned off in Permissions', 'Turn it on in Settings, Permissions.'],
+  H02: ['Location not supported', 'This browser has no location service.'],
+  H03: ['Location blocked or unavailable', 'Allow location in your browser site settings.'],
+  H04: ['Permission blocked', 'Allow it in your browser site settings.'],
+  H05: ['Phone number looks wrong', 'Enter 6 to 12 digits.'],
+  H06: ['Username not allowed', 'Use 3 to 30 letters, numbers, spaces, dots, underscores or dashes.'],
+  H07: ['Token limit too low', 'Enter at least 1,000, for example 200k or 1.5m.'],
+  H08: ['Not an image', 'Pick an image file.'],
+  H09: ['Card details look wrong', 'Check the name, number, expiry and CVV.'],
+  H10: ['Library form incomplete', 'Add a title, instructions and at least one file.']
+};
 const _toastSeen = {};
 function toastOnce(key, message, type = 'error', gap = 20000) {
   const now = Date.now();
@@ -1745,7 +1824,7 @@ function libRender() {
 }
 
 async function libRefresh() {
-  try { await libLoad(); } catch (_) { toast('Library storage is unavailable here.'); }
+  try { await libLoad(); } catch (_) { toast('Library storage is unavailable here. (E02)'); }
   libRender();
 }
 
@@ -1805,9 +1884,9 @@ function openLibSheet(edit) {
   });
   fileIn.addEventListener('change', () => {
     for (const f of fileIn.files) {
-      if (picked.length >= LIB_MAX_FILES) { toast('Up to ' + LIB_MAX_FILES + ' files per item.', 'info', 2200); break; }
-      if (!libIsText(f)) { toast(f.name + ' is not supported. Use text or code files.', 'info', 2600); continue; }
-      if (f.size > LIB_MAX_BYTES) { toast(f.name + ' is too large (max ' + libSize(LIB_MAX_BYTES) + ').'); continue; }
+      if (picked.length >= LIB_MAX_FILES) { toast('Up to ' + LIB_MAX_FILES + ' files per item. (E03)', 'info', 2200); break; }
+      if (!libIsText(f)) { toast(f.name + ' is not supported. Use text or code files. (E04)', 'info', 2600); continue; }
+      if (f.size > LIB_MAX_BYTES) { toast(f.name + ' is too large (max ' + libSize(LIB_MAX_BYTES) + '). (E05)'); continue; }
       if (picked.some((p) => p.name === f.name && p.size === f.size)) continue;
       picked.push(f);
     }
@@ -1819,10 +1898,10 @@ function openLibSheet(edit) {
     const title = el.querySelector('#lib-title').value.trim();
     const instructions = el.querySelector('#lib-instr').value.trim();
     const files = edit ? [] : picked.slice();
-    if (!title) return toast('Add a title.', 'info', 2000);
-    if (!instructions) return toast('Add instructions for the AI.', 'info', 2200);
-    if (!files.length && !edit) return toast('Choose at least one file.', 'info', 2000);
-    if (files.reduce((a, f) => a + f.size, 0) > LIB_MAX_TOTAL) return toast('Total size is too large (max ' + libSize(LIB_MAX_TOTAL) + ').');
+    if (!title) return toast('Add a title. (H10)', 'info', 2000);
+    if (!instructions) return toast('Add instructions for the AI. (H10)', 'info', 2200);
+    if (!files.length && !edit) return toast('Choose at least one file. (H10)', 'info', 2000);
+    if (files.reduce((a, f) => a + f.size, 0) > LIB_MAX_TOTAL) return toast('Total size is too large (max ' + libSize(LIB_MAX_TOTAL) + '). (E05)');
     saveBtn.disabled = true;
     saveBtn.textContent = 'Saving...';
     try {
@@ -1840,7 +1919,7 @@ function openLibSheet(edit) {
     } catch (_) {
       saveBtn.disabled = false;
       saveBtn.textContent = edit ? 'Save changes' : 'Save to Library';
-      toast('Could not save. Storage may be full.');
+      toast('Could not save. Storage may be full. (E06)');
     }
   });
 }
@@ -1855,7 +1934,7 @@ document.addEventListener('click', (e) => {
 document.addEventListener('click', async (e) => {
   const b = e.target.closest('[data-lib-del]');
   if (!b) return;
-  try { await libDelete(b.dataset.libDel); } catch (_) { toast('Could not delete.'); }
+  try { await libDelete(b.dataset.libDel); } catch (_) { toast('Could not delete. (E07)'); }
   libRender();
 });
 
@@ -2061,8 +2140,8 @@ function onSettingsClick(e) {
         try { await Cloud.flush(); } catch (_) {}
         try { await lockAccount('abandoned'); }
         catch (err) {
-          console.error('Abandon failed:', err);
-          toast('Couldn\u2019t lock the account. Check your connection and try again.');
+          console.error('[A07] Abandon failed:', err);
+          toast('Couldn\u2019t lock the account. Check your connection and try again. (A07)');
           return;
         }
         Cloud.reset();
@@ -2099,8 +2178,8 @@ function onSettingsClick(e) {
         toast('Destroying account…', 'info', 4000);
         try { await lockAccount('blocked'); }
         catch (err) {
-          console.error('Destruct failed:', err);
-          toast('Couldn\u2019t lock the account, so nothing was deleted. Try again.');
+          console.error('[A08] Destruct failed:', err);
+          toast('Couldn\u2019t lock the account, so nothing was deleted. Try again. (A08)');
           return;
         }
         Cloud.reset();
@@ -2145,7 +2224,7 @@ function onSettingsChange(e) {
       return refreshTokenMeter();
     }
     const n = parseTokens(raw);
-    if (n == null || n < 1000) return toast('Enter at least 1,000 tokens, e.g. 200k or 1.5m.', 'info');
+    if (n == null || n < 1000) return toast('Enter at least 1,000 tokens, e.g. 200k or 1.5m. (H07)', 'info');
     t.value = fmtTokens(n);
     setSetting('tokenLimit', n);
     LimitWindow.sync(TokenRecorder.dayTotals());
@@ -2175,7 +2254,7 @@ function onSettingsChange(e) {
   }
   if (t.matches?.('[data-text="username"]')) {
     const v = t.value.trim();
-    if (v && !/^[\w.\- ]{3,30}$/.test(v)) return toast('Username: 3 to 30 letters, numbers, spaces, . _ -');
+    if (v && !/^[\w.\- ]{3,30}$/.test(v)) return toast('Username: 3 to 30 letters, numbers, spaces, . _ - (H06)');
     return setSetting('username', v);
   }
   const text = t.closest?.('[data-text]');
@@ -2465,7 +2544,7 @@ function syncPhoneFull() {
 function commitPhone(el) {
   const d = phoneDigits(el.value);
   if (d && (d.length < 6 || d.length > 12)) {
-    toast('Enter a valid phone number (6 to 12 digits).');
+    toast('Enter a valid phone number (6 to 12 digits). (H05)');
     el.value = settings.phone || '';
     return;
   }
@@ -2531,8 +2610,8 @@ document.addEventListener('input', (e) => {
 
 function handleAvatar(file, input) {
   if (!file) return;
-  if (!/^image\//.test(file.type)) return toast('Pick an image file.');
-  if (file.size > 8 * 1024 * 1024) return toast('Image is too large (max 8 MB).');
+  if (!/^image\//.test(file.type)) return toast('Pick an image file. (H08)');
+  if (file.size > 8 * 1024 * 1024) return toast('Image is too large (max 8 MB). (E05)');
   const img = new Image(), url = URL.createObjectURL(file);
   img.onload = () => {
     const S = 192, c = document.createElement('canvas');
@@ -2544,7 +2623,7 @@ function handleAvatar(file, input) {
     input.value = '';
     toast('Profile photo updated.', 'success', 1800);
   };
-  img.onerror = () => toast('Could not read that image.');
+  img.onerror = () => toast('Could not read that image. (E08)');
   img.src = url;
 }
 
@@ -2606,7 +2685,7 @@ function chunkForSpeech(t, max = 180) {
 }
 const speakBrowser = function (text, btn = null) {
   const s = window.speechSynthesis;
-  if (!s) return toast('Read aloud isn\u2019t supported here.');
+  if (!s) return toast('Read aloud isn\u2019t supported here. (G03)');
   const same = !!btn && currentSpeakBtn === btn;
   const wasBusy = s.speaking || s.pending || !!currentSpeakBtn;
   stopSpeaking();
@@ -2698,7 +2777,7 @@ async function elSpeak(text, btn = null) {
     if (gen !== speakGen || (e && e.name === 'AbortError')) return;
     stopSpeaking();
     if (!played) {
-      toast('ElevenLabs unavailable (' + ((e && e.message) || 'error') + '). Using the device voice.', 'info', 2600);
+      toast('ElevenLabs unavailable (' + ((e && e.message) || 'error') + '). Using the device voice. (G01)', 'info', 2600);
       speakBrowser(text, btn);
     }
   }
@@ -2784,14 +2863,14 @@ async function renderDevices() {
 async function removeDevice(id) {
   if (!currentUser || id === deviceId) return;
   try { await deleteDoc(doc(db, 'users', currentUser.uid, 'devices', id)); toast('Device removed.', 'success', 1800); }
-  catch (_) { toast('Could not remove that device.'); }
+  catch (_) { toast('Could not remove that device. (B05)'); }
   renderDevices();
 }
 
 function detectLocation() {
-  if (!permAllowed('geolocation')) return toast('Location is turned off in Permissions.', 'info');
+  if (!permAllowed('geolocation')) return toast('Location is turned off in Permissions. (H01)', 'info');
   const out = document.getElementById('loc-out');
-  if (!navigator.geolocation) return toast('Location isn\u2019t supported here.');
+  if (!navigator.geolocation) return toast('Location isn\u2019t supported here. (H02)');
   if (out) out.textContent = 'Locating\u2026';
   navigator.geolocation.getCurrentPosition(
     (p) => {
@@ -2802,7 +2881,7 @@ function detectLocation() {
         out.title = 'Can be off by 1\u20133 km';
       }
     },
-    (err) => { if (out) out.textContent = 'Unavailable'; toast(err.code === 1 ? 'Location is blocked. Allow it in your browser\u2019s site settings.' : 'Could not get location.'); },
+    (err) => { if (out) out.textContent = 'Unavailable'; toast(err.code === 1 ? 'Location is blocked. Allow it in your browser\u2019s site settings. (H03)' : 'Could not get location. (H03)'); },
     { timeout: 8000, maximumAge: 60000 }
   );
 }
@@ -2871,7 +2950,7 @@ async function togglePerm(id, want) {
   if (want) {
     if ((await permState(p)) !== 'granted') {
       try { await p.ask(); rememberPerm(id, 'granted'); toast(`${p.label} allowed.`, 'success', 1800); }
-      catch (_) { toast(`${p.label} is blocked. Allow it in your browser\u2019s site settings.`, 'info', 3200); }
+      catch (_) { toast(`${p.label} is blocked. Allow it in your browser\u2019s site settings. (H04)`, 'info', 3200); }
     }
   } else {
     toast(`${p.label} turned off.`, 'info', 1600);
@@ -2954,7 +3033,7 @@ function fbErrors() {
 function fbLogError(err, step) {
   const code = err?.code || err?.name || 'unknown';
   const entry = { at: Date.now(), step, code, msg: String(err?.message || err || '').slice(0, 200) };
-  console.error(`Feedback error [${step}] ${code}:`, err);
+  console.error(`[F01] Feedback error [${step}] ${code}:`, err);
   try { localStorage.setItem(FB_ERR_LS, JSON.stringify([...fbErrors(), entry].slice(-20))); } catch (_) {}
   return entry;
 }
@@ -2963,7 +3042,7 @@ const fbErrText = (e) => {
   const hint = e.code === 'permission-denied' ? ' Firestore rules are blocking writes to users/{uid}/feedback.'
     : e.code === 'unavailable' ? ' No connection to the server.'
     : e.code === 'no-user' ? ' You are not signed in.' : '';
-  return `Error: ${e.code}.${hint}`;
+  return `Error F01: ${e.code}.${hint}`;
 };
 
 function openFeedback() {
@@ -3047,7 +3126,7 @@ function openFeedback() {
       applyLock();
       errNote.hidden = false;
       errNote.textContent = fbErrText(entry);
-      toast(`Couldn\u2019t send feedback (${entry.code}).`, 'error', 4000);
+      toast(`Couldn\u2019t send feedback (F01, ${entry.code}).`, 'error', 4000);
     }
   });
   document.body.appendChild(scrim);
@@ -3100,10 +3179,10 @@ function validateImport(data) {
 async function importData(file, input) {
   if (input) input.value = '';
   if (!file) return;
-  if (file.size > IMPORT_MAX_BYTES) return toast('That file is too large to import (25 MB max).', 'error', 4000);
+  if (file.size > IMPORT_MAX_BYTES) return toast('That file is too large to import (25 MB max). (E09)', 'error', 4000);
   let data;
   try { data = JSON.parse(await file.text()); }
-  catch (_) { return toast('That file is not valid JSON.', 'error', 4000); }
+  catch (_) { return toast('That file is not valid JSON. (E10)', 'error', 4000); }
 
   const r = validateImport(data);
   if (!r.ok) {
@@ -3364,26 +3443,26 @@ async function addFiles(list) {
   if (!files.length) return;
   const v = currentVariant(activeModel);
   for (const f of files) {
-    if (pendingFiles.length >= ATTACH_MAX) { toast(`Up to ${ATTACH_MAX} files per message.`, 'info', 2200); break; }
+    if (pendingFiles.length >= ATTACH_MAX) { toast(`Up to ${ATTACH_MAX} files per message. (E03)`, 'info', 2200); break; }
     try {
       if (/^image\//.test(f.type)) {
         if (activeModel && !supportsImages(activeModel, v.id)) {
-          toast(`${v.name || 'This model'} can\u2019t read images. Pick a vision model or attach a text file.`, 'info', 3400);
+          toast(`${v.name || 'This model'} can\u2019t read images. Pick a vision model or attach a text file. (E04)`, 'info', 3400);
           continue;
         }
-        if (f.size > ATTACH_IMG_MAX_BYTES) { toast(`${f.name} is too large (max 12 MB).`); continue; }
+        if (f.size > ATTACH_IMG_MAX_BYTES) { toast(`${f.name} is too large (max 12 MB). (E05)`); continue; }
         const dataUrl = await shrinkImage(f);
         pendingFiles.push({ id: uid(), name: f.name, size: f.size, kind: 'image', dataUrl });
       } else if (f.type.startsWith('text/') || f.type === 'application/json' || ATTACH_TEXT_EXT.test(f.name)) {
-        if (f.size > ATTACH_TEXT_MAX_BYTES) { toast(`${f.name} is too large (max 150 KB).`); continue; }
+        if (f.size > ATTACH_TEXT_MAX_BYTES) { toast(`${f.name} is too large (max 150 KB). (E05)`); continue; }
         let text = await readAs(f, 'readAsText');
         let cut = false;
         if (text.length > ATTACH_TEXT_CAP) { text = text.slice(0, ATTACH_TEXT_CAP); cut = true; }
         pendingFiles.push({ id: uid(), name: f.name, size: f.size, kind: 'text', text, cut });
       } else {
-        toast(`${f.name}: use images or text/code files for now.`, 'info', 3000);
+        toast(`${f.name}: use images or text/code files for now. (E04)`, 'info', 3000);
       }
-    } catch (_) { toast(`Couldn\u2019t read ${f.name}.`); }
+    } catch (_) { toast(`Couldn\u2019t read ${f.name}. (E08)`); }
   }
   syncAttachUi();
 }
@@ -3396,8 +3475,8 @@ const trayHtml = () => pendingFiles.map((f) => `
   </div>`).join('');
 
 function openAttach() {
-  if (!accountActive) { toast('Your account is deactivated. Activate it in Account settings to chat.', 'info', 3200); return; }
-  if (pendingFiles.length >= ATTACH_MAX) { toast(`Up to ${ATTACH_MAX} files per message.`, 'info', 2200); return; }
+  if (!accountActive) { toast('Your account is deactivated. Activate it in Account settings to chat. (D01)', 'info', 3200); return; }
+  if (pendingFiles.length >= ATTACH_MAX) { toast(`Up to ${ATTACH_MAX} files per message. (E03)`, 'info', 2200); return; }
   q$('.attach-input')?.click();
 }
 
@@ -3710,7 +3789,7 @@ function initComposer() {
       }
     } catch (e) {
       el.bad = true;
-      toast('ElevenLabs mic failed (' + ((e && e.message) || 'error') + '). Switching to device transcription.', 'info', 2800);
+      toast('ElevenLabs mic failed (' + ((e && e.message) || 'error') + '). Switching to device transcription. (G02)', 'info', 2800);
     } finally {
       el.busy--;
     }
@@ -3781,10 +3860,10 @@ function initComposer() {
         el.buf = new Uint8Array(el.an.fftSize);
         src.connect(el.an);
       } catch (_) { el.an = null; }
-      try { elBegin(); } catch (_) { elStopRec(); el.bad = true; toast('Recording is not supported here.'); return; }
+      try { elBegin(); } catch (_) { elStopRec(); el.bad = true; toast('Recording is not supported here. (G04)'); return; }
       el.timer = setInterval(elTick, 60);
     }).catch(() => {
-      toast('Mic is blocked. Allow it in browser settings.');
+      toast('Mic is blocked. Allow it in browser settings. (G05)');
       if (token === voice.token) { stopVoice(); setMode('text'); }
     });
     return true;
@@ -3802,7 +3881,7 @@ function initComposer() {
   };
 
   const startRecognition = (token) => {
-    if (!permAllowed('microphone')) { toast('Microphone is turned off in Permissions.', 'info'); return; }
+    if (!permAllowed('microphone')) { toast('Microphone is turned off in Permissions. (G06)', 'info'); return; }
     if (elEnabled() && elStartRec(token)) return;
     if (!SpeechRec) return;
     const rec = new SpeechRec();
@@ -3855,18 +3934,18 @@ function initComposer() {
       const err = e.error;
       if (err === 'not-allowed' || err === 'service-not-allowed') {
         voice.dead = true;
-        toast('Mic is blocked. Allow it in browser settings.');
+        toast('Mic is blocked. Allow it in browser settings. (G05)');
         if (token === voice.token) { stopVoice(); setMode('text'); }
       } else if (err === 'network') {
         voice.dead = true;
-        toast('Offline. Transcription needs a connection.');
+        toast('Offline. Transcription needs a connection. (G07)');
       } else if (err === 'audio-capture') {
         voice.dead = true;
-        toast('No mic found, or it\u2019s in use.');
+        toast('No mic found, or it\u2019s in use. (G08)');
         if (token === voice.token) { stopVoice(); setMode('text'); }
       } else if (err === 'language-not-supported') {
         voice.dead = true;
-        toast('That speech language isn\u2019t supported.');
+        toast('That speech language isn\u2019t supported. (G09)');
       }
     };
 
@@ -3885,7 +3964,7 @@ function initComposer() {
     if (!SpeechRec && !(elEnabled() && window.MediaRecorder)) {
       if (!voice.warned) {
         voice.warned = true;
-        toast('Live transcription isn\u2019t supported here. Try Chrome.');
+        toast('Live transcription isn\u2019t supported here. Try Chrome. (G10)');
       }
       setMode('text');
       return;
@@ -3985,7 +4064,7 @@ function initComposer() {
   });
 
   sendBtn.addEventListener('click', () => {
-    if (!accountActive) { toast('Your account is deactivated. Activate it in Account settings to chat.', 'info', 3200); return; }
+    if (!accountActive) { toast('Your account is deactivated. Activate it in Account settings to chat. (D01)', 'info', 3200); return; }
     if (chatBusy) { stopGeneration(); return; }
     if (mode === 'text' && (input.value.trim() || pendingFiles.length)) { submit(); return; }
     spin += 180;
@@ -4462,7 +4541,7 @@ const MemSys = (() => {
       await setDoc(ref(), JSON.parse(JSON.stringify({
         mem: st.mem, log: st.log.slice(-LIM.cloudLog), ch: st.ch, gone: st.gone, cut: st.cut, updated: now()
       })));
-    } catch (err) { dirty = true; console.warn('Memory sync:', err?.code || err); }
+    } catch (err) { dirty = true; console.warn('[B02] Memory sync (upload):', err?.code || err); }
   }
 
   async function pull() {
@@ -4492,7 +4571,7 @@ const MemSys = (() => {
       dirty = true;
       paint();
       push();
-    } catch (err) { console.warn('Memory sync:', err?.code || err); }
+    } catch (err) { console.warn('[B03] Memory sync (download):', err?.code || err); }
   }
 
   async function flush() {
@@ -4816,8 +4895,8 @@ const Cloud = (() => {
   const keyPreview = (raw = '') => (raw ? `••••${raw.slice(-4)}` : '');
 
   const warn = (err) => {
-    console.warn('Cloud sync:', err?.code || err);
-    toastOnce('cloud', 'Cloud sync is unavailable right now. Your data is safe on this device.', 'info', 300000);
+    console.warn('[B01] Cloud sync:', err?.code || err);
+    toastOnce('cloud', 'Cloud sync is unavailable right now. Your data is safe on this device. (B01)', 'info', 300000);
   };
 
   const collectKnownWords = () => {
@@ -5081,7 +5160,7 @@ const Cloud = (() => {
             TokenRecorder.merge(u.provider, u.model, u.period, u.used || 0, u.keyId);
           }
         });
-      } catch (e) { console.warn('Usage read skipped:', e?.code || e); }
+      } catch (e) { console.warn('[B04] Usage read skipped:', e?.code || e); }
       if (mine !== initSeq) return;
 
       try { localStorage.setItem(CLOUD_UID_LS, uid); } catch (_) {}
@@ -5414,7 +5493,7 @@ function openFileViewer(f) {
     if (b.dataset.r === 'x') return done();
     if (b.dataset.r === 'copy') {
       if (await copyText(f.code)) { b.textContent = 'Copied'; setTimeout(() => { b.textContent = 'Copy'; }, 1200); }
-      else toast('Couldn\u2019t copy.');
+      else toast('Couldn\u2019t copy. (D09)');
       return;
     }
     if (b.dataset.r === 'dl') {
@@ -5667,7 +5746,7 @@ let scrollDown = (force) => { const s = stageEl(); if (s && (force || (chatStick
 const closeSidebarMobile = () => document.getElementById('sidebar')?.classList.remove('open');
 
 function newSession() {
-  if (chatBusy) { toast('Stop the response before switching sessions.', 'info'); return; }
+  if (chatBusy) { toast('Stop the response before switching sessions. (D06)', 'info'); return; }
   if (currentSession.draft && currentSession.messages.length === 0) {
     toast('You\u2019re already in a new session.', 'info', 1800);
     closeSidebarMobile();
@@ -5683,7 +5762,7 @@ function newSession() {
 }
 
 function openSession(id) {
-  if (chatBusy) { toast('Stop the response before switching sessions.', 'info'); return; }
+  if (chatBusy) { toast('Stop the response before switching sessions. (D06)', 'info'); return; }
   const s = sessions.find((x) => x.id === id);
   if (!s) return;
   currentSession = s;
@@ -5727,7 +5806,7 @@ async function renameSession(id) {
 async function deleteSession(id) {
   const s = sessions.find((x) => x.id === id);
   if (!s) return;
-  if (chatBusy && currentSession.id === id) { toast('Stop the response first.', 'info'); return; }
+  if (chatBusy && currentSession.id === id) { toast('Stop the response first. (D06)', 'info'); return; }
   const yes = await confirmDialog({
     title: 'Delete session?',
     message: `\u201c${s.title}\u201d will be removed from your account and this device.`,
@@ -5754,7 +5833,7 @@ async function copyText(t) {
 }
 
 async function editMessage(i) {
-  if (chatBusy) { toast('Stop the response before editing.', 'info'); return; }
+  if (chatBusy) { toast('Stop the response before editing. (D06)', 'info'); return; }
   const m = currentSession.messages[i];
   if (!m || m.role !== 'user') return;
   const next = await promptDialog({ title: 'Edit message', label: 'Your message', value: m.content, confirmLabel: 'Resend', maxlength: 8000 });
@@ -5778,7 +5857,7 @@ async function onMessageAction(btn) {
       btn.innerHTML = ICONS.copiedCheck;
       sfx('copy'); haptic(8);
       setTimeout(() => { btn.innerHTML = ICONS.copy; }, 1400);
-    } else toast('Couldn\u2019t copy.');
+    } else toast('Couldn\u2019t copy. (D09)');
   } else if (a === 'voice') {
     if (m.content) speak(m.content, btn);
   } else if (a === 'like' || a === 'dislike') {
@@ -5790,7 +5869,7 @@ async function onMessageAction(btn) {
     if (chatBusy) return;
     const v = currentVariant(activeModel);
     if (badModels[badKey(activeModel, v.id)]) {
-      toast('That model isn\u2019t supported. Pick another in the model picker.', 'info', 3200);
+      toast('That model isn\u2019t supported. Pick another in the model picker. (C08)', 'info', 3200);
       pendingResend = { type: 'regen' };
       openModelPicker();
       return;
@@ -5800,7 +5879,7 @@ async function onMessageAction(btn) {
   } else if (a === 'continue') {
     if (chatBusy || !chatReady()) return;
     if (i !== currentSession.messages.length - 1) {
-      toast('You can only continue the most recent reply.', 'info');
+      toast('You can only continue the most recent reply. (D07)', 'info');
       return;
     }
     sendChatMessage('', true, null, true);
@@ -5822,7 +5901,7 @@ function retryFailed() {
 
   const v = currentVariant(activeModel);
   if (badModels[badKey(activeModel, v.id)]) {
-    toast('That model isn\u2019t supported. Pick another in the model picker.', 'info', 3200);
+    toast('That model isn\u2019t supported. Pick another in the model picker. (C08)', 'info', 3200);
     pendingResend = { type: 'retry', text, attachments };
     openModelPicker();
     return;
@@ -5836,27 +5915,27 @@ function retryFailed() {
 
 function chatReady() {
   if (!accountActive) {
-    toast('Your account is deactivated. Activate it in Account settings to chat.', 'info', 3200);
+    toast('Your account is deactivated. Activate it in Account settings to chat. (D01)', 'info', 3200);
     return false;
   }
   const lim = dayLimit();
   if (lim && LimitWindow.used() >= lim) {
-    toast('Token limit reached. Raise it in Settings \u2192 Usage, or wait for the timer.', 'info', 3600);
+    toast('Token limit reached. Raise it in Settings \u2192 Usage, or wait for the timer. (D02)', 'info', 3600);
     return false;
   }
   const prov = MODEL_PROVIDERS.find((p) => p.id === activeModel);
   if (!prov || !apiKeys[activeModel]) {
-    toast('Choose a model and add its API key first.', 'info');
+    toast('Choose a model and add its API key first. (D03)', 'info');
     openModelPicker();
     return false;
   }
   if (!PROVIDER_API[activeModel]) {
-    toast(`${prov.name} isn\u2019t connected yet.`, 'info');
+    toast(`${prov.name} isn\u2019t connected yet. (D04)`, 'info');
     return false;
   }
   const v = currentVariant(activeModel);
   if (!v || !v.id) {
-    toast('Pick a model version first.', 'info');
+    toast('Pick a model version first. (D05)', 'info');
     openModelPicker();
     return false;
   }
@@ -6128,16 +6207,16 @@ function modelErrorMessage(status, text, pid, variant) {
   const siblings = (api.models || []).filter((m) => m.series === variant.series);
   const seriesDown = siblings.length > 1 && siblings.every((m) => badModels[badKey(pid, m.id)]);
   return seriesDown
-    ? `${prov?.name || pid} doesn’t support the ${variant.series || variant.id} series with this API key.`
-    : `${prov?.name || pid} doesn’t support ${variant.name || variant.id} with this API key. Pick another version in the model picker.`;
+    ? `${prov?.name || pid} doesn’t support the ${variant.series || variant.id} series with this API key. (C08)`
+    : `${prov?.name || pid} doesn’t support ${variant.name || variant.id} with this API key. Pick another version in the model picker. (C08)`;
 }
 
 function friendlyHttpError(status, errText) {
-  if (status === 401 || status === 403) return 'That API key was rejected. Check it in the provider settings.';
-  if (status === 429) return 'Rate limited. Wait a moment and try again.';
-  if (status === 402) return 'The provider says this API key is out of credit.';
-  if (status === 500 || status === 502 || status === 503 || status === 504) return 'The provider is having trouble right now. Try again shortly.';
-  return `HTTP ${status} \u2014 ${String(errText || '').slice(0, 140)}`;
+  if (status === 401 || status === 403) return 'That API key was rejected. Check it in the provider settings. (C02)';
+  if (status === 429) return 'Rate limited. Wait a moment and try again. (C03)';
+  if (status === 402) return 'The provider says this API key is out of credit. (C04)';
+  if (status === 500 || status === 502 || status === 503 || status === 504) return 'The provider is having trouble right now. Try again shortly. (C05)';
+  return `HTTP ${status} \u2014 ${String(errText || '').slice(0, 140)} (C06)`;
 }
 
 function stripUnsupportedParams(body, errText) {
@@ -6339,7 +6418,7 @@ async function agentAfterReply(ai, session) {
   MessageRecorder.log({ type: 'tool', sessionId: session.id, name: calls[0].name });
   const mm = /\[\[\s*tool\s*:\s*\w+\s*(\{[\s\S]*?\})?\s*\]\]/.exec(ai.content);
   if (mm) ai.content = ai.content.slice(0, mm.index + mm[0].length);
-  if (agentDepthOf(session) >= AGENT_MAX_STEPS) { toast('Agent step limit reached.', 'info', 2000); return; }
+  if (agentDepthOf(session) >= AGENT_MAX_STEPS) { toast('Agent step limit reached. (D08)', 'info', 2000); return; }
   const results = [];
   for (const c of calls) {
     const fn = enabledAgentTools().includes(c.name) ? AGENT_TOOLS[c.name] : null;
@@ -6434,7 +6513,7 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
   startStatusRotor();
 
   pendingToolContext = isContinue ? '' : await autoResearch(seedText);
-  libContext = await libContextFor(seedText).catch((e) => { console.warn('Library lookup failed:', e); return ''; });
+  libContext = await libContextFor(seedText).catch((e) => { console.warn('[E02] Library lookup failed:', e); return ''; });
   const messages = buildMessages();
   if (existingContent) {
     messages.push({ role: 'user', content: 'Your previous message was cut off. Output ONLY the exact next characters to seamlessly continue that exact text, without repeating anything from before, and without any meta-commentary.' });
@@ -6494,7 +6573,7 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
       const tk = api.tokenParam || 'max_tokens';
       const body2 = { ...req.body };
       if (body2[tk]) body2[tk] = Math.max(512, Math.min(body2[tk], lim ? Math.floor(lim * 0.45) : Math.floor(body2[tk] / 2)));
-      toast('Rate limit hit. Retrying in ' + Math.ceil(wait / 1000) + 's…', 'info', Math.min(wait, 4000));
+      toast('Rate limit hit. Retrying in ' + Math.ceil(wait / 1000) + 's… (C03)', 'info', Math.min(wait, 4000));
       await new Promise((ok) => setTimeout(ok, wait));
       req = { ...req, body: body2, __retried: true };
       res = await fetch(req.url, { method: 'POST', signal: myAbort.signal, headers: req.headers, body: JSON.stringify(req.body) });
@@ -6510,7 +6589,7 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
     if (!wantStream) {
       let j = null;
       try { j = await res.json(); } catch (_) { j = null; }
-      if (!j || typeof j !== 'object') throw new Error('The provider returned an unexpected response.');
+      if (!j || typeof j !== 'object') throw new Error('The provider returned an unexpected response. (C07)');
       if (adapter.readFull) {
         const { content, usage: u } = adapter.readFull(j);
         ai.content = content || '';
@@ -6519,7 +6598,7 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
         ai.content = j?.choices?.[0]?.message?.content || '';
         usage = j?.usage || null;
       }
-      if (!ai.content) throw new Error('The provider returned no content.');
+      if (!ai.content) throw new Error('The provider returned no content. (C07)');
       paint();
     } else {
       const reader = res.body.getReader();
@@ -6561,7 +6640,10 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
       if (streamErr && !ai.content) throw new Error(streamErr);
     }
   } catch (err) {
-    if (err.name !== 'AbortError') error = err;
+    if (err.name !== 'AbortError') {
+      error = /\([A-H]\d\d\)/.test(err?.message || '') ? err : new Error((err?.message || 'Something went wrong.') + ' (C01)');
+      if (error !== err) console.warn('[C01] Chat request failed:', err);
+    }
   } finally {
     if (raf) cancelAnimationFrame(raf);
     const aborted = myAbort.signal.aborted;
@@ -7185,7 +7267,7 @@ function initShell() {
         input.classList.add('input-error');
         input.addEventListener('input', () => input.classList.remove('input-error'), { once: true });
         input.focus();
-        toast('Paste an API key first.');
+        toast('Paste an API key first. (C09)');
         return;
       }
       if (apiKeys[id] && apiKeys[id] !== key) {
@@ -7256,7 +7338,7 @@ function initShell() {
 
 function locked() {
   if (!chatBusy) return false;
-  toast('Stop the response before changing model.', 'info');
+  toast('Stop the response before changing model. (D06)', 'info');
   return true;
 }
 
@@ -7446,7 +7528,7 @@ async function autoSignIn() {
   } catch (err) {
     authBusy = false;
     const code = err?.code;
-    console.error('Sign-in error:', code, err?.message);
+    console.error('[A01] Sign-in error:', code, err?.message);
 
     if (code === 'auth/popup-blocked' || code === 'auth/operation-not-supported-in-this-environment') {
       hideLoader(); showSignInButton(); return;
@@ -7455,20 +7537,20 @@ async function autoSignIn() {
       hideLoader(); showSignInButton(); return;
     }
     if (code === 'auth/network-request-failed') {
-      toastOnce('net', 'Offline. Retrying sign-in\u2026');
+      toastOnce('net', 'Offline. Retrying sign-in\u2026 (A02)');
       authCooldownUntil = Date.now() + 3000; setTimeout(autoSignIn, 3100); return;
     }
     if (code === 'auth/unauthorized-domain') {
       authCooldownUntil = Date.now() + 15000;
-      console.error(`"${location.host}" is not an authorised Firebase domain.`);
-      toastOnce('domain', 'This domain isn\u2019t authorised for sign-in.', 'error', 60000);
+      console.error(`[A03] "${location.host}" is not an authorised Firebase domain.`);
+      toastOnce('domain', 'This domain isn\u2019t authorised for sign-in. (A03)', 'error', 60000);
       setTimeout(autoSignIn, 15100); return;
     }
     if (code === 'auth/too-many-requests') {
-      toastOnce('rate', 'Too many attempts. Trying again shortly.');
+      toastOnce('rate', 'Too many attempts. Trying again shortly. (A04)');
       authCooldownUntil = Date.now() + 15000; setTimeout(autoSignIn, 15100); return;
     }
-    toastOnce('signin', 'Sign-in didn\u2019t go through. Retrying\u2026', 'error', 30000);
+    toastOnce('signin', 'Sign-in didn\u2019t go through. Retrying\u2026 (A01)', 'error', 30000);
     authCooldownUntil = Date.now() + 3000; setTimeout(autoSignIn, 3100);
   }
 }
@@ -7503,7 +7585,7 @@ async function lockAccount(type) {
   try {
     await setDoc(doc(db, 'users', user.uid, 'data', 'account'),
       { [type === 'blocked' ? 'blocked' : 'abandoned']: true, lockedAt: at, email: user.email }, { merge: true });
-  } catch (err) { console.warn('Account-doc lock flag failed:', err?.code, err?.message); }
+  } catch (err) { console.warn('[A10] Account-doc lock flag failed:', err?.code, err?.message); }
   const check = await getDoc(doc(db, 'blocks', ek));
   if (!check.exists()) throw new Error('lock-not-saved');
   writeLocalLock(ek, type);
@@ -7547,9 +7629,9 @@ async function handleSignOut() {
     activeModel = null;
     await signOut(auth);
   } catch (err) {
-    console.error(err);
+    console.error('[A06] Sign-out failed:', err);
     hideLoader();
-    toast('Couldn\u2019t sign out. Try again.');
+    toast('Couldn\u2019t sign out. Try again. (A06)');
   }
 }
 
@@ -7561,8 +7643,8 @@ async function boot() {
 
   try { await getRedirectResult(auth); }
   catch (err) {
-    console.error('Redirect error:', err?.code, err?.message);
-    toastOnce('redirect', 'Couldn\u2019t finish sign-in. Try again.');
+    console.error('[A05] Redirect error:', err?.code, err?.message);
+    toastOnce('redirect', 'Couldn\u2019t finish sign-in. Try again. (A05)');
   }
 
   let authResolved = false;
@@ -7588,7 +7670,7 @@ async function boot() {
           }
         }
       } catch (err) {
-        console.error('Lock check failed:', err?.code, err?.message);
+        console.error('[A10] Lock check failed:', err?.code, err?.message);
       }
       if (!blocked && emailKey) blocked = readLocalLocks()[emailKey] || null;
       if (blocked) {
@@ -7614,7 +7696,7 @@ async function boot() {
 
   setTimeout(() => {
     if (!authResolved) {
-      console.warn('Auth state resolved late — nudging auto sign-in.');
+      console.warn('[A02] Auth state resolved late — nudging auto sign-in.');
       autoSignIn();
     }
   }, 2500);
@@ -7636,6 +7718,11 @@ const abTextCard = (title, tagline, desc, sub, desc2) => ({
 });
 
 const abLic = (name, lic, what) => `<h4>${esc(name)}<span class="ab-tag">${esc(lic)}</span></h4><p>${what}</p>`;
+
+const abErrCodesHtml = () => Object.keys(ERR_CATS).map((c) =>
+  `<h4>${esc(c + ' \u00b7 ' + ERR_CATS[c])}</h4>` +
+  Object.keys(ERR_CODES).filter((k) => k[0] === c).map((k) => `<p><b>${k}</b> ${esc(ERR_CODES[k][0])}. ${esc(ERR_CODES[k][1])}</p>`).join('')
+).join('');
 
 const AB_PAGES = {
   terms: { title: 'Terms & Conditions', icon: () => ICONS.stTerms, cards: [
@@ -7764,6 +7851,33 @@ const AB_PAGES = {
       b: `<p>Deactivate pauses chatting. Abandon locks the account forever but keeps the data. Abolish deletes the data but lets you start fresh. Destruct deletes the data and locks the account forever.</p>
       <h4>Which one to choose</h4><p>If you are just taking a break, Deactivate. If you are moving on but want the data back later, do nothing. Abandon and Destruct are for cases where the account must never be used again.</p>
       <h4>Data Recovery</h4><p>Once an account is abolished or destructed, the data cannot be recovered. Please be absolutely sure before confirming.</p>` },
+    { t: 'Error Codes', st: 1, kw: 'error codes problem failed fix ' + Object.keys(ERR_CODES).join(' ').toLowerCase(),
+      b: `<p>When something goes wrong, the popup ends with a code such as (A01). The letter is the area and the number is the problem. The same code shows in the browser console as [A01]. Include it when you send feedback.</p>${abErrCodesHtml()}` },
+    { t: 'Permissions Explained', st: 1, kw: 'permissions microphone camera location notifications clipboard audio blocked',
+      b: `<p>Settings → Permissions shows what Aphrosta may use on this device. Turning one off there stops the app from asking. The browser has the final say, so a blocked permission must be allowed in your browser's site settings.</p>
+      <h4>Microphone</h4><p>Voice input and live transcription.</p>
+      <h4>Camera / Media</h4><p>Photos and video.</p>
+      <h4>Location</h4><p>Nearby and local answers. Nothing is shared until you ask for it.</p>
+      <h4>Notifications</h4><p>Alerts when a reply is ready.</p>
+      <h4>Clipboard</h4><p>Pasting from the clipboard.</p>
+      <h4>Audio playback</h4><p>Sounds and music.</p>` },
+    { t: 'Voice and Read Aloud', st: 1, kw: 'voice speech read aloud elevenlabs microphone transcription',
+      b: `<p>Aphrosta can listen and speak. Voice input needs the microphone permission. Read aloud speaks a reply out loud and Auto Read does it for every reply.</p>
+      <h4>ElevenLabs and the device voice</h4><p>If ElevenLabs is unavailable, Aphrosta falls back to your device's own voice for speaking and to device transcription for listening, and tells you with a code.</p>
+      <h4>Live transcription</h4><p>It needs an internet connection and a supported browser. Chrome works best. If the microphone is busy in another app, close that app first.</p>` },
+    { t: 'Backup and Restore', st: 1, kw: 'backup restore export import json data transfer',
+      b: `<p>Export Data saves your settings and chats to a JSON file named aphrosta-data.json on this device. Your profile photo is not included.</p>
+      <h4>Importing</h4><p>Import accepts files up to 25 MB. Chats are merged with the ones you already have and the newer copy wins. Your current settings are replaced. You see a summary and confirm before anything changes, and the app reloads when it finishes.</p>
+      <h4>Delete Local</h4><p>Removes settings, sessions and saved API keys from this device. Your cloud copy is not touched.</p>` },
+    { t: 'Library', st: 1, kw: 'library files instructions knowledge context items',
+      b: `<p>The library holds items made of a title, instructions for the AI and up to 10 text or code files. When your message matches an item, the best-matching parts are added to the prompt.</p>
+      <h4>Size and storage</h4><p>Each file can be up to 8 MB and an item up to 25 MB in total. Large files are split into parts on this device. Files whose contents cannot be read are kept by name only.</p>` },
+    { t: 'Limits at a Glance', st: 1, kw: 'limits size max files attachments image feedback import',
+      b: `<h4>Attachments</h4><p>4 files per message. Images up to 12 MB and text or code files up to 150 KB. Text is trimmed to about 12,000 characters.</p>
+      <h4>Profile photo</h4><p>Up to 8 MB.</p>
+      <h4>Library</h4><p>10 files per item, 8 MB per file, 25 MB per item.</p>
+      <h4>Import</h4><p>Up to 25 MB.</p>
+      <h4>Feedback</h4><p>One message per hour.</p>` },
     { t: 'Contact and Feedback', st: 1, kw: 'contact feedback bug',
       b: `<p>If something is not working as expected, send us feedback from the app so our team can look into it. Feedback is limited to once per hour to keep the inbox tidy.</p>
       <h4>What to include</h4><p>Include a short description of what you were doing and what happened. Leave device info on so we can match your report to the browser and screen size.</p>
@@ -7783,7 +7897,7 @@ function abBill() {
 }
 function abBillSave() {
   try { localStorage.setItem(AB_BILL_LS, JSON.stringify(abBillCache)); return true; }
-  catch (_) { toast('Could not save on this device.', 'error'); return false; }
+  catch (_) { toast('Could not save on this device. (E06)', 'error'); return false; }
 }
 const abLog = (text) => { const b = abBill(); b.history.unshift({ at: Date.now(), text }); b.history = b.history.slice(0, 40); };
 const AB_DAYS = [{ id: '1', name: 'Every 1st' }, { id: '10', name: 'Every 10th' }];
@@ -7981,10 +8095,10 @@ document.addEventListener('click', (e) => {
       const now = new Date();
       const expOk = m && +m[1] >= 1 && +m[1] <= 12 && (2000 + +m[2] > now.getFullYear() || (2000 + +m[2] === now.getFullYear() && +m[1] >= now.getMonth() + 1));
       const bad = (k) => { const i = page.querySelector(`[data-ab-card="${k}"]`); i.classList.add('input-error'); setTimeout(() => i.classList.remove('input-error'), 700); };
-      if (!name) { bad('name'); return toast('Add the name on the card.', 'error'); }
-      if (!abLuhn(num)) { bad('num'); return toast('That card number looks wrong.', 'error'); }
-      if (!expOk) { bad('exp'); return toast('Check the expiry date.', 'error'); }
-      if (cvv.length < 3) { bad('cvv'); return toast('Check the CVV.', 'error'); }
+      if (!name) { bad('name'); return toast('Add the name on the card. (H09)', 'error'); }
+      if (!abLuhn(num)) { bad('num'); return toast('That card number looks wrong. (H09)', 'error'); }
+      if (!expOk) { bad('exp'); return toast('Check the expiry date. (H09)', 'error'); }
+      if (cvv.length < 3) { bad('cvv'); return toast('Check the CVV. (H09)', 'error'); }
       b.cards.push({ id: `c${Date.now()}`, brand: abBrand(num), last4: num.slice(-4), exp, name, def: !b.cards.length });
       abLog(`Added ${abBrand(num)} \u2022\u2022\u2022\u2022 ${num.slice(-4)}`);
       if (abBillSave()) { abRender(page); toast('Card saved on this device.', 'success', 1800); }
