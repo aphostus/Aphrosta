@@ -901,6 +901,7 @@ Object.assign(ICONS, {
   stLicense:     svg('<circle cx="12" cy="9" r="5.5"/><path d="M8.5 13.5L7 21l5-3 5 3-1.5-7.5"/>', 16),
   stHelp:        svg('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/><path d="M5.6 5.6l3.9 3.9M14.5 14.5l3.9 3.9M18.4 5.6l-3.9 3.9M9.5 14.5l-3.9 3.9"/>', 16),
   stBilling:     svg('<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>', 16),
+  stKeys:        svg('<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.01M11 10h.01M15 10h.01M7 14h10"/>', 16),
   stFeedback:    svg('<path d="M21 3L3 10.5l7 3 3 7z"/><path d="M21 3L10 13.5"/>', 16),
   stPermissions: svg('<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3M14 9l2 2"/>', 16),
   stNotify:      svg('<path d="M6 9a6 6 0 0112 0c0 5 2 6 2 7H4c0-1 2-2 2-7z"/><path d="M10 20a2 2 0 004 0M3 8c.5-2 1.5-3.5 3-4.5M21 8c-.5-2-1.5-3.5-3-4.5"/>', 16),
@@ -1476,9 +1477,10 @@ const AboutSection = () => Section('about', 'About', [
   LinkRow('rules', ICONS.stRules, 'Rules & Policies', { act: 'about-rules' }),
   LinkRow('licenses', ICONS.stLicense, 'About & Licenses', { act: 'about-licenses' }),
   LinkRow('help', ICONS.stHelp, 'Help & Support', { act: 'about-help' }),
+  ...(kbOn() ? [LinkRow('shortcuts', ICONS.stKeys, 'Keyboard Shortcuts', { act: 'about-shortcuts' })] : []),
   LinkRow('billing', ICONS.stBilling, 'Billing & Payment', { act: 'about-billing' }),
   LinkRow('feedback', ICONS.stFeedback, 'Feedback', { act: 'feedback', value: 'Bug or idea' })
-], 6);
+], kbOn() ? 7 : 6);
 
 let OthersSection = () => Section('others', 'Others', [
   Item('permissions', ICONS.stPermissions, 'Permissions', '<div id="perm-list"><p class="field-note">Checking\u2026</p></div>'),
@@ -2034,7 +2036,7 @@ function onSettingsClick(e) {
   switch (act) {
     case 'account-open':  return openAccountPage();
     case 'account-back':  return closeAccountPage();
-    case 'about-terms': case 'about-rules': case 'about-licenses': case 'about-help': case 'about-billing':
+    case 'about-terms': case 'about-rules': case 'about-licenses': case 'about-help': case 'about-billing': case 'about-shortcuts':
       return openAboutPage(act.slice(6));
     case 'voice-test':    return testVoice();
     case 'el-voices': { const p = document.querySelector('[data-el-panel]'); if (p) p.hidden = !p.hidden; return; }
@@ -7719,6 +7721,197 @@ if (document.readyState === 'loading') {
 } else {
   boot();
 }
+/* ---------- KEYBOARD SHORTCUTS (desktop only) ---------- */
+const KB_MAC = /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent || '');
+const kbOn = () => window.matchMedia('(pointer: fine)').matches;
+const kbTyping = (t) => !!t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
+const kbInput = () => q$('.composer-input');
+const kbBtns = (a) => [...(appEl?.querySelectorAll(`[data-a="${a}"]`) || [])];
+const kbLastMsg = (role) => {
+  const m = currentSession?.messages || [];
+  for (let i = m.length - 1; i >= 0; i--) if (m[i].role === role && m[i].content) return { m: m[i], i };
+  return null;
+};
+const kbOrder = () => [
+  ...sessions.filter((s) => s.pinned).sort((a, b) => b.pinnedAt - a.pinnedAt),
+  ...sessions.filter((s) => !s.pinned).sort((a, b) => b.updated - a.updated)
+];
+
+const KB_NAMES = { Comma: ',', Period: '.', Slash: '/', Semicolon: ';', Escape: 'Esc', ArrowUp: '\u2191', ArrowDown: '\u2193' };
+const kbParse = (s) => { const p = s.split('+'); return { mod: p.includes('mod'), shift: p.includes('shift'), alt: p.includes('alt'), code: p[p.length - 1] }; };
+const kbLabel = (s) => {
+  const k = kbParse(s);
+  const n = KB_NAMES[k.code] || k.code.replace(/^Key|^Digit/, '');
+  return KB_MAC
+    ? (k.alt ? '\u2325' : '') + (k.shift ? '\u21e7' : '') + (k.mod ? '\u2318' : '') + n
+    : [k.mod && 'Ctrl', k.alt && 'Alt', k.shift && 'Shift', n].filter(Boolean).join(' + ');
+};
+
+function kbStep(dir) {
+  const list = kbOrder();
+  if (!list.length) return;
+  const at = list.findIndex((s) => s.id === currentSession.id);
+  const to = at < 0 ? (dir > 0 ? 0 : -1) : at + dir;
+  if (to < 0 || to >= list.length) return;
+  openSession(list[to].id);
+}
+
+function kbSearch() {
+  const sb = document.getElementById('sidebar');
+  if (sb && !sb.classList.contains('open')) toggleSidebar();
+  setTimeout(() => { const i = q$('[data-role="session-search"]'); i?.focus(); i?.select(); }, 60);
+}
+
+function kbToggleSettings() {
+  if (document.getElementById('settings-panel')?.classList.contains('open')) closeSettings();
+  else openSettings();
+}
+
+function kbToggleShortcuts() {
+  const sp = document.getElementById('settings-panel');
+  if (sp?.classList.contains('open') && sp.classList.contains('show-about') && sp.querySelector('#about-page[data-page="shortcuts"]')) {
+    closeSettings();
+    return;
+  }
+  openSettings();
+  openAboutPage('shortcuts');
+}
+
+async function kbCopyReply() {
+  const r = kbLastMsg('assistant');
+  if (!r) { toast('No reply to copy yet.', 'info', 1600); return; }
+  if (await copyText(r.m.content)) toast('Last reply copied.', 'success', 1600);
+  else toast('Couldn\u2019t copy. (D09)');
+}
+
+async function kbCopyCode() {
+  const r = kbLastMsg('assistant');
+  const blocks = r ? [...r.m.content.matchAll(/```[^\n]*\n([\s\S]*?)```/g)] : [];
+  if (!blocks.length) { toast('No code block in the last reply.', 'info', 1800); return; }
+  if (await copyText(blocks[blocks.length - 1][1].replace(/\n$/, ''))) toast('Last code block copied.', 'success', 1600);
+  else toast('Couldn\u2019t copy. (D09)');
+}
+
+function kbRegen() {
+  const b = kbBtns('regen').pop() || kbBtns('retry').pop();
+  if (b) onMessageAction(b);
+  else toast('Nothing to regenerate yet.', 'info', 1600);
+}
+
+function kbContinue() {
+  const b = kbBtns('continue').pop();
+  if (b) onMessageAction(b);
+}
+
+function kbReadAloud() {
+  if (window.speechSynthesis?.speaking || !elAudio.paused) { stopSpeaking(); return; }
+  const b = kbBtns('voice').pop();
+  if (b) onMessageAction(b);
+  else toast('No reply to read yet.', 'info', 1600);
+}
+
+function kbEditLast() {
+  const r = kbLastMsg('user');
+  if (r) editMessage(r.i);
+}
+
+function kbVoice() {
+  const c = q$('.composer');
+  if (!c || chatBusy) return;
+  const tray = q$('.attach-tray');
+  const hasDraft = c.dataset.mode === 'text' && !!(kbInput()?.value.trim() || (tray && !tray.hidden));
+  if (hasDraft) { toast('Clear the message first to switch to voice.', 'info', 1800); return; }
+  q$('.send-btn')?.click();
+}
+
+function kbScroll(top) {
+  const s = stageEl();
+  if (!s) return;
+  chatStick = !top;
+  s.scrollTo({ top: top ? 0 : s.scrollHeight, behavior: 'smooth' });
+}
+
+function kbSessionOp(fn) {
+  if (!sessions.some((s) => s.id === currentSession.id)) { toast('Start a chat first.', 'info', 1600); return; }
+  fn(currentSession.id);
+}
+
+const KB_SHORTCUTS = [
+  { g: 'Chat', t: 'New session', k: 'mod+shift+KeyO', run: () => newSession() },
+  { g: 'Chat', t: 'Focus the message box', k: 'shift+Escape', any: true, run: () => kbInput()?.focus() },
+  { g: 'Chat', t: 'Focus the message box (not typing)', k: 'Slash', lbl: '/', run: () => kbInput()?.focus() },
+  { g: 'Chat', t: 'Send (even if Enter Sends is off)', k: 'mod+Enter',
+    when: (e) => e.target === kbInput() && !settings.enterSends && !chatBusy && !!kbInput().value.trim(),
+    run: () => q$('.send-btn')?.click() },
+  { g: 'Chat', t: 'Stop the reply', k: 'mod+Period', run: () => { if (chatBusy) stopGeneration(); } },
+  { g: 'Chat', t: 'Regenerate or retry the reply', k: 'alt+KeyR', run: kbRegen },
+  { g: 'Chat', t: 'Continue the reply', k: 'alt+KeyC', run: kbContinue },
+  { g: 'Chat', t: 'Edit your last message (box empty)', k: 'ArrowUp', lbl: '\u2191',
+    when: (e) => e.target === kbInput() && !kbInput().value, run: kbEditLast },
+  { g: 'Chat', t: 'Copy the last reply', k: 'mod+shift+KeyC', run: kbCopyReply },
+  { g: 'Chat', t: 'Copy the last code block', k: 'mod+shift+Semicolon', run: kbCopyCode },
+  { g: 'Chat', t: 'Read the last reply aloud / stop', k: 'alt+KeyS', run: kbReadAloud },
+  { g: 'Chat', t: 'Attach files', k: 'mod+KeyU', run: () => openAttach() },
+  { g: 'Chat', t: 'Switch voice and text input', k: 'alt+KeyV', run: kbVoice },
+  { g: 'Chat', t: 'Open or close the thinking view', k: 'alt+KeyT', run: () => kbClickSel('[data-action="agent"]') },
+
+  { g: 'Navigate', t: 'Search sessions', k: 'mod+KeyK', run: kbSearch },
+  { g: 'Navigate', t: 'Show or hide the sidebar', k: 'mod+shift+KeyS', run: () => toggleSidebar() },
+  { g: 'Navigate', t: 'Previous session', k: 'alt+ArrowUp', run: () => kbStep(-1) },
+  { g: 'Navigate', t: 'Next session', k: 'alt+ArrowDown', run: () => kbStep(1) },
+  { g: 'Navigate', t: 'Open Worlds', k: 'alt+Digit1', run: () => kbClickSel('[data-action="nav-worlds"]') },
+  { g: 'Navigate', t: 'Open Agents', k: 'alt+Digit2', run: () => kbClickSel('[data-action="nav-agent"]') },
+  { g: 'Navigate', t: 'Open Library', k: 'alt+Digit3', run: () => kbClickSel('[data-action="nav-data"]') },
+  { g: 'Navigate', t: 'Jump to the top of the chat', k: 'mod+Home', when: (e) => !kbTyping(e.target), run: () => kbScroll(true) },
+  { g: 'Navigate', t: 'Jump to the latest message', k: 'mod+End', when: (e) => !kbTyping(e.target), run: () => kbScroll(false) },
+
+  { g: 'Models', t: 'Open the model menu', k: 'alt+KeyM', run: () => kbClickSel('[data-action="model-select"]') },
+  { g: 'Models', t: 'Open the model picker', k: 'alt+shift+KeyM', run: () => kbClickSel('[data-action="model-picker"]') },
+  { g: 'Models', t: 'Open the effort menu', k: 'alt+KeyE', run: () => kbClickSel('[data-action="effort-select"]') },
+
+  { g: 'Sessions', t: 'Pin or unpin this session', k: 'alt+KeyP', run: () => kbSessionOp(togglePin) },
+  { g: 'Sessions', t: 'Rename this session', k: 'F2', run: () => kbSessionOp(renameSession) },
+  { g: 'Sessions', t: 'Delete this session', k: 'mod+shift+Backspace', run: () => kbSessionOp(deleteSession) },
+
+  { g: 'App', t: 'Open or close Settings', k: 'mod+Comma', run: kbToggleSettings },
+  { g: 'App', t: 'Show this shortcut list', k: 'mod+Slash', run: kbToggleShortcuts },
+  { g: 'App', t: 'Show this shortcut list (not typing)', k: 'shift+Slash', lbl: '?', run: kbToggleShortcuts },
+  { g: 'App', t: 'Close menus and stop speech', k: 'Escape', lbl: 'Esc', info: true, run: () => {} }
+];
+
+function kbClickSel(sel) { q$(sel)?.click(); }
+
+const KB_GROUPS = ['Chat', 'Navigate', 'Models', 'Sessions', 'App'];
+const kbCards = () => [
+  { t: 'About shortcuts', st: 1, kw: 'keyboard shortcuts keys hotkeys desktop mac ctrl command option',
+    b: `<p>Shortcuts work on computers with a keyboard and mouse. ${KB_MAC ? '\u2318 is Command, \u2325 is Option and \u21e7 is Shift.' : 'On a Mac, Ctrl becomes \u2318 and Alt becomes \u2325.'} They pause while a popup is open. Keys without Ctrl or Alt only work when you are not typing.</p>` },
+  ...KB_GROUPS.map((g) => {
+    const rows = KB_SHORTCUTS.filter((s) => s.g === g);
+    return {
+      t: g, st: 1, kw: `${g} ` + rows.map((s) => s.t).join(' '),
+      b: `<h4>${esc(g)}</h4>` + rows.map((s) => `<div class="ab-kv"><span>${esc(s.t)}</span><b>${esc(s.lbl || kbLabel(s.k))}</b></div>`).join('')
+    };
+  })
+];
+
+document.addEventListener('keydown', (e) => {
+  if (!kbOn() || e.isComposing || !e.code) return;
+  if (!q$('.composer')) return;
+  if (document.querySelector('.dialog-scrim, .tour')) return;
+  const mod = e.ctrlKey || e.metaKey;
+  for (const s of KB_SHORTCUTS) {
+    if (s.info) continue;
+    const k = s._k || (s._k = kbParse(s.k));
+    if (e.code !== k.code || mod !== k.mod || e.shiftKey !== k.shift || e.altKey !== k.alt) continue;
+    const ok = s.when ? s.when(e) : (k.mod || k.alt || s.any || !kbTyping(e.target));
+    if (!ok) continue;
+    e.preventDefault();
+    if (e.repeat && !/^Arrow/.test(e.code)) return;
+    s.run();
+    return;
+  }
+});
+
 /* ---------- ABOUT PAGES (Terms, Rules, Licenses, Help, Billing) ---------- */
 const AB_BILL_LS = 'aphrosta.billing'; /* local only: never synced to Firebase */
 const abP = (t) => `<p>${t}</p>`;
@@ -7737,6 +7930,7 @@ const abErrCodesHtml = () => Object.keys(ERR_CATS).map((c) =>
 ).join('');
 
 const AB_PAGES = {
+  shortcuts: { title: 'Keyboard Shortcuts', icon: () => ICONS.stKeys, cards: kbCards() },
   terms: { title: 'Terms & Conditions', icon: () => ICONS.stTerms, cards: [
     { t: 'Agreement to Terms', st: 1, kw: 'terms acceptance agreement',
       b: `<p>By creating an account or using Aphrosta, you agree to these Terms and Conditions. If you do not agree, please stop using the app and remove any local data you have saved.</p>
