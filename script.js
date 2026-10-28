@@ -5168,7 +5168,7 @@ function stopStatusRotor() {
   statusTimer = 0;
 }
 
-const NO_REPLY_TEXT = 'No visible reply. The model used its whole budget on thinking. Try a lower Effort, a non-reasoning model, or rephrase.';
+const NO_REPLY_TEXT = 'No reply was generated. The response may have been stopped, or the model ran out of space. Try again or switch models.';
 const stepCards = new WeakMap();
 const stepMsgs = new WeakSet();
 const TOOL_LABEL = { web_search: 'Searched', fetch_url: 'Read', calculator: 'Calculated', current_time: 'Checked time' };
