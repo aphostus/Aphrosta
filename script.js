@@ -5471,7 +5471,7 @@ async function onMessageAction(btn) {
       toast('You can only continue the most recent reply.', 'info');
       return;
     }
-    sendChatMessage('CONTINUE_GENERATION', true, null, true);
+    sendChatMessage('', true, null, true);
   } else if (a === 'retry') {
     if (chatBusy) return;
     retryFailed();
@@ -5622,7 +5622,8 @@ let systemPrompt = function () {
   const tone = byId(TONES, settings.tone).name.toLowerCase();
   const v = currentVariant(activeModel);
   const lines = [
-    `You are ${APP_NAME}, a helpful AI agent.`,
+    `You are ${APP_NAME}, a helpful AI assistant.`,
+    'INSTRUCTION PRIORITY: The LENGTH rule below overrides all SKILL file-generation rules. If the user is just chatting, ignore tool results and respond conversationally. If continuing a previous thought, output ONLY the continuation text.',
     EFFORT_RULES[activeEffort] || EFFORT_RULES.medium,
     `LENGTH: ${lengthRule().rule} This is strict and overrides any user request for longer or shorter text. Tone: ${tone}.`,
     `Hard output limit: about ${tokenCeiling(activeModel, v)} tokens including any thinking. Finish your answer well inside it.`,
@@ -5952,11 +5953,14 @@ function agentDepthOf(session) {
 function agentPromptLines() {
   const out = [];
   if (settings.persFormat !== 'plain' && settings.richFormat) out.push(RICH_FORMAT_PROMPT);
-  SKILL_LIBRARY.forEach((s) => {
-    if (!settings[s.key]) return;
-    if (s.needsTools && !settings.agentTools) return;
-    out.push(s.prompt());
-  });
+  const isCasual = !currentSession.messages.length || /^\s*(hi|hello|hey|yo|thanks?|thank you|ok(ay)?|yes|no|lol|bye|good (morning|night|evening))\b[\s!.?,]*$/i.test(currentSession.messages[currentSession.messages.length - 1]?.content || '');
+  if (!isCasual) {
+    SKILL_LIBRARY.forEach((s) => {
+      if (!settings[s.key]) return;
+      if (s.needsTools && !settings.agentTools) return;
+      out.push(s.prompt());
+    });
+  }
   if (settings.agentPlan) out.push(PLAN_PROMPT);
   const tools = enabledAgentTools();
   if (tools.length) {
@@ -5981,7 +5985,8 @@ async function autoResearch(text) {
       const r = await AGENT_TOOLS.fetch_url({ url: u });
       out.push(`[tool_result fetch_url ${u}]\n${String(r).slice(0, 1500)}\n[/tool_result]`);
     }
-    const wantsSearch = !urls.length && !SKIP_WEB_RE.test(t) && !/```/.test(t) && (NEEDS_WEB_RE.test(t) ||
+    const isCasual = /^\s*(hi|hello|hey|yo|thanks?|thank you|ok(ay)?|yes|no|lol|bye|good (morning|night|evening))\b[\s!.?,]*$/i.test(t);
+    const wantsSearch = !isCasual && !urls.length && !SKIP_WEB_RE.test(t) && !/```/.test(t) && (NEEDS_WEB_RE.test(t) ||
       (/\?/.test(t) && t.length > 20) ||
       (t.length > 60 && /\b(who|what|when|where|which|why|how)\b/i.test(t)));
     if (wantsSearch) {
@@ -6031,7 +6036,7 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
   const myAbort = new AbortController();
   chatAbort = myAbort;
 
-  if (text === 'CONTINUE_GENERATION') {
+  if (text === '') {
     isContinue = true;
     text = null;
     regen = true;
@@ -6079,7 +6084,7 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
   }
   session.updated = Date.now();
 
-  const lastUser = session.messages.filter((m) => m.role === 'user').slice(-1)[0];
+  const lastUser = session.messages.filter((m) => m.role === 'user' && !m.hidden).slice(-1)[0];
   const seedText = text || lastUser?.content || '';
 
   const ai = {
@@ -6096,10 +6101,10 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
   setAiState('thinking');
   startStatusRotor();
 
-  pendingToolContext = await autoResearch(seedText);
+  pendingToolContext = isContinue ? '' : await autoResearch(seedText);
   const messages = buildMessages();
   if (existingContent) {
-    messages.push({ role: 'user', content: 'Continue exactly from where you left off. Do not repeat the previous text.' });
+    messages.push({ role: 'user', content: 'Your previous message was cut off. Output ONLY the exact next characters to seamlessly continue that exact text, without repeating anything from before, and without any meta-commentary.' });
   }
   pendingToolContext = '';
   const wantStream = settings.streaming !== false;
