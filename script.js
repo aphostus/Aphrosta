@@ -768,7 +768,7 @@ Object.assign(ICONS, {
 Object.assign(ICONS, {
   navWorlds:     svg('<circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18"/>'),
   navAgents:     svg('<ellipse cx="12" cy="14" rx="8.5" ry="6.5"/><path d="M9 10.5v7M14.5 10.5v7"/><path d="M10 7.5C9.5 4.5 10.5 3 12.5 3s3 1.5 2 4.5"/><path d="M17.5 9.5L20 6.5M18 13.5h.01"/>'),
-  navSystem:     svg('<rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3"/>'),
+  navLibrary:    svg('<path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/><path d="M8 7h8M8 11h6"/>'),
   navAutomation: svg('<rect x="3" y="3" width="6" height="6" rx="1.5"/><rect x="15" y="15" width="6" height="6" rx="1.5"/><path d="M9 6h3a3 3 0 013 3v6"/>', 16),
   navConnectors: svg('<path d="M9 2v6M15 2v6"/><path d="M6 8h12v3a6 6 0 01-12 0z"/><path d="M12 17v5"/>', 16),
   navOperations: svg('<rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M7 10l3 2.5L7 15M13 15h4"/>', 16),
@@ -1086,7 +1086,7 @@ const Sidebar = (user) => `
     <nav class="side-nav" aria-label="Workspace">
       <button class="side-btn" type="button" data-action="nav-worlds">${ICONS.navWorlds}<span>Worlds</span></button>
       <button class="side-btn" type="button" data-action="nav-agent">${ICONS.navAgents}<span>Agents</span></button>
-      <button class="side-btn" type="button" data-action="nav-data">${ICONS.navSystem}<span>Systems</span></button>
+      <button class="side-btn" type="button" data-action="nav-data">${ICONS.navLibrary}<span>Library</span></button>
     </nav>
 
     <div class="side-tools" aria-label="Workspace tools">
@@ -1535,7 +1535,7 @@ const NAV_PANELS = {
   'nav-automation': { title: 'Automations', icon: 'navAutomation', desc: 'Saved flows and routines will show up here.' },
   'nav-worlds':     { title: 'Worlds',      icon: 'navWorlds',     desc: 'Your worlds will show up here.' },
   'nav-agent':      { title: 'Agents',      icon: 'navAgents',     desc: 'Your agents will show up here.' },
-  'nav-data':       { title: 'Systems',      icon: 'navSystem',     desc: 'System tools and status will show up here.' }
+  'nav-data':       { title: 'Library',      icon: 'navLibrary',    desc: 'Your library items will show up here.' }
 };
 
 function navPanelHtml(def) {
