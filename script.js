@@ -1535,6 +1535,8 @@ const soon = () => toast('Coming soon.', 'info', 1800);
 const LIB_MAX_BYTES = 8 * 1024 * 1024;
 const LIB_MAX_TOTAL = 25 * 1024 * 1024;
 const LIB_MAX_FILES = 10;
+const LIB_TEXT_RE = /\.(txt|md|markdown|json|csv|tsv|log|xml|yml|yaml|toml|ini|html|htm|css|js|mjs|ts|jsx|tsx|py|java|c|h|cpp|cs|go|rs|rb|php|sh|sql)$/i;
+const libIsText = (f) => f.type.startsWith('text/') || f.type === 'application/json' || LIB_TEXT_RE.test(f.name);
 const LIB_CHUNK = 1000;
 const LIB_INDEX_CHARS = 140;
 const LIB_HIT_CHARS = 600;
@@ -1775,9 +1777,9 @@ function openLibSheet(edit) {
       <div class="lib-lab">${edit ? 'Files' : 'Files (up to ' + LIB_MAX_FILES + ')'}
         <div class="lib-flist" id="lib-flist"></div>
         <button class="lib-file" id="lib-pick" type="button"${edit ? ' hidden' : ''}>${ICONS.attachFile}<span id="lib-fname">Add files</span></button>
-        <input type="file" id="lib-file" multiple hidden>
+        <input type="file" id="lib-file" multiple hidden accept=".txt,.md,.markdown,.json,.csv,.tsv,.log,.xml,.yml,.yaml,.toml,.ini,.html,.htm,.css,.js,.mjs,.ts,.jsx,.tsx,.py,.java,.c,.h,.cpp,.cs,.go,.rs,.rb,.php,.sh,.sql,text/*">
       </div>
-      <p class="lib-note">${edit ? 'The files can\u2019t be changed. To use other files, delete this item and add a new one.' : libSize(LIB_MAX_BYTES) + ' per file, ' + libSize(LIB_MAX_TOTAL) + ' total. Big files are split into parts. The AI only loads the parts that match your message.'}</p>
+      <p class="lib-note">${edit ? 'The files can\u2019t be changed. To use other files, delete this item and add a new one.' : libSize(LIB_MAX_BYTES) + ' per file, ' + libSize(LIB_MAX_TOTAL) + ' total. Text and code files only. Images, PDFs and other binary files can\u2019t be added. Big files are split into parts, and the AI only loads the parts that match your message.'}</p>
       <button class="lib-save" id="lib-save" type="button">${edit ? 'Save changes' : 'Save to Library'}</button>
     </div>`;
   document.body.appendChild(el);
@@ -1804,6 +1806,7 @@ function openLibSheet(edit) {
   fileIn.addEventListener('change', () => {
     for (const f of fileIn.files) {
       if (picked.length >= LIB_MAX_FILES) { toast('Up to ' + LIB_MAX_FILES + ' files per item.', 'info', 2200); break; }
+      if (!libIsText(f)) { toast(f.name + ' is not supported. Use text or code files.', 'info', 2600); continue; }
       if (f.size > LIB_MAX_BYTES) { toast(f.name + ' is too large (max ' + libSize(LIB_MAX_BYTES) + ').'); continue; }
       if (picked.some((p) => p.name === f.name && p.size === f.size)) continue;
       picked.push(f);
