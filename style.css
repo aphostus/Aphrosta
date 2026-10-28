@@ -2235,17 +2235,6 @@ select.input { width: 100%; appearance: none; -webkit-appearance: none; }
 .msg-act:hover { color: var(--fg); background: var(--glass-bg-hover); }
 .msg-act:active { transform: scale(0.9); }
 .msg-act.on { color: var(--accent); background: var(--glass-bg-hover); }
-.msg-act[data-a="continue"] {
-  color: var(--accent);
-  border: 1px solid rgba(var(--accent-rgb), 0.18);
-  background: rgba(var(--accent-rgb), 0.06);
-}
-.msg-act[data-a="continue"] svg { stroke-width: 2; }
-.msg-act[data-a="continue"]:hover {
-  color: var(--on-accent);
-  background: var(--accent);
-  border-color: var(--accent);
-}
 
 @keyframes msgIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
