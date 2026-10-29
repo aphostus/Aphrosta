@@ -1434,6 +1434,27 @@ html.has-vv #app-shell { height: var(--app-h); }
 .usage-unit { display: inline-flex; flex-direction: column; justify-content: center; gap: 2px; line-height: 1; letter-spacing: 0; }
 .usage-figure .token-unit { font-size: calc(10px * var(--ts)); margin-left: 0; }
 
+/* key backup card */
+.key-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  box-shadow: inset 0 1px 0 var(--glass-highlight);
+}
+.key-head-r { display: inline-flex; align-items: center; gap: 8px; }
+.key-auto { display: inline-flex; align-items: center; gap: 6px; font-size: calc(11.5px * var(--ts)); color: var(--gray-light); cursor: pointer; }
+.key-card .btn-line { width: auto; padding: 5px 10px; font-size: calc(11.5px * var(--ts)); }
+.key-note { margin: 0; font-size: calc(11px * var(--ts)); line-height: 1.4; color: var(--gray-mid); }
+.key-note.key-warn { color: var(--warn); }
+.key-reveal { display: flex; flex-direction: column; gap: 6px; }
+.key-reveal[hidden] { display: none; }
+.key-actions { display: flex; gap: 6px; }
+.key-actions .btn-line { flex: 1; padding: 8px 10px; }
+
 /* account card */
 .account-card {
   display: flex;

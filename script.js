@@ -365,7 +365,7 @@ const SETTINGS_DEFAULTS = {
   langOut: 'en',
   memoryNotes: [], memInit: true, nickname: '', instructions: '', creativity: 'balanced',
   enterSends: true, autoScroll: true, voiceIn: 'auto', voiceOut: 'normal',
-  username: '', phone: '', privUsage: true, privTrain: false,
+  username: '', phone: '', privUsage: true, privTrain: false, keyAuto: true,
   phoneCc: '+63', avatar: '',
   voiceName: '', voicePitch: 'normal', autoRead: false,
   elOn: true, elVoice: 'george',
@@ -1653,6 +1653,27 @@ const SettingsPanel = (user) => `
     </div>
 
     <div class="panel-scroll">
+      <section class="key-card" aria-label="Key backup">
+        <div class="usage-head">
+          <span class="usage-title">${ICONS.stPrivacy}<span>Key Backup</span></span>
+          <span class="key-head-r">
+            <label class="key-auto"><span>Auto</span><span class="switch"><input type="checkbox" data-set="keyAuto" ${settings.keyAuto !== false ? 'checked' : ''}><i></i></span></label>
+            <button class="btn-line" type="button" data-act="key-backup">Backup</button>
+          </span>
+        </div>
+        <p class="key-note" data-key-on${settings.keyAuto !== false ? '' : ' hidden'}>Auto keeps a spare copy of your key on this device after every action. It never goes to the cloud. To read your data on another device, tap Backup and copy your key.</p>
+        <p class="key-note key-warn" data-key-off${settings.keyAuto !== false ? ' hidden' : ''}>Auto is off, so no spare copy is kept. Tap Backup and save your key somewhere safe. If this browser is cleared and you have no copy, your cloud data cannot be opened.</p>
+        <div class="key-reveal" data-key-reveal hidden>
+          <div class="provider-input-wrap">
+            <input class="provider-input" data-key-input type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Paste a key to use it here" aria-label="Encryption key">
+            <button class="provider-eye" type="button" data-act="key-eye" aria-label="Show key" aria-pressed="false">${ICONS.eyeOff}</button>
+          </div>
+          <div class="key-actions">
+            <button class="btn-line" type="button" data-act="key-copy">Copy</button>
+            <button class="btn-line" type="button" data-act="key-restore">Use key</button>
+          </div>
+        </div>
+      </section>
       <section class="usage-card" aria-label="Usage">
         <div class="usage-head">
           <span class="usage-title">${ICONS.stUsage}<span>Usage</span></span>
@@ -2140,6 +2161,10 @@ function onSettingsClick(e) {
     case 'export-data':   return exportData();
     case 'feedback':      return openFeedback();
     case 'usage-info':    return openUsagePopup();
+    case 'key-backup':    return KeyBackup.open();
+    case 'key-eye':       return KeyBackup.eye(actEl);
+    case 'key-copy':      return KeyBackup.copy();
+    case 'key-restore':   return KeyBackup.restore();
     case 'wipe-local':    return wipeLocal();
     case 'clear-cache':   return clearCache();
     case 'dev-remove':    return removeDevice(actEl.dataset.dev);
@@ -2374,6 +2399,7 @@ function onSettingsChange(e) {
     Cloud.deleteAllSessions?.();
   }
   if (input.dataset.set === 'privTrain') Cloud.queueSessions?.();
+  if (input.dataset.set === 'keyAuto') KeyBackup.toggled(input);
 }
 
 const ProviderSteps = (p) => `<ol class="provider-steps">
@@ -4654,7 +4680,8 @@ const MemSys = (() => {
     try {
       const snap = await getDoc(ref());
       if (snap.exists()) {
-        const c = (await Vault.open(who, snap.data() || {})) || {};
+        const c = await Vault.open(who, snap.data() || {});
+        if (!c) return; /* locked with another device's key: leave it alone */
         st.gone = [...new Set([...(st.gone || []), ...(c.gone || [])])].slice(-LIM.gone);
         st.cut = Math.max(st.cut || 0, +c.cut || 0);
         const byId = new Map(st.mem.map((m) => [m.i, m]));
@@ -4984,13 +5011,39 @@ const Vault = (() => {
     return btoa(s);
   };
   const unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
-  let cached = null, cachedUid = null;
+  let cached = null, cachedUid = null, bakSig = '';
+
+  /* spare copy of the key in IndexedDB (this device only, never the cloud) */
+  const idb = () => new Promise((res, rej) => {
+    const r = indexedDB.open('aphkeys', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('k');
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+  const idbRun = async (mode, fn) => {
+    try {
+      const d = await idb();
+      return await new Promise((res) => {
+        const tx = d.transaction('k', mode);
+        const q = fn(tx.objectStore('k'));
+        tx.oncomplete = () => { d.close(); res(q ? q.result : null); };
+        tx.onerror = tx.onabort = () => { d.close(); res(null); };
+      });
+    } catch (_) { return null; }
+  };
+  const idbGet = (u) => idbRun('readonly', (s) => s.get(u)).then((v) => v || null);
+  const idbSet = (u, v) => idbRun('readwrite', (s) => s.put(v, u));
+  const idbDel = (u) => idbRun('readwrite', (s) => s.delete(u));
 
   async function keyFor(uid) {
     if (cached && cachedUid === uid) return cached;
     if (!window.crypto || !crypto.subtle) throw new Error('encryption needs https or localhost');
     let raw = null;
     try { raw = localStorage.getItem(keyLs(uid)); } catch (_) {}
+    if (!raw) {
+      raw = await idbGet(uid); /* the spare copy kept by Auto backup, if there is one */
+      if (raw) { try { localStorage.setItem(keyLs(uid), raw); } catch (_) {} }
+    }
     if (!raw) {
       raw = b64(crypto.getRandomValues(new Uint8Array(32)));
       /* throws if storage is blocked, so nothing is ever encrypted with a key we cannot keep */
@@ -5020,7 +5073,137 @@ const Vault = (() => {
     } catch (_) { return null; }
   }
 
-  return { seal, open, sealed };
+  const validKey = (s) => { try { return unb64(s).length === 32; } catch (_) { return false; } };
+
+  async function exportKey(uid) {
+    await keyFor(uid);
+    return localStorage.getItem(keyLs(uid)) || '';
+  }
+
+  async function importKey(uid, text) {
+    const s = String(text || '').replace(/\s+/g, '');
+    if (!validKey(s)) return false;
+    localStorage.setItem(keyLs(uid), s);
+    cached = null; cachedUid = null; bakSig = '';
+    return true;
+  }
+
+  async function backup(uid) {
+    let raw = null;
+    try { raw = localStorage.getItem(keyLs(uid)); } catch (_) {}
+    if (!raw || bakSig === uid + raw) return;
+    await idbSet(uid, raw);
+    bakSig = uid + raw;
+  }
+
+  async function dropBackup(uid) { bakSig = ''; await idbDel(uid); }
+
+  return { seal, open, sealed, exportKey, importKey, backup, dropBackup };
+})();
+
+/* ---------- KEY BACKUP (card at the top of Settings) ---------- */
+const KeyBackup = (() => {
+  let timer = 0;
+  const me = () => (typeof currentUser !== 'undefined' && currentUser ? currentUser.uid : null);
+  const card = () => document.querySelector('.key-card');
+  const input = () => card()?.querySelector('[data-key-input]');
+
+  /* Auto: any click, change or key press refreshes the spare copy (only when the key changed) */
+  function schedule() {
+    clearTimeout(timer);
+    if (settings.keyAuto === false || !me()) return;
+    timer = setTimeout(() => { Vault.backup(me()).catch(() => {}); }, 800);
+  }
+  ['click', 'change', 'keydown'].forEach((ev) => document.addEventListener(ev, schedule, { capture: true, passive: true }));
+
+  function paint() {
+    const c = card();
+    if (!c) return;
+    const auto = settings.keyAuto !== false;
+    const on = c.querySelector('[data-key-on]');
+    const off = c.querySelector('[data-key-off]');
+    if (on) on.hidden = !auto;
+    if (off) off.hidden = auto;
+  }
+
+  function toggled(sw) {
+    if (sw.checked) {
+      if (me()) Vault.backup(me()).catch(() => {});
+      paint();
+      return;
+    }
+    confirmDialog({
+      title: 'Turn off Auto backup?',
+      message: 'No spare copy of your key will be kept on this device. Save your key with Backup first. If this browser is cleared and you have no copy, your cloud data cannot be opened again.',
+      confirmLabel: 'Turn off',
+      danger: true
+    }).then((yes) => {
+      if (!yes) { setSetting('keyAuto', true); sw.checked = true; }
+      else if (me()) Vault.dropBackup(me()).catch(() => {});
+      paint();
+    });
+  }
+
+  async function open() {
+    const box = card()?.querySelector('[data-key-reveal]');
+    const field = input();
+    if (!box || !field) return;
+    if (!box.hidden) { box.hidden = true; field.value = ''; return; }
+    if (!me()) return toast('Sign in first.', 'info', 2000);
+    try {
+      field.value = await Vault.exportKey(me());
+      field.type = 'password';
+      const eyeBtn = box.querySelector('[data-act="key-eye"]');
+      eyeBtn.innerHTML = ICONS.eyeOff;
+      eyeBtn.setAttribute('aria-pressed', 'false');
+      eyeBtn.setAttribute('aria-label', 'Show key');
+      box.hidden = false;
+    } catch (_) { toast('Could not read the key on this device.', 'error', 3000); }
+  }
+
+  function eye(btn) {
+    const field = input();
+    if (!field) return;
+    const show = field.type === 'password';
+    field.type = show ? 'text' : 'password';
+    btn.innerHTML = show ? ICONS.eye : ICONS.eyeOff;
+    btn.setAttribute('aria-pressed', String(show));
+    btn.setAttribute('aria-label', show ? 'Hide key' : 'Show key');
+  }
+
+  async function copy() {
+    const field = input();
+    const v = field?.value.trim();
+    if (!v) return;
+    try { await navigator.clipboard.writeText(v); toast('Key copied.', 'success', 1800); }
+    catch (_) { field.type = 'text'; field.select(); toast('Press and hold to copy the key.', 'info', 2600); }
+  }
+
+  async function restore() {
+    const field = input();
+    if (!field || !me()) return;
+    const text = field.value.replace(/\s+/g, '');
+    let own = '';
+    try { own = await Vault.exportKey(me()); } catch (_) {}
+    if (!text) return;
+    if (text === own) return toast('This device already uses that key.', 'info', 2200);
+    const yes = await confirmDialog({
+      title: 'Use this key?',
+      message: 'This device will read your cloud data with the key you pasted, and its current key is replaced. Copy your current key first if you are not sure.',
+      confirmLabel: 'Use key'
+    });
+    if (!yes) return;
+    let ok = false;
+    try { ok = await Vault.importKey(me(), text); } catch (_) {}
+    if (!ok) return toast('That is not a valid key.', 'error', 2800);
+    if (settings.keyAuto !== false) Vault.backup(me()).catch(() => {});
+    field.value = '';
+    card()?.querySelector('[data-key-reveal]')?.setAttribute('hidden', '');
+    toast('Key saved. Loading your data\u2026', 'success', 2400);
+    try { await Cloud.init(currentUser); } catch (_) {}
+  }
+
+  return { toggled, open, eye, copy, restore, paint };
 })();
 
 /* ---------- CLOUD ---------- */
@@ -5032,6 +5215,7 @@ const Cloud = (() => {
   const usageQ = new Map();
   const shared = new Map(); /* session id -> signature of the readable copy kept for Improve Service */
   let improveClean = false;
+  let blockSettings = false; /* cloud settings are locked with another device's key: never overwrite them */
   let tSettings = 0, tSessions = 0, tUsage = 0;
   let settingsDirty = false, sessionsDirty = false;
   let tRetry = 0, initSeq = 0;
@@ -5082,7 +5266,7 @@ const Cloud = (() => {
   };
 
   async function pushSettings() {
-    if (!ready) return;
+    if (!ready || blockSettings) return;
     settingsDirty = false;
     try {
       await setDoc(docOf('data', 'settings'), await Vault.seal(uid, clean({
@@ -5258,13 +5442,13 @@ const Cloud = (() => {
         }
       } catch (err) { warn(err); }
     },
-    reset() { ready = false; uid = null; known.clear(); synced.clear(); shared.clear(); improveClean = false; usageQ.clear(); settingsDirty = false; sessionsDirty = false; MemSys.reset(); },
+    reset() { ready = false; uid = null; known.clear(); synced.clear(); shared.clear(); improveClean = false; blockSettings = false; usageQ.clear(); settingsDirty = false; sessionsDirty = false; MemSys.reset(); },
 
     async init(user) {
       const mine = ++initSeq;
       ready = false;
       uid = user.uid;
-      known.clear(); synced.clear(); shared.clear(); improveClean = false;
+      known.clear(); synced.clear(); shared.clear(); improveClean = false; blockSettings = false;
       let changed = false;
       let pushBack = true;
 
@@ -5283,6 +5467,10 @@ const Cloud = (() => {
         if (snap.exists()) {
           const rawS = snap.data();
           const c = await Vault.open(uid, rawS);
+          if (!c) {
+            blockSettings = true; pushBack = false;
+            toastOnce('lockkey', 'Your cloud data is locked with a key from another device. Paste that key in Settings, Key Backup, to open it.', 'info', 12000);
+          }
           if (c && !Vault.sealed(rawS)) settingsDirty = true; /* old plain copy: it is saved back encrypted */
           if (c && ((c.updated || 0) > localTs || otherAccount)) {
             pushBack = false;
@@ -8189,7 +8377,7 @@ const AB_PAGES = {
       b: `<p>Your data is locked with a private key before it leaves your device. The key is created automatically, lives only in this browser's local storage, and is never sent anywhere. We cannot read what is stored in the cloud.</p>
       <h4>What is encrypted</h4><p>Sessions, settings, memories and token usage are encrypted with AES-256 before they are saved. Only this device can open them.</p>
       <h4>Improve Service</h4><p>This switch is off by default. When it is on, a readable copy of your chats is saved so the service can be improved. Turn it off and that copy is deleted. Your encrypted data is not affected either way.</p>
-      <h4>Keep in mind</h4><p>The key is not backed up. If you clear this browser's data or sign in on another device, earlier cloud data cannot be opened there. Feedback you send, registered devices and your account status are stored as readable text.</p>` },
+      <h4>Keep in mind</h4><p>With Auto backup on, a spare copy of the key is kept on this device only, never in the cloud. To read your data on another device, copy your key from Settings, Key Backup, and paste it there. If you lose every copy, earlier cloud data cannot be opened. Feedback you send, registered devices and your account status are stored as readable text.</p>` },
     { t: 'Memory Systems Details', st: 1, kw: 'memory short long term context',
       b: `<p>Aphrosta's memory has three parts: a fact store (long-term), a scoped database (short-term), and a compact state log. Memories respect your Memory settings.</p>
       <h4>What is stored</h4><p>Long-term memory extracts facts like your name, preferences, and ongoing projects. Short-term memory keeps track of the current chat context so you don't have to repeat yourself.</p>
