@@ -3540,6 +3540,20 @@ const ATTACH_TEXT_CAP = 12000;
 const ATTACH_IMG_MAX_BYTES = 12 * 1024 * 1024;
 const imageStore = new Map();
 let pendingFiles = [];
+const PENDING_SS = 'aphrosta.pending';
+function persistPending() {
+  try {
+    if (!pendingFiles.length) { sessionStorage.removeItem(PENDING_SS); return; }
+    sessionStorage.setItem(PENDING_SS, JSON.stringify({ uid: currentUser?.uid || '', files: pendingFiles }));
+  } catch (_) {}
+}
+function restorePending(uid) {
+  try {
+    const d = JSON.parse(sessionStorage.getItem(PENDING_SS) || 'null');
+    if (d && d.uid === (uid || '') && Array.isArray(d.files)) return d.files.slice(0, ATTACH_MAX);
+  } catch (_) {}
+  return [];
+}
 let syncAttachUi = () => {};
 
 function supportsImages(pid, mid) {
@@ -4314,6 +4328,7 @@ function initComposer() {
   const attachInput = composer.querySelector('.attach-input');
 
   syncAttachUi = () => {
+    persistPending();
     tray.innerHTML = trayHtml();
     tray.hidden = !pendingFiles.length;
     attachBtn.classList.toggle('has-files', !!pendingFiles.length);
@@ -7033,7 +7048,7 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
   const myAbort = new AbortController();
   chatAbort = myAbort;
 
-  if (text === '') {
+  if (text === '' && !(attachmentsOverride && attachmentsOverride.length)) {
     isContinue = true;
     text = null;
     regen = true;
@@ -8083,7 +8098,7 @@ function renderHome(user) {
   LIVE_VOICES.clear();
   appEl.querySelector('.composer')?.__stopVoice?.();
 
-  pendingFiles = [];
+  pendingFiles = restorePending(user && user.uid);
   pendingResend = null;
 
   appEl.innerHTML = HomeScreen(user);
