@@ -1479,9 +1479,11 @@ html.has-vv #app-shell { height: var(--app-h); }
 }
 
 .key-reveal [data-key-input] {
-  font-size: calc(16px * var(--ts));
+  font-size: clamp(11px, 3.1vw, 13px);
   line-height: 1.25;
-  letter-spacing: 0.02em;
+  letter-spacing: 0;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 .key-reveal .provider-eye,

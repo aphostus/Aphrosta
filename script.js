@@ -1682,7 +1682,7 @@ const SettingsPanel = (user) => `
           </div>
           <div class="key-actions">
             <button class="btn-line" type="button" data-act="key-copy">Copy</button>
-            <button class="btn-line" type="button" data-act="key-restore">Use key</button>
+            <button class="btn-line" type="button" data-act="key-restore">Initiate</button>
           </div>
         </div>
       </section>
@@ -6208,7 +6208,7 @@ function msgEl(m, i) {
   } else {
     act.innerHTML =
       btn('copy', 'Copy', ICONS.copy) +
-      (last ? btn('continue', 'Continue reply', ICONS.continueReply) : '') +
+      (last && m.status === 'incomplete' ? btn('continue', 'Continue reply', ICONS.continueReply) : '') +
       btn('voice', 'Read aloud', ICONS.volume) +
       btn('like', 'Good response', m.feedback === 'like' ? ICONS.thumbUpOn : ICONS.thumbUp, m.feedback === 'like') +
       btn('dislike', 'Bad response', m.feedback === 'dislike' ? ICONS.thumbDownOn : ICONS.thumbDown, m.feedback === 'dislike') +
@@ -6423,6 +6423,10 @@ async function onMessageAction(btn) {
     if (chatBusy || !chatReady()) return;
     if (i !== currentSession.messages.length - 1) {
       toast('You can only continue the most recent reply. (D07)', 'info');
+      return;
+    }
+    if (currentSession.messages[i]?.status !== 'incomplete') {
+      toast('That reply is complete. Nothing to continue.', 'info');
       return;
     }
     sendChatMessage('', true, null, true);
@@ -6977,6 +6981,32 @@ async function agentAfterReply(ai, session) {
   sendChatMessage(results.join('\n\n') + '\n\nContinue the task using these results.');
 }
 
+/* Continue-reply helpers */
+function contSep(existing, delta) {
+  if (!existing || !delta) return '';
+  if (/\s$/.test(existing) || /^\s/.test(delta)) return '';
+  return /[.!?,;:)\]"'\u201d]$/.test(existing) && /^[A-Za-z0-9\u00C0-\uFFFF"'(\[]/.test(delta) ? ' ' : '';
+}
+function finishReasonOf(p) {
+  try {
+    const r = p?.choices?.[0]?.finish_reason || p?.delta?.stop_reason || p?.stop_reason
+      || p?.message?.stop_reason || p?.candidates?.[0]?.finishReason
+      || p?.response?.incomplete_details?.reason || p?.incomplete_details?.reason || '';
+    return String(r || '').toLowerCase();
+  } catch (_) { return ''; }
+}
+function replyStatus(ai, fr, aborted, errored, usage, pid, variant) {
+  if (!ai.content || !ai.content.trim() || ai.__empty) return 'complete';
+  if (aborted || errored) return 'incomplete';
+  if (fr) return /^(length|max_tokens|max_output_tokens|max_completion_tokens|model_context_window_exceeded)$/.test(fr) ? 'incomplete' : 'complete';
+  try {
+    const cap = tokenCeiling(pid, variant);
+    const used = usage?.completion_tokens;
+    if (cap && used && used >= cap * 0.97) return 'incomplete';
+  } catch (_) {}
+  return 'complete';
+}
+
 let sendChatMessage = async function (text, regen = false, attachmentsOverride = null, isContinue = false) {
   if (chatBusy || !chatReady()) return;
   chatBusy = true;
@@ -7077,6 +7107,7 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
   pendingToolContext = '';
   const wantStream = settings.streaming !== false;
   let usage = null, error = null, raf = 0, first = true, lastTick = 0, streamErr = '';
+  let finishReason = '';
   let lastPaintContent = '';
   let lastPaintReasoningLen = 0;
 
@@ -7155,6 +7186,8 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
         usage = j?.usage || null;
       }
       if (!ai.content) throw new Error('The provider returned no content. (C07)');
+      if (existingContent) ai.content = existingContent + contSep(existingContent, ai.content) + ai.content;
+      finishReason = finishReasonOf(j) || finishReason;
       paint();
     } else {
       const reader = res.body.getReader();
@@ -7177,6 +7210,7 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
             const delta = adapter.readDelta(p);
             if (delta) {
               if (first) { first = false; setAiState('composing'); haptic(10); sfx('start'); }
+              if (existingContent && ai.content === existingContent) ai.content += contSep(existingContent, delta);
               ai.content += delta;
               { const nt = performance.now(); if (nt - lastTick > 180) { lastTick = nt; haptic(6); } }
               if (!raf) raf = requestAnimationFrame(paint);
@@ -7190,6 +7224,7 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
             }
             const u = adapter.readUsage(p);
             if (u && (u.prompt_tokens || u.completion_tokens)) usage = u;
+            { const fr = finishReasonOf(p); if (fr) finishReason = fr; }
           } catch (_) {}
         }
       }
@@ -7227,6 +7262,7 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
       ai.__empty = true;
     }
 
+    ai.status = replyStatus(ai, finishReason, aborted, !!error, usage, pid, variant);
     session.updated = Date.now();
     persistSessions();
     Cloud.flush();
@@ -8174,6 +8210,18 @@ async function purgeAllUserData(keepAccount = false) {
   }
 }
 
+function wipeLocalChatState() {
+  try { chatAbort?.abort(); } catch (_) {}
+  chatAbort = null;
+  chatBusy = false;
+  pendingResend = null;
+  sessionQuery = '';
+  sessions = [];
+  currentSession = newDraft();
+  clearDraft();
+  try { localStorage.removeItem(SESSIONS_LS); } catch (_) {}
+}
+
 async function handleSignOut() {
   try {
     showLoader();
@@ -8188,6 +8236,7 @@ async function handleSignOut() {
     keyScope = '';
     apiKeys = {};
     activeModel = null;
+    wipeLocalChatState();
     await signOut(auth);
   } catch (err) {
     console.error('[A06] Sign-out failed:', err);
