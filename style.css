@@ -88,7 +88,12 @@ html, body {
   overscroll-behavior: none;
 }
 
-html { background: var(--bg); }
+html {
+  background: var(--bg);
+  -webkit-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
 
 body {
   background: var(--bg);
@@ -2274,7 +2279,7 @@ select.input { width: 100%; appearance: none; -webkit-appearance: none; }
   border-radius: 18px 18px 6px 18px;
   box-shadow: inset 0 1px 0 var(--glass-highlight);
 }
-.msg-body { line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
+.msg-body { font-size: calc(15px * var(--ts)); line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
 .msg-body pre {
   margin: 10px 0;
   padding: 12px 14px;
