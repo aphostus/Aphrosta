@@ -2454,6 +2454,17 @@ body { position: fixed; inset: 0; width: 100%; height: 100%; }
 .attach-x:hover { background: var(--glass-bg-hover); color: var(--fg); }
 .attach-btn.has-files { background: var(--fg); color: var(--bg); }
 .msg-files { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; max-width: 86%; }
+
+/* Prompt-injection warning banner (under a flagged message) */
+.shield-banner {
+  display: flex; align-items: center; gap: 6px;
+  max-width: 86%; margin-top: 6px; padding: 6px 10px;
+  border: 1px solid color-mix(in srgb, var(--warn) 55%, transparent);
+  background: color-mix(in srgb, var(--warn) 14%, transparent);
+  border-radius: var(--radius-sm);
+  color: var(--gray-light); font-size: 12px; line-height: 1.35;
+}
+.shield-banner svg { width: 14px; height: 14px; flex: none; color: var(--warn); stroke-width: 1.8; }
 .msg-img { max-width: 180px; max-height: 180px; border-radius: 14px; border: 1px solid var(--glass-border); object-fit: cover; }
 .msg-file {
   display: inline-flex; align-items: center; gap: 6px; max-width: 100%;
