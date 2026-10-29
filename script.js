@@ -245,7 +245,7 @@ const TEXT_SIZES = [
 
 const LENGTHS = [
   { id: 'short',  name: 'Short' },
-  { id: 'medium', name: 'Medium' },
+  { id: 'auto',   name: 'Auto' },
   { id: 'long',   name: 'Long' }
 ];
 
@@ -357,7 +357,7 @@ const SETTINGS_DEFAULTS = {
   warnTokens: true,
   version: '1.00',
   streaming: true,
-  length: 'medium',
+  length: 'auto',
   tone: 'neutral',
   status: 'online',
   notifications: true,
@@ -389,7 +389,8 @@ function loadSettings() {
   s.accent     = valid(ACCENTS, s.accent, 'mono');
   s.font       = valid(FONTS, s.font, 'system');
   s.size       = valid(TEXT_SIZES, s.size, 'default');
-  s.length     = valid(LENGTHS, s.length, 'medium');
+  if (s.length === 'medium') s.length = 'auto';
+  s.length     = valid(LENGTHS, s.length, 'auto');
   s.lineHeight = valid(LINE_HEIGHTS, s.lineHeight, 'normal');
   s.codeSize   = valid(CODE_SIZES, s.codeSize, 'default');
   s.tone       = valid(TONES, s.tone, 'neutral');
@@ -1677,7 +1678,7 @@ const SettingsPanel = (user) => `
           </p>
         <div class="key-reveal" data-key-reveal hidden>
           <div class="provider-input-wrap">
-            <input class="provider-input" data-key-input type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Paste a key to use it here" aria-label="Encryption key">
+            <textarea class="provider-input" data-key-input data-masked="1" rows="3" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Paste a key to use it here" aria-label="Encryption key"></textarea>
             <button class="provider-eye" type="button" data-act="key-eye" aria-label="Show key" aria-pressed="false"><span data-eye-on hidden>${ICONS.eye}</span><span data-eye-off>${ICONS.eyeOff}</span></button>
           </div>
           <div class="key-actions">
@@ -5189,7 +5190,7 @@ const KeyBackup = (() => {
     if (!box.hidden) { box.hidden = true; field.value = ''; return; }
     if (!me()) return toast('Sign in first.', 'info', 2000);
     box.hidden = false;
-    field.type = 'password';
+    field.dataset.masked = '1';
     const eyeBtn = box.querySelector('[data-act="key-eye"]');
     eyeBtn.querySelector('[data-eye-on]').hidden = true;
     eyeBtn.querySelector('[data-eye-off]').hidden = false;
@@ -5204,8 +5205,8 @@ const KeyBackup = (() => {
   function eye(btn) {
     const field = input();
     if (!field) return;
-    const show = field.type === 'password';
-    field.type = show ? 'text' : 'password';
+    const show = field.dataset.masked === '1';
+    field.dataset.masked = show ? '0' : '1';
     /* swap by hiding, not by replacing the icon: a removed icon looks like an outside tap and closes Settings */
     btn.querySelector('[data-eye-on]').hidden = !show;
     btn.querySelector('[data-eye-off]').hidden = show;
@@ -5218,7 +5219,7 @@ const KeyBackup = (() => {
     const v = field?.value.trim();
     if (!v) return;
     try { await navigator.clipboard.writeText(v); toast('Key copied.', 'success', 1800); }
-    catch (_) { field.type = 'text'; field.select(); toast('Press and hold to copy the key.', 'info', 2600); }
+    catch (_) { field.dataset.masked = '0'; field.select(); toast('Press and hold to copy the key.', 'info', 2600); }
   }
 
   async function restore() {
@@ -6513,6 +6514,7 @@ function needsThinking(text, pid, variant) {
 }
 
 const LENGTH_RULES = {
+  auto:   { words: 450, rule: 'Match the length to the question. Greetings and casual chat: 1-2 sentences. Simple questions: one short paragraph. Complex, technical or multi-part questions: as long as needed, well organised, up to 450 words. Never pad.' },
   short:  { words: 60,  rule: 'Reply in 1-3 sentences, 60 words max. No lists, headings or preamble.' },
   medium: { words: 180, rule: 'Reply in 1-3 short paragraphs, 100-180 words. Essentials only.' },
   long:   { words: 450, rule: 'Reply in detail, 300-450 words, well organised.' }
