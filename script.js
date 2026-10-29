@@ -1661,8 +1661,20 @@ const SettingsPanel = (user) => `
             <button class="btn-line" type="button" data-act="key-backup">Backup</button>
           </span>
         </div>
-        <p class="key-note" data-key-on${settings.keyAuto !== false ? '' : ' hidden'}>Auto keeps a spare copy of your key on this device after every action. It never goes to the cloud. To read your data on another device, tap Backup and copy your key.</p>
-        <p class="key-note key-warn" data-key-off${settings.keyAuto !== false ? ' hidden' : ''}>Auto is off, so no spare copy is kept. Tap Backup and save your key somewhere safe. If this browser is cleared and you have no copy, your cloud data cannot be opened.</p>
+        <p class="key-note" data-key-on${settings.keyAuto !== false ? '' : ' hidden'}>
+            Auto keeps a spare copy of your encryption key in this browser's IndexedDB.
+            The spare copy never goes to the cloud. Your encrypted cloud vault can contain
+            your settings, sessions, memories, model choices, model variants, usage data,
+            and provider API keys, but none of that can be read without this key.
+            Use Backup to copy the key before changing devices or clearing browser data.
+          </p>
+
+          <p class="key-note key-warn" data-key-off${settings.keyAuto !== false ? ' hidden' : ''}>
+            Auto backup is off, so this browser does not keep a spare copy of your
+            encryption key. Use Backup and save the key somewhere secure. If site data is
+            cleared and you no longer have the key, the encrypted cloud vault cannot be
+            opened, including any API keys stored inside it.
+          </p>
         <div class="key-reveal" data-key-reveal hidden>
           <div class="provider-input-wrap">
             <input class="provider-input" data-key-input type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Paste a key to use it here" aria-label="Encryption key">
@@ -4361,14 +4373,40 @@ function initComposer() {
 let resizeQueued = false;
 function onViewportChange() {
   if (resizeQueued) return;
+
   resizeQueued = true;
+
   requestAnimationFrame(() => {
     resizeQueued = false;
+
     const vv = window.visualViewport;
-    if (vv) {
-      document.documentElement.classList.add('has-vv');
-      document.documentElement.style.setProperty('--app-h', vv.height + 'px');
+    const root = document.documentElement;
+
+    if (vv && vv.height > 0) {
+      /*
+       * Do not let a temporary mobile selection/context-menu resize
+       * collapse the whole application into a split-screen layout.
+       */
+      const layoutHeight = Math.max(
+        document.documentElement.clientHeight || 0,
+        window.innerHeight || 0
+      );
+
+      const keyboardLikelyOpen =
+        document.activeElement?.matches?.(
+          'input, textarea, [contenteditable="true"]'
+        ) &&
+        vv.height < layoutHeight * 0.82;
+
+      if (keyboardLikelyOpen) {
+        root.classList.add('has-vv');
+        root.style.setProperty('--app-h', `${vv.height}px`);
+      } else {
+        root.classList.remove('has-vv');
+        root.style.removeProperty('--app-h');
+      }
     }
+
     fitComposer();
   });
 }
@@ -5275,10 +5313,24 @@ const Cloud = (() => {
     try {
       await setDoc(docOf('data', 'settings'), await Vault.seal(uid, clean({
         settings: scrubSettings(),
+
+        /*
+         * API keys are included inside the encrypted vault payload.
+         * They are never stored as readable Firestore fields.
+         * The encryption key itself remains separate.
+         */
+        apiKeys: { ...apiKeys },
+
         effort: activeEffort,
         activeModel,
         modelVariants,
         knownWords: collectKnownWords(),
+
+        /*
+         * These values are useful when the browser's site data is deleted
+         * and the vault is later restored with the encryption key.
+         */
+        accountActive,
         updated: +localStorage.getItem(SETTINGS_TS_LS) || Date.now()
       })));
     } catch (err) { settingsDirty = true; warn(err); retry(); }
@@ -5481,30 +5533,110 @@ const Cloud = (() => {
             try {
               if (c.settings) {
                 const incoming = { ...c.settings };
-                /* the cloud copy is blank when Share Usage is off; never wipe this device's own number with it */
+
+                /*
+                 * The cloud copy can intentionally omit private profile fields when
+                 * Share Usage is disabled. Do not erase this device's own phone number.
+                 */
                 if (!otherAccount && !incoming.phone && settings.phone) {
                   incoming.phone = settings.phone;
                   incoming.phoneCc = settings.phoneCc;
                   incoming.phoneFull = settings.phoneFull || '';
                 }
+
                 localStorage.setItem(SETTINGS_LS, JSON.stringify(incoming));
               }
-              if (c.effort) localStorage.setItem(ACTIVE_EFFORT_LS, c.effort);
-              if (c.modelVariants) localStorage.setItem(MODEL_VARIANT_LS, JSON.stringify(c.modelVariants));
+
+              /*
+               * API keys are restored only when the encrypted cloud record contains them.
+               * This keeps compatibility with older records created before API-key backup
+               * was added.
+               */
+              if (c.apiKeys && typeof c.apiKeys === 'object' && !Array.isArray(c.apiKeys)) {
+                const restoredKeys = {};
+
+                Object.entries(c.apiKeys).forEach(([providerId, value]) => {
+                  if (
+                    typeof providerId === 'string' &&
+                    typeof value === 'string' &&
+                    value.trim() &&
+                    value.length <= 2048
+                  ) {
+                    restoredKeys[providerId] = value;
+                  }
+                });
+
+                if (keyScope) {
+                  localStorage.setItem(keysLs(), JSON.stringify(restoredKeys));
+                }
+              }
+
+              if (c.effort) {
+                localStorage.setItem(ACTIVE_EFFORT_LS, c.effort);
+              }
+
+              if (c.modelVariants && typeof c.modelVariants === 'object') {
+                localStorage.setItem(
+                  MODEL_VARIANT_LS,
+                  JSON.stringify(c.modelVariants)
+                );
+              }
+
               Object.entries(c.knownWords || {}).forEach(([l, w]) => {
-                if (LANGUAGES.some((x) => x.id === l)) localStorage.setItem(knownKey(l), JSON.stringify(w));
+                if (LANGUAGES.some((x) => x.id === l)) {
+                  localStorage.setItem(knownKey(l), JSON.stringify(w));
+                }
               });
-              localStorage.setItem(SETTINGS_TS_LS, String(c.updated || Date.now()));
+
+              if (typeof c.accountActive === 'boolean') {
+                localStorage.setItem(
+                  ACCOUNT_ACTIVE_LS,
+                  String(c.accountActive)
+                );
+              }
+
+              localStorage.setItem(
+                SETTINGS_TS_LS,
+                String(c.updated || Date.now())
+              );
             } catch (_) {}
             const oldIn = settings.langIn;
+
             settings = loadSettings();
+
+            /*
+             * Reload API keys from the restored encrypted payload.
+             */
+            loadApiKeys();
+
             const sv = localStorage.getItem(ACTIVE_EFFORT_LS);
-            if (EFFORT_LEVELS.some((e) => e.id === sv)) activeEffort = sv;
-            try { modelVariants = JSON.parse(localStorage.getItem(MODEL_VARIANT_LS) || '{}') || {}; } catch (_) {}
+            if (EFFORT_LEVELS.some((e) => e.id === sv)) {
+              activeEffort = sv;
+            }
+
+            try {
+              modelVariants = JSON.parse(
+                localStorage.getItem(MODEL_VARIANT_LS) || '{}'
+              ) || {};
+            } catch (_) {
+              modelVariants = {};
+            }
+
+            /*
+             * Only restore the active model if its API key was restored too.
+             */
             if (c.activeModel && apiKeys[c.activeModel]) {
               activeModel = c.activeModel;
-              try { localStorage.setItem(modelLs(), activeModel); } catch (_) {}
+
+              try {
+                localStorage.setItem(modelLs(), activeModel);
+              } catch (_) {}
             }
+
+            if (typeof c.accountActive === 'boolean') {
+              accountActive = c.accountActive;
+            }
+
             applySettings();
             if (oldIn !== settings.langIn) loadDictionary(settings.langIn);
             changed = true;
@@ -8373,15 +8505,30 @@ const AB_PAGES = {
       b: `<p>Use Aphrosta for lawful purposes only. Do not attempt to disrupt the service, access data that is not yours, or misuse its features. Do not try to overload the model providers with automated spam or scripts.</p>
       <h4>Content limits</h4><p>Content you create stays yours, but you agree not to use the app to share material that is harmful, abusive, or illegal. This includes harassment, threats, sexual content involving minors, malware, and attempts to bypass provider safety systems.</p>
       <h4>Consequences</h4><p>Violating these rules may result in your API keys being removed from the app or your account being locked. Severe violations may be reported to the relevant authorities.</p>` },
-    { t: 'Privacy and Data Collection', st: 1, kw: 'privacy data tracking',
-      b: `<p>Your sessions, settings, memories and token usage are encrypted on this device before they are saved to the cloud, so the developers cannot read them. Registered devices, your account status and feedback you choose to send are stored as readable text.</p>
-      <h4>What stays on this device</h4><p>Billing details and saved card information on this device stay on this device. They are never sent to the cloud, and full card numbers and security codes are never stored.</p>
-      <h4>API Keys</h4><p>Your API keys live in this device's local storage. When syncing to the cloud, keys are never included. You must re-enter them if you switch devices.</p>` },
-    { t: 'Encryption and Your Privacy', st: 1, kw: 'encryption private safety key secure improve service',
-      b: `<p>Your data is locked with a private key before it leaves your device. The key is created automatically, lives only in this browser's local storage, and is never sent anywhere. We cannot read what is stored in the cloud.</p>
-      <h4>What is encrypted</h4><p>Sessions, settings, memories and token usage are encrypted with AES-256 before they are saved. Only this device can open them.</p>
-      <h4>Improve Service</h4><p>This switch is off by default. When it is on, a readable copy of your chats is saved so the service can be improved. Turn it off and that copy is deleted. Your encrypted data is not affected either way.</p>
-      <h4>Keep in mind</h4><p>With Auto backup on, a spare copy of the key is kept on this device only, never in the cloud. To read your data on another device, copy your key from Settings, Key Backup, and paste it there. If you lose every copy, earlier cloud data cannot be opened. Feedback you send, registered devices and your account status are stored as readable text.</p>` },
+    { t: 'Privacy and Data Collection', st: 1, kw: 'privacy data tracking cloud encrypted api keys',
+      b: `<p>Aphrosta is designed so that your private app data is encrypted in your browser before it is synchronized to your private cloud space. The cloud stores encrypted records, not a readable copy of your conversations, settings, memories, model configuration, or provider credentials.</p>
+  <h4>What is included in the encrypted vault</h4>
+  <p>The encrypted vault may contain your saved sessions, settings, memories, language preferences, effort level, active model, model variants, known words, token usage records, and the provider API keys that you choose to save in Aphrosta.</p>
+  <h4>How API-key protection works</h4>
+  <p>Your provider API keys are stored inside the encrypted vault payload. They are not stored inside the encryption key. The encryption key is a separate 256-bit AES-GCM key created for your account on this device. The key is required to decrypt the vault and is never uploaded to Firestore.</p>
+  <h4>What happens after clearing site data</h4>
+  <p>Clearing browser site data removes the local copy of your settings and API keys. If your encrypted cloud record still exists, you can sign in again and provide your exported encryption key from Settings → Key Backup. Aphrosta can then decrypt and restore the saved data, including the API keys included in the vault.</p>
+  <h4>Data that is not part of the encrypted vault</h4>
+  <p>Some operational records, such as account status, registered-device metadata, and feedback that you voluntarily submit, may be stored separately so account and support features can work. Browser-only drafts, billing information, and local library files should be treated as device-local unless the app explicitly provides an export or sync option for them.</p>
+  <h4>Your responsibility</h4>
+  <p>Keep a copy of your encryption key in a secure password manager or other secure location. Aphrosta cannot recover encrypted data if every copy of the key is lost.</p>` },
+    { t: 'Encryption and Your Privacy', st: 1, kw: 'encryption private safety key secure aes api keys vault',
+      b: `<p>Aphrosta encrypts private vault data in your browser before sending it to Firestore. The vault uses AES-GCM with a 256-bit key. Firestore receives the encrypted ciphertext and initialization vector, not the readable contents.</p>
+  <h4>The encryption key</h4>
+  <p>The encryption key is separate from your API keys. It is generated for your account and kept locally by the browser. It is never uploaded as a readable value and is not used as an API credential for any model provider.</p>
+  <h4>API keys inside the vault</h4>
+  <p>When you save a model provider key, Aphrosta places it inside the vault data before encryption. This allows the encrypted cloud copy to restore your provider keys after site data is deleted, provided that you still have the encryption key. The API keys are readable in the browser only while the app is using them to call the provider.</p>
+  <h4>Auto backup</h4>
+  <p>When Auto backup is enabled, an additional copy of the encryption key is kept in this device's IndexedDB. That spare copy is device-local and is not sent to the cloud. Use the Backup button to export a copy for another device or for recovery after clearing site data.</p>
+  <h4>Improve Service</h4>
+  <p>Improve Service is separate from the encrypted vault. When enabled, Aphrosta may store a readable copy of chats for that feature. When disabled, Aphrosta removes that readable copy where possible. Disabling it does not decrypt or weaken your encrypted vault.</p>
+  <h4>Important limitation</h4>
+  <p>Encryption protects stored data, but a browser running modified or malicious code could access data after it has been decrypted locally. Keep your browser, hosting files, and account secure, and never share your encryption key or provider API keys.</p>` },
     { t: 'Memory Systems Details', st: 1, kw: 'memory short long term context',
       b: `<p>Aphrosta's memory has three parts: a fact store (long-term), a scoped database (short-term), and a compact state log. Memories respect your Memory settings.</p>
       <h4>What is stored</h4><p>Long-term memory extracts facts like your name, preferences, and ongoing projects. Short-term memory keeps track of the current chat context so you don't have to repeat yourself.</p>

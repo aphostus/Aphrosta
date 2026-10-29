@@ -1450,6 +1450,48 @@ html.has-vv #app-shell { height: var(--app-h); }
 .key-card .btn-line { width: auto; padding: 5px 10px; font-size: calc(11.5px * var(--ts)); }
 .key-note { margin: 0; font-size: calc(11px * var(--ts)); line-height: 1.4; color: var(--gray-mid); }
 .key-note.key-warn { color: var(--warn); }
+/* Mobile-safe key fields */
+.key-reveal,
+.key-reveal * {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.key-reveal .provider-input-wrap {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.key-reveal [data-key-input],
+.provider .provider-input {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  touch-action: manipulation;
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.key-reveal [data-key-input] {
+  font-size: 16px;
+  line-height: 1.25;
+  letter-spacing: 0.02em;
+}
+
+.key-reveal .provider-eye,
+.key-reveal .btn-line,
+.provider .provider-eye,
+.provider .provider-save,
+.provider .provider-remove {
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 .key-reveal { display: flex; flex-direction: column; gap: 6px; }
 .key-reveal[hidden] { display: none; }
 .key-actions { display: flex; gap: 6px; }
@@ -2448,8 +2490,32 @@ html[data-motion="reduce"] .effort-ball[data-level="maxima"] {
 /* ============================================================
    SHELL / ATTACHMENTS / STATUS
    ============================================================ */
-body { position: fixed; inset: 0; width: 100%; height: 100%; }
-#app-shell, #app, .view { overflow: hidden; overflow: clip; }
+html,
+body {
+  width: 100%;
+  max-width: 100%;
+  min-height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body {
+  position: fixed;
+  inset: 0;
+  height: 100dvh;
+  min-height: 100dvh;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#app-shell,
+#app,
+.view {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
 
 .attach-tray { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 4px; scrollbar-width: none; }
 .attach-tray[hidden] { display: none; }
