@@ -1266,8 +1266,8 @@ const Sidebar = (user) => `
       <img class="brand-icon" src="${ICON_SRC}" alt="">
       <span class="brand-name">${APP_NAME}</span>
       <span class="side-head-tools">
-        <button class="sh-btn" type="button" data-action="inbox" aria-label="Inbox">${ICONS.inbox14}<span>Inbox</span></button>
-        <button class="sh-btn" type="button" data-action="folders" aria-label="Folders">${ICONS.folder14}<span>Folders</span></button>
+        <button class="sh-btn" type="button" data-action="inbox" aria-label="Inbox" title="Inbox">${ICONS.inbox14}</button>
+        <button class="sh-btn" type="button" data-action="folders" aria-label="Folders" title="Folders">${ICONS.folder14}</button>
       </span>
     </div>
 
@@ -2148,14 +2148,36 @@ const folderById = (id) => folders.find((f) => f.id === id) || null;
 const folderOf = (s) => (s && s.folderId ? folderById(s.folderId) : null);
 const FD_ACCEPT = '.txt,.md,.markdown,.json,.csv,.tsv,.log,.xml,.yml,.yaml,.toml,.ini,.html,.css,.js,.py,.sql,text/*';
 
-function fdClose() { document.getElementById('fd-panel')?.remove(); }
-function fdOpen(title, bodyHtml, actionsHtml = '') {
-  fdClose();
+const FD_I = {
+  check:   svg('<path d="M5 12.5l4.5 4.5L19 7.5"/>', 14),
+  chev:    svg('<path d="M9 6l6 6-6 6"/>', 16),
+  back:    svg('<path d="M15 6l-6 6 6 6"/>', 18),
+  info:    svg('<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>', 16),
+  err:     svg('<circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/>', 16),
+  ok:      svg('<circle cx="12" cy="12" r="9"/><path d="M8 12.5l3 3 5-6"/>', 16),
+  file:    svg('<path d="M6 2h8l5 5v15H6z"/><path d="M14 2v5h5"/>', 16),
+  folderS: svg('<path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>', 16),
+  folder:  svg('<path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>', 28),
+  inbox:   svg('<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/>', 28)
+};
+
+function fdClose(instant) {
+  const p = document.getElementById('fd-panel');
+  if (!p) return;
+  p.removeAttribute('id');
+  if (instant) { p.remove(); return; }
+  p.classList.add('leaving');
+  setTimeout(() => p.remove(), 220);
+}
+
+function fdOpen(title, sub, bodyHtml, actionsHtml = '', back = false) {
+  fdClose(true);
   document.getElementById('sidebar')?.classList.remove('open');
   const p = document.createElement('div');
   p.id = 'fd-panel';
   p.className = 'fd-panel';
-  p.innerHTML = `<div class="fd-bar"><h2 class="fd-title">${esc(title)}</h2><span class="fd-bar-actions">${actionsHtml}<button class="fd-ic" type="button" data-fd="close" aria-label="Close">${ICONS.close}</button></span></div><div class="fd-body">${bodyHtml}</div>`;
+  p.innerHTML = `<div class="fd-sheet"><div class="fd-bar">${back ? `<button class="fd-ic" type="button" data-fd="back" aria-label="Back">${FD_I.back}</button>` : ''}<div class="fd-heading"><h2 class="fd-title">${esc(title)}</h2>${sub ? `<span class="fd-sub">${esc(sub)}</span>` : ''}</div><span class="fd-bar-actions">${actionsHtml}<button class="fd-ic" type="button" data-fd="close" aria-label="Close">${ICONS.close}</button></span></div><div class="fd-body">${bodyHtml}</div></div>`;
+  p.addEventListener('click', (e) => { if (e.target === p) fdClose(); });
   document.body.appendChild(p);
   return p;
 }
@@ -2164,13 +2186,14 @@ function renderInbox() {
   const box = document.querySelector('[data-fd-inbox-list]');
   if (!box) return;
   const when = (t) => new Date(t).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const ico = { error: FD_I.err, success: FD_I.ok };
   box.innerHTML = inboxItems.length
-    ? inboxItems.map((it) => `<div class="fd-row fd-${esc(it.k)}"><span class="fd-dot"></span><span class="fd-row-main"><span class="fd-row-text">${esc(it.m)}</span><span class="fd-row-sub">${esc(when(it.t))}</span></span></div>`).join('')
-    : '<p class="fd-empty">Nothing yet. Activity and error pop-ups will be listed here.</p>';
+    ? `<div class="fd-stack">${inboxItems.map((it) => `<div class="fd-card fd-k-${esc(it.k)}"><span class="fd-badge">${ico[it.k] || FD_I.info}</span><span class="fd-card-main"><span class="fd-card-text">${esc(it.m)}</span><span class="fd-card-sub">${esc(when(it.t))}</span></span></div>`).join('')}</div>`
+    : `<div class="fd-empty"><span class="fd-empty-ico">${FD_I.inbox}</span><h3>All quiet</h3><p>Activity and error pop-ups will be saved here.</p></div>`;
 }
 
 function openInbox() {
-  const p = fdOpen('Inbox', '<div data-fd-inbox-list></div>', '<button class="fd-txt" type="button" data-fd="inbox-clear">Clear</button>');
+  const p = fdOpen('Inbox', 'Activity and errors', '<div data-fd-inbox-list></div>', '<button class="fd-pill" type="button" data-fd="inbox-clear">Clear</button>');
   p.addEventListener('click', (e) => {
     const b = e.target.closest('[data-fd]');
     if (!b) return;
@@ -2183,15 +2206,17 @@ function openInbox() {
 function renderFolderList() {
   const box = document.querySelector('[data-fd-list]');
   if (!box) return;
-  box.innerHTML = folders.length ? folders.map((f) => {
-    const n = sessions.filter((s) => s.folderId === f.id).length;
-    const nf = (f.files || []).length;
-    return `<button class="fd-row" type="button" data-fd="open" data-id="${esc(f.id)}"><span class="fd-ico">${ICONS.folder}</span><span class="fd-row-main"><span class="fd-row-text">${esc(f.title)}</span><span class="fd-row-sub">${esc(f.desc || 'No description')} \u00b7 ${n} chat${n === 1 ? '' : 's'} \u00b7 ${nf} file${nf === 1 ? '' : 's'}</span></span></button>`;
-  }).join('') : '<p class="fd-empty">No folders yet. Tap + to make one.</p>';
+  box.innerHTML = folders.length
+    ? `<div class="fd-stack">${folders.map((f) => {
+      const n = sessions.filter((s) => s.folderId === f.id).length;
+      const nf = (f.files || []).length;
+      return `<button class="fd-card fd-card-btn" type="button" data-fd="open" data-id="${esc(f.id)}"><span class="fd-badge fd-badge-lg">${FD_I.folderS}</span><span class="fd-card-main"><span class="fd-card-title">${esc(f.title)}</span>${f.desc ? `<span class="fd-card-desc">${esc(f.desc)}</span>` : ''}<span class="fd-chips"><span class="fd-chip">${n} chat${n === 1 ? '' : 's'}</span><span class="fd-chip">${nf} file${nf === 1 ? '' : 's'}</span></span></span><span class="fd-chev">${FD_I.chev}</span></button>`;
+    }).join('')}</div>`
+    : `<div class="fd-empty"><span class="fd-empty-ico">${FD_I.folder}</span><h3>No folders yet</h3><p>Group chats and give them shared instructions and files.</p><button class="fd-pill fd-pill-solid" type="button" data-fd="new">New folder</button></div>`;
 }
 
 function openFolders() {
-  const p = fdOpen('Folders', '<div data-fd-list></div>', `<button class="fd-ic" type="button" data-fd="new" aria-label="New folder">${ICONS.plus}</button>`);
+  const p = fdOpen('Folders', 'Group chats with shared instructions and files', '<div data-fd-list></div>', `<button class="fd-ic fd-ic-fill" type="button" data-fd="new" aria-label="New folder">${ICONS.plus}</button>`);
   p.addEventListener('click', (e) => {
     const b = e.target.closest('[data-fd]');
     if (!b) return;
@@ -2208,25 +2233,24 @@ function fdEditor(id) {
   let files = f ? (f.files || []).map((x) => ({ ...x })) : [];
   const chosen = new Set(f ? sessions.filter((s) => s.folderId === f.id).map((s) => s.id) : []);
   const chats = sessions.slice().sort((a, b) => b.updated - a.updated);
-  const p = fdOpen(f ? 'Edit folder' : 'New folder', `
-    <label class="fd-lab">Title<input class="fd-in" data-fd-f="title" maxlength="60" placeholder="Folder title" value="${esc(f ? f.title : '')}"></label>
-    <label class="fd-lab">Description<textarea class="fd-in" data-fd-f="desc" rows="2" maxlength="300" placeholder="What is this folder for?">${esc(f ? f.desc || '' : '')}</textarea></label>
-    <label class="fd-lab">Instructions<textarea class="fd-in" data-fd-f="instr" rows="4" maxlength="4000" placeholder="How the AI should behave in this folder\u2019s chats">${esc(f ? f.instructions || '' : '')}</textarea></label>
-    <div class="fd-lab fd-lab-row">Files<button class="fd-txt" type="button" data-fd="addfile">Add</button></div>
-    <input type="file" multiple hidden data-fd-file accept="${FD_ACCEPT}">
-    <div data-fd-files></div>
-    <div class="fd-lab">Conversations</div>
-    <div data-fd-chats></div>
-    <div class="fd-foot">${f ? '<button class="fd-txt fd-danger" type="button" data-fd="delete">Delete folder</button>' : ''}<button class="fd-save" type="button" data-fd="save">Save</button></div>`);
+  const p = fdOpen(f ? 'Edit folder' : 'New folder', f ? f.title : 'Name it, add instructions and files', `
+    <div class="fd-field"><label class="fd-label">Title</label><input class="fd-in" data-fd-f="title" maxlength="60" placeholder="Folder title" value="${esc(f ? f.title : '')}"></div>
+    <div class="fd-field"><label class="fd-label">Description</label><textarea class="fd-in" data-fd-f="desc" rows="2" maxlength="300" placeholder="What is this folder for?">${esc(f ? f.desc || '' : '')}</textarea></div>
+    <div class="fd-field"><label class="fd-label">Instructions</label><textarea class="fd-in" data-fd-f="instr" rows="4" maxlength="4000" placeholder="How the AI should behave in this folder\u2019s chats">${esc(f ? f.instructions || '' : '')}</textarea></div>
+    <div class="fd-section"><div class="fd-section-head"><span>Files</span><button class="fd-pill" type="button" data-fd="addfile">Add file</button></div><input type="file" multiple hidden data-fd-file accept="${FD_ACCEPT}"><div class="fd-stack" data-fd-files></div></div>
+    <div class="fd-section"><div class="fd-section-head"><span>Conversations</span><span data-fd-count></span></div><div class="fd-stack" data-fd-chats></div></div>
+    <div class="fd-foot">${f ? '<button class="fd-pill fd-danger" type="button" data-fd="delete">Delete</button>' : ''}<button class="fd-save" type="button" data-fd="save">Save folder</button></div>`, '', true);
 
   const renderFiles = () => {
-    p.querySelector('[data-fd-files]').innerHTML = files.length ? files.map((x) => `<div class="fd-row"><span class="fd-row-main"><span class="fd-row-text">${esc(x.name)}</span><span class="fd-row-sub">${fmtSize(x.size || 0)}${x.cut ? ' \u00b7 trimmed' : ''}</span></span><button class="fd-ic" type="button" data-fd="rmfile" data-id="${esc(x.id)}" aria-label="Remove ${esc(x.name)}">${ICONS.close}</button></div>`).join('') : '<p class="fd-sub-empty">No files yet.</p>';
+    p.querySelector('[data-fd-files]').innerHTML = files.length ? files.map((x) => `<div class="fd-item"><span class="fd-item-ico">${FD_I.file}</span><span class="fd-card-main"><span class="fd-card-text">${esc(x.name)}</span><span class="fd-card-sub">${fmtSize(x.size || 0)}${x.cut ? ' \u00b7 trimmed' : ''}</span></span><button class="fd-ic" type="button" data-fd="rmfile" data-id="${esc(x.id)}" aria-label="Remove ${esc(x.name)}">${ICONS.close}</button></div>`).join('') : '<p class="fd-sub-empty">No files yet.</p>';
   };
+  const renderCount = () => { p.querySelector('[data-fd-count]').textContent = `${chosen.size} selected`; };
   const renderChats = () => {
     p.querySelector('[data-fd-chats]').innerHTML = chats.length ? chats.map((s) => {
       const other = s.folderId && (!f || s.folderId !== f.id) ? folderById(s.folderId) : null;
-      return `<label class="fd-row"><input type="checkbox" data-fd-chat="${esc(s.id)}"${chosen.has(s.id) ? ' checked' : ''}><span class="fd-row-main"><span class="fd-row-text">${esc(s.title)}</span>${other ? `<span class="fd-row-sub">Now in ${esc(other.title)}. Saving moves it here.</span>` : ''}</span></label>`;
+      return `<label class="fd-item fd-check"><input type="checkbox" data-fd-chat="${esc(s.id)}"${chosen.has(s.id) ? ' checked' : ''}><span class="fd-box">${FD_I.check}</span><span class="fd-card-main"><span class="fd-card-text">${esc(s.title)}</span>${other ? `<span class="fd-card-sub">Now in ${esc(other.title)}. Saving moves it here.</span>` : ''}</span></label>`;
     }).join('') : '<p class="fd-sub-empty">No conversations yet.</p>';
+    renderCount();
   };
   renderFiles();
   renderChats();
@@ -2235,7 +2259,8 @@ function fdEditor(id) {
     const b = e.target.closest('[data-fd]');
     if (!b) return;
     const a = b.dataset.fd;
-    if (a === 'close') { openFolders(); return; }
+    if (a === 'close') { fdClose(); return; }
+    if (a === 'back') { openFolders(); return; }
     if (a === 'addfile') { p.querySelector('[data-fd-file]').click(); return; }
     if (a === 'rmfile') { files = files.filter((x) => x.id !== b.dataset.id); renderFiles(); return; }
     if (a === 'delete') {
@@ -2269,7 +2294,7 @@ function fdEditor(id) {
 
   p.addEventListener('change', async (e) => {
     const c = e.target.closest?.('[data-fd-chat]');
-    if (c) { if (c.checked) chosen.add(c.dataset.fdChat); else chosen.delete(c.dataset.fdChat); return; }
+    if (c) { if (c.checked) chosen.add(c.dataset.fdChat); else chosen.delete(c.dataset.fdChat); renderCount(); return; }
     if (!e.target.matches?.('[data-fd-file]')) return;
     for (const file of [...e.target.files]) {
       if (files.length >= 8) { toast('Up to 8 files per folder.', 'info', 2200); break; }
@@ -2291,18 +2316,25 @@ function pickFolder(sid) {
   const s = sessions.find((x) => x.id === sid);
   if (!s) return;
   if (!folders.length) { toast('No folders yet. Open Folders and tap + to make one.', 'info', 2600); return; }
+  document.querySelector('.fd-scrim')?.remove();
   const scrim = document.createElement('div');
   scrim.className = 'fd-scrim';
-  scrim.innerHTML = `<div class="fd-pick" role="dialog" aria-label="Choose folder"><h3 class="fd-title">Move to folder</h3>${folders.map((f) => `<button class="fd-row${s.folderId === f.id ? ' on' : ''}" type="button" data-pick="${esc(f.id)}"><span class="fd-ico">${ICONS.folder14}</span><span class="fd-row-text">${esc(f.title)}</span></button>`).join('')}<button class="fd-row" type="button" data-pick="">No folder</button></div>`;
+  scrim.innerHTML = `<div class="fd-pick" role="dialog" aria-label="Choose folder"><div class="fd-pick-head"><h3 class="fd-title">Move to folder</h3><span class="fd-sub">${esc(s.title)}</span></div><div class="fd-stack" data-pick-list></div><button class="fd-save fd-done" type="button" data-pick-done>Done</button></div>`;
+  const row = (id, label, icon) => `<button class="fd-item fd-pickrow${(s.folderId || '') === id ? ' on' : ''}" type="button" data-pick="${esc(id)}"><span class="fd-item-ico">${icon}</span><span class="fd-card-main"><span class="fd-card-text">${esc(label)}</span></span><span class="fd-tick">${(s.folderId || '') === id ? FD_I.check : ''}</span></button>`;
+  const draw = () => {
+    scrim.querySelector('[data-pick-list]').innerHTML = folders.map((f) => row(f.id, f.title, FD_I.folderS)).join('') + row('', 'No folder', FD_I.info);
+  };
+  const close = () => { scrim.classList.add('leaving'); setTimeout(() => scrim.remove(), 200); };
   scrim.addEventListener('click', (e) => {
-    if (e.target === scrim) { scrim.remove(); return; }
+    if (e.target === scrim || e.target.closest('[data-pick-done]')) { close(); return; }
     const b = e.target.closest('[data-pick]');
     if (!b) return;
     if (b.dataset.pick) s.folderId = b.dataset.pick; else delete s.folderId;
     persistSessions();
     renderSessionList();
-    scrim.remove();
+    draw();
   });
+  draw();
   document.body.appendChild(scrim);
 }
 
