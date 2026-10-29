@@ -5,6 +5,7 @@
 !index.html
 !style.css
 !script.js
+!manifest.webmanifest
 !.gitignore
 
 # 3. Allow your public assets (folders must be re-included first)
