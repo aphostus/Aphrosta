@@ -2373,6 +2373,7 @@ function onSettingsChange(e) {
   if (input.dataset.set === 'saveSessions' && !input.checked) {
     Cloud.deleteAllSessions?.();
   }
+  if (input.dataset.set === 'privTrain') Cloud.queueSessions?.();
 }
 
 const ProviderSteps = (p) => `<ol class="provider-steps">
@@ -4641,9 +4642,9 @@ const MemSys = (() => {
     dirty = false;
     try {
       prune();
-      await setDoc(ref(), JSON.parse(JSON.stringify({
+      await setDoc(ref(), await Vault.seal(who, JSON.parse(JSON.stringify({
         mem: st.mem, log: st.log.slice(-LIM.cloudLog), ch: st.ch, gone: st.gone, cut: st.cut, updated: now()
-      })));
+      }))));
     } catch (err) { dirty = true; console.warn('[B02] Memory sync (upload):', err?.code || err); }
   }
 
@@ -4653,7 +4654,7 @@ const MemSys = (() => {
     try {
       const snap = await getDoc(ref());
       if (snap.exists()) {
-        const c = snap.data() || {};
+        const c = (await Vault.open(who, snap.data() || {})) || {};
         st.gone = [...new Set([...(st.gone || []), ...(c.gone || [])])].slice(-LIM.gone);
         st.cut = Math.max(st.cut || 0, +c.cut || 0);
         const byId = new Map(st.mem.map((m) => [m.i, m]));
@@ -4973,6 +4974,55 @@ function refreshTokenMeter() {
   }
 }
 
+/* ---------- VAULT (private cloud: data is encrypted on this device before it leaves) ---------- */
+const Vault = (() => {
+  /* the key is stored under "aphkey." and NOT "aphrosta." so Delete Local and sign-out never erase it */
+  const keyLs = (u) => 'aphkey.' + u;
+  const b64 = (u8) => {
+    let s = '';
+    for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+    return btoa(s);
+  };
+  const unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+  let cached = null, cachedUid = null;
+
+  async function keyFor(uid) {
+    if (cached && cachedUid === uid) return cached;
+    if (!window.crypto || !crypto.subtle) throw new Error('encryption needs https or localhost');
+    let raw = null;
+    try { raw = localStorage.getItem(keyLs(uid)); } catch (_) {}
+    if (!raw) {
+      raw = b64(crypto.getRandomValues(new Uint8Array(32)));
+      /* throws if storage is blocked, so nothing is ever encrypted with a key we cannot keep */
+      localStorage.setItem(keyLs(uid), raw);
+    }
+    cached = await crypto.subtle.importKey('raw', unb64(raw), 'AES-GCM', false, ['encrypt', 'decrypt']);
+    cachedUid = uid;
+    return cached;
+  }
+
+  const sealed = (d) => !!d && d._e === 1 && typeof d.iv === 'string' && typeof d.ct === 'string';
+
+  async function seal(uid, obj) {
+    const key = await keyFor(uid);
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(JSON.stringify(obj)));
+    return { _e: 1, iv: b64(iv), ct: b64(new Uint8Array(ct)) };
+  }
+
+  /* returns the readable object, the same object for old plain docs, or null when this device cannot read it */
+  async function open(uid, data) {
+    if (!sealed(data)) return data;
+    try {
+      const key = await keyFor(uid);
+      const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(data.iv) }, key, unb64(data.ct));
+      return JSON.parse(new TextDecoder().decode(pt));
+    } catch (_) { return null; }
+  }
+
+  return { seal, open, sealed };
+})();
+
 /* ---------- CLOUD ---------- */
 const CLOUD_UID_LS = 'aphrosta.cloudUid';
 const Cloud = (() => {
@@ -4980,6 +5030,8 @@ const Cloud = (() => {
   const known = new Set();
   const synced = new Map();
   const usageQ = new Map();
+  const shared = new Map(); /* session id -> signature of the readable copy kept for Improve Service */
+  let improveClean = false;
   let tSettings = 0, tSessions = 0, tUsage = 0;
   let settingsDirty = false, sessionsDirty = false;
   let tRetry = 0, initSeq = 0;
@@ -5033,14 +5085,14 @@ const Cloud = (() => {
     if (!ready) return;
     settingsDirty = false;
     try {
-      await setDoc(docOf('data', 'settings'), clean({
+      await setDoc(docOf('data', 'settings'), await Vault.seal(uid, clean({
         settings: scrubSettings(),
         effort: activeEffort,
         activeModel,
         modelVariants,
         knownWords: collectKnownWords(),
         updated: +localStorage.getItem(SETTINGS_TS_LS) || Date.now()
-      }));
+      })));
     } catch (err) { settingsDirty = true; warn(err); retry(); }
   }
 
@@ -5050,24 +5102,57 @@ const Cloud = (() => {
     try {
       const live = sessions.filter((x) => !x.draft);
       const ids = new Set(live.map((x) => x.id));
-      for (const x of live) {
-        const sg = sig(x);
-        if (synced.get(x.id) === sg) continue;
+      const bodyOf = (x) => {
         let { draft, ...body } = x;
         body = clean(body);
         body.messages = body.messages.map(({ attachments, ...m }) => m);
-        while (JSON.stringify(body).length > 900000 && body.messages.length > 2) body.messages.shift();
-        await setDoc(docOf('sessions', x.id), body);
+        /* encrypted text is about 1/3 bigger, so keep the plain size under ~740 KB to stay inside Firestore's 1 MB limit */
+        const size = () => new TextEncoder().encode(JSON.stringify(body)).length;
+        while (size() > 740000 && body.messages.length > 2) body.messages.shift();
+        return body;
+      };
+      for (const x of live) {
+        const sg = sig(x);
+        if (synced.get(x.id) === sg) continue;
+        await setDoc(docOf('sessions', x.id), await Vault.seal(uid, bodyOf(x)));
         synced.set(x.id, sg);
         known.add(x.id);
       }
       for (const id of [...known]) {
         if (ids.has(id)) continue;
         await deleteDoc(docOf('sessions', id));
+        try { await deleteDoc(docOf('improve', id)); } catch (_) {}
         known.delete(id);
         synced.delete(id);
+        shared.delete(id);
       }
+      try { await syncImprove(live, bodyOf); }
+      catch (err) { console.warn('[B05] Improve Service sync:', err?.code || err); }
     } catch (err) { sessionsDirty = true; warn(err); retry(); }
+  }
+
+  /* Improve Service: ON saves a readable copy of this user's chats in users/{uid}/improve. OFF deletes that copy. */
+  async function syncImprove(live, bodyOf) {
+    if (settings.privTrain) {
+      const ids = new Set(live.map((x) => x.id));
+      for (const x of live) {
+        const sg = sig(x);
+        if (shared.get(x.id) === sg) continue;
+        await setDoc(docOf('improve', x.id), bodyOf(x));
+        shared.set(x.id, sg);
+      }
+      for (const id of [...shared.keys()]) {
+        if (ids.has(id)) continue;
+        await deleteDoc(docOf('improve', id));
+        shared.delete(id);
+      }
+      improveClean = false;
+    } else if (!improveClean) {
+      const snap = await getDocs(collection(db, 'users', uid, 'improve'));
+      await Promise.all(snap.docs.map((d) => deleteDoc(d.ref)));
+      shared.clear();
+      improveClean = true;
+    }
   }
 
   async function pushUsage() {
@@ -5077,11 +5162,11 @@ const Cloud = (() => {
       const snap = TokenRecorder.snapshot(provider, model);
       if (snap.keyId !== keyId) { usageQ.delete(id); continue; }
       try {
-        await setDoc(docOf('usage', id), {
+        await setDoc(docOf('usage', id), await Vault.seal(uid, {
           ...snap,
           keyPreview: keyPreview(apiKeys[provider]),
           updated: Date.now()
-        });
+        }));
         usageQ.delete(id);
       } catch (err) { warn(err); }
     }
@@ -5106,8 +5191,8 @@ const Cloud = (() => {
       const snap = await getDocs(collection(db, 'users', uid, 'usage'));
       for (const job of list) {
         for (const d of snap.docs) {
-          const u = d.data();
-          if (u.provider === job.pid && u.keyId === job.keyId) await deleteDoc(d.ref);
+          const u = await Vault.open(uid, d.data());
+          if (u && u.provider === job.pid && u.keyId === job.keyId) await deleteDoc(d.ref);
         }
       }
       lsSet(PURGE_LS, []);
@@ -5168,17 +5253,18 @@ const Cloud = (() => {
       try {
         for (const id of [...known]) {
           await deleteDoc(docOf('sessions', id));
-          known.delete(id); synced.delete(id);
+          try { await deleteDoc(docOf('improve', id)); } catch (_) {}
+          known.delete(id); synced.delete(id); shared.delete(id);
         }
       } catch (err) { warn(err); }
     },
-    reset() { ready = false; uid = null; known.clear(); synced.clear(); usageQ.clear(); settingsDirty = false; sessionsDirty = false; MemSys.reset(); },
+    reset() { ready = false; uid = null; known.clear(); synced.clear(); shared.clear(); improveClean = false; usageQ.clear(); settingsDirty = false; sessionsDirty = false; MemSys.reset(); },
 
     async init(user) {
       const mine = ++initSeq;
       ready = false;
       uid = user.uid;
-      known.clear(); synced.clear();
+      known.clear(); synced.clear(); shared.clear(); improveClean = false;
       let changed = false;
       let pushBack = true;
 
@@ -5195,8 +5281,10 @@ const Cloud = (() => {
         const snap = await getDoc(docOf('data', 'settings'));
         const localTs = +localStorage.getItem(SETTINGS_TS_LS) || 0;
         if (snap.exists()) {
-          const c = snap.data();
-          if ((c.updated || 0) > localTs || otherAccount) {
+          const rawS = snap.data();
+          const c = await Vault.open(uid, rawS);
+          if (c && !Vault.sealed(rawS)) settingsDirty = true; /* old plain copy: it is saved back encrypted */
+          if (c && ((c.updated || 0) > localTs || otherAccount)) {
             pushBack = false;
             try {
               if (c.settings) {
@@ -5241,28 +5329,46 @@ const Cloud = (() => {
       if (settings.saveSessions) {
         try {
           const snapS = await getDocs(collection(db, 'users', uid, 'sessions'));
-          snapS.forEach((d) => {
-            const c = d.data();
-            if (!c || !Array.isArray(c.messages)) return;
+          for (const d of snapS.docs) {
+            const rawD = d.data();
+            const c = await Vault.open(uid, rawD);
+            if (!c || !Array.isArray(c.messages)) continue;
             known.add(d.id);
+            /* old plain docs stay unmarked so they are saved back encrypted */
+            const mark = (v) => { if (Vault.sealed(rawD)) synced.set(d.id, v); };
             const mineS = sessions.find((x) => x.id === d.id);
-            if (!mineS) { sessions.push({ ...c, id: d.id }); synced.set(d.id, sig(c)); changed = true; }
-            else if ((c.updated || 0) > (mineS.updated || 0)) { Object.assign(mineS, c, { id: d.id }); synced.set(d.id, sig(c)); changed = true; }
-            else if ((c.updated || 0) === (mineS.updated || 0)) synced.set(d.id, sig(mineS));
-          });
+            if (!mineS) { sessions.push({ ...c, id: d.id }); mark(sig(c)); changed = true; }
+            else if ((c.updated || 0) > (mineS.updated || 0)) { Object.assign(mineS, c, { id: d.id }); mark(sig(c)); changed = true; }
+            else if ((c.updated || 0) === (mineS.updated || 0)) mark(sig(mineS));
+          }
           lsSet(SESSIONS_LS, sessions.map(({ draft, ...x }) => x));
         } catch (err) { warn(err); }
       }
       if (mine !== initSeq) return;
 
+      if (settings.privTrain && settings.saveSessions) {
+        try {
+          const snapI = await getDocs(collection(db, 'users', uid, 'improve'));
+          snapI.forEach((d) => {
+            const c = d.data();
+            if (c && Array.isArray(c.messages)) shared.set(d.id, sig(c));
+          });
+        } catch (e) { console.warn('[B05] Improve Service read skipped:', e?.code || e); }
+      }
+      if (mine !== initSeq) return;
+
       try {
         const snapU = await getDocs(collection(db, 'users', uid, 'usage'));
-        snapU.forEach((d) => {
-          const u = d.data();
-          if (u?.provider && u?.model && PROVIDER_API[u.provider]) {
+        for (const d of snapU.docs) {
+          const rawU = d.data();
+          const u = await Vault.open(uid, rawU);
+          if (!u) continue;
+          /* old plain record: save it back encrypted */
+          if (!Vault.sealed(rawU)) { try { await setDoc(d.ref, await Vault.seal(uid, u)); } catch (_) {} }
+          if (u.provider && u.model && PROVIDER_API[u.provider]) {
             TokenRecorder.merge(u.provider, u.model, u.period, u.used || 0, u.keyId);
           }
-        });
+        }
       } catch (e) { console.warn('[B04] Usage read skipped:', e?.code || e); }
       if (mine !== initSeq) return;
 
@@ -7732,7 +7838,7 @@ function showBlockedScreen(type) {
 async function purgeAllUserData(keepAccount = false) {
   const uid = currentUser?.uid;
   if (!uid) return;
-  const cols = ['sessions', 'usage', 'feedback', 'devices'];
+  const cols = ['sessions', 'usage', 'feedback', 'devices', 'improve'];
   for (const c of cols) {
     try {
       const snap = await getDocs(collection(db, 'users', uid, c));
@@ -8076,9 +8182,14 @@ const AB_PAGES = {
       <h4>Content limits</h4><p>Content you create stays yours, but you agree not to use the app to share material that is harmful, abusive, or illegal. This includes harassment, threats, sexual content involving minors, malware, and attempts to bypass provider safety systems.</p>
       <h4>Consequences</h4><p>Violating these rules may result in your API keys being removed from the app or your account being locked. Severe violations may be reported to the relevant authorities.</p>` },
     { t: 'Privacy and Data Collection', st: 1, kw: 'privacy data tracking',
-      b: `<p>We only keep the information needed to run the app, keep your settings in sync, and improve your experience. Sessions, settings, memories, token usage and registered devices are stored in your private Firestore space under your account.</p>
+      b: `<p>Your sessions, settings, memories and token usage are encrypted on this device before they are saved to the cloud, so the developers cannot read them. Registered devices, your account status and feedback you choose to send are stored as readable text.</p>
       <h4>What stays on this device</h4><p>Billing details and saved card information on this device stay on this device. They are never sent to the cloud, and full card numbers and security codes are never stored.</p>
       <h4>API Keys</h4><p>Your API keys live in this device's local storage. When syncing to the cloud, keys are never included. You must re-enter them if you switch devices.</p>` },
+    { t: 'Encryption and Your Privacy', st: 1, kw: 'encryption private safety key secure improve service',
+      b: `<p>Your data is locked with a private key before it leaves your device. The key is created automatically, lives only in this browser's local storage, and is never sent anywhere. We cannot read what is stored in the cloud.</p>
+      <h4>What is encrypted</h4><p>Sessions, settings, memories and token usage are encrypted with AES-256 before they are saved. Only this device can open them.</p>
+      <h4>Improve Service</h4><p>This switch is off by default. When it is on, a readable copy of your chats is saved so the service can be improved. Turn it off and that copy is deleted. Your encrypted data is not affected either way.</p>
+      <h4>Keep in mind</h4><p>The key is not backed up. If you clear this browser's data or sign in on another device, earlier cloud data cannot be opened there. Feedback you send, registered devices and your account status are stored as readable text.</p>` },
     { t: 'Memory Systems Details', st: 1, kw: 'memory short long term context',
       b: `<p>Aphrosta's memory has three parts: a fact store (long-term), a scoped database (short-term), and a compact state log. Memories respect your Memory settings.</p>
       <h4>What is stored</h4><p>Long-term memory extracts facts like your name, preferences, and ongoing projects. Short-term memory keeps track of the current chat context so you don't have to repeat yourself.</p>
