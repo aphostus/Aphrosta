@@ -1666,7 +1666,7 @@ const SettingsPanel = (user) => `
         <div class="key-reveal" data-key-reveal hidden>
           <div class="provider-input-wrap">
             <input class="provider-input" data-key-input type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Paste a key to use it here" aria-label="Encryption key">
-            <button class="provider-eye" type="button" data-act="key-eye" aria-label="Show key" aria-pressed="false">${ICONS.eyeOff}</button>
+            <button class="provider-eye" type="button" data-act="key-eye" aria-label="Show key" aria-pressed="false"><span data-eye-on hidden>${ICONS.eye}</span><span data-eye-off>${ICONS.eyeOff}</span></button>
           </div>
           <div class="key-actions">
             <button class="btn-line" type="button" data-act="key-copy">Copy</button>
@@ -5150,15 +5150,17 @@ const KeyBackup = (() => {
     if (!box || !field) return;
     if (!box.hidden) { box.hidden = true; field.value = ''; return; }
     if (!me()) return toast('Sign in first.', 'info', 2000);
+    box.hidden = false;
+    field.type = 'password';
+    const eyeBtn = box.querySelector('[data-act="key-eye"]');
+    eyeBtn.querySelector('[data-eye-on]').hidden = true;
+    eyeBtn.querySelector('[data-eye-off]').hidden = false;
+    eyeBtn.setAttribute('aria-pressed', 'false');
+    eyeBtn.setAttribute('aria-label', 'Show key');
     try {
-      field.value = await Vault.exportKey(me());
-      field.type = 'password';
-      const eyeBtn = box.querySelector('[data-act="key-eye"]');
-      eyeBtn.innerHTML = ICONS.eyeOff;
-      eyeBtn.setAttribute('aria-pressed', 'false');
-      eyeBtn.setAttribute('aria-label', 'Show key');
-      box.hidden = false;
-    } catch (_) { toast('Could not read the key on this device.', 'error', 3000); }
+      const k = await Vault.exportKey(me());
+      if (!box.hidden) field.value = k; /* ignore it if the box was closed while loading */
+    } catch (_) { box.hidden = true; toast('Could not read the key on this device.', 'error', 3000); }
   }
 
   function eye(btn) {
@@ -5166,7 +5168,9 @@ const KeyBackup = (() => {
     if (!field) return;
     const show = field.type === 'password';
     field.type = show ? 'text' : 'password';
-    btn.innerHTML = show ? ICONS.eye : ICONS.eyeOff;
+    /* swap by hiding, not by replacing the icon: a removed icon looks like an outside tap and closes Settings */
+    btn.querySelector('[data-eye-on]').hidden = !show;
+    btn.querySelector('[data-eye-off]').hidden = show;
     btn.setAttribute('aria-pressed', String(show));
     btn.setAttribute('aria-label', show ? 'Hide key' : 'Show key');
   }
