@@ -1657,7 +1657,7 @@ const SettingsPanel = (user) => `
     <div class="panel-scroll">
       <section class="key-card" aria-label="Key backup">
         <div class="usage-head">
-          <span class="usage-title">${ICONS.stPrivacy}<span>Key Backup</span></span>
+          <span class="usage-title">${ICONS.stPrivacy}<span>Security</span></span>
           <span class="key-head-r">
             <label class="key-auto"><span>Auto</span><span class="switch"><input type="checkbox" data-set="keyAuto" ${settings.keyAuto !== false ? 'checked' : ''}><i></i></span></label>
             <button class="btn-line" type="button" data-act="key-backup">Backup</button>
