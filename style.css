@@ -1493,8 +1493,9 @@ html.has-vv #app-shell { height: var(--app-h); }
 }
 .key-reveal textarea[data-key-input] {
   height: auto;
-  min-height: 64px;
-  padding: 10px 44px 10px 12px;
+  min-height: 42px;
+  padding: 8px 44px 8px 12px;
+  field-sizing: content;
   white-space: pre-wrap;
   word-break: break-all;
   overflow-x: hidden;

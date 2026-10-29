@@ -609,6 +609,7 @@ const ERR_CODES = {
   A08: ['Could not lock the account (Destruct)', 'Nothing was deleted. Try again.'],
   A09: ['Sign-in storage error', 'Your browser may block saved sign-in. Check private mode and site-data settings.'],
   A10: ['Account lock check failed', 'Sign in again. If it keeps happening, send feedback with this code.'],
+  A11: ['Key does not open this account', 'The pasted key could not read this account\u2019s cloud data. Aphrosta put your previous key back.'],
   B01: ['Cloud sync unavailable', 'Your data is safe on this device and syncs when the connection returns.'],
   B02: ['Memory upload failed', 'It retries automatically. Check your connection.'],
   B03: ['Memory download failed', 'Check your connection, then reopen the app.'],
@@ -1678,7 +1679,7 @@ const SettingsPanel = (user) => `
           </p>
         <div class="key-reveal" data-key-reveal hidden>
           <div class="provider-input-wrap">
-            <textarea class="provider-input" data-key-input data-masked="1" rows="3" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Paste a key to use it here" aria-label="Encryption key"></textarea>
+            <textarea class="provider-input" data-key-input data-masked="1" rows="2" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Paste a key to use it here" aria-label="Encryption key"></textarea>
             <button class="provider-eye" type="button" data-act="key-eye" aria-label="Show key" aria-pressed="false"><span data-eye-on hidden>${ICONS.eye}</span><span data-eye-off>${ICONS.eyeOff}</span></button>
           </div>
           <div class="key-actions">
@@ -5239,11 +5240,18 @@ const KeyBackup = (() => {
     let ok = false;
     try { ok = await Vault.importKey(me(), text); } catch (_) {}
     if (!ok) return toast('That is not a valid key.', 'error', 2800);
-    if (settings.keyAuto !== false) Vault.backup(me()).catch(() => {});
     field.value = '';
     card()?.querySelector('[data-key-reveal]')?.setAttribute('hidden', '');
-    toast('Key saved. Loading your data\u2026', 'success', 2400);
+    toast('Checking the key\u2026', 'info', 2000);
     try { await Cloud.init(currentUser); } catch (_) {}
+    if (Cloud.locked() && own) {
+      try { await Vault.importKey(me(), own); } catch (_) {}
+      try { await Cloud.init(currentUser); } catch (_) {}
+      toast('That key does not open this account\u2019s data. Your previous key was put back. (A11)', 'error', 4200);
+      return;
+    }
+    if (settings.keyAuto !== false) Vault.backup(me()).catch(() => {});
+    toast('Key saved. Your data is loaded.', 'success', 2400);
   }
 
   return { toggled, open, eye, copy, restore, paint };
@@ -5499,6 +5507,7 @@ const Cloud = (() => {
         }
       } catch (err) { warn(err); }
     },
+    locked() { return blockSettings; },
     reset() { ready = false; uid = null; known.clear(); synced.clear(); shared.clear(); improveClean = false; blockSettings = false; usageQ.clear(); settingsDirty = false; sessionsDirty = false; MemSys.reset(); },
 
     async init(user) {
