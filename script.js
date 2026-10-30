@@ -910,6 +910,8 @@ const ICONS = {
   pause:    svg('<rect x="6" y="5" width="4" height="14" rx="1.2"/><rect x="14" y="5" width="4" height="14" rx="1.2"/>', 20),
   play:     svg('<path d="M8 5.2v13.6a.7.7 0 001.07.6l10.6-6.8a.7.7 0 000-1.2L9.07 4.6A.7.7 0 008 5.2z"/>', 20),
   search:   svg('<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>', 16),
+  teamShare: svg('<circle cx="9" cy="8" r="3"/><path d="M3 20v-1a5 5 0 015-5h2a5 5 0 015 5v1"/><circle cx="17.5" cy="9" r="2.4"/><path d="M17 14.2a4 4 0 014 3.8v1.5"/>', 18),
+  chevL:    svg('<path d="M15 6l-6 6 6 6"/>', 14),
   folder:   svg('<path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>'),
   inbox14:  svg('<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/>', 14),
   memory:   svg('<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>'),
@@ -2748,11 +2750,43 @@ const Composer = () => `
   </div>
 `;
 
+const SearchBar = () => `
+  <div class="sbar-wrap">
+    <div class="sbar" data-open="0">
+      <div class="sbar-row">
+        <span class="sbar-ico" aria-hidden="true">${ICONS.search}</span>
+        <input class="sbar-input" type="text" placeholder="Search" aria-label="Search this chat" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="search">
+        <span class="sbar-count" hidden></span>
+        <button class="sbar-nav" type="button" data-action="sb-prev" aria-label="Previous match" hidden>${ICONS.chevL}</button>
+        <button class="sbar-nav" type="button" data-action="sb-next" aria-label="Next match" hidden>${ICONS.chevronR}</button>
+        <button class="sbar-share" type="button" data-action="sb-share" aria-label="Team share" aria-expanded="false">${ICONS.teamShare}</button>
+      </div>
+      <div class="sbar-panel" inert>
+        <div class="sbar-panel-in">
+          <div class="sbar-line">
+            <input class="sbar-field sbar-code" type="text" readonly aria-label="Chat ID" value="">
+            <button class="sbar-mini" type="button" data-action="sb-copy" aria-label="Copy chat ID">${ICONS.copy}</button>
+          </div>
+          <div class="sbar-line">
+            <span class="sbar-label">Public<span class="sbar-sub">Anyone with the ID can open a copy</span></span>
+            <button class="sbar-switch" type="button" role="switch" aria-checked="false" aria-label="Public" data-action="sb-pub"></button>
+          </div>
+          <div class="sbar-line">
+            <input class="sbar-field sbar-load" type="text" placeholder="Paste a chat ID to load" aria-label="Load chat by ID" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+            <button class="sbar-mini" type="button" data-action="sb-load">Load</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+`;
+
 const HomeScreen = (user) => `
   <section class="view home-view">
     ${Sidebar(user)}
     <div class="main">
       ${Topbar()}
+      ${SearchBar()}
       <div class="stage">
         ${Welcome()}
         <div class="messages hidden" id="messages" aria-live="polite"></div>
@@ -5385,7 +5419,7 @@ const Cloud = (() => {
   const sig = (x) => {
     const last = x.messages[x.messages.length - 1];
     const fb = x.messages.reduce((n, m) => n + (m.feedback ? 1 : 0), 0);
-    return `${x.updated}|${x.pinned}|${x.pinnedAt}|${x.title}|${x.messages.length}|${last?.content?.length || 0}|${fb}`;
+    return `${x.updated}|${x.pinned}|${x.pinnedAt}|${x.title}|${x.messages.length}|${last?.content?.length || 0}|${fb}|${x.shareCode || ''}|${x.sharePub ? 1 : 0}`;
   };
   const docOf = (...p) => doc(db, 'users', uid, ...p);
   const batchId = (pid, mid, period, keyId) =>
@@ -5862,6 +5896,259 @@ let chatStick = true;
 let sessionsBound = false;
 let pendingResend = null;
 
+/* ---------- SEARCH BAR + CHAT SHARE ---------- */
+var sbHits = [], sbIdx = -1, sbQuery = '', sbTimer = 0;
+var pubSig = new Map(), pubTimer = 0;
+const SB_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%&*?+=-_';
+
+function sbMakeCode() {
+  let c;
+  do {
+    const r = crypto.getRandomValues(new Uint8Array(10));
+    c = Array.from(r, (b) => SB_CHARS[b % SB_CHARS.length]).join('');
+  } while (/^__.*__$/.test(c));
+  return c;
+}
+
+/* the chat ID is made once per chat and kept for good */
+function sbCode(s) {
+  if (!s.shareCode) {
+    s.shareCode = sbMakeCode();
+    if (!s.draft) persistSessions();
+  }
+  return s.shareCode;
+}
+
+function sbUi() {
+  const bar = q$('.sbar');
+  if (!bar) return;
+  const has = sbHits.length > 0;
+  const cnt = bar.querySelector('.sbar-count');
+  cnt.textContent = sbQuery ? (has ? `${sbIdx + 1}/${sbHits.length}` : '0') : '';
+  cnt.hidden = !sbQuery;
+  bar.querySelectorAll('.sbar-nav').forEach((b) => { b.hidden = !has; });
+}
+
+function sbClear() {
+  const box = q$('#messages');
+  if (box) {
+    box.querySelectorAll('mark.sb-hit').forEach((m) => {
+      const p = m.parentNode;
+      p.replaceChild(document.createTextNode(m.textContent), m);
+      p.normalize();
+    });
+  }
+  sbHits = [];
+  sbIdx = -1;
+}
+
+/* mode: 0 = no scroll, 1 = instant, 2 = smooth slide */
+function sbFocus(mode) {
+  sbHits.forEach((m) => m.classList.remove('is-cur'));
+  const el = sbHits[sbIdx];
+  if (!el) return;
+  el.classList.add('is-cur');
+  if (!mode) return;
+  const st = stageEl();
+  if (!st) return;
+  chatStick = false;
+  const r = el.getBoundingClientRect();
+  const sr = st.getBoundingClientRect();
+  st.scrollTo({ top: st.scrollTop + (r.top - sr.top) - sr.height / 2 + r.height / 2, behavior: mode === 2 ? 'smooth' : 'auto' });
+}
+
+function sbMark(term, quiet) {
+  const keep = quiet ? sbIdx : 0;
+  sbClear();
+  const box = q$('#messages');
+  if (!term || !box) { sbUi(); return; }
+  const low = term.toLowerCase();
+  const walker = document.createTreeWalker(box, NodeFilter.SHOW_TEXT, {
+    acceptNode: (n) => (n.nodeValue.toLowerCase().includes(low) && !n.parentElement.closest('button, script, style, textarea, .msg-actions')
+      ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT)
+  });
+  const nodes = [];
+  while (walker.nextNode()) nodes.push(walker.currentNode);
+  nodes.forEach((n) => {
+    const t = n.nodeValue;
+    const lt = t.toLowerCase();
+    const frag = document.createDocumentFragment();
+    let p = 0, i;
+    while ((i = lt.indexOf(low, p)) > -1) {
+      if (i > p) frag.appendChild(document.createTextNode(t.slice(p, i)));
+      const m = document.createElement('mark');
+      m.className = 'sb-hit';
+      m.textContent = t.slice(i, i + low.length);
+      frag.appendChild(m);
+      p = i + low.length;
+    }
+    if (p < t.length) frag.appendChild(document.createTextNode(t.slice(p)));
+    n.parentNode.replaceChild(frag, n);
+  });
+  sbHits = [...box.querySelectorAll('mark.sb-hit')];
+  sbIdx = sbHits.length ? Math.min(Math.max(keep, 0), sbHits.length - 1) : -1;
+  sbFocus(quiet ? 0 : 2);
+  sbUi();
+}
+
+function sbStep(d) {
+  if (!sbHits.length) return;
+  sbIdx = (sbIdx + d + sbHits.length) % sbHits.length;
+  sbFocus(2);
+  sbUi();
+}
+
+function sbSyncShare() {
+  const bar = q$('.sbar');
+  if (!bar) return;
+  const s = currentSession;
+  const code = bar.querySelector('.sbar-code');
+  if (code) code.value = bar.dataset.open === '1' ? sbCode(s) : (s.shareCode || '');
+  bar.querySelector('.sbar-switch')?.setAttribute('aria-checked', String(!!s.sharePub));
+  bar.querySelector('.sbar-share')?.classList.toggle('on', !!s.sharePub);
+}
+
+function sbRemark() {
+  try {
+    if (sbQuery) sbMark(sbQuery, true);
+    sbSyncShare();
+  } catch (_) {}
+}
+
+function sbTogglePanel() {
+  const bar = q$('.sbar');
+  if (!bar) return;
+  const open = bar.dataset.open !== '1';
+  bar.dataset.open = open ? '1' : '0';
+  bar.querySelector('.sbar-share')?.setAttribute('aria-expanded', String(open));
+  bar.querySelector('.sbar-panel')?.toggleAttribute('inert', !open);
+  sbSyncShare();
+}
+
+/* public copy lives in the top level "shared" collection, readable by any signed-in user */
+function pubBody(s) {
+  const msgs = s.messages
+    .filter((m) => !m.hidden && (m.role === 'user' || m.role === 'assistant') && m.content)
+    .map((m) => ({ role: m.role, content: String(m.content) }));
+  while (new TextEncoder().encode(JSON.stringify(msgs)).length > 900000 && msgs.length > 2) msgs.shift();
+  return { owner: currentUser.uid, title: String(s.title || 'Shared chat').slice(0, 80), messages: msgs, updated: Date.now() };
+}
+
+async function pubPush(force) {
+  if (!currentUser) return;
+  for (const s of new Set([...sessions, currentSession])) {
+    if (!s.sharePub || !s.shareCode || !s.messages.length) continue;
+    const sg = `${s.title}|${s.messages.length}|${s.messages[s.messages.length - 1]?.content?.length || 0}`;
+    if (!force && pubSig.get(s.id) === sg) continue;
+    await setDoc(doc(db, 'shared', s.shareCode), pubBody(s));
+    pubSig.set(s.id, sg);
+  }
+}
+
+function pubQueue() {
+  clearTimeout(pubTimer);
+  pubTimer = setTimeout(() => { pubPush().catch(() => {}); }, 1500);
+}
+
+function pubDrop(s) {
+  if (s && s.sharePub && s.shareCode && currentUser) deleteDoc(doc(db, 'shared', s.shareCode)).catch(() => {});
+}
+
+async function sbSetPublic(on) {
+  const s = currentSession;
+  if (!currentUser) { toast('Sign in to share chats.', 'info'); return; }
+  if (on && !s.messages.length) { toast('Send a message first, then make it public.', 'info'); return; }
+  const code = sbCode(s);
+  try {
+    if (on) {
+      const ex = await getDoc(doc(db, 'shared', code));
+      if (ex.exists() && ex.data().owner !== currentUser.uid) s.shareCode = sbMakeCode();
+      s.sharePub = true;
+      persistSessions();
+      await pubPush(true);
+      toast('Public. Anyone with this ID can open a copy.', 'success', 2200);
+    } else {
+      s.sharePub = false;
+      persistSessions();
+      await deleteDoc(doc(db, 'shared', code));
+      pubSig.delete(s.id);
+      toast('Private again. Only you can see this chat.', 'success', 2200);
+    }
+  } catch (_) {
+    s.sharePub = !on;
+    toast('Could not update sharing. Check your connection.', 'error');
+  }
+  sbSyncShare();
+}
+
+async function sbLoad() {
+  const bar = q$('.sbar');
+  const inp = bar?.querySelector('.sbar-load');
+  const code = (inp?.value || '').trim();
+  if (!code) { toast('Paste a chat ID first.', 'info', 1800); return; }
+  if (/[\/\s]/.test(code) || code.length > 40) { toast('That chat ID looks wrong.', 'info'); return; }
+  if (!currentUser) { toast('Sign in to load shared chats.', 'info'); return; }
+  if (chatBusy) { toast('Stop the response before switching sessions. (D06)', 'info'); return; }
+  try {
+    const snap = await getDoc(doc(db, 'shared', code));
+    if (!snap.exists()) { toast('No public chat found with that ID.', 'info'); return; }
+    const d = snap.data();
+    const now = Date.now();
+    const msgs = (Array.isArray(d.messages) ? d.messages : [])
+      .filter((m) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
+      .map((m) => ({ role: m.role, content: m.content, t: now }));
+    if (!msgs.length) { toast('That chat is empty.', 'info'); return; }
+    const copy = {
+      id: uid(), title: String(d.title || 'Shared chat').slice(0, 80), messages: msgs,
+      pinned: false, pinnedAt: 0, created: now, updated: now
+    };
+    sessions.unshift(copy);
+    currentSession = copy;
+    chatStick = true;
+    clearDraft();
+    persistSessions();
+    inp.value = '';
+    sbTogglePanel();
+    renderSessionUi();
+    scrollDown(true);
+    toast('Chat copied to your sessions.', 'success', 2000);
+  } catch (_) {
+    toast('Could not load that chat. Check your connection.', 'error');
+  }
+}
+
+function sbAction(action) {
+  if (action === 'sb-next') sbStep(1);
+  else if (action === 'sb-prev') sbStep(-1);
+  else if (action === 'sb-share') sbTogglePanel();
+  else if (action === 'sb-pub') sbSetPublic(!currentSession.sharePub);
+  else if (action === 'sb-load') sbLoad();
+  else if (action === 'sb-copy') {
+    copyText(sbCode(currentSession)).then((ok) => toast(ok ? 'Chat ID copied.' : 'Could not copy.', ok ? 'success' : 'error', 1600));
+  }
+}
+
+document.addEventListener('input', (e) => {
+  const t = e.target;
+  if (!t || !t.classList || !t.classList.contains('sbar-input')) return;
+  clearTimeout(sbTimer);
+  sbTimer = setTimeout(() => { sbQuery = t.value.trim(); sbMark(sbQuery, false); }, 120);
+});
+
+document.addEventListener('keydown', (e) => {
+  const t = e.target;
+  if (!t || !t.classList || e.key !== 'Enter') return;
+  if (t.classList.contains('sbar-input')) {
+    e.preventDefault();
+    clearTimeout(sbTimer);
+    if (sbQuery !== t.value.trim()) { sbQuery = t.value.trim(); sbMark(sbQuery, false); }
+    else sbStep(e.shiftKey ? -1 : 1);
+  } else if (t.classList.contains('sbar-load')) {
+    e.preventDefault();
+    sbLoad();
+  }
+});
+
 function persistSessions() {
   if (!settings.saveSessions) return;
   const stripped = sessions.map(({ draft, ...s }) => ({
@@ -5870,6 +6157,7 @@ function persistSessions() {
   }));
   lsSet(SESSIONS_LS, stripped);
   Cloud.queueSessions();
+  pubQueue();
 }
 
 function clearDraft() {
@@ -6617,6 +6905,7 @@ function renderMessages() {
   box.replaceChildren(...currentSession.messages.map((m, i) => (m.hidden || stepMsgs.has(m) ? null : msgEl(m, i))).filter(Boolean));
   box.classList.toggle('hidden', n === 0);
   welcome?.classList.toggle('hidden', n > 0);
+  sbRemark();
 }
 
 function sessionItem(s) {
@@ -6747,6 +7036,7 @@ async function deleteSession(id) {
     danger: true
   });
   if (!yes) return;
+  pubDrop(s);
   sessions = sessions.filter((x) => x.id !== id);
   persistSessions();
   if (currentSession.id === id) { currentSession = newDraft(); clearDraft(); }
@@ -8170,6 +8460,7 @@ function initShell() {
     else if (action === 'settings-close') closeSettings();
     else if (action === 'signout') handleSignOut();
     else if (action === 'new-chat') newSession();
+    else if (String(action).startsWith('sb-')) sbAction(action);
     else if (action === 'attach') openAttach();
     else if (action === 'inbox') openInbox();
     else if (action === 'replay-tour') { closeSettings(); setTimeout(() => startOnboarding(true), 350); }
