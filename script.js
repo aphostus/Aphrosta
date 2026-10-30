@@ -6134,6 +6134,7 @@ function openFileViewer(f) {
   scrim.className = 'dialog-scrim';
   scrim.innerHTML = `<div class="dialog file-viewer" role="dialog" aria-modal="true" aria-label="${esc(f.name)}">
     <div class="file-viewer-head"><h3 class="dialog-title">${esc(f.name)}</h3><span class="file-viewer-meta" data-fv-meta></span></div>
+    <button class="fd-ic fv-x" type="button" data-r="x" aria-label="Close">${ICONS.close}</button>
     <pre class="file-viewer-code"><code data-fv-code></code></pre>
     <div class="fv-actions">
       <button class="fv-btn" type="button" data-r="copy">Copy</button>
@@ -6161,6 +6162,7 @@ function openFileViewer(f) {
     const b = e.target.closest('[data-r]');
     if (!b) return;
     const r = b.dataset.r;
+    if (r === 'x') return done();
     if (r === 'copy') {
       if (await copyText(code)) { b.textContent = 'Copied'; setTimeout(() => { b.textContent = 'Copy'; }, 1200); }
       else toast('Couldn\u2019t copy. (D09)');

@@ -2962,6 +2962,9 @@ html[data-motion="reduce"] .think-panel { transition: none; }
   -webkit-overflow-scrolling: touch;
 }
 .fv-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 12px; }
+.file-viewer { position: relative; }
+.file-viewer-head { padding-right: 60px; }
+.fv-x { position: absolute; top: 12px; right: 12px; }
 .fv-btn {
   height: 42px; border-radius: var(--radius-pill); color: var(--fg);
   font-size: calc(13px * var(--ts)); font-weight: 600;
