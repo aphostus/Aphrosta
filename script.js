@@ -6385,7 +6385,14 @@ document.addEventListener('scroll', (e) => {
   const d = top - sbLastTop;
   sbLastTop = top;
 
-  const pinned = bar.dataset.pin === '1';
+  /*
+   * The bar stays put for the whole time a search is in use: while there is a
+   * query, text in the box, or the box has focus. It only auto-hides again
+   * once the search has ended (tap outside the bar) or was never started.
+   */
+  const sbInp = bar.querySelector('.sbar-input');
+  const searching = !!sbQuery || (sbInp && sbInp.value.trim() !== '') || bar.contains(document.activeElement);
+  const pinned = bar.dataset.pin === '1' || searching;
 
   if (pinned || top < 24 || d < -4) {
     wrap.classList.remove('is-hidden');
