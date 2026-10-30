@@ -6228,7 +6228,6 @@ function sbShareErr(err) {
 }
 
 var sbBusy = false;
-async 
 
 async function sbSetPublic(on) {
   const s = currentSession;
