@@ -6059,11 +6059,10 @@ function sbSetPanel(open) {
 function sbTogglePanel() {
   const bar = q$('.sbar');
   if (!bar) return;
-  if (bar.dataset.pin === '1') { sbSetPin(false); return; }
   sbSetPanel(bar.dataset.open !== '1');
 }
 
-/* pinned: the panel stays open and the bar never hides while scrolling */
+/* pinned: the bar never hides while scrolling. It never opens the panel. */
 function sbSetPin(on) {
   const bar = q$('.sbar');
   const btn = bar?.querySelector('.sbar-share');
@@ -6072,15 +6071,14 @@ function sbSetPin(on) {
     bar.dataset.pin = '1';
     btn.dataset.pinned = '1';
     btn.setAttribute('aria-pressed', 'true');
-    btn.setAttribute('aria-label', 'Pinned. Tap to unpin');
-    sbSetPanel(true);
+    btn.setAttribute('aria-label', 'Pinned. Long press to unpin');
   } else {
     delete bar.dataset.pin;
     delete btn.dataset.pinned;
     btn.setAttribute('aria-pressed', 'false');
     btn.setAttribute('aria-label', 'Team share');
-    sbSetPanel(false);
   }
+  q$('.sbar-wrap')?.classList.remove('is-hidden');
 }
 
 var sbLongTimer = 0, sbLongAt = 0;
@@ -6089,8 +6087,10 @@ document.addEventListener('pointerdown', (e) => {
   const btn = e.target.closest && e.target.closest('.sbar-share');
   if (!btn) return;
   sbLongCancel();
+  if (q$('.sbar')?.dataset.open === '1') return;
   sbLongTimer = setTimeout(() => {
     sbLongTimer = 0;
+    if (q$('.sbar')?.dataset.open === '1') return;
     sbLongAt = Date.now();
     const bar = q$('.sbar');
     if (navigator.vibrate) { try { navigator.vibrate(12); } catch (_) {} }
@@ -6104,11 +6104,7 @@ document.addEventListener('pointerdown', (e) => {
 document.addEventListener('contextmenu', (e) => {
   if (e.target.closest && e.target.closest('.sbar-share')) e.preventDefault();
 }, true);
-/* tap anywhere outside the bar releases the pin */
-document.addEventListener('pointerdown', (e) => {
-  const bar = q$('.sbar');
-  if (bar && bar.dataset.pin === '1' && !(e.target.closest && e.target.closest('.sbar'))) sbSetPin(false);
-}, true);
+/* pin is only changed by a long press on the people icon */
 
 /* public copy lives in the top level "shared" collection, readable by any signed-in user */
 function pubBody(s) {
