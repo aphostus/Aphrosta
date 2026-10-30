@@ -2764,7 +2764,7 @@ const SearchBar = () => `
           <input class="sbar-input" type="text" placeholder="Search" aria-label="Search this chat" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="search">
           <span class="sbar-count"></span>
         </div>
-        <button class="sbar-share" type="button" data-action="sb-share" aria-label="Team share" aria-expanded="false">${ICONS.teamShare}</button>
+        <button class="sbar-share" type="button" data-action="sb-share" aria-label="Team share" aria-expanded="false" aria-pressed="false"><span class="sbar-share-ppl">${ICONS.teamShare}</span><span class="sbar-share-pin">${ICONS.pushpinOn}</span></button>
       </div>
       <div class="sbar-panel" inert>
         <div class="sbar-panel-in">
@@ -6046,16 +6046,69 @@ function sbRemark() {
   } catch (_) {}
 }
 
-function sbTogglePanel() {
+function sbSetPanel(open) {
   const bar = q$('.sbar');
   if (!bar) return;
-  const open = bar.dataset.open !== '1';
   bar.dataset.open = open ? '1' : '0';
   bar.querySelector('.sbar-share')?.setAttribute('aria-expanded', String(open));
   bar.querySelector('.sbar-panel')?.toggleAttribute('inert', !open);
   q$('.sbar-wrap')?.classList.remove('is-hidden');
   sbSyncShare();
 }
+
+function sbTogglePanel() {
+  const bar = q$('.sbar');
+  if (!bar) return;
+  if (bar.dataset.pin === '1') { sbSetPin(false); return; }
+  sbSetPanel(bar.dataset.open !== '1');
+}
+
+/* pinned: the panel stays open and the bar never hides while scrolling */
+function sbSetPin(on) {
+  const bar = q$('.sbar');
+  const btn = bar?.querySelector('.sbar-share');
+  if (!bar || !btn) return;
+  if (on) {
+    bar.dataset.pin = '1';
+    btn.dataset.pinned = '1';
+    btn.setAttribute('aria-pressed', 'true');
+    btn.setAttribute('aria-label', 'Pinned. Tap to unpin');
+    sbSetPanel(true);
+  } else {
+    delete bar.dataset.pin;
+    delete btn.dataset.pinned;
+    btn.setAttribute('aria-pressed', 'false');
+    btn.setAttribute('aria-label', 'Team share');
+    sbSetPanel(false);
+  }
+}
+
+var sbLongTimer = 0, sbLongAt = 0;
+function sbLongCancel() { clearTimeout(sbLongTimer); sbLongTimer = 0; }
+document.addEventListener('pointerdown', (e) => {
+  const btn = e.target.closest && e.target.closest('.sbar-share');
+  if (!btn) return;
+  sbLongCancel();
+  sbLongTimer = setTimeout(() => {
+    sbLongTimer = 0;
+    sbLongAt = Date.now();
+    const bar = q$('.sbar');
+    if (navigator.vibrate) { try { navigator.vibrate(12); } catch (_) {} }
+    sbSetPin(bar?.dataset.pin !== '1');
+  }, 450);
+}, true);
+['pointerup', 'pointercancel', 'pointerleave', 'scroll'].forEach((ev) => document.addEventListener(ev, (e) => {
+  if (ev === 'pointerleave' && !(e.target.closest && e.target.closest('.sbar-share'))) return;
+  sbLongCancel();
+}, true));
+document.addEventListener('contextmenu', (e) => {
+  if (e.target.closest && e.target.closest('.sbar-share')) e.preventDefault();
+}, true);
+/* tap anywhere outside the bar releases the pin */
+document.addEventListener('pointerdown', (e) => {
+  const bar = q$('.sbar');
+  if (bar && bar.dataset.pin === '1' && !(e.target.closest && e.target.closest('.sbar'))) sbSetPin(false);
+}, true);
 
 /* public copy lives in the top level "shared" collection, readable by any signed-in user */
 function pubBody(s) {
@@ -6066,14 +6119,20 @@ function pubBody(s) {
   return { owner: currentUser.uid, title: String(s.title || 'Shared chat').slice(0, 80), messages: msgs, updated: Date.now() };
 }
 
+async function pubPushOne(s, force) {
+  if (!currentUser || !s.sharePub || !s.shareCode || !s.messages.length) return;
+  const sg = `${s.title}|${s.messages.length}|${s.messages[s.messages.length - 1]?.content?.length || 0}`;
+  if (!force && pubSig.get(s.id) === sg) return;
+  await setDoc(doc(db, 'shared', s.shareCode), pubBody(s));
+  pubSig.set(s.id, sg);
+}
+
+/* one chat failing must not block the others, so errors are kept per chat */
 async function pubPush(force) {
   if (!currentUser) return;
   for (const s of new Set([...sessions, currentSession])) {
-    if (!s.sharePub || !s.shareCode || !s.messages.length) continue;
-    const sg = `${s.title}|${s.messages.length}|${s.messages[s.messages.length - 1]?.content?.length || 0}`;
-    if (!force && pubSig.get(s.id) === sg) continue;
-    await setDoc(doc(db, 'shared', s.shareCode), pubBody(s));
-    pubSig.set(s.id, sg);
+    try { await pubPushOne(s, force); }
+    catch (err) { console.error('[share] push failed for', s.id, err?.code, err); }
   }
 }
 
@@ -6086,30 +6145,50 @@ function pubDrop(s) {
   if (s && s.sharePub && s.shareCode && currentUser) deleteDoc(doc(db, 'shared', s.shareCode)).catch(() => {});
 }
 
+function sbShareErr(err) {
+  const c = err?.code || '';
+  if (c === 'permission-denied') return 'Sharing is blocked by the Firestore rules for the "shared" collection. (permission-denied)';
+  if (c === 'unavailable' || c === 'deadline-exceeded' || /network|offline/i.test(String(err?.message || ''))) return 'Could not reach the server. Check your connection.';
+  if (c === 'unauthenticated') return 'Your sign-in expired. Sign in again to share.';
+  if (c === 'invalid-argument' || c === 'resource-exhausted') return 'This chat is too large to share.';
+  return `Could not update sharing${c ? ` (${c})` : ''}.`;
+}
+
+var sbBusy = false;
 async function sbSetPublic(on) {
   const s = currentSession;
   if (!currentUser) { toast('Sign in to share chats.', 'info'); return; }
   if (on === !!s.sharePub) return;
+  if (sbBusy) return;
   if (on && !s.messages.length) { toast('Send a message first, then make it public.', 'info'); return; }
+  sbBusy = true;
   const code = sbCode(s);
   try {
     if (on) {
-      const ex = await getDoc(doc(db, 'shared', code));
-      if (ex.exists() && ex.data().owner !== currentUser.uid) s.shareCode = sbMakeCode();
+      /* collision check is best effort: a read refused for a missing doc must not block sharing */
+      try {
+        const ex = await getDoc(doc(db, 'shared', code));
+        if (ex.exists() && ex.data().owner !== currentUser.uid) s.shareCode = sbMakeCode();
+      } catch (e) { console.warn('[share] id check skipped', e?.code); }
       s.sharePub = true;
+      await pubPushOne(s, true);
       persistSessions();
-      await pubPush(true);
       toast('Public. Anyone with this ID can open a copy.', 'success', 2200);
     } else {
       s.sharePub = false;
       persistSessions();
-      await deleteDoc(doc(db, 'shared', code));
+      try { await deleteDoc(doc(db, 'shared', s.shareCode || code)); }
+      catch (e) { console.warn('[share] delete failed', e?.code); throw e; }
       pubSig.delete(s.id);
       toast('Private again. Only you can see this chat.', 'success', 2200);
     }
-  } catch (_) {
+  } catch (err) {
+    console.error('[share] update failed', err?.code, err);
     s.sharePub = !on;
-    toast('Could not update sharing. Check your connection.', 'error');
+    persistSessions();
+    toast(sbShareErr(err), 'error', 3600);
+  } finally {
+    sbBusy = false;
   }
   sbSyncShare();
 }
@@ -6152,7 +6231,7 @@ async function sbLoad() {
 function sbAction(action) {
   if (action === 'sb-next') sbStep(1);
   else if (action === 'sb-prev') sbStep(-1);
-  else if (action === 'sb-share') sbTogglePanel();
+  else if (action === 'sb-share') { if (Date.now() - sbLongAt < 700) return; sbTogglePanel(); }
   else if (action === 'sb-vis') sbSetPublic(!currentSession.sharePub);
   else if (action === 'sb-act') {
     if (q$('.sbar-act')?.dataset.mode === 'load') sbLoad();
@@ -6217,7 +6296,7 @@ document.addEventListener('scroll', (e) => {
   const top = st.scrollTop;
   const d = top - sbLastTop;
   sbLastTop = top;
-  const pinned = !!sbQuery || bar.dataset.open === '1' || bar.contains(document.activeElement);
+  const pinned = !!sbQuery || bar.dataset.pin === '1' || bar.dataset.open === '1' || bar.contains(document.activeElement);
   if (pinned || top < 24 || d < -4) wrap.classList.remove('is-hidden');
   else if (d > 4) wrap.classList.add('is-hidden');
 }, true);

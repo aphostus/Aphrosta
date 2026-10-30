@@ -675,6 +675,17 @@ html.has-vv #app-shell { height: var(--app-h); }
 .sbar-nav:disabled { opacity: 0.3; pointer-events: none; }
 .sbar-nav:hover, .sbar-share:hover { background: var(--glass-bg-hover); color: var(--fg); }
 .sbar-share[aria-expanded="true"] { background: var(--glass-bg-hover); color: var(--fg); }
+.sbar-share {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+.sbar-share-pin { display: none !important; }
+.sbar-share span { display: inline-flex; }
+.sbar-share[data-pinned="1"] .sbar-share-ppl { display: none; }
+.sbar-share[data-pinned="1"] .sbar-share-pin { display: inline-flex !important; }
+.sbar-share[data-pinned="1"] { background: var(--glass-bg-hover); color: var(--fg); }
 .sbar-share.on::after {
   content: "";
   position: absolute;
@@ -722,7 +733,8 @@ html.has-vv #app-shell { height: var(--app-h); }
   min-width: 0;
   height: 100%;
   padding: 0 4px;
-  font-size: max(16px, calc(16px * var(--ts)));
+  font-family: inherit;
+  font-size: calc(16px * var(--ts));
   background: none;
   border: none;
   outline: none;
