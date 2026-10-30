@@ -912,6 +912,7 @@ const ICONS = {
   search:   svg('<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>', 16),
   teamShare: svg('<circle cx="9" cy="8" r="3"/><path d="M3 20v-1a5 5 0 015-5h2a5 5 0 015 5v1"/><circle cx="17.5" cy="9" r="2.4"/><path d="M17 14.2a4 4 0 014 3.8v1.5"/>', 18),
   chevL:    svg('<path d="M15 6l-6 6 6 6"/>', 14),
+  loadIn:   svg('<path d="M12 4v11M7 11l5 5 5-5M5 20h14"/>', 16),
   folder:   svg('<path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>'),
   inbox14:  svg('<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/>', 14),
   memory:   svg('<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>'),
@@ -2755,25 +2756,26 @@ const SearchBar = () => `
     <div class="sbar" data-open="0">
       <div class="sbar-row">
         <span class="sbar-ico" aria-hidden="true">${ICONS.search}</span>
-        <input class="sbar-input" type="text" placeholder="Search" aria-label="Search this chat" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="search">
-        <span class="sbar-count" hidden></span>
-        <button class="sbar-nav" type="button" data-action="sb-prev" aria-label="Previous match" hidden>${ICONS.chevL}</button>
-        <button class="sbar-nav" type="button" data-action="sb-next" aria-label="Next match" hidden>${ICONS.chevronR}</button>
+        <div class="sbar-pill">
+          <button class="sbar-nav" type="button" data-action="sb-prev" aria-label="Previous match" disabled>${ICONS.chevL}</button>
+          <button class="sbar-nav" type="button" data-action="sb-next" aria-label="Next match" disabled>${ICONS.chevronR}</button>
+          <input class="sbar-input" type="text" placeholder="Search" aria-label="Search this chat" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="search">
+          <span class="sbar-count"></span>
+        </div>
         <button class="sbar-share" type="button" data-action="sb-share" aria-label="Team share" aria-expanded="false">${ICONS.teamShare}</button>
       </div>
       <div class="sbar-panel" inert>
         <div class="sbar-panel-in">
-          <div class="sbar-line">
-            <input class="sbar-field sbar-code" type="text" readonly aria-label="Chat ID" value="">
-            <button class="sbar-mini" type="button" data-action="sb-copy" aria-label="Copy chat ID">${ICONS.copy}</button>
+          <div class="sbar-idbox">
+            <input class="sbar-code" type="text" maxlength="15" aria-label="Chat ID" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" value="">
+            <button class="sbar-act" type="button" data-action="sb-act" data-mode="copy" aria-label="Copy chat ID">
+              <span class="sbar-act-copy">${ICONS.copy}</span>
+              <span class="sbar-act-load">${ICONS.loadIn}</span>
+            </button>
           </div>
-          <div class="sbar-line">
-            <span class="sbar-label">Public<span class="sbar-sub">Anyone with the ID can open a copy</span></span>
-            <button class="sbar-switch" type="button" role="switch" aria-checked="false" aria-label="Public" data-action="sb-pub"></button>
-          </div>
-          <div class="sbar-line">
-            <input class="sbar-field sbar-load" type="text" placeholder="Paste a chat ID to load" aria-label="Load chat by ID" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
-            <button class="sbar-mini" type="button" data-action="sb-load">Load</button>
+          <div class="sbar-vis">
+            <button class="sbar-seg" type="button" data-action="sb-public" data-vis="public" aria-pressed="false">Public</button>
+            <button class="sbar-seg" type="button" data-action="sb-private" data-vis="private" aria-pressed="true">Private</button>
           </div>
         </div>
       </div>
@@ -5897,22 +5899,24 @@ let sessionsBound = false;
 let pendingResend = null;
 
 /* ---------- SEARCH BAR + CHAT SHARE ---------- */
-var sbHits = [], sbIdx = -1, sbQuery = '', sbTimer = 0;
+var sbHits = [], sbIdx = -1, sbQuery = '', sbTimer = 0, sbMig = 0, sbLastTop = 0;
 var pubSig = new Map(), pubTimer = 0;
+const SB_LEN = 15;
 const SB_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%&*?+=-_';
 
 function sbMakeCode() {
   let c;
   do {
-    const r = crypto.getRandomValues(new Uint8Array(10));
+    const r = crypto.getRandomValues(new Uint8Array(SB_LEN));
     c = Array.from(r, (b) => SB_CHARS[b % SB_CHARS.length]).join('');
   } while (/^__.*__$/.test(c));
   return c;
 }
 
-/* the chat ID is made once per chat and kept for good */
+/* the chat ID is made once per chat and kept for good (always SB_LEN characters) */
 function sbCode(s) {
-  if (!s.shareCode) {
+  if (!s.shareCode || s.shareCode.length !== SB_LEN) {
+    if (s.shareCode) { pubDrop(s); pubSig.delete(s.id); }
     s.shareCode = sbMakeCode();
     if (!s.draft) persistSessions();
   }
@@ -5925,8 +5929,7 @@ function sbUi() {
   const has = sbHits.length > 0;
   const cnt = bar.querySelector('.sbar-count');
   cnt.textContent = sbQuery ? (has ? `${sbIdx + 1}/${sbHits.length}` : '0') : '';
-  cnt.hidden = !sbQuery;
-  bar.querySelectorAll('.sbar-nav').forEach((b) => { b.hidden = !has; });
+  bar.querySelectorAll('.sbar-nav').forEach((b) => { b.disabled = !has; });
 }
 
 function sbClear() {
@@ -5998,18 +6001,40 @@ function sbStep(d) {
   sbUi();
 }
 
+/* copy icon while the field shows this chat's own ID, load icon once it holds a different one */
+function sbCodeMode() {
+  const bar = q$('.sbar');
+  if (!bar) return;
+  const code = bar.querySelector('.sbar-code');
+  const act = bar.querySelector('.sbar-act');
+  if (!code || !act) return;
+  const load = code.value !== (currentSession.shareCode || '');
+  act.dataset.mode = load ? 'load' : 'copy';
+  act.setAttribute('aria-label', load ? 'Load chat' : 'Copy chat ID');
+  act.classList.toggle('is-dim', load && code.value.length !== SB_LEN);
+}
+
 function sbSyncShare() {
   const bar = q$('.sbar');
   if (!bar) return;
   const s = currentSession;
   const code = bar.querySelector('.sbar-code');
-  if (code) code.value = bar.dataset.open === '1' ? sbCode(s) : (s.shareCode || '');
-  bar.querySelector('.sbar-switch')?.setAttribute('aria-checked', String(!!s.sharePub));
+  if (code && document.activeElement !== code) {
+    code.value = bar.dataset.open === '1' ? sbCode(s) : (s.shareCode && s.shareCode.length === SB_LEN ? s.shareCode : '');
+  }
+  sbCodeMode();
+  bar.querySelectorAll('.sbar-seg').forEach((b) => {
+    b.setAttribute('aria-pressed', String((b.dataset.vis === 'public') === !!s.sharePub));
+  });
   bar.querySelector('.sbar-share')?.classList.toggle('on', !!s.sharePub);
 }
 
 function sbRemark() {
   try {
+    if (!sbMig && sessions.length) {
+      sbMig = 1;
+      sessions.forEach((x) => { if (x.shareCode && x.shareCode.length !== SB_LEN) sbCode(x); });
+    }
     if (sbQuery) sbMark(sbQuery, true);
     sbSyncShare();
   } catch (_) {}
@@ -6022,6 +6047,7 @@ function sbTogglePanel() {
   bar.dataset.open = open ? '1' : '0';
   bar.querySelector('.sbar-share')?.setAttribute('aria-expanded', String(open));
   bar.querySelector('.sbar-panel')?.toggleAttribute('inert', !open);
+  q$('.sbar-wrap')?.classList.remove('is-hidden');
   sbSyncShare();
 }
 
@@ -6057,6 +6083,7 @@ function pubDrop(s) {
 async function sbSetPublic(on) {
   const s = currentSession;
   if (!currentUser) { toast('Sign in to share chats.', 'info'); return; }
+  if (on === !!s.sharePub) return;
   if (on && !s.messages.length) { toast('Send a message first, then make it public.', 'info'); return; }
   const code = sbCode(s);
   try {
@@ -6083,10 +6110,9 @@ async function sbSetPublic(on) {
 
 async function sbLoad() {
   const bar = q$('.sbar');
-  const inp = bar?.querySelector('.sbar-load');
+  const inp = bar?.querySelector('.sbar-code');
   const code = (inp?.value || '').trim();
-  if (!code) { toast('Paste a chat ID first.', 'info', 1800); return; }
-  if (/[\/\s]/.test(code) || code.length > 40) { toast('That chat ID looks wrong.', 'info'); return; }
+  if (code.length !== SB_LEN || /[\/\s]/.test(code)) { toast(`A chat ID is exactly ${SB_LEN} characters.`, 'info', 2200); return; }
   if (!currentUser) { toast('Sign in to load shared chats.', 'info'); return; }
   if (chatBusy) { toast('Stop the response before switching sessions. (D06)', 'info'); return; }
   try {
@@ -6107,7 +6133,7 @@ async function sbLoad() {
     chatStick = true;
     clearDraft();
     persistSessions();
-    inp.value = '';
+    inp.blur();
     sbTogglePanel();
     renderSessionUi();
     scrollDown(true);
@@ -6121,18 +6147,23 @@ function sbAction(action) {
   if (action === 'sb-next') sbStep(1);
   else if (action === 'sb-prev') sbStep(-1);
   else if (action === 'sb-share') sbTogglePanel();
-  else if (action === 'sb-pub') sbSetPublic(!currentSession.sharePub);
-  else if (action === 'sb-load') sbLoad();
-  else if (action === 'sb-copy') {
-    copyText(sbCode(currentSession)).then((ok) => toast(ok ? 'Chat ID copied.' : 'Could not copy.', ok ? 'success' : 'error', 1600));
+  else if (action === 'sb-public') sbSetPublic(true);
+  else if (action === 'sb-private') sbSetPublic(false);
+  else if (action === 'sb-act') {
+    if (q$('.sbar-act')?.dataset.mode === 'load') sbLoad();
+    else copyText(sbCode(currentSession)).then((ok) => toast(ok ? 'Chat ID copied.' : 'Could not copy.', ok ? 'success' : 'error', 1600));
   }
 }
 
 document.addEventListener('input', (e) => {
   const t = e.target;
-  if (!t || !t.classList || !t.classList.contains('sbar-input')) return;
-  clearTimeout(sbTimer);
-  sbTimer = setTimeout(() => { sbQuery = t.value.trim(); sbMark(sbQuery, false); }, 120);
+  if (!t || !t.classList) return;
+  if (t.classList.contains('sbar-input')) {
+    clearTimeout(sbTimer);
+    sbTimer = setTimeout(() => { sbQuery = t.value.trim(); sbMark(sbQuery, false); }, 120);
+  } else if (t.classList.contains('sbar-code')) {
+    sbCodeMode();
+  }
 });
 
 document.addEventListener('keydown', (e) => {
@@ -6143,11 +6174,26 @@ document.addEventListener('keydown', (e) => {
     clearTimeout(sbTimer);
     if (sbQuery !== t.value.trim()) { sbQuery = t.value.trim(); sbMark(sbQuery, false); }
     else sbStep(e.shiftKey ? -1 : 1);
-  } else if (t.classList.contains('sbar-load')) {
+  } else if (t.classList.contains('sbar-code')) {
     e.preventDefault();
-    sbLoad();
+    if (q$('.sbar-act')?.dataset.mode === 'load') sbLoad();
   }
 });
+
+/* hide the bar when scrolling down, bring it back when scrolling up */
+document.addEventListener('scroll', (e) => {
+  const st = e.target;
+  if (!st || !st.classList || !st.classList.contains('stage')) return;
+  const wrap = q$('.sbar-wrap');
+  const bar = q$('.sbar');
+  if (!wrap || !bar) return;
+  const top = st.scrollTop;
+  const d = top - sbLastTop;
+  sbLastTop = top;
+  const pinned = !!sbQuery || bar.dataset.open === '1' || bar.contains(document.activeElement);
+  if (pinned || top < 24 || d < -4) wrap.classList.remove('is-hidden');
+  else if (d > 4) wrap.classList.add('is-hidden');
+}, true);
 
 function persistSessions() {
   if (!settings.saveSessions) return;
