@@ -7115,6 +7115,36 @@ const nearBottom = () => { const s = stageEl(); return !s || s.scrollHeight - s.
 let scrollDown = (force) => { const s = stageEl(); if (s && (force || (chatStick && settings.autoScroll))) s.scrollTop = s.scrollHeight; };
 const closeSidebarMobile = () => document.getElementById('sidebar')?.classList.remove('open');
 
+function resetNewSessionUi() {
+  activeEffort = DEFAULT_EFFORT;
+  updateEffortButton();
+  renderEffortList();
+  closeEffortMenu();
+
+  sessionQuery = '';
+  const sessionSearch = q$('[data-role="session-search"]');
+  if (sessionSearch) sessionSearch.value = '';
+
+  sbEnd();
+  sbSetPanel(false);
+  sbSetPin(false);
+  sbClear();
+  sbLastTop = 0;
+
+  pendingFiles = [];
+  try { sessionStorage.removeItem(PENDING_SS); } catch (_) {}
+  syncAttachUi();
+
+  const input = q$('.composer-input');
+  if (input) {
+    input.value = '';
+    input.style.height = '';
+  }
+
+  q$('.composer')?.__resetThink?.();
+  q$('.sbar-wrap')?.classList.remove('is-hidden');
+}
+
 function newSession() {
   if (chatBusy) { toast('Stop the response before switching sessions. (D06)', 'info'); return; }
   if (currentSession.draft && currentSession.messages.length === 0) {
@@ -7126,6 +7156,7 @@ function newSession() {
   currentSession = newDraft();
   chatStick = true;
   clearDraft();
+  resetNewSessionUi();
   renderSessionUi();
   closeSidebarMobile();
   q$('.composer-input')?.focus();
@@ -7138,6 +7169,7 @@ function openSession(id) {
   currentSession = s;
   chatStick = true;
   clearDraft();
+  resetNewSessionUi();
   renderSessionUi();
   scrollDown();
   closeSidebarMobile();
