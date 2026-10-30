@@ -244,9 +244,9 @@ html.has-vv #app-shell { height: var(--app-h); }
 @keyframes fdFadeOut { from { opacity: 1; } to { opacity: 0; } }
 @keyframes fdRise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 
-.fd-panel { position: fixed; inset: 0; z-index: 8500; display: flex; align-items: center; justify-content: center; padding: calc(12px + env(safe-area-inset-top, 0px)) 12px calc(12px + env(safe-area-inset-bottom, 0px)); background: rgba(0, 0, 0, 0.5); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); color: var(--fg); animation: fdFadeIn 0.22s ease both; }
+.fd-panel { position: fixed; inset: 0; z-index: 8500; display: flex; align-items: center; justify-content: center; padding: max(12px, env(safe-area-inset-top, 0px)) 12px max(12px, env(safe-area-inset-bottom, 0px)); background: rgba(0, 0, 0, 0.5); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); color: var(--fg); animation: fdFadeIn 0.22s ease both; }
 .fd-panel.leaving { animation: fdFadeOut 0.2s ease both; pointer-events: none; }
-.fd-sheet { display: flex; flex-direction: column; width: 100%; max-width: 520px; max-height: 100%; min-height: min(440px, 100%); overflow: hidden; background: var(--surface-3); border: 1px solid var(--glass-border); border-radius: 22px; box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35); animation: fdRise 0.3s var(--ease-spring) both; }
+.fd-sheet { display: flex; flex-direction: column; width: 100%; max-width: 520px; height: 100%; max-height: 100%; overflow: hidden; background: var(--bg); background: color-mix(in srgb, var(--bg) 97%, var(--fg)); border: 1px solid var(--glass-border); border-radius: 22px; box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45); animation: fdRise 0.3s var(--ease-spring) both; }
 .fd-bar { display: flex; align-items: center; gap: 10px; padding: 16px 16px 14px; border-bottom: 1px solid var(--glass-border); }
 .fd-heading { display: flex; flex-direction: column; flex: 1; gap: 2px; min-width: 0; }
 .fd-title { margin: 0; font-size: calc(17px * var(--ts)); font-weight: 600; letter-spacing: -0.01em; }
@@ -2950,17 +2950,18 @@ html[data-motion="reduce"] .think-panel { transition: none; }
 .file-card--image { --file-c: #ff8fc7; --file-bg: rgba(244, 114, 182, 0.16); }
 .file-card[class*="file-card--"] .file-card-sub { color: var(--file-c); }
 
-.file-viewer { max-width: 560px; max-height: 84vh; padding: 16px; gap: 12px; border-radius: 22px; }
-.file-viewer-head { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.file-viewer-head .dialog-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.file-viewer-meta { font-size: calc(11px * var(--ts)); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--gray-mid); }
+.dialog-scrim:has(.file-viewer) { padding: max(12px, env(safe-area-inset-top, 0px)) 12px max(12px, env(safe-area-inset-bottom, 0px)); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.file-viewer { max-width: 640px; height: 100%; max-height: 100%; padding: 0; gap: 0; overflow: hidden; background: var(--bg); background: color-mix(in srgb, var(--bg) 97%, var(--fg)); border-radius: 22px; box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45); }
+.file-viewer-head { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; padding: 16px 16px 14px; border-bottom: 1px solid var(--glass-border); }
+.file-viewer-head .dialog-title { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-viewer-meta { padding: 4px 10px; border-radius: var(--radius-pill); background: var(--glass-bg); border: 1px solid var(--glass-border); font-size: calc(11px * var(--ts)); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--gray-mid); }
 .file-viewer-code {
-  margin: 0; flex: 1 1 auto; min-height: 0; max-height: 56vh; overflow: auto; padding: 14px;
+  margin: 12px 12px 0; flex: 1 1 auto; min-height: 0; max-height: none; overflow: auto; padding: 14px;
   font: calc(12.5px * var(--ts)) / 1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  white-space: pre; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 14px;
+  white-space: pre; background: var(--bg); border: 1px solid var(--glass-border); border-radius: 14px;
   -webkit-overflow-scrolling: touch;
 }
-.fv-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.fv-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 12px; }
 .fv-btn {
   height: 42px; border-radius: var(--radius-pill); color: var(--fg);
   font-size: calc(13px * var(--ts)); font-weight: 600;
