@@ -1982,6 +1982,37 @@ select.input { width: 100%; appearance: none; -webkit-appearance: none; }
 }
 .seg-btn.on { background: var(--accent); color: var(--on-accent); font-weight: 600; }
 
+html[data-status-mode="auto"] .seg[data-seg-group="status"] .seg-btn {
+  border: 1px solid rgba(var(--fg-rgb), 0.22);
+}
+
+html[data-status-mode="auto"] .seg[data-seg-group="status"] .seg-btn[data-val="auto"] {
+  background: #ffffff;
+  color: #000000;
+  border-color: #ffffff;
+  font-weight: 600;
+}
+
+html[data-status-mode="auto"][data-status="online"]
+  .seg[data-seg-group="status"] .seg-btn[data-val="online"] {
+  border-color: #ffffff;
+}
+
+html[data-status-mode="auto"][data-status="online"]
+  .seg[data-seg-group="status"] .seg-btn[data-val="offline"] {
+  border-color: rgba(var(--fg-rgb), 0.22);
+}
+
+html[data-status-mode="auto"][data-status="offline"]
+  .seg[data-seg-group="status"] .seg-btn[data-val="offline"] {
+  border-color: #ffffff;
+}
+
+html[data-status-mode="auto"][data-status="offline"]
+  .seg[data-seg-group="status"] .seg-btn[data-val="online"] {
+  border-color: rgba(var(--fg-rgb), 0.22);
+}
+
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip {
   padding: 6px 11px;

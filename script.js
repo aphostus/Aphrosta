@@ -255,8 +255,9 @@ const TONES = [
 ].map((n) => ({ id: n.toLowerCase(), name: n }));
 
 const STATUSES = [
-  { id: 'online',  name: 'Online' },
-  { id: 'offline', name: 'Offline' }
+  { id: 'offline', name: 'Offline' },
+  { id: 'auto',    name: 'Auto' },
+  { id: 'online',  name: 'Online' }
 ];
 
 const LANGUAGES = [
@@ -408,7 +409,19 @@ function loadSettings() {
 let settings = loadSettings();
 
 let accountActive = true;
-try { accountActive = localStorage.getItem(ACCOUNT_ACTIVE_LS) !== 'false'; } catch (_) {}
+let accountStatusOffline = false;
+
+try {
+  accountActive = localStorage.getItem(ACCOUNT_ACTIVE_LS) !== 'false';
+} catch (_) {}
+
+function accountStatusUnavailable() {
+  toast(
+    'Account status could not be verified. Viewing is available, but chatting and account changes are disabled. Try again when you are online.',
+    'info',
+    5000
+  );
+}
 
 function setAccountActive(on) {
   const wasActive = accountActive;
@@ -516,8 +529,17 @@ const lsGet = (k, d) => {
   try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (_) { return d; }
 };
 
+function effectiveStatus() {
+  if (settings.status === 'auto') {
+    return currentUser || chatBusy ? 'online' : 'offline';
+  }
+
+  return settings.status;
+}
+
 function applySettings() {
   const root = document.documentElement;
+  const liveStatus = effectiveStatus();
 
   const theme = settings.appearance === 'system'
     ? (systemLight?.matches ? 'light' : 'dark')
@@ -539,7 +561,10 @@ function applySettings() {
 
   root.style.setProperty('--font', byId(FONTS, settings.font).stack);
   root.style.setProperty('--ts', String(byId(TEXT_SIZES, settings.size).s));
-  root.dataset.status = settings.status;
+  root.dataset.status = liveStatus;
+  root.dataset.statusMode = settings.status;
+  root.dataset.statusAuto = settings.status === 'auto' ? liveStatus : '';
+
   root.dataset.motion = settings.reduceMotion ? 'reduce' : 'full';
   root.dataset.lh = settings.lineHeight;
   root.dataset.cs = settings.codeSize;
@@ -911,6 +936,8 @@ const THINK_STATES = [
 let aiState = 'idle';
 function setAiState(next) {
   if (!AI_STATES[next]) return;
+
+  if (settings.status === 'auto') applySettings();
   if (aiState === next) return;
   aiState = next;
   const label = AI_STATES[next]?.label;
@@ -1413,7 +1440,9 @@ const SUM = {
   series:     () => 'Pluthos',
   versions:   () => settings.version || '1.00',
   responses:  () => `${cap(settings.length)} · ${byId(TONES, settings.tone).name}`,
-  status:     () => byId(STATUSES, settings.status).name,
+  status:     () => settings.status === 'auto'
+    ? `Auto · ${cap(effectiveStatus())}`
+    : byId(STATUSES, settings.status).name,
   personalize: () => settings.nickname || (settings.persRole ? 'Set' : 'Off'),
   controls:   () => cap(settings.creativity),
   profile:    () => settings.username || '',
@@ -1441,7 +1470,7 @@ const fmtBytes = (n) => {
 };
 
 const Seg = (key, opts, selected) => `
-  <div class="seg" role="radiogroup">
+  <div class="seg" role="radiogroup" data-seg-group="${esc(key)}">
     ${opts.map((o) => `<button class="seg-btn ${o.id === selected ? 'on' : ''}" type="button" role="radio" aria-checked="${o.id === selected}" data-seg="${key}" data-val="${o.id}"${o.style ? ` style="${o.style}"` : ''}>${esc(o.name)}</button>`).join('')}
   </div>`;
 
@@ -2283,6 +2312,15 @@ function onSettingsClick(e) {
 
   const actEl = t.closest('[data-act]');
   const act = actEl?.dataset.act;
+
+  if (
+    accountStatusOffline &&
+    (act === 'deactivate' || act === 'activate')
+  ) {
+    accountStatusUnavailable();
+    return;
+  }
+
   switch (act) {
     case 'account-open':  return openAccountPage();
     case 'account-back':  return closeAccountPage();
@@ -3130,7 +3168,24 @@ function timeAgo(ts) {
 }
 
 async function registerDevice(user) {
-  try { await setDoc(doc(db, 'users', user.uid, 'devices', deviceId), deviceInfo(), { merge: true }); } catch (_) {}
+  try {
+    const ref = collection(db, 'users', user.uid, 'devices');
+    const snap = await getDocs(ref);
+
+    const anotherDeviceExists = snap.docs.some((d) => d.id !== deviceId);
+    if (anotherDeviceExists) return false;
+
+    await setDoc(
+      doc(db, 'users', user.uid, 'devices', deviceId),
+      deviceInfo(),
+      { merge: true }
+    );
+
+    return true;
+  } catch (err) {
+    console.error('[DEVICE] Could not verify first device:', err);
+    return false;
+  }
 }
 
 async function renderDevices() {
@@ -6194,6 +6249,14 @@ async function sbSetPublic(on) {
   if (on === !!s.sharePub) return;
   if (sbBusy) return;
   if (on && !s.messages.length) { toast('Send a message first, then make it public.', 'info'); return; }
+  if (on) {
+    toast(
+      'Warning: this conversation will be readable by anyone with its chat ID.',
+      'info',
+      4200
+    );
+  }
+
   sbBusy = true;
   sbSetVisLoading(true);
   const code = sbCode(s);
@@ -6989,6 +7052,8 @@ function startStatusRotor() {
 function stopStatusRotor() {
   if (statusTimer) clearInterval(statusTimer);
   statusTimer = 0;
+
+  if (settings.status === 'auto') applySettings();
 }
 
 const NO_REPLY_TEXT = 'No reply was generated. The response may have been stopped, or the model ran out of space. Try again or switch models.';
@@ -7381,6 +7446,11 @@ function retryFailed() {
 }
 
 function chatReady() {
+  if (accountStatusOffline) {
+    accountStatusUnavailable();
+    return false;
+  }
+
   if (!accountActive) {
     toast('Your account is deactivated. Activate it in Account settings to chat. (D01)', 'info', 3200);
     return false;
@@ -8990,6 +9060,7 @@ function startOnboarding(force = false) {
 
 function renderHome(user) {
   currentUser = user;
+  applySettings();
   stopSpeaking();
   LIVE_VOICES.forEach((stop) => { try { stop(); } catch (_) {} });
   LIVE_VOICES.clear();
@@ -9146,6 +9217,8 @@ function wipeLocalChatState() {
 }
 
 async function handleSignOut() {
+  accountStatusOffline = false;
+
   try {
     showLoader();
     stopSpeaking();
@@ -9188,6 +9261,7 @@ async function boot() {
       hideLoader();
       bindAccountKeys(user.uid);
       let blocked = null;
+      accountStatusOffline = false;
       const emailKey = lockKey(user.email);
       try {
         if (emailKey) {
@@ -9204,6 +9278,12 @@ async function boot() {
         }
       } catch (err) {
         console.error('[A10] Lock check failed:', err?.code, err?.message);
+        accountStatusOffline = true;
+        toast(
+          'Account status could not be verified. You can view local sessions, but chatting is temporarily disabled.',
+          'info',
+          5000
+        );
       }
       if (!blocked && emailKey) blocked = readLocalLocks()[emailKey] || null;
       if (blocked) {
@@ -9212,10 +9292,24 @@ async function boot() {
         await signOut(auth);
         return;
       }
+      const deviceAllowed = await registerDevice(user);
+
+      if (!deviceAllowed) {
+        authBlocked = true;
+        hideLoader();
+        appEl.innerHTML = `
+          <div style="display:grid;place-items:center;height:100vh;padding:24px;text-align:center">
+            <p style="max-width:340px;line-height:1.6;color:var(--gray-light)">
+              This account is already registered on another device.
+            </p>
+          </div>`;
+        await signOut(auth);
+        return;
+      }
+
       renderHome(user);
       loadDictionary(settings.langIn);
       try { await Cloud.init(user); } catch (_) {}
-      registerDevice(user);
       applyProfile();
       refreshStorage();
       updateAccountBanner();
