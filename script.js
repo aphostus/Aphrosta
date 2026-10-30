@@ -6690,6 +6690,158 @@ function chartCardHtml(raw) {
   if (document.body) go(); else document.addEventListener('DOMContentLoaded', go);
 })();
 
+/* ---- Mermaid diagrams: lazy-loaded, themed, copy / SVG / fullscreen zoom ---- */
+const MMD_SRC = 'https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js';
+const mmdCache = new Map();
+let mmdLoading = null;
+let mmdQueue = Promise.resolve();
+let mmdSeq = 0;
+
+function mmdIsLight() {
+  try {
+    const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
+    const m = bg.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+    if (m) {
+      let h = m[1];
+      if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+      const n = parseInt(h, 16);
+      return ((n >> 16) * 299 + ((n >> 8) & 255) * 587 + (n & 255) * 114) / 1000 > 140;
+    }
+  } catch (e) { /* fall through */ }
+  return document.documentElement.getAttribute('data-theme') === 'light';
+}
+
+const mmdKey = (code) => (mmdIsLight() ? 'l:' : 'd:') + code;
+
+function mmdLoadLib() {
+  if (window.mermaid) return Promise.resolve(window.mermaid);
+  if (!mmdLoading) {
+    mmdLoading = new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = MMD_SRC;
+      s.async = true;
+      s.onload = () => (window.mermaid ? res(window.mermaid) : rej(new Error('Mermaid did not start')));
+      s.onerror = () => { mmdLoading = null; rej(new Error('Could not load Mermaid. Check your connection.')); };
+      document.head.appendChild(s);
+    });
+  }
+  return mmdLoading;
+}
+
+function mmdCardHtml(code) {
+  const hit = mmdCache.get(mmdKey(code));
+  const inner = hit || '<div class="mmd-load">Drawing diagram\u2026</div>';
+  return '<div class="mmd-card' + (hit ? ' mmd-ok" data-ready="1' : '') + '" data-code="' + esc(code) + '">'
+    + '<div class="mmd-bar"><span class="mmd-title">Diagram</span><span class="mmd-actions">'
+    + '<button class="mmd-btn" type="button" data-mm="copy">Copy code</button>'
+    + '<button class="mmd-btn" type="button" data-mm="svg">Download SVG</button>'
+    + '<button class="mmd-btn" type="button" data-mm="full">Zoom</button>'
+    + '</span></div><div class="mmd-view" data-mm="full">' + inner + '</div></div>';
+}
+
+function mmdHydrate(card) {
+  card.setAttribute('data-ready', '1');
+  const code = card.getAttribute('data-code') || '';
+  const view = card.querySelector('.mmd-view');
+  mmdQueue = mmdQueue.then(async () => {
+    try {
+      const key = mmdKey(code);
+      let svg = mmdCache.get(key);
+      if (!svg) {
+        const m = await mmdLoadLib();
+        m.initialize({ startOnLoad: false, securityLevel: 'strict', theme: mmdIsLight() ? 'default' : 'dark', fontFamily: 'inherit' });
+        const id = 'mmd-' + (++mmdSeq);
+        try {
+          svg = (await m.render(id, code)).svg;
+        } finally {
+          [id, 'd' + id].forEach((x) => { const n = document.getElementById(x); if (n) n.remove(); });
+        }
+        mmdCache.set(key, svg);
+      }
+      view.innerHTML = svg;
+      card.classList.add('mmd-ok');
+    } catch (err) {
+      const msg = String((err && err.message) || err || 'Unknown error').split('\n')[0].slice(0, 160);
+      view.innerHTML = '<div class="mmd-err">Could not draw this diagram: ' + esc(msg) + '</div><pre class="mmd-src">' + esc(code) + '</pre>';
+    }
+  });
+}
+
+(function mmdWatch() {
+  let queued = false;
+  const scan = () => { queued = false; document.querySelectorAll('.mmd-card:not([data-ready])').forEach(mmdHydrate); };
+  const obs = new MutationObserver(() => { if (!queued) { queued = true; setTimeout(scan, 0); } });
+  const go = () => { obs.observe(document.body, { childList: true, subtree: true }); scan(); };
+  if (document.body) go(); else document.addEventListener('DOMContentLoaded', go);
+})();
+
+function mmdFullscreen(card) {
+  const view = card.querySelector('.mmd-view');
+  if (!view || !view.querySelector('svg')) return;
+  const ov = document.createElement('div');
+  ov.className = 'mmd-full';
+  ov.innerHTML = '<div class="mmd-full-bar"><button class="mmd-btn" type="button" data-z="out">\u2212</button><button class="mmd-btn" type="button" data-z="in">+</button><button class="mmd-btn" type="button" data-z="fit">Fit</button><button class="mmd-btn" type="button" data-z="x">Close</button></div><div class="mmd-full-body"></div>';
+  const body = ov.querySelector('.mmd-full-body');
+  body.innerHTML = view.innerHTML;
+  document.body.appendChild(ov);
+  const s = body.querySelector('svg');
+  const vb = s.viewBox && s.viewBox.baseVal;
+  const box = s.getBoundingClientRect();
+  const w0 = (vb && vb.width) || box.width || 600;
+  const h0 = (vb && vb.height) || box.height || 400;
+  let scale = 1;
+  const apply = () => {
+    s.style.maxWidth = 'none';
+    s.style.width = Math.round(w0 * scale) + 'px';
+    s.style.height = Math.round(h0 * scale) + 'px';
+  };
+  const setScale = (v) => { scale = Math.max(0.2, Math.min(8, v)); apply(); };
+  const fit = () => setScale(Math.min((body.clientWidth - 24) / w0, 3));
+  const close = () => { document.removeEventListener('keydown', onKey); ov.remove(); };
+  const onKey = (e) => { if (e.key === 'Escape') close(); };
+  document.addEventListener('keydown', onKey);
+  ov.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-z]');
+    if (!b) return;
+    const z = b.getAttribute('data-z');
+    if (z === 'x') close();
+    else if (z === 'in') setScale(scale * 1.3);
+    else if (z === 'out') setScale(scale / 1.3);
+    else fit();
+  });
+  let d0 = 0, s0 = 1;
+  const dist = (e) => Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+  body.addEventListener('touchstart', (e) => { if (e.touches.length === 2) { d0 = dist(e); s0 = scale; } }, { passive: true });
+  body.addEventListener('touchmove', (e) => { if (e.touches.length === 2 && d0) setScale(s0 * dist(e) / d0); }, { passive: true });
+  body.addEventListener('touchend', () => { d0 = 0; }, { passive: true });
+  fit();
+}
+
+document.addEventListener('click', (e) => {
+  const mb = e.target.closest('.mmd-card [data-mm]');
+  if (!mb) return;
+  const card = mb.closest('.mmd-card');
+  const act = mb.getAttribute('data-mm');
+  const code = card.getAttribute('data-code') || '';
+  if (act === 'copy') {
+    const done = () => { mb.textContent = 'Copied'; setTimeout(() => { mb.textContent = 'Copy code'; }, 1200); };
+    if (navigator.clipboard) navigator.clipboard.writeText(code).then(done).catch(() => {});
+  } else if (act === 'svg') {
+    const sv = card.querySelector('.mmd-view svg');
+    if (!sv) return;
+    const blob = new Blob([new XMLSerializer().serializeToString(sv)], { type: 'image/svg+xml' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'diagram.svg';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  } else if (act === 'full') {
+    mmdFullscreen(card);
+  }
+});
+
 document.addEventListener('click', (e) => {
   const cp = e.target.closest('.code-copy');
   if (cp) {
@@ -7193,6 +7345,7 @@ function renderMd(src) {
       const f = parseFence(parts[i], i);
       const isStreamingLast = streamingFence && i === parts.length - 1;
       if (f.lang === 'chart' && !isStreamingLast) { items.push({ type: 'chart', f, i }); continue; }
+      if ((f.lang === 'mermaid' || f.lang === 'mmd') && !isStreamingLast) { items.push({ type: 'mermaid', f, i }); continue; }
       if (f.isFile && !isStreamingLast) items.push({ type: 'file', f, i });
       else items.push({ type: 'code', f, i });
     } else {
@@ -7239,6 +7392,10 @@ function renderMd(src) {
     }
     if (it.type === 'chart') {
       out.push(chartCardHtml(it.f.name));
+      return;
+    }
+    if (it.type === 'mermaid') {
+      out.push(mmdCardHtml(it.f.code));
       return;
     }
     if (it.type === 'code') {
@@ -8153,6 +8310,7 @@ let systemPrompt = function () {
   ];
   lines.push('When you write code or a file longer than about 10 lines, put it in a fenced block whose first line is the language followed by the filename, for example ```js script.js. One file per block.');
   lines.push('To show a live price chart card for a crypto coin, currency pair or stock, write a fenced block: three backticks followed by chart and the symbol on the first line (for example ```chart BTC or ```chart EUR/USD or ```chart AAPL), then three closing backticks on the next line. Never write chart SYMBOL as plain text. Never invent prices.');
+  lines.push('DIAGRAMS: Whenever the user asks for ANY diagram, or wants something visualised, mapped out or drawn as a structure (flowchart, sequence diagram, class diagram, state diagram, ER diagram, gantt, mind map, timeline, pie chart, git graph, user journey, quadrant chart, architecture, org chart, process, network, hierarchy), ALWAYS answer with a Mermaid diagram in a fenced block: the first line is three backticks followed by mermaid, the last line is three backticks. Pick the best Mermaid type for the request: flowchart, sequenceDiagram, classDiagram, stateDiagram-v2, erDiagram, gantt, pie, mindmap, timeline, journey, gitGraph, quadrantChart, requirementDiagram, C4Context, sankey-beta, xychart-beta, block-beta, packet-beta or architecture-beta. Use valid Mermaid syntax only. Put any node label that has spaces, brackets, punctuation or non-ASCII characters in double quotes. Never put HTML, markdown or code fences inside the diagram. One diagram per block. Keep your text to one short sentence unless the user wants an explanation. Never draw diagrams as ASCII art, raw SVG, HTML or images unless the user explicitly asks for that format. Live price charts for coins, currencies and stocks still use the chart block, not Mermaid.');
   if (settings.langOut && settings.langOut !== 'en') lines.push(`Always reply in ${byId(LANGUAGES, settings.langOut).name}.`);
   if (settings.nickname) lines.push(`Call the user ${settings.nickname}.`);
   if (settings.instructions) lines.push(`User instructions: ${settings.instructions}`);
