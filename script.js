@@ -1918,6 +1918,7 @@ async function libSave({ title, instructions, files }) {
     tx.onabort = () => rej(tx.error);
   });
   libItems.push(item);
+  fmStoreLib(item.id, files).catch(() => {});
   return item;
 }
 
@@ -1947,6 +1948,7 @@ async function libDelete(id) {
     tx.onerror = () => rej(tx.error);
   });
   libItems = libItems.filter((i) => i.id !== id);
+  fmDelItem(id).catch(() => {});
 }
 
 function libScan(itemId, fn) {
@@ -6756,10 +6758,154 @@ function fmNumbered(code, q, budget) {
   return out.join('\n');
 }
 
-function fmContext(query) {
+/* ---------- FILE STORE: library files + attachments (exact original text, own IndexedDB) ---------- */
+let fmBases = new Map();
+let fmDbP = null;
+const FM_MAX = 400000;
+
+function fmDb() {
+  if (!fmDbP) {
+    fmDbP = new Promise((res, rej) => {
+      const r = indexedDB.open('aphrosta-files', 1);
+      r.onupgradeneeded = () => { r.result.createObjectStore('files', { keyPath: 'k' }).createIndex('item', 'item'); };
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => rej(r.error);
+    });
+  }
+  return fmDbP;
+}
+
+async function fmPut(recs) {
+  if (!recs.length) return;
+  const db = await fmDb();
+  await new Promise((res, rej) => {
+    const tx = db.transaction('files', 'readwrite');
+    recs.forEach((x) => tx.objectStore('files').put(x));
+    tx.oncomplete = () => res();
+    tx.onerror = () => rej(tx.error);
+    tx.onabort = () => rej(tx.error);
+  });
+}
+
+async function fmAllStored() {
+  const db = await fmDb();
+  return new Promise((res, rej) => {
+    const r = db.transaction('files').objectStore('files').getAll();
+    r.onsuccess = () => res(r.result || []);
+    r.onerror = () => rej(r.error);
+  });
+}
+
+async function fmDelKeys(keys) {
+  if (!keys.length) return;
+  const db = await fmDb();
+  await new Promise((res, rej) => {
+    const tx = db.transaction('files', 'readwrite');
+    keys.forEach((k) => tx.objectStore('files').delete(k));
+    tx.oncomplete = () => res();
+    tx.onerror = () => rej(tx.error);
+  });
+}
+
+async function fmDelItem(id) {
+  const db = await fmDb();
+  await new Promise((res, rej) => {
+    const tx = db.transaction('files', 'readwrite');
+    const cur = tx.objectStore('files').index('item').openCursor(IDBKeyRange.only(id));
+    cur.onsuccess = () => { const c = cur.result; if (c) { c.delete(); c.continue(); } };
+    tx.oncomplete = () => res();
+    tx.onerror = () => rej(tx.error);
+  });
+}
+
+async function fmStoreLib(itemId, files) {
+  const recs = [];
+  for (const file of files) {
+    const text = await file.text();
+    if (!text || text.length > FM_MAX || libIsBinary(text)) continue;
+    recs.push({ k: 'lib:' + itemId + ':' + file.name, item: itemId, src: 'lib', name: file.name, text, t: Date.now() });
+  }
+  await fmPut(recs);
+}
+
+async function fmStoreAtts(session) {
+  const m = [...session.messages].reverse().find((x) => x.role === 'user' && x.attachments && x.attachments.length);
+  if (!m) return;
+  const recs = m.attachments
+    .filter((a) => a.kind === 'text' && !a.cut && a.text && a.text.length <= FM_MAX)
+    .map((a) => ({ k: 'att:' + a.name, item: 'att', src: 'att', name: a.name, text: a.text, t: m.t || Date.now() }));
+  if (!recs.length) return;
+  await fmPut(recs);
+  const old = (await fmAllStored()).filter((r) => r.src === 'att').sort((a, b) => b.t - a.t).slice(40);
+  await fmDelKeys(old.map((r) => r.k));
+}
+
+function fmMerge(a, b) {
+  const out = new Map(a);
+  b.forEach((v, k) => {
+    const o = out.get(k);
+    if (!o || (v.t || 0) > (o.t || 0)) out.set(k, v);
+  });
+  return out;
+}
+
+async function fmExternal(query, session) {
+  const out = new Map();
+  const put = (name, text, t, src) => {
+    if (!name || !text || /\s/.test(name)) return;
+    const o = out.get(name);
+    if (o && o.t >= t) return;
+    const ext = name.includes('.') ? name.split('.').pop().toLowerCase() : '';
+    out.set(name, { f: { name, code: text, lines: text.split('\n').length, lang: ext, ext }, cur: false, fresh: false, t, src });
+  };
+  if (!libItems.length) await libLoad().catch(() => {});
+  const libIds = new Set(libItems.map((i) => i.id));
+  const have = new Set();
+  try {
+    (await fmAllStored()).forEach((r) => {
+      if (r.src === 'lib' && !libIds.has(r.item)) return;
+      have.add(r.k);
+      put(r.name, r.text, r.t, r.src);
+    });
+  } catch (_) {}
+  const all = (typeof sessions !== 'undefined' ? sessions : []).concat([session]);
+  all.forEach((s) => (s.messages || []).forEach((m) => {
+    (m.attachments || []).forEach((a) => { if (a.kind === 'text' && !a.cut) put(a.name, a.text, m.t || 0, 'att'); });
+  }));
+  const lastUser = [...(session.messages || [])].reverse().find((x) => x.role === 'user' && x.attachments && x.attachments.length);
+  if (lastUser) lastUser.attachments.forEach((a) => { const o = out.get(a.name); if (o && a.kind === 'text' && !a.cut) o.fresh = true; });
+  try {
+    const q = libTokens(query);
+    const flat = String(query).toLowerCase();
+    const cands = libItems.filter((it) => it.parts > 0 && (q.some((w) => it.ik.includes(w)) || libFilesOf(it).some((f) => flat.includes(String(f.name).toLowerCase())))).slice(0, 3);
+    for (const it of cands) {
+      for (const fm of libFilesOf(it)) {
+        if (!fm.parts || have.has('lib:' + it.id + ':' + fm.name)) continue;
+        const chunks = [];
+        await libScan(it.id, (c) => { if (c.fn === fm.name) chunks.push(c); });
+        chunks.sort((a, b) => a.n - b.n);
+        const text = chunks.map((c) => c.text).join('\n\n');
+        if (text.length === fm.size) put(fm.name, text, it.t || 0, 'lib');
+      }
+    }
+  } catch (_) {}
+  return out;
+}
+
+async function fmPrepare(query, session) {
+  let extra = new Map();
+  try {
+    fmStoreAtts(session).catch(() => {});
+    extra = await fmExternal(query, session);
+  } catch (_) {}
+  fmBases = extra;
+  return fmContext(query, extra);
+}
+
+function fmContext(query, extra) {
   let files;
-  try { files = [...fmCollect(null).values()]; } catch (_) { return ''; }
-  if (!files.length) return '';
+  try { files = [...fmMerge(fmCollect(null), extra || new Map()).values()].filter((x) => !/\s/.test(x.f.name)); } catch (_) { return null; }
+  if (!files.length) return null;
   const q = libTokens(query);
   const flat = String(query).toLowerCase();
   const editWord = /\b(fix|change|update|edit|add|remove|rename|modify|tweak|improve|make|set|replace|continue|also|now)\b/i.test(query);
@@ -6769,15 +6915,19 @@ function fmContext(query) {
     let s = 0;
     if (flat.includes(x.f.name.toLowerCase())) s += 10;
     for (const w of q) { if (nameTok.includes(w)) s += 3; else if (bodyTok.has(w)) s += 1; }
+    if (x.fresh) s += 6;
     if (x.cur) s += editWord ? 3 : 1;
     return { x, s };
   }).filter((r) => r.s >= 3).sort((a, b) => b.s - a.s || b.x.t - a.x.t).slice(0, 2);
-  if (!picked.length) return '';
-  const blocks = picked.map(({ x }) => 'FILE ' + x.f.name + ' (' + x.f.lines + ' lines)\n' + fmNumbered(x.f.code, q, 9000));
-  return 'SAVED FILES YOU WROTE EARLIER (live data, available to you right now). Line numbers are shown as "N| " and are NOT part of the code.\n\n' + blocks.join('\n\n')
-    + '\n\nEDIT RULE: If the user\u2019s request fits one of these saved files, do NOT rewrite the file. Reply with only the targeted changes. Each change is a short label line, then one code block holding ONLY the new code (no line numbers): '
-    + '"Edit NAME lines A-B:" replaces those lines. "Insert into NAME after line N:" adds after line N (0 means the top). "Append to NAME:" adds at the end of the file. "Delete NAME lines A-B." has no code block. '
-    + 'Use several labels for several changes. Line numbers always refer to the file exactly as shown above. Write a whole new file only when nothing saved fits or the user asks for a full rewrite.';
+  if (!picked.length) return null;
+  const SRC = { att: 'attached', lib: 'library' };
+  const blocks = picked.map(({ x }) => 'FILE ' + x.f.name + ' (' + x.f.lines + ' lines, ' + (SRC[x.src] || 'written earlier') + ')\n' + fmNumbered(x.f.code, q, 9000));
+  return {
+    files: 'SAVED FILES you can edit: files you wrote earlier, files the user attached, and files from the user\u2019s library (live data, available to you right now). Line numbers are shown as "N| " and are NOT part of the code. If the same file also appears elsewhere in this conversation, use the numbered copy here for line numbers.\n\n' + blocks.join('\n\n'),
+    rules: 'EDIT RULE: If the user\u2019s request fits one of the saved files above, do NOT rewrite the file. Reply with only the targeted changes. Each change is a short label line, then one code block holding ONLY the new code (no line numbers): '
+      + '"Edit NAME lines A-B:" replaces those lines. "Insert into NAME after line N:" adds after line N (0 means the top). "Append to NAME:" adds at the end of the file. "Delete NAME lines A-B." has no code block. '
+      + 'Use several labels for several changes. Line numbers always refer to the file exactly as shown above. Attached and library originals are never changed; your edits produce a patched copy. Write a whole new file only when nothing saved fits or the user asks for a full rewrite.'
+  };
 }
 
 const FM_LABEL = /^(Edit|Insert into|Insert in|Append to|Delete)\s+(\S+?)\s*(?:lines?\s+(\d+)(?:\s*(?:-|to|\u2013|\u2014)\s*(\d+))?|after\s+line\s+(\d+))?\s*[:.]?$/i;
@@ -6849,7 +6999,7 @@ function editApply(ai) {
   try {
     const ops = fmParseOps(ai.content);
     if (!ops.length) return;
-    const base = fmCollect(ai);
+    const base = fmMerge(fmCollect(ai), fmBases);
     const byFile = new Map();
     ops.forEach((o) => { if (!byFile.has(o.name)) byFile.set(o.name, []); byFile.get(o.name).push(o); });
     const done = [], failed = [], spans = [];
@@ -8490,7 +8640,15 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
   const sLib = Shield.clean(libContext);
   pendingToolContext = sTool.text ? Shield.wrap(sTool.text, 'web-or-tool') : '';
   libContext = sLib.text ? Shield.wrap(sLib.text, 'library') : '';
-  editCtx = isContinue ? '' : fmContext(seedText);
+  editCtx = '';
+  if (!isContinue) {
+    const fmc = await fmPrepare(seedText, session).catch(() => null);
+    if (fmc) {
+      const sFm = Shield.clean(fmc.files);
+      if (sFm.hit) Shield.notify('I03');
+      else editCtx = Shield.wrap(sFm.text, 'saved-files') + '\n\n' + fmc.rules;
+    }
+  }
   if (sTool.hit) Shield.notify('I04');
   if (sLib.hit) Shield.notify('I03');
   const messages = buildMessages();
