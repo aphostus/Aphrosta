@@ -960,7 +960,6 @@ const ICONS = {
   play:     svg('<path d="M8 5.2v13.6a.7.7 0 001.07.6l10.6-6.8a.7.7 0 000-1.2L9.07 4.6A.7.7 0 008 5.2z"/>', 20),
   search:   svg('<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>', 16),
   teamShare: svg('<circle cx="9" cy="8" r="3"/><path d="M3 20v-1a5 5 0 015-5h2a5 5 0 015 5v1"/><circle cx="17.5" cy="9" r="2.4"/><path d="M17 14.2a4 4 0 014 3.8v1.5"/>', 18),
-  shareLoading: svg('<path d="M7 7h5a5 5 0 014.7 6.7"/><path d="M17 17h-5a5 5 0 01-4.7-6.7"/><path d="M7 4v3h3"/><path d="M17 20v-3h-3"/>', 16),
   chevL:    svg('<path d="M15 6l-6 6 6 6"/>', 14),
   loadIn:   svg('<path d="M12 4v11M7 11l5 5 5-5M5 20h14"/>', 16),
   lock:     svg('<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/>', 16),
@@ -2833,7 +2832,6 @@ const SearchBar = () => `
             <button class="sbar-vis" type="button" data-action="sb-vis" data-state="private" aria-label="Private. Tap to make public">
               <span class="sbar-vis-priv">${ICONS.lock}</span>
               <span class="sbar-vis-pub">${ICONS.globe}</span>
-              <span class="sbar-vis-loading">${ICONS.shareLoading}</span>
             </button>
             <div class="sbar-pill">
               <input class="sbar-code" type="text" maxlength="15" aria-label="Chat ID" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" value="">
@@ -6230,18 +6228,7 @@ function sbShareErr(err) {
 }
 
 var sbBusy = false;
-async function sbSetVisLoading(on) {
-  const vis = q$('.sbar-vis');
-  if (!vis) return;
-
-  if (on) {
-    vis.dataset.loading = '1';
-    vis.setAttribute('aria-busy', 'true');
-  } else {
-    delete vis.dataset.loading;
-    vis.setAttribute('aria-busy', 'false');
-  }
-}
+async 
 
 async function sbSetPublic(on) {
   const s = currentSession;
@@ -6257,8 +6244,8 @@ async function sbSetPublic(on) {
     );
   }
 
+  toast('Please wait, applying changes.', 'info', 2200);
   sbBusy = true;
-  sbSetVisLoading(true);
   const code = sbCode(s);
   try {
     if (on) {
@@ -6286,7 +6273,6 @@ async function sbSetPublic(on) {
     toast(sbShareErr(err), 'error', 3600);
   } finally {
     sbBusy = false;
-    sbSetVisLoading(false);
   }
   sbSyncShare();
 }
