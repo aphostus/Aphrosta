@@ -9946,9 +9946,14 @@ async function autoSignIn() {
   }
 }
 
+let signInFallback = null;
 function renderSigningIn() {
   appEl.innerHTML = '';
   showLoader();
+  clearTimeout(signInFallback);
+  signInFallback = setTimeout(() => {
+    if (!auth.currentUser) { hideLoader(); showSignInButton(); }
+  }, 8000);
 }
 
 function showSignInButton() {
@@ -10047,7 +10052,9 @@ async function boot() {
 
   showLoader();
 
-  try { await getRedirectResult(auth); }
+  const withTimeout = (p, ms) =>
+    Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
+  try { await withTimeout(getRedirectResult(auth), 5000); }
   catch (err) {
     console.error('[A05] Redirect error:', err?.code, err?.message);
     toastOnce('redirect', 'Couldn\u2019t finish sign-in. Try again. (A05)');
@@ -10057,6 +10064,7 @@ async function boot() {
 
   onAuthStateChanged(auth, async (user) => {
     authResolved = true;
+    clearTimeout(signInFallback);
     if (user) {
       hideLoader();
       bindAccountKeys(user.uid);
