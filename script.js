@@ -6286,15 +6286,29 @@ document.addEventListener('focusout', (e) => {
 document.addEventListener('scroll', (e) => {
   const st = e.target;
   if (!st || !st.classList || !st.classList.contains('stage')) return;
+
   const wrap = q$('.sbar-wrap');
   const bar = q$('.sbar');
   if (!wrap || !bar) return;
+
   const top = st.scrollTop;
   const d = top - sbLastTop;
   sbLastTop = top;
-  const pinned = !!sbQuery || bar.dataset.pin === '1' || bar.dataset.open === '1' || bar.contains(document.activeElement);
-  if (pinned || top < 24 || d < -4) wrap.classList.remove('is-hidden');
-  else if (d > 4) wrap.classList.add('is-hidden');
+
+  const pinned = bar.dataset.pin === '1';
+
+  if (pinned || top < 24 || d < -4) {
+    wrap.classList.remove('is-hidden');
+  } else if (d > 4) {
+    /*
+     * A non-pinned bar must not retain an open/on panel state
+     * while it is collapsed by scrolling.
+     */
+    bar.dataset.open = '0';
+    bar.querySelector('.sbar-share')?.setAttribute('aria-expanded', 'false');
+    bar.querySelector('.sbar-panel')?.toggleAttribute('inert', true);
+    wrap.classList.add('is-hidden');
+  }
 }, true);
 
 function persistSessions() {
@@ -7139,7 +7153,10 @@ function resetNewSessionUi() {
   if (input) {
     input.value = '';
     input.style.height = '';
+    input.scrollTop = 0;
   }
+
+  refreshPill?.();
 
   q$('.composer')?.__resetThink?.();
   q$('.sbar-wrap')?.classList.remove('is-hidden');
