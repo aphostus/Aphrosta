@@ -3213,9 +3213,9 @@ html[data-motion="reduce"] .think-panel { transition: none; }
 .fv-t { flex: 0 0 auto; padding-right: 14px; }
 :root[data-cw="on"] .fv-ln { width: auto; min-width: 0; }
 :root[data-cw="on"] .fv-t { flex: 1 1 0; min-width: 0; }
-.fv-hit { background: rgba(255, 214, 10, 0.28); color: inherit; border-radius: 3px; transition: background 0.25s var(--ease-smooth), box-shadow 0.25s var(--ease-smooth); }
-.fv-cur { background: rgba(255, 214, 10, 0.7); box-shadow: 0 0 0 2px rgba(255, 214, 10, 0.35); }
-.file-viewer-code .fv-cur { color: #000; }
+.fv-hit { background: rgba(var(--accent-rgb), 0.26); color: inherit; border-radius: 3px; transition: background 0.25s var(--ease-smooth), box-shadow 0.25s var(--ease-smooth); }
+.fv-cur { background: rgba(var(--accent-rgb), 0.82); box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.4); }
+.file-viewer-code .fv-cur { color: var(--on-accent); }
 
 .fv-edit { display: flex; flex: 1 1 auto; min-height: 0; margin: 12px 12px 0; overflow: hidden; font: var(--fv-font); tab-size: 4; background: var(--bg); border: 1px solid var(--glass-border); border-radius: 14px; }
 .fv-edit[hidden] { display: none; }
@@ -3852,3 +3852,22 @@ mark.ab-mark {
 .chart-btn.on { background: var(--fg); color: var(--bg); border-color: transparent; }
 .chart-btn:active { transform: scale(0.95); }
 .chart-src { font-size: calc(10.5px * var(--ts)); color: var(--gray-mid); white-space: nowrap; }
+
+/* Wrap Code toggle: ON = boxed code block with wrapped lines, OFF = plain text, no block */
+:root[data-cw="on"] .msg-body .code-glass pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+:root[data-cw="off"] .code-glass {
+  background: none; border: 0; box-shadow: none; border-radius: 0;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  margin: 6px 0; overflow: visible;
+}
+:root[data-cw="off"] .code-glass-bar { display: none; }
+:root[data-cw="off"] .msg-body .code-glass pre {
+  padding: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit;
+}
+:root[data-cw="off"] .msg-body .code-glass pre code { font: inherit; }
+
+/* File cards follow the accent colour from Settings, not per-type colours */
+.file-card[class*="file-card--"] {
+  --file-c: var(--accent);
+  --file-bg: rgba(var(--accent-rgb), 0.16);
+}
