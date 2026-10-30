@@ -3756,3 +3756,99 @@ mark.ab-mark {
   background: transparent;
   color: var(--fg);
 }
+
+/* =========================================================
+   Glass cards, chart cards, wrapped code blocks
+   ========================================================= */
+.chart-card,
+.code-glass,
+.file-card,
+.file-materials,
+.lib-card,
+.account-card,
+.usage-card,
+.key-card,
+.fd-card,
+.rich-table {
+  background: linear-gradient(135deg, rgba(var(--fg-rgb), 0.075), rgba(var(--fg-rgb), 0.02));
+  border: 1px solid rgba(var(--fg-rgb), 0.12);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16), inset 0 1px 0 var(--glass-highlight);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  backdrop-filter: blur(12px) saturate(140%);
+}
+.file-card:hover {
+  background: linear-gradient(135deg, rgba(var(--fg-rgb), 0.11), rgba(var(--fg-rgb), 0.04));
+  border-color: rgba(var(--fg-rgb), 0.2);
+}
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .chart-card, .code-glass, .file-card, .file-materials, .lib-card,
+  .account-card, .usage-card, .key-card, .fd-card, .rich-table {
+    background: var(--surface-3);
+  }
+}
+
+.code-glass {
+  margin: 10px 0;
+  border-radius: 14px;
+  overflow: hidden;
+  white-space: normal;
+}
+.code-glass-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 6px 8px 6px 14px;
+  border-bottom: 1px solid var(--glass-border);
+  background: rgba(var(--fg-rgb), 0.04);
+}
+.code-glass-lang {
+  font-size: calc(11px * var(--ts)); font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--gray-mid);
+}
+.code-copy {
+  height: 26px; padding: 0 12px; border-radius: var(--radius-pill);
+  border: 1px solid var(--glass-border); background: var(--glass-bg); color: var(--fg);
+  font-size: calc(11.5px * var(--ts)); font-weight: 600; cursor: pointer;
+  touch-action: manipulation;
+}
+.code-copy:active { transform: scale(0.95); }
+.msg-body .code-glass pre {
+  margin: 0; border: 0; border-radius: 0; background: transparent;
+}
+
+.chart-card {
+  margin: 10px 0; padding: 12px 12px 10px;
+  border-radius: 16px; white-space: normal; color: var(--fg);
+}
+.chart-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.chart-sym {
+  font-size: calc(12px * var(--ts)); font-weight: 700;
+  letter-spacing: 0.05em; text-transform: uppercase; color: var(--gray-mid);
+}
+.chart-price {
+  font-size: calc(24px * var(--ts)); font-weight: 700; line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+.chart-sub { font-size: calc(11.5px * var(--ts)); color: var(--gray-mid); min-height: 1.3em; }
+.chart-chg {
+  flex-shrink: 0; padding: 4px 10px; border-radius: var(--radius-pill);
+  font-size: calc(12.5px * var(--ts)); font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.chart-chg:empty { display: none; }
+.chart-chg.up { color: #3fd08a; background: rgba(52, 199, 123, 0.16); }
+.chart-chg.down { color: #ff6b6b; background: rgba(255, 92, 92, 0.16); }
+.chart-plot { margin-top: 8px; }
+.chart-svg { display: block; width: 100%; height: auto; aspect-ratio: 320 / 120; touch-action: pan-y; }
+.chart-state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  aspect-ratio: 320 / 120; color: var(--gray-mid); font-size: calc(12.5px * var(--ts));
+}
+.chart-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
+.chart-ranges { display: flex; flex-wrap: wrap; gap: 4px; }
+.chart-btn {
+  height: 28px; padding: 0 11px; border-radius: var(--radius-pill);
+  border: 1px solid var(--glass-border); background: var(--glass-bg); color: var(--fg);
+  font-size: calc(11.5px * var(--ts)); font-weight: 600; cursor: pointer;
+  touch-action: manipulation;
+}
+.chart-btn.on { background: var(--fg); color: var(--bg); border-color: transparent; }
+.chart-btn:active { transform: scale(0.95); }
+.chart-src { font-size: calc(10.5px * var(--ts)); color: var(--gray-mid); white-space: nowrap; }
