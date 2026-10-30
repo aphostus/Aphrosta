@@ -411,8 +411,30 @@ let accountActive = true;
 try { accountActive = localStorage.getItem(ACCOUNT_ACTIVE_LS) !== 'false'; } catch (_) {}
 
 function setAccountActive(on) {
+  const wasActive = accountActive;
   accountActive = !!on;
   try { localStorage.setItem(ACCOUNT_ACTIVE_LS, String(accountActive)); } catch (_) {}
+
+  if (wasActive && !accountActive) {
+    const input = appEl?.querySelector('.composer-input');
+
+    if (input) {
+      input.value = '';
+      input.style.height = '';
+      input.scrollTop = 0;
+    }
+
+    pendingFiles = [];
+    try { sessionStorage.removeItem(PENDING_SS); } catch (_) {}
+
+    refreshPill?.();
+    syncAttachUi?.();
+    appEl?.querySelector('.composer')?.__syncState?.();
+    appEl?.querySelector('.composer')?.__syncIdle?.();
+    appEl?.querySelector('.composer')?.__syncSend?.();
+    fitComposer?.();
+  }
+
   updateAccountBanner();
 }
 
@@ -7159,6 +7181,9 @@ function resetNewSessionUi() {
   refreshPill?.();
 
   q$('.composer')?.__resetThink?.();
+  q$('.composer')?.__syncState?.();
+  q$('.composer')?.__syncIdle?.();
+  q$('.composer')?.__syncSend?.();
   q$('.sbar-wrap')?.classList.remove('is-hidden');
 }
 
