@@ -913,6 +913,8 @@ const ICONS = {
   teamShare: svg('<circle cx="9" cy="8" r="3"/><path d="M3 20v-1a5 5 0 015-5h2a5 5 0 015 5v1"/><circle cx="17.5" cy="9" r="2.4"/><path d="M17 14.2a4 4 0 014 3.8v1.5"/>', 18),
   chevL:    svg('<path d="M15 6l-6 6 6 6"/>', 14),
   loadIn:   svg('<path d="M12 4v11M7 11l5 5 5-5M5 20h14"/>', 16),
+  lock:     svg('<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/>', 16),
+  globe:    svg('<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18"/>', 16),
   folder:   svg('<path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>'),
   inbox14:  svg('<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/>', 14),
   memory:   svg('<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>'),
@@ -2766,16 +2768,18 @@ const SearchBar = () => `
       </div>
       <div class="sbar-panel" inert>
         <div class="sbar-panel-in">
-          <div class="sbar-idbox">
-            <input class="sbar-code" type="text" maxlength="15" aria-label="Chat ID" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" value="">
+          <div class="sbar-row sbar-idrow">
+            <button class="sbar-vis" type="button" data-action="sb-vis" data-state="private" aria-label="Private. Tap to make public">
+              <span class="sbar-vis-priv">${ICONS.lock}</span>
+              <span class="sbar-vis-pub">${ICONS.globe}</span>
+            </button>
+            <div class="sbar-pill">
+              <input class="sbar-code" type="text" maxlength="15" aria-label="Chat ID" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" value="">
+            </div>
             <button class="sbar-act" type="button" data-action="sb-act" data-mode="copy" aria-label="Copy chat ID">
               <span class="sbar-act-copy">${ICONS.copy}</span>
               <span class="sbar-act-load">${ICONS.loadIn}</span>
             </button>
-          </div>
-          <div class="sbar-vis">
-            <button class="sbar-seg" type="button" data-action="sb-public" data-vis="public" aria-pressed="false">Public</button>
-            <button class="sbar-seg" type="button" data-action="sb-private" data-vis="private" aria-pressed="true">Private</button>
           </div>
         </div>
       </div>
@@ -6023,9 +6027,11 @@ function sbSyncShare() {
     code.value = bar.dataset.open === '1' ? sbCode(s) : (s.shareCode && s.shareCode.length === SB_LEN ? s.shareCode : '');
   }
   sbCodeMode();
-  bar.querySelectorAll('.sbar-seg').forEach((b) => {
-    b.setAttribute('aria-pressed', String((b.dataset.vis === 'public') === !!s.sharePub));
-  });
+  const vis = bar.querySelector('.sbar-vis');
+  if (vis) {
+    vis.dataset.state = s.sharePub ? 'public' : 'private';
+    vis.setAttribute('aria-label', s.sharePub ? 'Public. Tap to make private' : 'Private. Tap to make public');
+  }
   bar.querySelector('.sbar-share')?.classList.toggle('on', !!s.sharePub);
 }
 
@@ -6147,8 +6153,7 @@ function sbAction(action) {
   if (action === 'sb-next') sbStep(1);
   else if (action === 'sb-prev') sbStep(-1);
   else if (action === 'sb-share') sbTogglePanel();
-  else if (action === 'sb-public') sbSetPublic(true);
-  else if (action === 'sb-private') sbSetPublic(false);
+  else if (action === 'sb-vis') sbSetPublic(!currentSession.sharePub);
   else if (action === 'sb-act') {
     if (q$('.sbar-act')?.dataset.mode === 'load') sbLoad();
     else copyText(sbCode(currentSession)).then((ok) => toast(ok ? 'Chat ID copied.' : 'Could not copy.', ok ? 'success' : 'error', 1600));
@@ -6179,6 +6184,28 @@ document.addEventListener('keydown', (e) => {
     if (q$('.sbar-act')?.dataset.mode === 'load') sbLoad();
   }
 });
+
+/* the search ends when the input loses focus for real, or you tap outside the bar */
+function sbEnd() {
+  const inp = q$('.sbar-input');
+  clearTimeout(sbTimer);
+  if (inp) inp.value = '';
+  if (!sbQuery && !sbHits.length) return;
+  sbQuery = '';
+  sbMark('', false);
+}
+var sbTap = 0;
+document.addEventListener('pointerdown', (e) => {
+  if (e.target.closest && e.target.closest('.sbar')) sbTap = Date.now();
+}, true);
+document.addEventListener('click', (e) => {
+  if (sbQuery && e.target.closest && !e.target.closest('.sbar')) sbEnd();
+}, true);
+document.addEventListener('focusout', (e) => {
+  const t = e.target;
+  if (!t || !t.classList || !t.classList.contains('sbar-input')) return;
+  setTimeout(() => { if (Date.now() - sbTap > 600 && document.activeElement !== t) sbEnd(); }, 150);
+}, true);
 
 /* hide the bar when scrolling down, bring it back when scrolling up */
 document.addEventListener('scroll', (e) => {

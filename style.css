@@ -694,35 +694,44 @@ html.has-vv #app-shell { height: var(--app-h); }
 .sbar-panel-in {
   min-height: 0;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 0 12px;
+  padding: 0;
   opacity: 0;
   transition: opacity 0.25s var(--ease-smooth), padding 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.sbar[data-open="1"] .sbar-panel-in { padding: 4px 12px 12px; opacity: 1; }
-.sbar-idbox { position: relative; display: flex; align-items: center; }
+.sbar[data-open="1"] .sbar-panel-in { padding: 0 0 6px; opacity: 1; }
+.sbar-vis {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-left: -6px;
+  color: var(--gray-mid);
+  border-radius: 9px;
+  transition: background 0.2s var(--ease-smooth), color 0.2s var(--ease-smooth);
+}
+.sbar-vis:hover { background: var(--glass-bg-hover); color: var(--fg); }
+.sbar-vis[data-state="public"] { color: var(--fg); }
+.sbar-vis span { display: inline-flex; }
+.sbar-vis-pub { display: none !important; }
+.sbar-vis[data-state="public"] .sbar-vis-priv { display: none; }
+.sbar-vis[data-state="public"] .sbar-vis-pub { display: inline-flex !important; }
 .sbar-code {
-  width: 100%;
-  height: 38px;
-  padding: 0 44px 0 14px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0 4px;
   font-size: max(16px, calc(16px * var(--ts)));
-  letter-spacing: 0.04em;
-  font-variant-ligatures: none;
-  background: rgba(var(--fg-rgb), 0.05);
-  border: 1px solid var(--glass-border);
-  border-radius: 12px;
+  background: none;
+  border: none;
   outline: none;
+  caret-color: var(--fg);
   -webkit-user-select: text;
   user-select: text;
-  transition: border-color 0.2s var(--ease-smooth);
 }
-.sbar-code:focus { border-color: rgba(var(--fg-rgb), 0.22); }
 .sbar-act {
-  position: absolute;
-  right: 4px;
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -738,36 +747,20 @@ html.has-vv #app-shell { height: var(--app-h); }
 .sbar-act-load { display: none !important; }
 .sbar-act[data-mode="load"] .sbar-act-copy { display: none; }
 .sbar-act[data-mode="load"] .sbar-act-load { display: inline-flex !important; }
-.sbar-vis { display: flex; gap: 8px; }
-.sbar-seg {
-  flex: 1;
-  height: 36px;
-  font-size: calc(14px * var(--ts));
-  font-weight: 600;
-  color: var(--gray-mid);
-  background: rgba(var(--fg-rgb), 0.07);
-  border: 1.5px solid transparent;
-  border-radius: 12px;
-  transition: color 0.2s var(--ease-smooth), border-color 0.2s var(--ease-smooth), background 0.2s var(--ease-smooth);
-}
-.sbar-seg[aria-pressed="true"] {
-  color: var(--fg);
-  border-color: var(--fg);
-  background: rgba(var(--fg-rgb), 0.12);
-}
+
 
 /* highlighted search hits inside the chat */
 mark.sb-hit {
   color: inherit;
-  background: rgba(255, 196, 0, 0.32);
+  background: rgba(var(--accent-rgb), 0.26);
   border-radius: 3px;
   padding: 0 1px;
   transition: background 0.25s var(--ease-smooth), box-shadow 0.25s var(--ease-smooth);
 }
 mark.sb-hit.is-cur {
-  color: #111;
-  background: #ffb300;
-  box-shadow: 0 0 0 2px rgba(255, 179, 0, 0.55);
+  color: var(--on-accent);
+  background: rgba(var(--accent-rgb), 0.82);
+  box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.4);
 }
 
 .icon-btn {
