@@ -6126,45 +6126,253 @@ function renderMd(src) {
   return out.join('');
 }
 
-function openFileViewer(f) {
+function openFileViewer(f, onSave) {
   let code = String(f.code == null ? '' : f.code);
+  let saved = code;
   let pasted = false;
+  let editing = false;
+  let query = '';
+  let hits = [];
+  let cur = -1;
+  let viewTop = 0;
   const baseMeta = String(f.ext || f.lang || 'text').toUpperCase();
   const scrim = document.createElement('div');
   scrim.className = 'dialog-scrim';
   scrim.innerHTML = `<div class="dialog file-viewer" role="dialog" aria-modal="true" aria-label="${esc(f.name)}">
     <div class="file-viewer-head"><h3 class="dialog-title">${esc(f.name)}</h3><span class="file-viewer-meta" data-fv-meta></span></div>
-    <button class="fd-ic fv-x" type="button" data-r="x" aria-label="Close">${ICONS.close}</button>
-    <pre class="file-viewer-code"><code data-fv-code></code></pre>
+    <div class="fv-bar">
+      <span class="fv-grp fv-grp-view">
+        <button class="fd-ic fv-ib" type="button" data-r="edit" aria-label="Edit">${svg('<path d="M4 20h4L18.5 9.5a2.1 2.1 0 00-3-3L5 17z"/><path d="M13.5 6.5l3 3"/>', 16)}</button>
+        <button class="fd-ic fv-ib" type="button" data-r="x" aria-label="Close">${ICONS.close}</button>
+      </span>
+      <span class="fv-grp fv-grp-edit">
+        <button class="fd-ic fv-ib fv-save" type="button" data-r="save" aria-label="Save">${svg('<path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7V4"/><path d="M8 20v-6h8v6"/>', 16)}</button>
+        <button class="fd-ic fv-ib" type="button" data-r="cancel" aria-label="Cancel edit">${svg('<path d="M9 14L4 9l5-5"/><path d="M4 9h9a6 6 0 010 12h-3"/>', 16)}</button>
+      </span>
+    </div>
+    <div class="fv-search">
+      <span class="fv-search-ico">${svg('<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>', 16)}</span>
+      <input class="fv-q" type="text" inputmode="search" enterkeyhint="search" placeholder="Search" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Search in file" data-fv-q>
+      <span class="fv-count" data-fv-count></span>
+      <span class="fv-nav" data-fv-nav>
+        <button class="fv-nb" type="button" data-r="prev" aria-label="Previous match">${svg('<path d="M15 6l-6 6 6 6"/>', 16)}</button>
+        <button class="fv-nb" type="button" data-r="next" aria-label="Next match">${svg('<path d="M9 6l6 6-6 6"/>', 16)}</button>
+      </span>
+    </div>
+    <div class="file-viewer-code" data-fv-view></div>
+    <div class="fv-edit" data-fv-edit hidden>
+      <div class="fv-gutter"><div class="fv-gin" data-fv-gin></div></div>
+      <div class="fv-field">
+        <div class="fv-mirror" aria-hidden="true"><div class="fv-min" data-fv-min></div></div>
+        <textarea class="fv-ta" data-fv-ta wrap="off" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" aria-label="Edit ${esc(f.name)}"></textarea>
+      </div>
+    </div>
     <div class="fv-actions">
       <button class="fv-btn" type="button" data-r="copy">Copy</button>
       <button class="fv-btn" type="button" data-r="paste">Paste</button>
       <button class="fv-btn primary" type="button" data-r="share">Share</button>
     </div></div>`;
-  const codeEl = scrim.querySelector('[data-fv-code]');
-  const metaEl = scrim.querySelector('[data-fv-meta]');
-  const paint = () => {
-    codeEl.textContent = code;
-    metaEl.textContent = `${baseMeta} \u00b7 ${code.split('\n').length} lines${pasted ? ' \u00b7 pasted, not saved' : ''}`;
+  const sel = (s) => scrim.querySelector(s);
+  const root = sel('.file-viewer');
+  const viewEl = sel('[data-fv-view]');
+  const editEl = sel('[data-fv-edit]');
+  const ta = sel('[data-fv-ta]');
+  const gin = sel('[data-fv-gin]');
+  const min = sel('[data-fv-min]');
+  const metaEl = sel('[data-fv-meta]');
+  const qEl = sel('[data-fv-q]');
+  const countEl = sel('[data-fv-count]');
+  const navEl = sel('[data-fv-nav]');
+  const shareBtn = sel('[data-r="share"]');
+
+  const text = () => (editing ? ta.value : code);
+  const lineCount = (t) => t.split('\n').length;
+
+  const findHits = (t, q) => {
+    if (!q) return [];
+    const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+    const out = [];
+    let m;
+    while ((m = re.exec(t)) && out.length < 5000) {
+      out.push({ i: m.index, l: m[0].length });
+      if (!m[0].length) re.lastIndex++;
+    }
+    return out;
   };
-  paint();
+
+  const markHtml = (t) => {
+    let pos = 0;
+    let s = '';
+    hits.forEach((h, k) => {
+      s += esc(t.slice(pos, h.i)) + `<mark class="fv-hit${k === cur ? ' fv-cur' : ''}" data-h="${k}">` + esc(t.slice(h.i, h.i + h.l)) + '</mark>';
+      pos = h.i + h.l;
+    });
+    return s + esc(t.slice(pos));
+  };
+
+  const viewHtml = (t) => {
+    const lines = t.split('\n');
+    let off = 0;
+    let hi = 0;
+    let html = '';
+    lines.forEach((L, n) => {
+      const end = off + L.length;
+      let pos = 0;
+      let seg = '';
+      while (hi < hits.length && hits[hi].i < off) hi++;
+      while (hi < hits.length && hits[hi].i + hits[hi].l <= end) {
+        const h = hits[hi];
+        const a = h.i - off;
+        seg += esc(L.slice(pos, a)) + `<mark class="fv-hit${hi === cur ? ' fv-cur' : ''}" data-h="${hi}">` + esc(L.slice(a, a + h.l)) + '</mark>';
+        pos = a + h.l;
+        hi++;
+      }
+      seg += esc(L.slice(pos));
+      html += `<div class="fv-ln"><span class="fv-n">${n + 1}</span><span class="fv-t">${seg || '&#8203;'}</span></div>`;
+      off = end + 1;
+    });
+    return { html, count: lines.length };
+  };
+
+  const paintMeta = () => {
+    metaEl.textContent = `${baseMeta} \u00b7 ${lineCount(text())} lines${editing ? ' \u00b7 editing' : pasted ? ' \u00b7 pasted, not saved' : ''}`;
+  };
+  const paintView = () => {
+    const v = viewHtml(code);
+    viewEl.style.setProperty('--fvd', String(String(v.count).length));
+    viewEl.innerHTML = v.html;
+  };
+  const paintGutter = () => {
+    const n = lineCount(ta.value);
+    let s = '';
+    for (let k = 1; k <= n; k++) s += k + '\n';
+    gin.textContent = s;
+    editEl.style.setProperty('--fvd', String(String(n).length));
+  };
+  const paintMirror = () => { min.innerHTML = markHtml(ta.value) + '\n'; };
+  const syncScroll = () => {
+    min.style.transform = `translate(${-ta.scrollLeft}px, ${-ta.scrollTop}px)`;
+    gin.style.transform = `translateY(${-ta.scrollTop}px)`;
+  };
+  const paintCount = () => {
+    countEl.textContent = !query ? '' : hits.length ? `${cur + 1}/${hits.length}` : 'No results';
+    navEl.classList.toggle('on', hits.length > 1);
+  };
+
+  const scrollToCur = () => {
+    const h = hits[cur];
+    if (!h) return;
+    if (editing) {
+      const pre = ta.value.slice(0, h.i);
+      const row = pre.split('\n').length - 1;
+      const col = h.i - (pre.lastIndexOf('\n') + 1);
+      const cs = getComputedStyle(ta);
+      const lh = parseFloat(cs.lineHeight) || 19;
+      const cw = (parseFloat(cs.fontSize) || 12.5) * 0.6;
+      ta.scrollTo({ top: Math.max(0, row * lh + 14 - ta.clientHeight / 2 + lh / 2), left: Math.max(0, col * cw - ta.clientWidth / 2), behavior: 'smooth' });
+      return;
+    }
+    const el = viewEl.querySelector(`[data-h="${cur}"]`);
+    if (!el) return;
+    const cr = viewEl.getBoundingClientRect();
+    const er = el.getBoundingClientRect();
+    viewEl.scrollTo({
+      top: Math.max(0, viewEl.scrollTop + (er.top - cr.top) - viewEl.clientHeight / 2 + er.height / 2),
+      left: Math.max(0, viewEl.scrollLeft + (er.left - cr.left) - viewEl.clientWidth / 2 + er.width / 2),
+      behavior: 'smooth'
+    });
+  };
+
+  const setCur = (k) => {
+    if (!hits.length) return;
+    cur = (k + hits.length) % hits.length;
+    const host = editing ? min : viewEl;
+    host.querySelector('.fv-cur')?.classList.remove('fv-cur');
+    host.querySelector(`[data-h="${cur}"]`)?.classList.add('fv-cur');
+    paintCount();
+    scrollToCur();
+  };
+
+  const runSearch = (keep) => {
+    hits = findHits(text(), query);
+    cur = hits.length ? Math.min(keep ? Math.max(cur, 0) : 0, hits.length - 1) : -1;
+    if (editing) paintMirror(); else paintView();
+    paintCount();
+    if (!keep) scrollToCur();
+  };
+
+  const setEditing = (on) => {
+    editing = on;
+    root.classList.toggle('is-editing', on);
+    viewEl.hidden = on;
+    editEl.hidden = !on;
+    shareBtn.disabled = on;
+  };
+  const startEdit = () => {
+    viewTop = viewEl.scrollTop;
+    ta.value = code;
+    setEditing(true);
+    paintGutter();
+    runSearch(true);
+    paintMeta();
+    ta.scrollTop = viewTop;
+    syncScroll();
+    ta.focus({ preventScroll: true });
+  };
+  const cancelEdit = () => {
+    setEditing(false);
+    runSearch(true);
+    paintMeta();
+    viewEl.scrollTop = viewTop;
+  };
+  const saveEdit = () => {
+    const next = ta.value;
+    if (next.includes('```')) { toast('Code can\u2019t contain three backticks in a row. (D12)', 'info', 3000); return; }
+    if (chatBusy) { toast('Stop the response before saving. (D06)', 'info'); return; }
+    if (typeof onSave === 'function' && !onSave(saved, next)) { toast('Couldn\u2019t save this edit. (D11)'); return; }
+    code = next;
+    saved = next;
+    pasted = false;
+    setEditing(false);
+    runSearch(true);
+    paintMeta();
+    viewEl.scrollTop = viewTop;
+    toast('Saved.', 'success', 1400);
+  };
+  const onType = () => { paintGutter(); runSearch(true); paintMeta(); syncScroll(); };
+
+  setEditing(false);
+  paintView();
+  paintMeta();
+  ta.addEventListener('input', onType);
+  ta.addEventListener('scroll', syncScroll);
+  qEl.addEventListener('input', () => { query = qEl.value; runSearch(false); });
+  qEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); setCur(cur + (e.shiftKey ? -1 : 1)); }
+  });
+
   const done = () => { document.removeEventListener('keydown', onKey, true); scrim.remove(); };
   const onKey = (e) => {
     if (e.key !== 'Escape') return;
     if (document.querySelectorAll('.dialog-scrim').length > 1) return;
     e.stopPropagation();
-    done();
+    if (editing) cancelEdit(); else done();
   };
   document.addEventListener('keydown', onKey, true);
   scrim.addEventListener('click', async (e) => {
     e.stopPropagation();
-    if (e.target === scrim) return done();
+    if (e.target === scrim) return editing ? cancelEdit() : done();
     const b = e.target.closest('[data-r]');
     if (!b) return;
     const r = b.dataset.r;
     if (r === 'x') return done();
+    if (r === 'edit') return startEdit();
+    if (r === 'save') return saveEdit();
+    if (r === 'cancel') return cancelEdit();
+    if (r === 'prev') return setCur(cur - 1);
+    if (r === 'next') return setCur(cur + 1);
     if (r === 'copy') {
-      if (await copyText(code)) { b.textContent = 'Copied'; setTimeout(() => { b.textContent = 'Copy'; }, 1200); }
+      if (await copyText(text())) { b.textContent = 'Copied'; setTimeout(() => { b.textContent = 'Copy'; }, 1200); }
       else toast('Couldn\u2019t copy. (D09)');
       return;
     }
@@ -6172,16 +6380,22 @@ function openFileViewer(f) {
       let t = '';
       try { t = await navigator.clipboard.readText(); } catch (_) { t = ''; }
       if (!t) { toast('Nothing to paste, or clipboard access was blocked. (D10)', 'info'); return; }
-      code += (code && !code.endsWith('\n') ? '\n' : '') + t;
-      pasted = true;
-      paint();
-      const pre = scrim.querySelector('.file-viewer-code');
-      pre.scrollTop = pre.scrollHeight;
+      if (editing) {
+        ta.setRangeText(t, ta.selectionStart, ta.selectionEnd, 'end');
+        onType();
+      } else {
+        code += (code && !code.endsWith('\n') ? '\n' : '') + t;
+        pasted = true;
+        runSearch(true);
+        paintMeta();
+        viewEl.scrollTo({ top: viewEl.scrollHeight, behavior: 'smooth' });
+      }
       b.textContent = 'Pasted';
       setTimeout(() => { b.textContent = 'Paste'; }, 1200);
       return;
     }
     if (r === 'share') {
+      if (editing) return;
       const def = String(f.name || 'file.txt').split('/').pop();
       const next = await promptDialog({ title: 'Share file', label: 'Name the file, then it downloads.', value: def, confirmLabel: 'Download', maxlength: 120 });
       if (next == null) return;
@@ -6197,13 +6411,32 @@ function openFileViewer(f) {
   document.body.appendChild(scrim);
 }
 
+function saveFileEdit(mi, fi, oldCode, next) {
+  const m = currentSession.messages[mi];
+  if (!m) return false;
+  const parts = String(m.content).split('```');
+  const raw = parts[fi];
+  if (raw == null) return false;
+  const nl = raw.indexOf('\n');
+  const head = nl > -1 ? raw.slice(0, nl + 1) : raw + '\n';
+  const body = nl > -1 ? raw.slice(nl + 1) : '';
+  const at = body.indexOf(oldCode);
+  parts[fi] = head + (at > -1 ? body.slice(0, at) + next + body.slice(at + oldCode.length) : next + '\n');
+  m.content = parts.join('```');
+  persistSessions();
+  const old = q$('#messages')?.querySelector(`.msg[data-i="${mi}"]`);
+  if (old) old.replaceWith(msgEl(m, mi)); else renderMessages();
+  return true;
+}
+
 function onFileCard(card) {
   if (card.classList.contains('file-more')) { card.closest('.file-grid')?.classList.add('expanded'); return; }
   const mi = +card.closest('.msg')?.dataset.i;
+  const fi = +card.dataset.fi;
   const m = currentSession.messages[mi];
-  const part = m ? String(m.content).split('```')[+card.dataset.fi] : null;
+  const part = m ? String(m.content).split('```')[fi] : null;
   if (part == null) return;
-  openFileViewer(parseFence(part, +card.dataset.fi));
+  openFileViewer(parseFence(part, fi), (prev, next) => saveFileEdit(mi, fi, prev, next));
 }
 
 const statusHTML = () => `<span class="aph-avatar" role="status" aria-label="Loading response">${aphMark({ animated: true })}</span>`;
