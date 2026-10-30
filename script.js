@@ -3170,22 +3170,13 @@ function timeAgo(ts) {
 
 async function registerDevice(user) {
   try {
-    const ref = collection(db, 'users', user.uid, 'devices');
-    const snap = await getDocs(ref);
-
-    const anotherDeviceExists = snap.docs.some((d) => d.id !== deviceId);
-    if (anotherDeviceExists) return false;
-
     await setDoc(
       doc(db, 'users', user.uid, 'devices', deviceId),
       deviceInfo(),
       { merge: true }
     );
-
-    return true;
   } catch (err) {
-    console.error('[DEVICE] Could not verify first device:', err);
-    return false;
+    console.warn('[DEVICE] Could not register device:', err?.code || err);
   }
 }
 
@@ -10100,20 +10091,7 @@ async function boot() {
         await signOut(auth);
         return;
       }
-      const deviceAllowed = await registerDevice(user);
-
-      if (!deviceAllowed) {
-        authBlocked = true;
-        hideLoader();
-        appEl.innerHTML = `
-          <div style="display:grid;place-items:center;height:100vh;padding:24px;text-align:center">
-            <p style="max-width:340px;line-height:1.6;color:var(--gray-light)">
-              This account is already registered on another device.
-            </p>
-          </div>`;
-        await signOut(auth);
-        return;
-      }
+      await registerDevice(user);
 
       renderHome(user);
       loadDictionary(settings.langIn);
