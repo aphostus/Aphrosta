@@ -6728,6 +6728,47 @@ function mmdLoadLib() {
   return mmdLoading;
 }
 
+const MMD_SCALE = 0.75;
+const MMD_MAXW = 520;
+
+function mmdFix(code) {
+  if (!/^\s*(flowchart|graph)\b/i.test(code)) return code;
+  return code
+    .replace(/(\b[A-Za-z0-9_]+)\[(?![\[(\/\\{>"])([^\]"\n]*[()<>&;:,#'][^\]"\n]*)\]/g, '$1["$2"]')
+    .replace(/\|(?!")([^|"\n]*[()&;:,#'][^|"\n]*)\|/g, '|"$1"|');
+}
+
+function mmdSized(svg) {
+  const m = svg.match(/viewBox="[\d.\-]+ [\d.\-]+ ([\d.]+) ([\d.]+)"/);
+  if (!m) return svg;
+  const w0 = parseFloat(m[1]);
+  if (!(w0 > 0)) return svg;
+  const w = Math.max(80, Math.round(Math.min(w0 * MMD_SCALE, MMD_MAXW)));
+  return svg.replace(/<svg\b([^>]*?)>/, (all, attrs) => {
+    attrs = attrs.replace(/\sstyle="[^"]*"/, '').replace(/\swidth="[^"]*"/, '').replace(/\sheight="[^"]*"/, '');
+    return '<svg' + attrs + ' style="width:' + w + 'px;max-width:100%;height:auto;">';
+  });
+}
+
+async function mmdTryRender(m, code) {
+  const id = 'mmd-' + (++mmdSeq);
+  try {
+    return (await m.render(id, code)).svg;
+  } finally {
+    [id, 'd' + id].forEach((x) => { const n = document.getElementById(x); if (n) n.remove(); });
+  }
+}
+
+async function mmdRenderSafe(m, code) {
+  try {
+    return await mmdTryRender(m, code);
+  } catch (err) {
+    const fixed = mmdFix(code);
+    if (fixed === code) throw err;
+    try { return await mmdTryRender(m, fixed); } catch (e2) { throw err; }
+  }
+}
+
 function mmdCardHtml(code) {
   const hit = mmdCache.get(mmdKey(code));
   const inner = hit || '<div class="mmd-load">Drawing diagram\u2026</div>';
@@ -6749,20 +6790,18 @@ function mmdHydrate(card) {
       let svg = mmdCache.get(key);
       if (!svg) {
         const m = await mmdLoadLib();
-        m.initialize({ startOnLoad: false, securityLevel: 'strict', theme: mmdIsLight() ? 'default' : 'dark', fontFamily: 'inherit' });
-        const id = 'mmd-' + (++mmdSeq);
-        try {
-          svg = (await m.render(id, code)).svg;
-        } finally {
-          [id, 'd' + id].forEach((x) => { const n = document.getElementById(x); if (n) n.remove(); });
-        }
+        m.initialize({ startOnLoad: false, securityLevel: 'strict', theme: mmdIsLight() ? 'default' : 'dark', fontFamily: 'inherit', themeVariables: { fontSize: '14px' }, flowchart: { nodeSpacing: 28, rankSpacing: 34, padding: 8 } });
+        svg = mmdSized(await mmdRenderSafe(m, code));
         mmdCache.set(key, svg);
       }
       view.innerHTML = svg;
+      card.removeAttribute('data-err');
       card.classList.add('mmd-ok');
     } catch (err) {
-      const msg = String((err && err.message) || err || 'Unknown error').split('\n')[0].slice(0, 160);
-      view.innerHTML = '<div class="mmd-err">Could not draw this diagram: ' + esc(msg) + '</div><pre class="mmd-src">' + esc(code) + '</pre>';
+      const full = String((err && err.message) || err || 'Unknown error');
+      card.setAttribute('data-err', full.slice(0, 400));
+      const msg = full.split('\n')[0].slice(0, 160);
+      view.innerHTML = '<div class="mmd-err">Could not draw this diagram: ' + esc(msg) + '</div><pre class="mmd-src">' + esc(code) + '</pre><button class="mmd-btn mmd-fixbtn" type="button" data-mm="fix">Fix with AI</button>';
     }
   });
 }
@@ -6829,7 +6868,11 @@ document.addEventListener('click', (e) => {
   } else if (act === 'svg') {
     const sv = card.querySelector('.mmd-view svg');
     if (!sv) return;
-    const blob = new Blob([new XMLSerializer().serializeToString(sv)], { type: 'image/svg+xml' });
+    const cl = sv.cloneNode(true);
+    const cvb = cl.viewBox && cl.viewBox.baseVal;
+    cl.removeAttribute('style');
+    if (cvb && cvb.width) { cl.setAttribute('width', Math.round(cvb.width)); cl.setAttribute('height', Math.round(cvb.height)); }
+    const blob = new Blob([new XMLSerializer().serializeToString(cl)], { type: 'image/svg+xml' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'diagram.svg';
@@ -6837,6 +6880,10 @@ document.addEventListener('click', (e) => {
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  } else if (act === 'fix') {
+    if (chatBusy) { toast('Wait for the current reply to finish.', 'info', 2200); return; }
+    const why = (card.getAttribute('data-err') || 'unknown error').slice(0, 300);
+    sendChatMessage('This Mermaid diagram failed to render.\nError: ' + why + '\nFind the exact mistake and reply with ONLY the corrected diagram in one mermaid fenced block, plus one sentence on what was wrong. Put every node label and edge label in double quotes and keep the same meaning.\n\nBroken diagram:\n~~~\n' + code + '\n~~~', false, []);
   } else if (act === 'full') {
     mmdFullscreen(card);
   }
@@ -8311,6 +8358,7 @@ let systemPrompt = function () {
   lines.push('When you write code or a file longer than about 10 lines, put it in a fenced block whose first line is the language followed by the filename, for example ```js script.js. One file per block.');
   lines.push('To show a live price chart card for a crypto coin, currency pair or stock, write a fenced block: three backticks followed by chart and the symbol on the first line (for example ```chart BTC or ```chart EUR/USD or ```chart AAPL), then three closing backticks on the next line. Never write chart SYMBOL as plain text. Never invent prices.');
   lines.push('DIAGRAMS: Whenever the user asks for ANY diagram, or wants something visualised, mapped out or drawn as a structure (flowchart, sequence diagram, class diagram, state diagram, ER diagram, gantt, mind map, timeline, pie chart, git graph, user journey, quadrant chart, architecture, org chart, process, network, hierarchy), ALWAYS answer with a Mermaid diagram in a fenced block: the first line is three backticks followed by mermaid, the last line is three backticks. Pick the best Mermaid type for the request: flowchart, sequenceDiagram, classDiagram, stateDiagram-v2, erDiagram, gantt, pie, mindmap, timeline, journey, gitGraph, quadrantChart, requirementDiagram, C4Context, sankey-beta, xychart-beta, block-beta, packet-beta or architecture-beta. Use valid Mermaid syntax only. Put any node label that has spaces, brackets, punctuation or non-ASCII characters in double quotes. Never put HTML, markdown or code fences inside the diagram. One diagram per block. Keep your text to one short sentence unless the user wants an explanation. Never draw diagrams as ASCII art, raw SVG, HTML or images unless the user explicitly asks for that format. Live price charts for coins, currencies and stocks still use the chart block, not Mermaid.');
+  lines.push('MERMAID SYNTAX RULES (follow exactly, one mistake breaks the diagram): 1) The first line is the diagram type, for example flowchart TD, sequenceDiagram or classDiagram. 2) Node IDs are short, unique, letters and digits only, and never the words end or graph. 3) ALWAYS wrap every node label and every edge label in double quotes, for example A["Collect data"] --> B["Train model (GPU)"] and A -->|"yes"| B. 4) Never put unquoted parentheses, brackets, braces, colons, semicolons, ampersands, quotes or slashes inside a label. 5) No HTML tags except br, no markdown, no comments, no styling or click lines unless asked. 6) Keep diagrams focused: about 12 to 15 nodes at most, labels of 1 to 4 words, prefer top-down direction on narrow screens. 7) Sequence diagrams: declare participants first and use ->> and -->> arrows. 8) Before sending, silently re-check every line against these rules. 9) If the user pastes a Mermaid error or a broken diagram, find the exact mistake, fix it, and reply with ONLY the corrected diagram block plus one sentence on what was wrong. Correct example: flowchart TD, A["Start"] --> B{"Valid input?"}, B -->|"yes"| C["Process"], B -->|"no"| D["Show error"].');
   if (settings.langOut && settings.langOut !== 'en') lines.push(`Always reply in ${byId(LANGUAGES, settings.langOut).name}.`);
   if (settings.nickname) lines.push(`Call the user ${settings.nickname}.`);
   if (settings.instructions) lines.push(`User instructions: ${settings.instructions}`);

@@ -3888,3 +3888,5 @@ mark.ab-mark {
 .mmd-full-bar { display: flex; gap: 8px; justify-content: flex-end; padding: calc(10px + env(safe-area-inset-top, 0px)) 12px 10px; border-bottom: 1px solid var(--glass-border); }
 .mmd-full-body { flex: 1; overflow: auto; padding: 12px; touch-action: pan-x pan-y; -webkit-overflow-scrolling: touch; }
 .mmd-full-body svg { display: block; margin: 0 auto; }
+.mmd-view { max-height: 380px; overflow: auto; }
+.mmd-fixbtn { margin-top: 10px; }
