@@ -4211,6 +4211,28 @@ mark.ab-mark {
 }
 .chat-list.is-reordering { touch-action: none; }
 
+/* ---------- Swipe: left archives, right shows stats ---------- */
+.chat-item { position: relative; touch-action: pan-y; }
+.chat-slide { display: flex; align-items: center; flex: 1; min-width: 0; border-radius: inherit; transition: transform 0.22s var(--ease-smooth); will-change: transform; }
+.chat-item.is-swipe { overflow: hidden; }
+.chat-item.is-swipe .chat-slide { background: var(--bg); }
+.chat-item.is-swiping { -webkit-user-select: none; user-select: none; }
+.chat-item.is-swiping .chat-slide { transition: none; }
+.chat-under { display: none; position: absolute; inset: 0; align-items: center; justify-content: center; gap: 8px; pointer-events: none; font-size: calc(12.5px * var(--ts)); font-weight: 600; letter-spacing: 0.02em; font-variant-numeric: tabular-nums; }
+.chat-under svg { width: 15px; height: 15px; }
+.chat-under b { font-weight: 600; }
+.chat-item.is-stat .chat-under-stat { display: flex; color: var(--fg); }
+.chat-item.is-arc .chat-under-arc { display: flex; color: var(--accent); }
+
+/* ---------- Archive drawer ---------- */
+.arch-btn { width: 30px; height: 30px; }
+.arch-btn svg { width: 15px; height: 15px; }
+.arch-list { display: flex; flex-direction: column; gap: 8px; }
+.arch-row { align-items: center; padding: 8px 10px; }
+.arch-row .fd-ic { width: 30px; height: 30px; }
+.arch-open { display: flex; flex-direction: column; flex: 1; gap: 3px; min-width: 0; padding: 0; text-align: left; color: inherit; background: none; border: 0; cursor: pointer; }
+.arch-open .fd-card-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
 /* ---------- Read aloud: current word underline + collapsed card follow ---------- */
 ::highlight(spk-word) {
   text-decoration: underline 2px;

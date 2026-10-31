@@ -1024,6 +1024,8 @@ Object.assign(ICONS, {
 ICONS.thumbUpOn   = ICONS.thumbUp.replace('fill="none"', 'fill="currentColor"');
 ICONS.thumbDownOn = ICONS.thumbDown.replace('fill="none"', 'fill="currentColor"');
 ICONS.pushpinOn   = ICONS.pushpin.replace('fill="none"', 'fill="currentColor"');
+ICONS.archive = svg('<rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 002 2h12a2 2 0 002-2V8"/><path d="M10 12h4"/>', 15);
+ICONS.restore = svg('<path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 010 11H11"/>', 15);
 ICONS.book = svg('<path d="M12 7v14"/><path d="M3 18a1 1 0 01-1-1V4a1 1 0 011-1h5a4 4 0 014 4 4 4 0 014-4h5a1 1 0 011 1v13a1 1 0 01-1 1h-6a3 3 0 00-3 3 3 3 0 00-3-3z"/>', 15);
 
 /* ---------- NEW ICONS (Fix 4) ---------- */
@@ -1409,6 +1411,7 @@ const Sidebar = (user) => `
         <span class="profile-name">${esc(user.displayName || 'User')}</span>
         <span class="profile-plan">Free plan</span>
       </div>
+      <button class="fd-ic arch-btn" type="button" data-action="archive" aria-label="Archive" title="Archive">${ICONS.archive}</button>
       <button class="pill-btn" type="button" data-action="upgrade">Upgrade</button>
     </div>
   </aside>
@@ -5828,7 +5831,7 @@ const Cloud = (() => {
   const sig = (x) => {
     const last = x.messages[x.messages.length - 1];
     const fb = x.messages.reduce((n, m) => n + (m.feedback ? 1 : 0), 0);
-    return `${x.updated}|${x.pinned}|${x.pinnedAt}|${x.title}|${x.messages.length}|${last?.content?.length || 0}|${fb}|${x.shareCode || ''}|${x.sharePub ? 1 : 0}|${x.messages.map((m) => (m.pubHide ? 'h' : '') + (m.pw ? 'p' + m.pw.iv : '')).join('')}`;
+    return `${x.updated}|${x.archived ? 1 : 0}|${x.pinned}|${x.pinnedAt}|${x.title}|${x.messages.length}|${last?.content?.length || 0}|${fb}|${x.shareCode || ''}|${x.sharePub ? 1 : 0}|${x.messages.map((m) => (m.pubHide ? 'h' : '') + (m.pw ? 'p' + m.pw.iv : '')).join('')}`;
   };
   const docOf = (...p) => doc(db, 'users', uid, ...p);
   const batchId = (pid, mid, period, keyId) =>
@@ -8724,15 +8727,19 @@ function renderMessages() {
 
 function sessionItem(s) {
   return `<div class="chat-item${s.id === currentSession.id ? ' is-active' : ''}" data-id="${esc(s.id)}">
+    <span class="chat-under chat-under-stat"></span>
+    <span class="chat-under chat-under-arc">${ICONS.archive}<b>Archive</b></span>
+    <div class="chat-slide">
     <button class="chat-open" type="button" title="${esc(s.title)}">
       <span class="chat-act" data-act="rename" aria-label="Rename session" style="margin-right:2px;width:24px;height:24px;vertical-align:middle;">${ICONS.renameChat}</span>
       <span>${esc(s.title)}</span>
     </button>
     <span class="chat-actions">
-      <button class="chat-act" type="button" data-act="copy" aria-label="Copy session">${ICONS.copy}</button>
+      <button class="chat-act" type="button" data-act="copy" aria-label="Duplicate session" title="Duplicate session">${ICONS.copy}</button>
       <button class="chat-act${s.pinned ? ' on' : ''}" type="button" data-act="pin" aria-label="${s.pinned ? 'Unpin' : 'Pin'} session">${s.pinned ? ICONS.pushpinOn : ICONS.pushpin}</button>
       <button class="chat-act" type="button" data-act="del" aria-label="Delete session">${ICONS.trash}</button>
     </span>
+    </div>
   </div>`;
 }
 
@@ -8742,8 +8749,8 @@ function renderSessionList() {
   if (!pinnedBox || !chatsBox) return;
   const q = sessionQuery.trim().toLowerCase();
   const match = (s) => !q || String(s.title || '').toLowerCase().includes(q) || s.messages.some((m) => String(m.content || '').toLowerCase().includes(q));
-  const pinned = sessions.filter((s) => s.pinned && match(s)).sort((a, b) => b.pinnedAt - a.pinnedAt);
-  const normal = sessions.filter((s) => !s.pinned && match(s)).sort((a, b) => b.updated - a.updated);
+  const pinned = sessions.filter((s) => !s.archived && s.pinned && match(s)).sort((a, b) => b.pinnedAt - a.pinnedAt);
+  const normal = sessions.filter((s) => !s.archived && !s.pinned && match(s)).sort((a, b) => b.updated - a.updated);
 
   const count = q$('[data-pin-count]');
   if (count) count.textContent = `${sessions.filter((s) => s.pinned).length}/${MAX_PINS}`;
@@ -8972,6 +8979,172 @@ function bindPinDrag() {
   document.addEventListener('contextmenu', (e) => {
     if ((drag || down) && e.target.closest && e.target.closest('[data-list="pinned"] .chat-item')) e.preventDefault();
   }, true);
+}
+
+/* Duplicate a session into a brand new one (the old Copy button) */
+function duplicateSession(id) {
+  const s = sessions.find((x) => x.id === id) || (currentSession.id === id ? currentSession : null);
+  if (!s) return;
+  const msgs = s.messages.filter((m) => !m.__empty && !m.__failed);
+  if (!msgs.length) { toast('Nothing to duplicate in that session.', 'info', 1800); return; }
+  const now = Date.now();
+  const { draft, archived, archivedAt, shareCode, sharePub, ...rest } = s;
+  const copy = {
+    ...rest,
+    id: uid(),
+    title: String(s.title || 'Session').slice(0, 70) + ' (copy)',
+    messages: JSON.parse(JSON.stringify(msgs)),
+    pinned: false, pinnedAt: 0, created: now, updated: now
+  };
+  sessions.push(copy);
+  persistSessions();
+  renderSessionList();
+  toast('Session duplicated.', 'success', 1800);
+  if (!chatBusy) openSession(copy.id);
+}
+
+/* Archive: unpin, hide from the side menu, keep it in the Archive drawer */
+function archiveSession(id) {
+  const s = sessions.find((x) => x.id === id);
+  if (!s) return;
+  if (s.draft && !s.messages.length) { toast('Nothing to archive yet.', 'info', 1800); return; }
+  s.pinned = false; s.pinnedAt = 0;
+  s.archived = true; s.archivedAt = Date.now();
+  persistSessions();
+  renderSessionList();
+  toast(`Archived \u201c${s.title}\u201d.`, 'info', 1800);
+}
+
+function restoreSession(id) {
+  const s = sessions.find((x) => x.id === id);
+  if (!s) return;
+  s.archived = false; delete s.archivedAt;
+  persistSessions();
+  renderSessionList();
+  renderArchive();
+  toast('Session restored.', 'success', 1800);
+}
+
+/* "120kT | 153.3Kb | 20 Cd" = tokens estimate | storage | message cards */
+function sessionStats(s) {
+  const cards = s.messages.filter((m) => !m.hidden && !m.__empty && !m.__failed).length;
+  const tok = s.messages.reduce((n, m) => n + estTokens(String(m.content || '')), 0);
+  const bytes = new Blob([JSON.stringify(s)]).size;
+  const t = tok >= 1000 ? `${+(tok / 1000).toFixed(tok >= 1e4 ? 0 : 1)}kT` : `${tok}T`;
+  const b = bytes >= 1048576 ? `${(bytes / 1048576).toFixed(1)}Mb` : `${(bytes / 1024).toFixed(1)}Kb`;
+  return `${t} | ${b} | ${cards} Cd`;
+}
+
+/* Swipe a session: left = archive, right = stats (stays until you tap or ~4.5s) */
+function bindSwipe() {
+  let it = null, slide = null, x0 = 0, y0 = 0, dx = 0, mode = 0, w = 0, openEl = null, timer = 0, swallow = false;
+  const held = () => { swallow = true; setTimeout(() => { swallow = false; }, 350); };
+  const reset = (el) => {
+    if (!el) return;
+    const sl = el.querySelector('.chat-slide');
+    if (sl) sl.style.transform = '';
+    el.classList.remove('is-swiping');
+    setTimeout(() => el.classList.remove('is-swipe', 'is-stat', 'is-arc'), 240);
+  };
+  const closeStat = () => { clearTimeout(timer); const el = openEl; openEl = null; reset(el); };
+  document.addEventListener('pointerdown', (e) => {
+    const el = e.target.closest && e.target.closest('.chat-list .chat-item');
+    if (openEl) {
+      const same = el === openEl;
+      closeStat();
+      if (same) { held(); it = null; return; }
+    }
+    if (!el || e.target.closest('.chat-actions')) { it = null; return; }
+    if (e.pointerType === 'mouse' && e.button !== 0) { it = null; return; }
+    it = el; slide = el.querySelector('.chat-slide');
+    x0 = e.clientX; y0 = e.clientY; dx = 0; mode = 0; w = el.offsetWidth;
+  }, true);
+  document.addEventListener('pointermove', (e) => {
+    if (!it || !slide) return;
+    if (it.classList.contains('is-dragging')) { it = null; return; }
+    const mx = e.clientX - x0, my = e.clientY - y0;
+    if (mode === 0) {
+      if (Math.abs(my) > 10 && Math.abs(my) > Math.abs(mx)) { it = null; return; }
+      if (Math.abs(mx) < 10 || Math.abs(mx) < Math.abs(my) * 1.5) return;
+      const s = sessions.find((x) => x.id === it.dataset.id);
+      if (!s) { it = null; return; }
+      mode = 1;
+      it.querySelector('.chat-under-stat').textContent = sessionStats(s);
+      it.classList.add('is-swipe', 'is-swiping');
+    }
+    dx = mx;
+    it.classList.toggle('is-stat', dx > 0);
+    it.classList.toggle('is-arc', dx <= 0);
+    slide.style.transform = 'translateX(' + Math.max(-w, Math.min(w, dx)) + 'px)';
+    if (e.cancelable) e.preventDefault();
+  }, true);
+  const end = () => {
+    const el = it, sl = slide;
+    it = null;
+    if (!el || mode !== 1) return;
+    mode = 0;
+    held();
+    el.classList.remove('is-swiping');
+    const th = Math.min(80, w * 0.28);
+    if (dx < -th) {
+      sl.style.transform = 'translateX(-100%)';
+      haptic(10);
+      setTimeout(() => { archiveSession(el.dataset.id); if (el.isConnected) reset(el); }, 200);
+    } else if (dx > th) {
+      sl.style.transform = 'translateX(100%)';
+      haptic(10);
+      openEl = el;
+      timer = setTimeout(closeStat, 4500);
+    } else reset(el);
+  };
+  document.addEventListener('pointerup', end, true);
+  document.addEventListener('pointercancel', () => {
+    const el = it; it = null;
+    if (el && mode === 1) { mode = 0; reset(el); }
+  }, true);
+  document.addEventListener('scroll', () => { if (openEl) closeStat(); }, true);
+  document.addEventListener('click', (e) => {
+    if (swallow && e.target.closest && e.target.closest('.chat-list .chat-item')) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+  }, true);
+}
+
+/* Archive drawer (same popup size as the Inbox) */
+function archRow(s) {
+  const day = new Date(s.archivedAt || s.updated).toLocaleDateString([], { month: 'short', day: 'numeric' });
+  return `<div class="fd-card arch-row" data-id="${esc(s.id)}">
+    <button class="fd-ic" type="button" data-fd="arch-rename" aria-label="Rename session">${ICONS.renameChat}</button>
+    <button class="arch-open" type="button" data-fd="arch-open" title="${esc(s.title)}"><span class="fd-card-text">${esc(s.title)}</span><span class="fd-card-sub">${esc(day)}</span></button>
+    <button class="fd-ic" type="button" data-fd="arch-restore" aria-label="Restore session">${ICONS.restore}</button>
+  </div>`;
+}
+
+function renderArchive() {
+  const box = document.querySelector('[data-fd-arch-list]');
+  if (!box) return;
+  const list = sessions.filter((s) => s.archived).sort((a, b) => (b.archivedAt || 0) - (a.archivedAt || 0));
+  const sub = document.querySelector('[data-fd-sub]');
+  if (sub) sub.textContent = list.length ? `${list.length} archived` : 'Saved chats';
+  box.innerHTML = list.length
+    ? list.map(archRow).join('')
+    : `<div class="fd-empty"><span class="fd-empty-ico">${ICONS.archive}</span><h3>Nothing archived</h3><p>Swipe a session left to archive it.</p></div>`;
+}
+
+function openArchive() {
+  const p = fdOpen('Archive', 'Saved chats', '<div class="arch-list" data-fd-arch-list></div>');
+  p.addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-fd]');
+    if (!b) return;
+    const id = b.closest('.arch-row')?.dataset.id;
+    const k = b.dataset.fd;
+    if (k === 'close') fdClose();
+    else if (k === 'arch-restore') restoreSession(id);
+    else if (k === 'arch-rename') { await renameSession(id); renderArchive(); }
+    else if (k === 'arch-open') { fdClose(); openSession(id); }
+  });
+  renderArchive();
 }
 
 async function deleteSession(id) {
@@ -10304,6 +10477,7 @@ function initSessions() {
   if (!sessionsBound) {
     sessionsBound = true;
     bindPinDrag();
+    bindSwipe();
     appEl.addEventListener('click', (e) => {
       const fc = e.target.closest('.file-card');
       if (fc) return onFileCard(fc);
@@ -10319,7 +10493,7 @@ function initSessions() {
         const a = act.dataset.act;
         if (a === 'pin') return togglePin(item.dataset.id);
         if (a === 'rename') return renameSession(item.dataset.id);
-        if (a === 'copy') return copySession(item.dataset.id);
+        if (a === 'copy') return duplicateSession(item.dataset.id);
         return deleteSession(item.dataset.id);
       }
       openSession(item.dataset.id);
@@ -10483,6 +10657,7 @@ function initShell() {
     else if (String(action).startsWith('sb-')) sbAction(action);
     else if (action === 'attach') openAttach();
     else if (action === 'inbox') openInbox();
+    else if (action === 'archive') openArchive();
     else if (action === 'replay-tour') { closeSettings(); setTimeout(() => startOnboarding(true), 350); }
     else if (action === 'upgrade') toast('Paid plans are coming soon.', 'info', 1800);
     else if (NAV_PANELS[action]) openNavPanel(action);
