@@ -2675,7 +2675,7 @@ html[data-status-mode="auto"][data-status="offline"]
 }
 .msg-user .msg-card { align-self: stretch; }
 .msg-sec { min-width: 0; }
-.msg-sec + .msg-sec { border-top: 1px solid var(--glass-border); }
+.msg-sec + .msg-sec { border-top: 1px solid rgba(var(--fg-rgb), 0.04); }
 .msg-sec-main { display: flex; flex-direction: column; gap: 6px; padding: 10px 14px; }
 .msg-card .msg-bubble {
   max-width: 100%;
@@ -2701,6 +2701,10 @@ html[data-status-mode="auto"][data-status="offline"]
 .msg-sec-foot { flex-wrap: wrap; }
 .msg-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; min-width: 0; }
 .msg-time, .msg-model, .msg-tok { color: var(--gray-mid); white-space: nowrap; }
+.msg-sec-foot { opacity: 0.5; }
+.msg-ai .msg-sec-main { padding: 16px 18px; }
+.msg-card:not(.is-long):not(.is-bare) .msg-sec-main { padding-bottom: 22px; }
+.msg-ai .msg-card:not(.is-long):not(.is-bare) .msg-sec-main { padding-bottom: 32px; }
 .msg-ico { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 30px; height: 30px; color: var(--gray-mid); }
 .msg-ico svg { width: 15px; height: 15px; stroke-width: 1.6; }
 .msg-actions-user .msg-ico { margin-right: auto; }
