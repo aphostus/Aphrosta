@@ -8162,7 +8162,7 @@ function pwFollow(btn) {
   requestAnimationFrame(step);
 }
 
-function pwKeep(card, fn) {
+function pwKeep(card, fn, sel) {
   const st = stageEl();
   if (!st || !card) { fn(); return; }
   const ids = card.dataset.ids;
@@ -8170,7 +8170,16 @@ function pwKeep(card, fn) {
   const wasBottom = st.scrollHeight - st.scrollTop - st.clientHeight < 90;
   const top = st.scrollTop;
   const off = card.getBoundingClientRect().top - st.getBoundingClientRect().top;
+  const ab0 = sel ? card.querySelector(sel) : null;
+  const aOff = ab0 ? ab0.getBoundingClientRect().top - st.getBoundingClientRect().top : 0;
   const restore = () => {
+    const nc0 = [...st.querySelectorAll('.msg-card')].find((c) => c.dataset.ids === ids);
+    const ab = sel && nc0 ? nc0.querySelector(sel) : null;
+    if (ab0 && ab) {
+      st.scrollTop += ab.getBoundingClientRect().top - st.getBoundingClientRect().top - aOff;
+      sbLastTop = st.scrollTop;
+      return;
+    }
     const all = [...st.querySelectorAll('.msg-card')];
     const nc = all.find((c) => c.dataset.ids === ids);
     if (wasBottom && (!nc || nc === all[all.length - 1])) st.scrollTop = st.scrollHeight;
@@ -8745,7 +8754,7 @@ async function onMessageAction(btn) {
       renderMessages();
       const nb = [...document.querySelectorAll('.msg-card')].find((c) => c.dataset.ids === tids)?.querySelector('.msg-sec-main > .msg-body');
       if (nb) { nb.classList.add('swap-glaze'); setTimeout(() => nb.classList.remove('swap-glaze'), 700); }
-    });
+    }, '.msg-act[data-a="think"]');
   } else if (a === 'edit') {
     const ui = btn.dataset.ui != null ? +btn.dataset.ui : i;
     const card = btn.closest('.msg-card');
