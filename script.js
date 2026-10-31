@@ -8086,7 +8086,7 @@ async function pwOpenAll(pass, msgs) {
 }
 
 function pwDecorate(card, m, i, pu) {
-  if (!currentSession.sharePub && !currentSession.clone && !currentSession.messages.some((x) => x.pw && !x.pw.own)) return;
+  /* key button shows in every session; the lock button only when public */
   const ids = pu ? [pu.i, i] : [i];
   card.dataset.ids = ids.join(',');
   const msgs = pwMsgs(card);
@@ -8125,7 +8125,6 @@ async function pwGo(card) {
   const mode = row.dataset.mode;
   const bad = () => { inp.classList.add('input-error'); setTimeout(() => inp.classList.remove('input-error'), 700); };
   if (mode === 'set') {
-    if (msgs.includes(currentSession.messages[currentSession.messages.length - 1])) { pwShake(card); return; }
     if (inp.value.length !== PW_LEN) { bad(); toast(`Password must be exactly ${PW_LEN} characters. (H11)`, 'error'); return; }
     row.dataset.busy = '1';
     try {
@@ -8146,19 +8145,23 @@ async function pwGo(card) {
   renderMessages();
 }
 
-function pwShake(card) {
-  if (!card) return;
-  card.classList.remove('pw-shake');
-  void card.offsetWidth;
-  card.classList.add('pw-shake');
+function pwShake(el) {
+  if (!el) return;
+  el.classList.remove('pw-shake');
+  void el.offsetWidth;
+  el.classList.add('pw-shake');
   try { navigator.vibrate?.(30); } catch (_) {}
-  setTimeout(() => card.classList.remove('pw-shake'), 500);
+  setTimeout(() => el.classList.remove('pw-shake'), 500);
 }
 
 function pcAct(kind, card) {
   const msgs = pwMsgs(card);
   if (kind === 'vis') {
     const on = !msgs.some((x) => x.pubHide);
+    if (on) {
+      const keep = currentSession.messages.filter((x) => x && !x.hidden && (x.role === 'user' || x.role === 'assistant') && (x.content || (x.pw && x.pw.ct)) && !x.pubHide && !msgs.includes(x));
+      if (!keep.length) { pwShake(card.querySelector('.pc-lock')); return; }
+    }
     msgs.forEach((x) => { if (on) x.pubHide = true; else delete x.pubHide; });
     persistSessions();
     renderMessages();
@@ -8171,7 +8174,7 @@ function pcAct(kind, card) {
     toast('Wait for the reply to finish first.', 'info', 1800);
     return;
   }
-  if (!has && msgs.includes(currentSession.messages[currentSession.messages.length - 1])) { pwShake(card); return; }
+  
   pwRow(card, locked ? 'unlock' : has ? 'manage' : 'set');
 }
 

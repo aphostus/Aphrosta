@@ -4161,7 +4161,7 @@ mark.ab-mark {
 .pw-eye svg { width: 18px; height: 18px; }
 .pw-eye[aria-pressed="true"] { color: var(--accent); }
 .pw-eye:active { transform: scale(0.94); }
-.msg-card.pw-shake { animation: pwShake 0.45s var(--ease-smooth); }
+.pc-btn.pw-shake { animation: pwShake 0.45s var(--ease-smooth); }
 @keyframes pwShake {
   15% { transform: translateX(-7px); }
   30% { transform: translateX(7px); }
