@@ -7997,11 +7997,18 @@ const tokShort = (n) => (n < 1000
 const msgStamp = (t) => {
   if (!t) return '';
   const d = new Date(t);
-  const time = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }).replace(/\s/g, '').toLowerCase();
   return d.toDateString() === new Date().toDateString()
     ? time
-    : d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ', ' + time;
+    : d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).replace(',', '') + ' | ' + time;
 };
+const msgModelName = (m) => {
+  if (m.role !== 'assistant') return '';
+  const v = PROVIDER_API[m.provider]?.models?.find((x) => x.id === m.model);
+  return v ? v.name : (m.model || '');
+};
+const msgProvLogo = (m) => MODEL_PROVIDERS.find((p) => p.id === m.provider)?.logo || '';
+const MSG_USER_ICO = svg('<circle cx="12" cy="8" r="3.6"/><path d="M5 20c.8-3.6 3.6-5.4 7-5.4s6.2 1.8 7 5.4"/>', 15);
 function foldSync(card, text) {
   if (!card) return;
   const long = String(text || '').length > FOLD_CHARS;
@@ -8022,21 +8029,26 @@ function msgEl(m, i) {
   const user = m.role === 'user';
   const card = document.createElement('div');
   card.className = 'msg-card';
-  const top = document.createElement('div');
-  top.className = 'msg-sec msg-sec-top';
   const main = document.createElement('div');
   main.className = 'msg-sec msg-sec-main';
   const acts = el.querySelector(':scope > .msg-actions');
   [...el.children].forEach((c) => { if (c !== acts) main.appendChild(c); });
-  card.append(top, main);
+  card.appendChild(main);
   if (acts) {
     acts.classList.add('msg-sec', 'msg-sec-act');
+    if (user) {
+      acts.insertAdjacentHTML('afterbegin', `<span class="msg-ico" aria-hidden="true">${MSG_USER_ICO}</span>`);
+    } else {
+      const lg = msgProvLogo(m);
+      if (lg) acts.insertAdjacentHTML('beforeend', `<span class="msg-ico msg-prov" title="${esc(msgModelName(m))}">${lg}</span>`);
+    }
     card.appendChild(acts);
   }
   if (acts || user) {
     const ft = document.createElement('div');
     ft.className = 'msg-sec msg-sec-foot';
-    ft.innerHTML = `<span class="msg-time">${esc(msgStamp(m.t))}</span><span class="msg-tok">${tokShort(estTokens(m.content))}</span>`;
+    const mn = msgModelName(m);
+    ft.innerHTML = `<span class="msg-meta"><span class="msg-time">${esc(msgStamp(m.t))}</span>${mn ? `<span class="msg-model">${esc(mn)}</span>` : ''}</span><span class="msg-tok">${tokShort(estTokens(m.content))}</span>`;
     card.appendChild(ft);
   }
   el.appendChild(card);
