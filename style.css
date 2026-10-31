@@ -4087,3 +4087,35 @@ mark.ab-mark {
 .signin-agree { display: flex; align-items: flex-start; gap: 10px; width: 100%; max-width: 480px; margin: 0 auto; font-size: 13px; line-height: 1.45; color: rgba(255, 255, 255, 0.78); cursor: pointer; }
 .signin-agree input { flex: none; width: 18px; height: 18px; margin: 1px 0 0; accent-color: #fff; }
 
+/* ---------- Merged message card (user section on top of AI) ---------- */
+.msg-sec-user { position: relative; display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; min-width: 0; }
+.msg-user-ico { margin: -4px 0 0 -6px; color: var(--gray-light); }
+.msg-user-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.msg-sec-user .msg-bubble { max-height: 14em; overflow-y: auto; }
+.msg-sec-user + .msg-sec { border-top-color: rgba(var(--fg-rgb), 0.08); }
+.msg-card.is-bare .msg-sec-user { display: none; }
+.msg-card.is-bare .msg-sec-main { border-top: 0; }
+.msg-body.msg-thoughts { color: var(--gray-light); font-style: italic; padding-left: 12px; border-left: 2px solid var(--glass-border); }
+
+/* Edit mode: construction stripes on the user section only */
+.msg-card.is-editing .msg-sec-user::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  background: repeating-linear-gradient(45deg, #000 0 10px, #fff 10px 20px);
+  background-size: 28.28px 28.28px;
+  animation: msgStripes 1.2s linear infinite;
+}
+.msg-card.is-editing .msg-sec-user > * { position: relative; z-index: 1; }
+.msg-card.is-editing .msg-sec-user .msg-bubble {
+  padding: 6px 10px;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+}
+@keyframes msgStripes { to { background-position: 28.28px 0; } }
+

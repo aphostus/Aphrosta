@@ -1006,6 +1006,7 @@ Object.assign(ICONS, {
 ICONS.thumbUpOn   = ICONS.thumbUp.replace('fill="none"', 'fill="currentColor"');
 ICONS.thumbDownOn = ICONS.thumbDown.replace('fill="none"', 'fill="currentColor"');
 ICONS.pushpinOn   = ICONS.pushpin.replace('fill="none"', 'fill="currentColor"');
+ICONS.book = svg('<path d="M12 7v14"/><path d="M3 18a1 1 0 01-1-1V4a1 1 0 011-1h5a4 4 0 014 4 4 4 0 014-4h5a1 1 0 011 1v13a1 1 0 01-1 1h-6a3 3 0 00-3 3 3 3 0 00-3-3z"/>', 15);
 
 /* ---------- NEW ICONS (Fix 4) ---------- */
 Object.assign(ICONS, {
@@ -7879,8 +7880,7 @@ function saveFileEdit(mi, fi, oldCode, next) {
   parts[fi] = head + (at > -1 ? body.slice(0, at) + next + body.slice(at + oldCode.length) : next + '\n');
   m.content = parts.join('```');
   persistSessions();
-  const old = q$('#messages')?.querySelector(`.msg[data-i="${mi}"]`);
-  if (old) old.replaceWith(msgEl(m, mi)); else renderMessages();
+  renderMessages();
   return true;
 }
 
@@ -8009,6 +8009,7 @@ const msgModelName = (m) => {
 };
 const msgProvLogo = (m) => MODEL_PROVIDERS.find((p) => p.id === m.provider)?.logo || '';
 const MSG_USER_ICO = svg('<circle cx="12" cy="8" r="3.6"/><path d="M5 20c.8-3.6 3.6-5.4 7-5.4s6.2 1.8 7 5.4"/>', 15);
+const thinkShown = new WeakSet();
 function foldSync(card, text) {
   if (!card) return;
   const long = String(text || '').length > FOLD_CHARS;
@@ -8024,27 +8025,50 @@ function foldSync(card, text) {
     tg.remove();
   }
 }
-function msgEl(m, i) {
+function msgUserSecFrom(uel) {
+  const acts = uel.querySelector(':scope > .msg-actions');
+  const sec = document.createElement('div');
+  sec.className = 'msg-sec msg-sec-user';
+  sec.innerHTML = `<span class="msg-ico msg-user-ico" aria-hidden="true">${MSG_USER_ICO}</span><div class="msg-user-col"></div>`;
+  const col = sec.querySelector('.msg-user-col');
+  [...uel.children].forEach((c) => { if (c !== acts) col.appendChild(c); });
+  return { sec, acts };
+}
+
+function msgEl(m, i, pu) {
   const el = msgElRaw(m, i);
   const user = m.role === 'user';
   const card = document.createElement('div');
   card.className = 'msg-card';
-  const main = document.createElement('div');
-  main.className = 'msg-sec msg-sec-main';
   const acts = el.querySelector(':scope > .msg-actions');
-  [...el.children].forEach((c) => { if (c !== acts) main.appendChild(c); });
-  card.appendChild(main);
-  if (acts) {
-    acts.classList.add('msg-sec', 'msg-sec-act');
-    if (user) {
-      acts.insertAdjacentHTML('afterbegin', `<span class="msg-ico" aria-hidden="true">${MSG_USER_ICO}</span>`);
-    } else {
+  let pencil = null;
+  if (user) {
+    const u = msgUserSecFrom(el);
+    card.appendChild(u.sec);
+    if (u.acts) {
+      u.acts.classList.add('msg-sec', 'msg-sec-act');
+      card.appendChild(u.acts);
+    }
+  } else {
+    if (pu) {
+      const u = msgUserSecFrom(msgElRaw(pu.m, pu.i));
+      card.appendChild(u.sec);
+      pencil = u.acts ? u.acts.querySelector('[data-a="edit"]') : null;
+      if (pencil) pencil.dataset.ui = String(pu.i);
+    }
+    const main = document.createElement('div');
+    main.className = 'msg-sec msg-sec-main';
+    [...el.children].forEach((c) => { if (c !== acts) main.appendChild(c); });
+    card.appendChild(main);
+    if (acts) {
+      acts.classList.add('msg-sec', 'msg-sec-act');
+      if (pencil) acts.appendChild(pencil);
       const lg = msgProvLogo(m);
       if (lg) acts.insertAdjacentHTML('beforeend', `<span class="msg-ico msg-prov" title="${esc(msgModelName(m))}">${lg}</span>`);
+      card.appendChild(acts);
     }
-    card.appendChild(acts);
   }
-  if (acts || user) {
+  if (acts && !user) {
     const ft = document.createElement('div');
     ft.className = 'msg-sec msg-sec-foot';
     const mn = msgModelName(m);
@@ -8053,7 +8077,7 @@ function msgEl(m, i) {
   }
   if (!user && !acts && !String(m.content || '').trim()) card.classList.add('is-bare');
   el.appendChild(card);
-  foldSync(card, m.content);
+  foldSync(card, thinkShown.has(m) ? m.reasoning : m.content);
   return el;
 }
 
@@ -8166,6 +8190,9 @@ function msgElRaw(m, i) {
     body.textContent = m.__empty ? NO_REPLY_TEXT : (m.__error || 'No reply. Tap retry, or pick another model.');
     body.style.color = 'var(--gray-mid)';
     body.style.fontStyle = 'italic';
+  } else if (thinkShown.has(m)) {
+    body.classList.add('msg-thoughts');
+    body.textContent = m.reasoning || '';
   } else {
     setMsgBody(body, m.content);
   }
@@ -8192,10 +8219,28 @@ function msgElRaw(m, i) {
       btn('voice', 'Read aloud', ICONS.volume) +
       btn('like', 'Good response', m.feedback === 'like' ? ICONS.thumbUpOn : ICONS.thumbUp, m.feedback === 'like') +
       btn('dislike', 'Bad response', m.feedback === 'dislike' ? ICONS.thumbDownOn : ICONS.thumbDown, m.feedback === 'dislike') +
-      (last ? btn('regen', 'Regenerate', ICONS.regen) : '');
+      (last ? btn('regen', 'Regenerate', ICONS.regen) : '') +
+      (!last && m.reasoning ? btn('think', thinkShown.has(m) ? 'Show reply' : 'Show thoughts', ICONS.book, thinkShown.has(m)) : '');
   }
   el.appendChild(act);
   return el;
+}
+
+function buildMsgEls(msgs) {
+  const out = [];
+  let pu = null;
+  msgs.forEach((m, i) => {
+    if (m.hidden || stepMsgs.has(m)) return;
+    if (m.role === 'user') {
+      if (pu) out.push(msgEl(pu.m, pu.i));
+      pu = { m, i };
+      return;
+    }
+    out.push(msgEl(m, i, pu));
+    pu = null;
+  });
+  if (pu) out.push(msgEl(pu.m, pu.i));
+  return out;
 }
 
 function renderMessages() {
@@ -8204,7 +8249,7 @@ function renderMessages() {
   if (!box) return;
   const n = currentSession.messages.length;
   buildStepCards(currentSession.messages);
-  box.replaceChildren(...currentSession.messages.map((m, i) => (m.hidden || stepMsgs.has(m) ? null : msgEl(m, i))).filter(Boolean));
+  box.replaceChildren(...buildMsgEls(currentSession.messages));
   box.classList.toggle('hidden', n === 0);
   welcome?.classList.toggle('hidden', n > 0);
   sbRemark();
@@ -8455,8 +8500,18 @@ async function onMessageAction(btn) {
   } else if (a === 'retry') {
     if (chatBusy) return;
     retryFailed();
+  } else if (a === 'think') {
+    if (thinkShown.has(m)) thinkShown.delete(m); else thinkShown.add(m);
+    renderMessages();
   } else if (a === 'edit') {
-    editMessage(i);
+    const ui = btn.dataset.ui != null ? +btn.dataset.ui : i;
+    const card = btn.closest('.msg-card');
+    card?.classList.add('is-editing');
+    btn.classList.add('on');
+    Promise.resolve(editMessage(ui)).finally(() => {
+      card?.classList.remove('is-editing');
+      btn.classList.remove('on');
+    });
   }
 }
 
