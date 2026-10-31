@@ -4081,6 +4081,15 @@ mark.ab-mark {
 .signin-agree { display: flex; align-items: flex-start; gap: 10px; width: 100%; max-width: 480px; margin: 0 auto; font-size: 13px; line-height: 1.45; color: rgba(255, 255, 255, 0.78); cursor: pointer; }
 .signin-agree input { flex: none; width: 18px; height: 18px; margin: 1px 0 0; accent-color: #fff; }
 
+/* sign-in page, light version (always follows Auto: 6am-6pm) */
+.signin-screen.is-light { background: #fff; color: #000; }
+.signin-screen.is-light .signin-art { color: #000; }
+.signin-screen.is-light .signin-card { background: rgba(255, 255, 255, 0.6); border-top-color: #000; box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.18); }
+.signin-screen.is-light .signin-btn { color: #000; background: rgba(0, 0, 0, 0.05); border-color: rgba(0, 0, 0, 0.55); }
+.signin-screen.is-light .signin-btn:not(:disabled):active { background: rgba(0, 0, 0, 0.14); }
+.signin-screen.is-light .signin-agree { color: rgba(0, 0, 0, 0.75); }
+.signin-screen.is-light .signin-agree input { accent-color: #000; }
+
 /* ---------- Merged message card (user section on top of AI) ---------- */
 .msg-sec-user { position: relative; display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; min-width: 0; }
 .msg-user-ico { margin: -4px 0 0 -6px; color: var(--gray-light); }

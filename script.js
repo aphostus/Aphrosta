@@ -204,10 +204,17 @@ const SETTINGS_TS_LS = 'aphrosta.settingsUpdated';
 const SESSIONS_LS = 'aphrosta.sessions';
 
 const APPEARANCES = [
-  { id: 'system', name: 'System' },
   { id: 'dark',   name: 'Dark' },
-  { id: 'light',  name: 'Light' }
+  { id: 'auto',   name: 'Auto' },
+  { id: 'light',  name: 'Light' },
+  { id: 'system', name: 'System' }
 ];
+
+/* Auto: light from 6am to 6pm, dark from 6pm to 6am */
+function autoTheme() {
+  const h = new Date().getHours();
+  return h >= 6 && h < 18 ? 'light' : 'dark';
+}
 
 const ACCENTS = [
   { id: 'mono',   name: 'Mono',   c: null },
@@ -341,7 +348,7 @@ const RICH_FORMAT_PROMPT = [
 const PLAN_PROMPT = 'PLANNING: for tasks that need three or more steps, open the reply with a plan block: a line ":::plan Plan", up to 6 lines like "- [ ] step", then ":::" alone on a line. When you post an updated plan, mark finished steps "- [x]" and the current step "- [~]". Skip the plan for simple questions.';
 
 const SETTINGS_DEFAULTS = {
-  appearance: 'dark',
+  appearance: 'auto',
   accent: 'mono',
   font: 'system',
   size: 'default',
@@ -386,7 +393,7 @@ function loadSettings() {
   const s = { ...SETTINGS_DEFAULTS, ...raw };
   delete s.sections;
   const valid = (list, id, fb) => (list.some((x) => x.id === id) ? id : fb);
-  s.appearance = valid(APPEARANCES, s.appearance, 'dark');
+  s.appearance = valid(APPEARANCES, s.appearance, 'auto');
   s.accent     = valid(ACCENTS, s.accent, 'mono');
   s.font       = valid(FONTS, s.font, 'system');
   s.size       = valid(TEXT_SIZES, s.size, 'default');
@@ -544,7 +551,9 @@ function applySettings() {
 
   const theme = settings.appearance === 'system'
     ? (systemLight?.matches ? 'light' : 'dark')
-    : settings.appearance;
+    : settings.appearance === 'auto'
+      ? autoTheme()
+      : settings.appearance;
   root.dataset.theme = theme;
   document.querySelector('meta[name="theme-color"]')
     ?.setAttribute('content', theme === 'light' ? '#ffffff' : '#000000');
@@ -588,6 +597,12 @@ function setSetting(key, value) {
 systemLight?.addEventListener?.('change', () => {
   if (settings.appearance === 'system') applySettings();
 });
+/* Auto mode: switch at 6am / 6pm without a reload; also keeps the sign-in page in step */
+setInterval(() => {
+  const t = autoTheme();
+  document.querySelector('.signin-screen')?.classList.toggle('is-light', t === 'light');
+  if (settings.appearance === 'auto' && document.documentElement.dataset.theme !== t) applySettings();
+}, 30000);
 applySettings();
 
 function ensureToastHost() {
@@ -6157,12 +6172,36 @@ function sbClear() {
 }
 
 /* mode: 0 = no scroll, 1 = instant, 2 = smooth slide */
+/* search auto-opens a folded card for its match, and folds it again when search moves on */
+const sbAuto = new Set();
+function sbFold(card, open) {
+  const tg = card.querySelector('.msg-sec-main > .msg-body, .msg-sec-main > .msg-bubble');
+  const fb = card.querySelector('.msg-fold');
+  card.classList.toggle('open', open);
+  if (fb) fb.textContent = open ? 'Hide...' : 'Show...';
+  if (!tg) return;
+  tg.style.transition = 'none';
+  tg.style.maxHeight = open ? 'none' : '';
+  void tg.offsetHeight;
+  tg.style.transition = '';
+}
+function sbReveal(el) {
+  const card = el ? el.closest('.msg-card.is-long') : null;
+  sbAuto.forEach((c) => {
+    if (c === card) return;
+    if (c.isConnected && c.classList.contains('open')) sbFold(c, false);
+    sbAuto.delete(c);
+  });
+  if (card && !card.classList.contains('open')) { sbFold(card, true); sbAuto.add(card); }
+}
+
 function sbFocus(mode) {
   sbHits.forEach((m) => m.classList.remove('is-cur'));
   const el = sbHits[sbIdx];
-  if (!el) return;
+  if (!el) { if (mode) sbReveal(null); return; }
   el.classList.add('is-cur');
   if (!mode) return;
+  sbReveal(el);
   const st = stageEl();
   if (!st) return;
   chatStick = false;
@@ -6175,10 +6214,10 @@ function sbMark(term, quiet) {
   const keep = quiet ? sbIdx : 0;
   sbClear();
   const box = q$('#messages');
-  if (!term || !box) { sbUi(); return; }
+  if (!term || !box) { sbReveal(null); sbUi(); return; }
   const low = term.toLowerCase();
   const walker = document.createTreeWalker(box, NodeFilter.SHOW_TEXT, {
-    acceptNode: (n) => (n.nodeValue.toLowerCase().includes(low) && !n.parentElement.closest('button, script, style, textarea, .msg-actions')
+    acceptNode: (n) => (n.nodeValue.toLowerCase().includes(low) && !n.parentElement.closest('button, script, style, textarea, .msg-actions, .msg-card.pw-locked')
       ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT)
   });
   const nodes = [];
@@ -8116,7 +8155,7 @@ function pwRow(card, mode) {
   row.dataset.mode = mode;
   row.innerHTML = (mode === 'set' || mode === 'unlock')
     ? `<input class="pw-in" type="password" maxlength="${PW_LEN}" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="${mode === 'set' ? 'Set a 10 character password' : 'Enter password'}" aria-label="Password"><button class="pw-eye" type="button" data-pw="eye" aria-label="Show password" aria-pressed="false"><span data-eye-on hidden>${ICONS.eye}</span><span data-eye-off>${ICONS.eyeOff}</span></button><button class="pw-go" type="button" data-pw="go">${mode === 'set' ? 'Lock' : 'Open'}</button>`
-    : `<button class="pw-go" type="button" data-pw="relock">Lock now</button>${own ? '<button class="pw-go pw-danger" type="button" data-pw="remove">Remove</button>' : ''}`;
+    : `<button class="pw-go" type="button" data-pw="relock">Lock</button>${own ? '<button class="pw-go pw-danger" type="button" data-pw="remove">Remove</button>' : ''}`;
   card.firstElementChild.after(row);
   row.querySelector('.pw-in')?.focus({ preventScroll: true });
 }
@@ -10711,7 +10750,7 @@ function showSignInButton() {
     return;
   }
   appEl.innerHTML = `
-    <div class="signin-screen">
+    <div class="signin-screen${autoTheme() === 'light' ? ' is-light' : ''}">
       <pre class="signin-art" id="signin-art" aria-hidden="true"></pre>
       <div class="signin-card">
         <button id="signin-btn" class="signin-btn" disabled>
@@ -10725,6 +10764,7 @@ function showSignInButton() {
       </div>
     </div>`;
   startSignArt();
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', autoTheme() === 'light' ? '#ffffff' : '#000000');
   const cb = document.getElementById('signin-agree');
   const btn = document.getElementById('signin-btn');
   cb.onchange = () => { btn.disabled = !cb.checked; };
