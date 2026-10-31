@@ -4537,8 +4537,8 @@ function initComposer() {
     hideTapAt = 0;
     input.blur();
     wrap.classList.add('composer-hidden');
+    wrap.classList.remove('composer-hiding');
     wrap.setAttribute('aria-hidden', 'true');
-    toast('Double tap to bring back', 'info', 2600);
   };
   const showComposer = () => {
     if (!cmpHidden) return;
@@ -4577,6 +4577,7 @@ function initComposer() {
     const dy = drag.y - e.clientY;
     if (Math.abs(dy) > 3) drag.moved = true;
     drag.raw = drag.h + dy;
+    wrap.classList.toggle('composer-hiding', drag.moved && drag.raw < MIN_H * HIDE_RATIO);
     userMin = Math.min(Math.max(drag.h + dy, MIN_H), getMax());
     fit();
   });
@@ -4590,6 +4591,7 @@ function initComposer() {
     document.documentElement.classList.remove('resizing');
     document.removeEventListener('touchmove', blockScroll);
     if (shouldHide) { hideComposer(); return; }
+    wrap.classList.remove('composer-hiding');
     if (wasTap) {
       const now = Date.now();
       if (now - lastTap < 320) { userMin = MIN_H; fit(); lastTap = 0; }

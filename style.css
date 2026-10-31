@@ -1009,6 +1009,10 @@ mark.sb-hit.is-cur {
 .composer-wrap {
   transition: opacity 0.32s var(--ease-smooth), transform 0.32s var(--ease-smooth);
 }
+.composer-wrap.composer-hiding {
+  opacity: 0.35;
+  transform: translateY(45%);
+}
 .composer-wrap.composer-hidden {
   opacity: 0;
   transform: translateY(calc(100% + 24px));
