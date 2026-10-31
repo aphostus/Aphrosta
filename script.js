@@ -2094,8 +2094,8 @@ function openLibSheet(edit) {
       <label class="lib-lab">Name
         <input class="lib-in" id="lib-title" maxlength="80" autocomplete="off" placeholder="e.g. Brand guidelines" value="${esc(edit?.title)}">
       </label>
-      <label class="lib-lab">Information
-        <textarea class="lib-in lib-ta" id="lib-instr" rows="5" maxlength="1500" placeholder="Add details about this item. e.g. Prices, rules, or notes you want to keep.">${esc(edit?.instructions)}</textarea>
+      <label class="lib-lab"><span id="lib-instr-lab">${edit?.hidden ? 'Information' : 'Instructions'}</span>
+        <textarea class="lib-in lib-ta" id="lib-instr" rows="5" maxlength="1500" placeholder="${edit?.hidden ? 'Add details about this item. e.g. Prices, rules, or notes you want to keep.' : 'When and how should the AI use this? e.g. Use it when I ask about pricing. Quote exact numbers.'}">${esc(edit?.instructions)}</textarea>
       </label>
       <div class="lib-lab">Files
         <div class="lib-flist" id="lib-flist"></div>
@@ -2119,6 +2119,10 @@ function openLibSheet(edit) {
     visBtn.classList.toggle('is-off', hid);
     visBtn.setAttribute('aria-pressed', hid ? 'true' : 'false');
     visBtn.setAttribute('aria-label', hid ? 'Hidden from AI' : 'Visible to AI');
+    el.querySelector('#lib-instr-lab').textContent = hid ? 'Information' : 'Instructions';
+    el.querySelector('#lib-instr').placeholder = hid
+      ? 'Add details about this item. e.g. Prices, rules, or notes you want to keep.'
+      : 'When and how should the AI use this? e.g. Use it when I ask about pricing. Quote exact numbers.';
     toast(hid ? 'Hidden: only you can see this.' : 'Visible: the AI can see this.', 'info', 1600);
   });
   el.querySelector('#lib-pick').addEventListener('click', () => fileIn.click());
