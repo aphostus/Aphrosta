@@ -4277,15 +4277,36 @@ mark.ab-mark {
 }
 
 /* ---------- Session key row (left panel) ---------- */
-.sess-pw .pw-in { flex: 1 1 auto; width: 0; min-width: 0; }
-.sess-pw .pw-eye, .sess-pw .pw-go { flex: 0 0 auto; white-space: nowrap; }
+.chat-item.has-pw { background: var(--glass-bg-hover); border-radius: 10px 10px 0 0; }
 .sess-pw {
-  box-sizing: border-box;
-  width: 100%;
+  display: grid;
+  grid-template-rows: 1fr;
+  background: var(--glass-bg-hover);
+  border-radius: 0 0 10px 10px;
+  animation: sessPwGrow 0.38s var(--ease-spring) both;
+}
+.sess-pw-in { min-height: 0; overflow: hidden; }
+.sess-pw-line {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 8px 8px;
-  animation: msgIn 0.25s var(--ease-spring);
+  padding: 8px 8px 10px 42px;
+  border-top: 1px solid var(--glass-border);
 }
+.sess-pw .pw-in {
+  flex: 1 1 auto;
+  width: 0;
+  min-width: 0;
+  font-family: inherit;
+  font-size: calc(13.5px * var(--ts));
+  letter-spacing: 0.04em;
+}
+.sess-pw .pw-in::placeholder { font-family: inherit; font-size: calc(12.5px * var(--ts)); letter-spacing: 0; }
+.sess-pw .pw-go { font-family: inherit; font-size: calc(12.5px * var(--ts)); }
+.sess-pw .pw-eye, .sess-pw .pw-go { flex: 0 0 auto; white-space: nowrap; }
+@keyframes sessPwGrow {
+  from { grid-template-rows: 0fr; opacity: 0; }
+  to   { grid-template-rows: 1fr; opacity: 1; }
+}
+html[data-motion="reduce"] .sess-pw { animation: none; }
 

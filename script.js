@@ -8748,7 +8748,7 @@ function renderMessages() {
 }
 
 function sessionItem(s) {
-  return `<div class="chat-item${s.id === currentSession.id ? ' is-active' : ''}" data-id="${esc(s.id)}">
+  return `<div class="chat-item${s.id === currentSession.id ? ' is-active' : ''}${sessPw && sessPw.id === s.id ? ' has-pw' : ''}" data-id="${esc(s.id)}">
     <span class="chat-under chat-under-stat"></span>
     <span class="chat-under chat-under-arc">${ICONS.archive}<b>Archive</b></span>
     <div class="chat-slide">
@@ -8777,7 +8777,7 @@ function sessPwRowHtml(s) {
   const inner = m === 'manage'
     ? '<button class="pw-go" type="button" data-sp="relock">Lock</button><button class="pw-go pw-danger" type="button" data-sp="remove">Remove</button>'
     : `<input class="pw-in" type="password" maxlength="${PW_LEN}" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="${m === 'set' ? 'Set a 10 character password' : 'Enter password'}" aria-label="Password"><button class="pw-eye" type="button" data-sp="eye" aria-label="Show password" aria-pressed="false"><span data-eye-on hidden>${ICONS.eye}</span><span data-eye-off>${ICONS.eyeOff}</span></button><button class="pw-go" type="button" data-sp="go">${m === 'set' ? 'Lock' : 'Open'}</button>`;
-  return `<div class="sess-pw" data-id="${esc(s.id)}" data-mode="${m}">${inner}</div>`;
+  return `<div class="sess-pw" data-id="${esc(s.id)}" data-mode="${m}"><div class="sess-pw-in"><div class="sess-pw-line">${inner}</div></div></div>`;
 }
 
 function sessPwShow(id, mode) {
@@ -8846,11 +8846,16 @@ async function sessPwAct(btn) {
       try {
         const seal = (await pwSeal(inp.value, [{ content: 'aphrosta-session-lock' }]))[0];
         s.lock = { s: seal.s, iv: seal.iv, ct: seal.ct };
-        sessOpen.add(id);
+        sessOpen.delete(id);
         sessPw = null;
         stamp();
         persistSessions();
-        renderSessionList();
+        if (currentSession.id === id && !chatBusy) {
+          currentSession = newDraft();
+          clearDraft();
+          resetNewSessionUi();
+          renderSessionUi();
+        } else renderSessionList();
         toast('Session locked with your password.', 'success', 2000);
       } catch (_) { delete row.dataset.busy; toast('Could not lock the session. (H13)'); }
       return;
