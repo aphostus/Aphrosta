@@ -1071,6 +1071,7 @@ Object.assign(ICONS, {
   stClose:       svg('<path d="M6 6l12 12M6 18L18 6"/>', 16),  
   stBack:        svg('<path d="M19 12H5M11 6l-6 6 6 6"/>', 16),
   stReset:       svg('<path d="M4 12a8 8 0 108-8H8"/><path d="M11 1L8 4l3 3"/>', 16),
+  stTutorial:    svg('<path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11.5V16c0 1.5 3 3 6 3s6-1.5 6-3v-4.5"/><path d="M22 9v6"/>', 16),
   stAppearance:  svg('<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 000 18z"/>', 16),
   stLanguage:    svg('<path d="M4 5h9M8.5 3v2M6 5c.5 3 3 6 6.5 7.5M12 5c-.8 3.5-3.5 6.5-7.5 8.5"/><path d="M12 20l4-9 4 9M13.5 17h5"/>', 16),
   stSounds:      svg('<path d="M9 18V5l11-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/>', 16),
@@ -1602,8 +1603,9 @@ let ThemeSection = () => Section('theme', 'Theme', [
 ], 6);
 
 const ResetGroup = () => Section('reset', 'Defaults', [
-  LinkRow('reset-defaults', ICONS.stReset, 'Default', { act: 'reset-defaults' })
-], 1);
+  LinkRow('reset-defaults', ICONS.stReset, 'Default', { act: 'reset-defaults' }),
+  LinkRow('tutorial', ICONS.stTutorial, 'Tutorial', { act: 'tutorial' })
+], 2);
 
 const memListHtml = () => (settings.memoryNotes?.length
   ? settings.memoryNotes.map((n, i) => `<div class="mem-item"><span title="${esc(n)}">${esc(n)}</span><button type="button" data-act="mem-del" data-i="${i}">Delete</button></div>`).join('')
@@ -1662,8 +1664,7 @@ let AssistanceSection = () => Section('assistance', 'Assistance', [
     SubSwitch('Slides', 'skillPresentations') +
     SubSwitch('Documents', 'skillDocuments') +
     SubSwitch('Spreadsheets', 'skillSheets') +
-    SubSwitch('Web Search', 'skillWeb') +
-    Field('Tutorial', '<button class="chip" type="button" data-action="replay-tour">Replay Tour</button>')),
+    SubSwitch('Web Search', 'skillWeb')),
 
   Item('controls', ICONS.stControls, 'Controls',
     Field('Creativity', Chips('creativity', [{ id: 'precise', name: 'Precise' }, { id: 'balanced', name: 'Balanced' }, { id: 'creative', name: 'Creative' }], settings.creativity)) +
@@ -2390,6 +2391,7 @@ function onSettingsClick(e) {
     case 'about-terms': case 'about-rules': case 'about-licenses': case 'about-help': case 'about-billing': case 'about-shortcuts':
       return openAboutPage(act.slice(6));
     case 'voice-test':    return testVoice();
+    case 'tutorial':      closeSettings(); setTimeout(() => startOnboarding(true), 350); return;
     case 'el-voices': { const p = document.querySelector('[data-el-panel]'); if (p) p.hidden = !p.hidden; return; }
     case 'avatar-remove': setSetting('avatar', ''); toast('Profile photo removed.', 'success', 1800); return;
     case 'export-data':   return exportData();
