@@ -734,7 +734,7 @@ html.has-vv #app-shell { height: var(--app-h); }
   height: 100%;
   padding: 0 4px;
   font-family: inherit;
-  font-size: calc(16px * var(--ts));
+  font-size: calc(12px * var(--ts));
   background: none;
   border: none;
   outline: none;

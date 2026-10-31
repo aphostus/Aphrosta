@@ -2837,7 +2837,7 @@ const SearchBar = () => `
               <span class="sbar-vis-pub">${ICONS.globe}</span>
             </button>
             <div class="sbar-pill">
-              <input class="sbar-code" type="text" maxlength="15" aria-label="Chat ID" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" value="">
+              <input class="sbar-code" type="text" maxlength="30" aria-label="Chat ID" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" value="">
             </div>
             <button class="sbar-act" type="button" data-action="sb-act" data-mode="copy" aria-label="Copy chat ID">
               <span class="sbar-act-copy">${ICONS.copy}</span>
@@ -5976,7 +5976,7 @@ let pendingResend = null;
 /* ---------- SEARCH BAR + CHAT SHARE ---------- */
 var sbHits = [], sbIdx = -1, sbQuery = '', sbTimer = 0, sbMig = 0, sbLastTop = 0;
 var pubSig = new Map(), pubTimer = 0;
-const SB_LEN = 15;
+const SB_LEN = 30;
 const SB_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%&*?+=-_';
 
 function sbMakeCode() {
