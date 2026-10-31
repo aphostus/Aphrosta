@@ -4199,3 +4199,14 @@ mark.ab-mark {
 .msg-card.is-editing .msg-sec-user .msg-user-ico { visibility: hidden; }
 .msg-card.is-editing .msg-pubctl { display: none !important; }
 
+/* ---------- Read aloud: current word underline + collapsed card follow ---------- */
+::highlight(spk-word) {
+  text-decoration: underline 2px;
+  text-decoration-color: var(--accent, currentColor);
+  text-underline-offset: 3px;
+}
+.msg-card.is-long.spk-follow:not(.open) .msg-sec-main > .msg-body {
+  -webkit-mask-size: 100% calc(100% - 1.5em), 100% 1.5em;
+  mask-size: 100% calc(100% - 1.5em), 100% 1.5em;
+}
+

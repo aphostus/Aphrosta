@@ -3011,9 +3011,132 @@ function cleanForSpeech(text) {
     .trim();
 }
 
+/* ---------- SPEECH FOLLOW: underline spoken word, auto-scroll, grow collapsed card ---------- */
+const SpkFollow = (() => {
+  const ok = !!(window.CSS && CSS.highlights && window.Highlight);
+  const norm = (w) => String(w).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+  const count = (s) => (String(s).match(/\S+/g) || []).length;
+  const SKIP = '.code-glass, pre, button, .file-materials, .file-single, .chart-card, .mmd-card, .rich-tool, script, style';
+  let st = null, raf = 0, cur = -1, userAt = 0;
+  ['wheel', 'touchmove'].forEach((ev) => document.addEventListener(ev, () => { userAt = Date.now(); }, { passive: true, capture: true }));
+
+  function domWords(body) {
+    const out = [];
+    const w = document.createTreeWalker(body, NodeFilter.SHOW_TEXT, {
+      acceptNode: (n) => (n.parentElement && !n.parentElement.closest(SKIP) && n.nodeValue.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT)
+    });
+    while (w.nextNode()) {
+      const n = w.currentNode, re = /\S+/g;
+      let m;
+      while ((m = re.exec(n.nodeValue))) out.push({ n, a: m.index, b: m.index + m[0].length, k: norm(m[0]) });
+    }
+    return out;
+  }
+
+  function wordTimes(al) {
+    const ch = (al && al.characters) || [], t0 = (al && al.character_start_times_seconds) || [];
+    const out = [];
+    let inW = false;
+    for (let i = 0; i < ch.length; i++) {
+      const sp = /\s/.test(ch[i]);
+      if (!sp && !inW) { out.push(t0[i] || 0); inW = true; }
+      else if (sp) inW = false;
+    }
+    return out;
+  }
+
+  function stop() {
+    cancelAnimationFrame(raf);
+    raf = 0;
+    if (ok) { try { CSS.highlights.delete('spk-word'); } catch (_) {} }
+    if (st) {
+      st.card.classList.remove('spk-follow');
+      if (st.grown && !st.card.classList.contains('open')) st.body.style.maxHeight = '';
+    }
+    st = null;
+    cur = -1;
+  }
+
+  function start(btn, clean) {
+    stop();
+    if (!ok || !btn) return;
+    const card = btn.closest('.msg-card');
+    const body = card && card.querySelector('.msg-sec-main > .msg-body');
+    if (!body) return;
+    const dom = domWords(body);
+    if (!dom.length) return;
+    const spoken = String(clean).match(/\S+/g) || [];
+    const map = new Array(spoken.length).fill(-1);
+    let p = 0;
+    spoken.forEach((sw, i) => {
+      const k = norm(sw);
+      if (!k) return;
+      for (let j = p; j < Math.min(dom.length, p + 30); j++) {
+        if (dom[j].k === k) { map[i] = j; p = j + 1; break; }
+      }
+    });
+    const clamped = card.classList.contains('is-long') && !card.classList.contains('open');
+    st = { card, body, dom, map, clamped, grown: false, target: body.clientHeight };
+    if (clamped) card.classList.add('spk-follow');
+  }
+
+  function reveal(j, r) {
+    const tg = st.body;
+    if (st.clamped && !st.card.classList.contains('open')) {
+      const nx = st.dom[Math.min(j + 1, st.dom.length - 1)];
+      const rr = document.createRange();
+      rr.setStart(nx.n, nx.a);
+      rr.setEnd(nx.n, nx.b);
+      const need = Math.ceil(rr.getBoundingClientRect().bottom - tg.getBoundingClientRect().top + 8);
+      if (need > st.target) { st.target = need; st.grown = true; tg.style.maxHeight = need + 'px'; }
+    }
+    if (Date.now() - userAt < 2500) return;
+    const s = stageEl();
+    if (!s) return;
+    const sr = s.getBoundingClientRect();
+    const cw = appEl && appEl.querySelector('.composer-wrap');
+    const top = sr.top + 60, bot = sr.bottom - (cw ? cw.offsetHeight : 140);
+    const h = Math.max(80, bot - top);
+    const wr = r.getBoundingClientRect();
+    if (wr.top < top + h * 0.08 || wr.bottom > top + h * 0.75) {
+      s.scrollTo({ top: Math.max(0, s.scrollTop + (wr.top - top) - h * 0.35), behavior: 'smooth' });
+    }
+  }
+
+  function at(i) {
+    if (!st || !(i >= 0)) return;
+    if (!st.body.isConnected) { stop(); return; }
+    const j = st.map[i];
+    if (j == null || j < 0 || j === cur) return;
+    cur = j;
+    const d = st.dom[j];
+    const r = document.createRange();
+    try { r.setStart(d.n, d.a); r.setEnd(d.n, d.b); } catch (_) { return; }
+    CSS.highlights.set('spk-word', new Highlight(r));
+    reveal(j, r);
+  }
+
+  function audio(times, base) {
+    cancelAnimationFrame(raf);
+    if (!st || !times || !times.length) return;
+    let k = 0;
+    const loop = () => {
+      if (!st) return;
+      const t = elAudio.currentTime;
+      while (k + 1 < times.length && times[k + 1] <= t) k++;
+      at(base + k);
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+  }
+
+  return { start, stop, at, audio, count, wordTimes };
+})();
+
 let speakGen = 0, speakTimer = 0;
 function stopSpeaking() {
   speakGen++; clearTimeout(speakTimer);
+  SpkFollow.stop();
   elStop();
   window.speechSynthesis?.cancel();
   if (currentSpeakBtn) {
@@ -3050,6 +3173,8 @@ const speakBrowser = function (text, btn = null) {
   const clean = cleanForSpeech(text);
   if (!clean) return;
   const gen = speakGen, chunks = chunkForSpeech(clean), v = pickVoice(s);
+  SpkFollow.start(btn, clean);
+  let wBase = 0;
   const rate = { slow: 0.8, normal: 1, fast: 1.25 }[settings.voiceOut] || 1;
   const pitch = { low: 0.8, normal: 1, high: 1.25 }[settings.voicePitch] || 1;
   if (btn) {
@@ -3063,7 +3188,13 @@ const speakBrowser = function (text, btn = null) {
   const next = () => {
     if (gen !== speakGen) return;
     if (i >= chunks.length) return stopSpeaking();
-    const u = new SpeechSynthesisUtterance(chunks[i++]);
+    const chunkTxt = chunks[i++];
+    const u = new SpeechSynthesisUtterance(chunkTxt);
+    const base = wBase;
+    wBase += SpkFollow.count(chunkTxt);
+    u.onboundary = (ev) => {
+      if (gen === speakGen && ev.name !== 'sentence') SpkFollow.at(base + SpkFollow.count(chunkTxt.slice(0, ev.charIndex)));
+    };
     u.lang = v?.lang || settings.langOut || 'en';
     if (v) u.voice = v;
     u.rate = rate; u.pitch = pitch;
@@ -3088,6 +3219,7 @@ async function elSpeak(text, btn = null) {
   const clean = cleanForSpeech(text);
   if (!clean) return;
   const gen = speakGen;
+  SpkFollow.start(btn, clean);
   if (btn) {
     currentSpeakBtn = btn;
     btn.innerHTML = ICONS.stopSpk;
@@ -3100,21 +3232,26 @@ async function elSpeak(text, btn = null) {
   const chunks = chunkForSpeech(clean, 450);
   const ctl = new AbortController();
   elCtl = ctl;
-  let played = 0;
+  let played = 0, wBase = 0;
   try {
     const key = await elKey();
-    const grab = (t) => fetch('https://api.elevenlabs.io/v1/text-to-speech/' + vo.v + '?output_format=mp3_44100_64', {
+    const grab = (t) => fetch('https://api.elevenlabs.io/v1/text-to-speech/' + vo.v + '/with-timestamps?output_format=mp3_44100_64', {
       method: 'POST',
       signal: ctl.signal,
-      headers: { 'xi-api-key': key, 'Content-Type': 'application/json', Accept: 'audio/mpeg' },
+      headers: { 'xi-api-key': key, 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({ text: t, model_id: 'eleven_flash_v2_5', voice_settings: { stability: 0.5, similarity_boost: 0.75, speed } })
     }).then(async (r) => {
       if (!r.ok) throw new Error('HTTP ' + r.status);
-      return URL.createObjectURL(await r.blob());
+      const j = await r.json();
+      const bin = atob(j.audio_base64 || '');
+      const u8 = new Uint8Array(bin.length);
+      for (let q = 0; q < bin.length; q++) u8[q] = bin.charCodeAt(q);
+      return { src: URL.createObjectURL(new Blob([u8], { type: 'audio/mpeg' })), times: SpkFollow.wordTimes(j.alignment) };
     });
     let next = grab(chunks[0]);
     for (let i = 0; i < chunks.length; i++) {
-      const src = await next;
+      const got = await next;
+      const src = got.src;
       if (gen !== speakGen) { URL.revokeObjectURL(src); return; }
       next = i + 1 < chunks.length ? grab(chunks[i + 1]) : null;
       if (next) next.catch(() => {});
@@ -3122,12 +3259,14 @@ async function elSpeak(text, btn = null) {
         elResolve = res;
         elAudio.onended = elAudio.onerror = () => { elResolve = null; res(); };
         elAudio.src = src;
+        SpkFollow.audio(got.times, wBase);
         const p = elAudio.play();
         if (p && p.catch) p.catch((e) => { elResolve = null; rej(e); });
       });
       URL.revokeObjectURL(src);
       if (gen !== speakGen) return;
       played++;
+      wBase += SpkFollow.count(chunks[i]);
     }
     stopSpeaking();
   } catch (e) {
