@@ -636,7 +636,7 @@ function inboxPush(message, type) {
 
 function toast(message, type = 'error', duration = 2800) {
   inboxPush(message, type);
-  if (type === 'success' && !settings.notifications) return;
+  if (!settings.notifications) return;
   const host = ensureToastHost();
   if ([...host.children].some((el) => el.dataset.msg === message)) return;
   while (host.children.length >= 3) host.firstElementChild.remove();
@@ -1112,6 +1112,8 @@ Object.assign(ICONS, {
 });
 ICONS.infoSm  = svg('<path d="M4 4h16v12H8l-4 4z"/><path d="M12 8v3M12 13h.01"/>', 14);
 delete ICONS.memory; delete ICONS.pen;
+ICONS.bellOn = svg('<path d="M6 9a6 6 0 0112 0c0 5 2 6 2 7H4c0-1 2-2 2-7z"/><path d="M10 20a2 2 0 004 0"/>', 16);
+ICONS.bellOff = svg('<path d="M6 9a6 6 0 0112 0c0 5 2 6 2 7H4c0-1 2-2 2-7z"/><path d="M10 20a2 2 0 004 0"/><path d="M3 3l18 18"/>', 16);
 ICONS.branchTree = svg('<path d="M12 21v-7"/><path d="M12 14c0-3-5-3-5-7"/><path d="M12 14c0-3 5-3 5-7"/><circle cx="7" cy="5" r="2"/><circle cx="17" cy="5" r="2"/>', 15);
 
 /* ---------- BRAND MARK ---------- */
@@ -2308,13 +2310,24 @@ function renderInbox() {
   box.innerHTML = html + '</div>';
 }
 
+const inboxBellHtml = () => `<button class="fd-ic" type="button" data-fd="inbox-bell" aria-pressed="${settings.notifications ? 'true' : 'false'}" aria-label="${settings.notifications ? 'Toasts on. Tap to turn off' : 'Toasts off. Tap to turn on'}" title="${settings.notifications ? 'Toasts on' : 'Toasts off'}">${settings.notifications ? ICONS.bellOn : ICONS.bellOff}</button>`;
+
 function openInbox() {
-  const p = fdOpen('Inbox', 'Activity and errors', '<div data-fd-inbox-list></div>', '<button class="fd-pill" type="button" data-fd="inbox-clear">Clear</button>');
+  const p = fdOpen('Inbox', 'Activity and errors', '<div data-fd-inbox-list></div>', inboxBellHtml() + '<button class="fd-pill" type="button" data-fd="inbox-clear">Clear</button>');
   p.addEventListener('click', (e) => {
     const b = e.target.closest('[data-fd]');
     if (!b) return;
     if (b.dataset.fd === 'close') fdClose();
     else if (b.dataset.fd === 'inbox-clear') { inboxItems = []; lsSet(INBOX_LS, inboxItems); renderInbox(); }
+    else if (b.dataset.fd === 'inbox-bell') {
+      setSetting('notifications', !settings.notifications);
+      b.innerHTML = settings.notifications ? ICONS.bellOn : ICONS.bellOff;
+      b.setAttribute('aria-pressed', settings.notifications ? 'true' : 'false');
+      b.setAttribute('aria-label', settings.notifications ? 'Toasts on. Tap to turn off' : 'Toasts off. Tap to turn on');
+      b.title = settings.notifications ? 'Toasts on' : 'Toasts off';
+      document.querySelectorAll('input[data-set="notifications"]').forEach((i) => { i.checked = !!settings.notifications; });
+      if (settings.notifications) toast('Toasts are on.', 'info', 1400);
+    }
   });
   renderInbox();
 }
