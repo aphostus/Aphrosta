@@ -9955,32 +9955,49 @@ function startSignArt() {
   const el = document.getElementById('signin-art');
   if (!el) return;
   clearInterval(signArtTimer);
-  const W = 64, H = 24;
   const RAMP = ' .:-=+*#%@';
-  const frame = (t) => {
+  let cols = 0, rows = 0, t = 0;
+  const fit = () => {
+    el.textContent = '';
+    const probe = document.createElement('span');
+    probe.textContent = 'M'.repeat(20);
+    el.appendChild(probe);
+    const cw = probe.getBoundingClientRect().width / 20 || 6;
+    const ch = parseFloat(getComputedStyle(el).lineHeight) || 11;
+    cols = Math.ceil(window.innerWidth / cw) + 1;
+    rows = Math.ceil(window.innerHeight / ch) + 1;
+    el.textContent = '';
+  };
+  const frame = () => {
     let out = '';
-    for (let y = 0; y < H; y++) {
+    for (let y = 0; y < rows; y++) {
       let row = '';
-      for (let x = 0; x < W; x++) {
-        const v = Math.sin(x * 0.18 + t)
-          + Math.sin(y * 0.4 - t * 1.3)
-          + Math.sin((x + y) * 0.12 + t * 0.7)
-          + Math.sin(Math.hypot(x - W / 2, (y - H / 2) * 2) * 0.25 - t * 2);
+      for (let x = 0; x < cols; x++) {
+        const v = Math.sin(x * 0.16 + t)
+          + Math.sin(y * 0.22 - t * 1.3)
+          + Math.sin((x + y) * 0.09 + t * 0.7)
+          + Math.sin(Math.hypot(x - cols / 2, (y - rows / 2) * 1.8) * 0.18 - t * 2);
         const n = (v + 4) / 8;
         const i = Math.max(0, Math.min(RAMP.length - 1, Math.floor(n * RAMP.length)));
         row += RAMP[i];
       }
-      out += row + (y < H - 1 ? '\n' : '');
+      out += row + (y < rows - 1 ? '\n' : '');
     }
     return out;
   };
-  let t = 0;
-  el.textContent = frame(t);
+  const onResize = () => {
+    if (!el.isConnected) { window.removeEventListener('resize', onResize); return; }
+    fit();
+    el.textContent = frame();
+  };
+  fit();
+  el.textContent = frame();
+  window.addEventListener('resize', onResize);
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   signArtTimer = setInterval(() => {
     if (!el.isConnected) { clearInterval(signArtTimer); return; }
     t += 0.12;
-    el.textContent = frame(t);
+    el.textContent = frame();
   }, 70);
 }
 
