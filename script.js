@@ -8763,8 +8763,7 @@ function sessionItem(s) {
       <button class="chat-act" type="button" data-act="del" aria-label="Delete session">${ICONS.trash}</button>
     </span>
     </div>
-    ${sessPwRowHtml(s)}
-  </div>`;
+  </div>${sessPwRowHtml(s)}`;
 }
 
 /* ---------- SESSION KEY (password lock on the left panel) ---------- */

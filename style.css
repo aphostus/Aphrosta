@@ -4277,9 +4277,11 @@ mark.ab-mark {
 }
 
 /* ---------- Session key row (left panel) ---------- */
-.chat-item { flex-wrap: wrap; }
+.sess-pw .pw-in { flex: 1 1 auto; width: 0; min-width: 0; }
+.sess-pw .pw-eye, .sess-pw .pw-go { flex: 0 0 auto; white-space: nowrap; }
 .sess-pw {
-  flex: 0 0 100%;
+  box-sizing: border-box;
+  width: 100%;
   display: flex;
   align-items: center;
   gap: 8px;
