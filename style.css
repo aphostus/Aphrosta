@@ -4162,6 +4162,21 @@ mark.ab-mark {
 .pw-eye[aria-pressed="true"] { color: var(--accent); }
 .pw-eye:active { transform: scale(0.94); }
 .pc-btn.pw-shake { animation: pwShake 0.45s var(--ease-smooth); }
+.msg-body.swap-glaze { position: relative; animation: glazeClear 0.55s var(--ease-smooth) both; }
+.msg-body.swap-glaze::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(105deg, transparent 30%, rgba(var(--fg-rgb), 0.14) 50%, transparent 70%);
+  background-size: 250% 100%; background-position: 130% 0;
+  animation: glazeSweep 0.65s var(--ease-smooth) both;
+}
+@keyframes glazeClear {
+  from { opacity: 0; filter: blur(9px); transform: translateY(5px); }
+  to { opacity: 1; filter: blur(0); transform: none; }
+}
+@keyframes glazeSweep { to { background-position: -30% 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .msg-body.swap-glaze, .msg-body.swap-glaze::after { animation: none; }
+}
 @keyframes pwShake {
   15% { transform: translateX(-7px); }
   30% { transform: translateX(7px); }

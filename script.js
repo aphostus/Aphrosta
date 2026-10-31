@@ -8725,7 +8725,13 @@ async function onMessageAction(btn) {
     retryFailed();
   } else if (a === 'think') {
     if (thinkShown.has(m)) thinkShown.delete(m); else thinkShown.add(m);
-    pwKeep(btn.closest('.msg-card'), renderMessages);
+    const tcard = btn.closest('.msg-card');
+    const tids = tcard?.dataset.ids;
+    pwKeep(tcard, () => {
+      renderMessages();
+      const nb = [...document.querySelectorAll('.msg-card')].find((c) => c.dataset.ids === tids)?.querySelector('.msg-sec-main > .msg-body');
+      if (nb) { nb.classList.add('swap-glaze'); setTimeout(() => nb.classList.remove('swap-glaze'), 700); }
+    });
   } else if (a === 'edit') {
     const ui = btn.dataset.ui != null ? +btn.dataset.ui : i;
     const card = btn.closest('.msg-card');
