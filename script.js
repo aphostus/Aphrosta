@@ -8016,6 +8016,10 @@ const msgModelName = (m) => {
   const v = PROVIDER_API[m.provider]?.models?.find((x) => x.id === m.model);
   return v ? v.name : (m.model || '');
 };
+const msgEffortTag = (m) => {
+  const e = m.effort && EFFORT_LEVELS.find((x) => x.id === m.effort);
+  return e ? esc(e.name) + ' effort \u00b7 ' : '';
+};
 const msgProvLogo = (m) => MODEL_PROVIDERS.find((p) => p.id === m.provider)?.logo || '';
 const MSG_USER_ICO = svg('<circle cx="12" cy="8" r="3.6"/><path d="M5 20c.8-3.6 3.6-5.4 7-5.4s6.2 1.8 7 5.4"/>', 15);
 const thinkShown = new WeakSet();
@@ -8114,7 +8118,7 @@ function pwRow(card, mode) {
     ? `<input class="pw-in" type="password" maxlength="${PW_LEN}" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="${mode === 'set' ? 'Set a 10 character password' : 'Enter password'}" aria-label="Password"><button class="pw-eye" type="button" data-pw="eye" aria-label="Show password" aria-pressed="false"><span data-eye-on hidden>${ICONS.eye}</span><span data-eye-off>${ICONS.eyeOff}</span></button><button class="pw-go" type="button" data-pw="go">${mode === 'set' ? 'Lock' : 'Open'}</button>`
     : `<button class="pw-go" type="button" data-pw="relock">Lock now</button>${own ? '<button class="pw-go pw-danger" type="button" data-pw="remove">Remove</button>' : ''}`;
   card.firstElementChild.after(row);
-  row.querySelector('.pw-in')?.focus();
+  row.querySelector('.pw-in')?.focus({ preventScroll: true });
 }
 
 async function pwGo(card) {
@@ -8131,7 +8135,7 @@ async function pwGo(card) {
       const seals = await pwSeal(inp.value, msgs);
       msgs.forEach((m, n) => { m.pw = seals[n]; pwOpen.delete(m); });
       persistSessions();
-      renderMessages();
+      pwKeep(card, renderMessages);
       toast('Message locked with your password.', 'success', 2000);
     } catch (_) { delete row.dataset.busy; toast('Could not lock the message. (H13)'); }
     return;
@@ -8142,7 +8146,27 @@ async function pwGo(card) {
   delete row.dataset.busy;
   if (!texts) { bad(); inp.select(); toast('Wrong password. (H12)', 'error', 2200); return; }
   msgs.forEach((m, n) => { if (!m.pw) return; pwOpen.add(m); if (!m.pw.own) pwPlain.set(m, texts[n]); });
-  renderMessages();
+  pwKeep(card, renderMessages);
+}
+
+function pwKeep(card, fn) {
+  const st = stageEl();
+  if (!st || !card) { fn(); return; }
+  const ids = card.dataset.ids;
+  const wasBottom = st.scrollHeight - st.scrollTop - st.clientHeight < 90;
+  const top = st.scrollTop;
+  const off = card.getBoundingClientRect().top - st.getBoundingClientRect().top;
+  const restore = () => {
+    const nc = [...st.querySelectorAll('.msg-card')].find((c) => c.dataset.ids === ids);
+    if (wasBottom) st.scrollTop = st.scrollHeight;
+    else if (nc) st.scrollTop += nc.getBoundingClientRect().top - st.getBoundingClientRect().top - off;
+    else st.scrollTop = top;
+    sbLastTop = st.scrollTop;
+  };
+  fn();
+  st.querySelectorAll('.msg').forEach((el) => { el.style.animation = 'none'; });
+  restore();
+  requestAnimationFrame(restore);
 }
 
 function pwShake(el) {
@@ -8164,7 +8188,7 @@ function pcAct(kind, card) {
     }
     msgs.forEach((x) => { if (on) x.pubHide = true; else delete x.pubHide; });
     persistSessions();
-    renderMessages();
+    pwKeep(card, renderMessages);
     toast(on ? 'Never public. Hidden from the public copy.' : 'Included in the public copy.', 'info', 1800);
     return;
   }
@@ -8175,7 +8199,7 @@ function pcAct(kind, card) {
     return;
   }
   
-  pwRow(card, locked ? 'unlock' : has ? 'manage' : 'set');
+  pwKeep(card, () => pwRow(card, locked ? 'unlock' : has ? 'manage' : 'set'));
 }
 
 function pwAct(kind, card) {
@@ -8195,11 +8219,11 @@ function pwAct(kind, card) {
     return;
   }
   const msgs = pwMsgs(card);
-  if (kind === 'relock') { msgs.forEach((m) => pwOpen.delete(m)); renderMessages(); return; }
+  if (kind === 'relock') { msgs.forEach((m) => pwOpen.delete(m)); pwKeep(card, renderMessages); return; }
   if (kind === 'remove') {
     msgs.forEach((m) => { delete m.pw; pwOpen.delete(m); });
     persistSessions();
-    renderMessages();
+    pwKeep(card, renderMessages);
     toast('Password removed.', 'success', 1800);
   }
 }
@@ -8256,7 +8280,7 @@ function msgEl(m, i, pu) {
     const ft = document.createElement('div');
     ft.className = 'msg-sec msg-sec-foot';
     const mn = msgModelName(m);
-    ft.innerHTML = `<span class="msg-meta"><span class="msg-time">${esc(msgStamp(m.t))}</span>${mn ? `<span class="msg-model">${esc(mn)}</span>` : ''}</span><span class="msg-tok">${tokShort(estTokens(m.content))}</span>`;
+    ft.innerHTML = `<span class="msg-meta"><span class="msg-time">${esc(msgStamp(m.t))}</span>${mn ? `<span class="msg-model">${esc(mn)}</span>` : ''}</span><span class="msg-tok">${msgEffortTag(m)}${tokShort(estTokens(m.content))}</span>`;
     card.appendChild(ft);
   }
   if (!user && !acts && !String(m.content || '').trim()) card.classList.add('is-bare');
@@ -8912,12 +8936,12 @@ const lockNote = (n) => (n
 function buildMessages() {
   const shieldAlert = (() => { const u = currentSession.messages.filter((m) => m.role === 'user' && !m.hidden).slice(-1)[0]; return !!(u && Shield.scan(u.content || '').hit); })();
   const ctx = trimCtx(currentSession.messages.filter((m) => !m.__empty && !m.__failed)).map((m) => {
-    if (m.pw) return { role: m.role, content: LOCK_STUB };
-    if (m.role !== 'user') return { role: m.role, content: m.content };
+    if (m.pw && (!pwOpen.has(m) || !pwBody(m))) return { role: m.role, content: LOCK_STUB };
+    if (m.role !== 'user') return { role: m.role, content: m.pw ? pwBody(m) : m.content };
     const atts = m.attachments || [];
     const texts = atts.filter((a) => a.kind === 'text');
     const images = atts.filter((a) => a.kind === 'image');
-    let text = Shield.clean(m.content || '').text;
+    let text = Shield.clean(m.pw ? pwBody(m) : (m.content || '')).text;
     if (texts.length) {
       const blocks = texts.map((a) => `\n\n<untrusted_data file="${Shield.name(a.name)}">\n${Shield.safe(a.text)}${a.cut ? '\n\u2026[trimmed]' : ''}\n</untrusted_data>`).join('');
       text = (text + blocks).trim();
@@ -9356,7 +9380,7 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
   const seedText = text || lastUser?.content || '';
 
   const ai = {
-    role: 'assistant', content: existingContent, provider: pid, model: variant.id, t: Date.now(),
+    role: 'assistant', content: existingContent, provider: pid, model: variant.id, effort: activeEffort, t: Date.now(),
     reasoning: '', thinkWanted: needsThinking(seedText, pid, variant),
     thinkStarted: 0, thinkMs: 0, thinkId: uid(), thinkModel: pid, thinkVariant: variant.id
   };
