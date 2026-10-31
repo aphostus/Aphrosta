@@ -7989,7 +7989,113 @@ function cardsEl(cards) {
   return d;
 }
 
+/* ---------- MESSAGE CARDS (glass sections, fold, scroll arrows) ---------- */
+const FOLD_CHARS = 500;
+const tokShort = (n) => (n < 1000
+  ? '~' + n + 'T'
+  : '~' + (n < 10000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') : Math.round(n / 1000)) + 'kT');
+const msgStamp = (t) => {
+  if (!t) return '';
+  const d = new Date(t);
+  const time = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  return d.toDateString() === new Date().toDateString()
+    ? time
+    : d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ', ' + time;
+};
+function foldSync(card, text) {
+  if (!card) return;
+  const long = String(text || '').length > FOLD_CHARS;
+  let tg = card.querySelector('.msg-fold');
+  card.classList.toggle('is-long', long);
+  if (long && !tg) {
+    tg = document.createElement('button');
+    tg.type = 'button';
+    tg.className = 'msg-fold';
+    tg.textContent = 'Show...';
+    card.querySelector('.msg-sec-main')?.appendChild(tg);
+  } else if (!long && tg) {
+    tg.remove();
+  }
+}
 function msgEl(m, i) {
+  const el = msgElRaw(m, i);
+  const user = m.role === 'user';
+  const card = document.createElement('div');
+  card.className = 'msg-card';
+  const top = document.createElement('div');
+  top.className = 'msg-sec msg-sec-top';
+  const main = document.createElement('div');
+  main.className = 'msg-sec msg-sec-main';
+  const acts = el.querySelector(':scope > .msg-actions');
+  [...el.children].forEach((c) => { if (c !== acts) main.appendChild(c); });
+  card.append(top, main);
+  if (acts) {
+    acts.classList.add('msg-sec', 'msg-sec-act');
+    card.appendChild(acts);
+  }
+  if (acts || user) {
+    const ft = document.createElement('div');
+    ft.className = 'msg-sec msg-sec-foot';
+    ft.innerHTML = `<span class="msg-time">${esc(msgStamp(m.t))}</span><span class="msg-tok">${tokShort(estTokens(m.content))}</span>`;
+    card.appendChild(ft);
+  }
+  el.appendChild(card);
+  foldSync(card, m.content);
+  return el;
+}
+
+document.addEventListener('click', (e) => {
+  const b = e.target.closest?.('.msg-fold');
+  if (!b) return;
+  const open = b.closest('.msg-card').classList.toggle('open');
+  b.textContent = open ? 'Hide...' : 'Show...';
+});
+
+/* up / down arrows: only on a still screen, no typing, no popups */
+(function scrollNav() {
+  let nav = null;
+  let lastMove = Date.now();
+  const bump = () => { lastMove = Date.now(); };
+  document.addEventListener('scroll', bump, true);
+  ['touchstart', 'touchmove', 'touchend', 'wheel', 'pointerdown', 'keydown'].forEach((ev) =>
+    document.addEventListener(ev, bump, { passive: true, capture: true }));
+
+  const ARROW_UP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>';
+  const ARROW_DOWN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+
+  function build() {
+    nav = document.createElement('div');
+    nav.className = 'scroll-nav';
+    nav.innerHTML = `<button type="button" data-d="up" aria-label="Jump to top">${ARROW_UP}</button><button type="button" data-d="down" aria-label="Jump to bottom">${ARROW_DOWN}</button>`;
+    nav.addEventListener('click', (e) => {
+      const b = e.target.closest('button');
+      if (!b || b.disabled) return;
+      kbScroll(b.dataset.d === 'up');
+    });
+    document.body.appendChild(nav);
+  }
+
+  function tick() {
+    const s = stageEl();
+    if (!s) { nav?.classList.remove('show'); return; }
+    if (!nav) build();
+    const a = document.activeElement;
+    const typing = !!a && a.matches?.('input, textarea, select, [contenteditable="true"]');
+    const popup = !!document.querySelector('.dialog-scrim, .fd-panel, .tour, .sidebar.open, .settings-panel.open, .nav-panel.open');
+    const tall = s.scrollHeight - s.clientHeight > 120;
+    const still = Date.now() - lastMove >= 1000;
+    const show = still && tall && !typing && !popup && !chatBusy && !document.hidden
+      && !q$('#messages')?.classList.contains('hidden');
+    nav.classList.toggle('show', show);
+    if (show) {
+      nav.children[0].disabled = s.scrollTop < 40;
+      nav.children[1].disabled = s.scrollHeight - s.scrollTop - s.clientHeight < 40;
+    }
+  }
+  setInterval(tick, 200);
+})();
+
+function msgElRaw(m, i) {
   const el = document.createElement('div');
   el.className = 'msg ' + (m.role === 'user' ? 'msg-user' : 'msg-ai');
   el.dataset.i = i;

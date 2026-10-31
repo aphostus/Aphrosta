@@ -2659,6 +2659,100 @@ html[data-status-mode="auto"][data-status="offline"]
 
 @keyframes msgIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
+/* ---------- MESSAGE CARDS: glass card split into full-width sections ---------- */
+.msg-card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: blur(18px) saturate(110%);
+  backdrop-filter: blur(18px) saturate(110%);
+  border: 1px solid var(--glass-border);
+  border-radius: 18px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12), inset 0 1px 0 var(--glass-highlight);
+}
+.msg-user .msg-card { align-self: flex-end; width: fit-content; min-width: 150px; max-width: 86%; }
+.msg-sec { min-width: 0; }
+.msg-sec + .msg-sec { border-top: 1px solid var(--glass-border); }
+.msg-sec-top { min-height: 12px; }
+.msg-sec-main { display: flex; flex-direction: column; gap: 6px; padding: 10px 14px; }
+.msg-card .msg-bubble {
+  max-width: 100%;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.msg-card .msg-files { max-width: 100%; justify-content: flex-start; }
+.msg-sec-act { margin: 0; padding: 3px 8px; }
+.msg-actions-user.msg-sec-act { justify-content: flex-end; }
+.msg-sec-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 14px;
+  font-size: calc(11px * var(--ts));
+  line-height: 1.4;
+  color: var(--gray-mid);
+}
+.msg-time, .msg-tok { color: var(--gray-mid); white-space: nowrap; }
+.msg-fold {
+  align-self: flex-start;
+  padding: 2px 0;
+  font-size: calc(13px * var(--ts));
+  color: var(--gray-mid);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.msg-card.is-long:not(.open) .msg-sec-main > .msg-body,
+.msg-card.is-long:not(.open) .msg-sec-main > .msg-bubble {
+  max-height: 12em;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(#000 65%, transparent);
+  mask-image: linear-gradient(#000 65%, transparent);
+}
+
+/* ---------- SCROLL ARROWS: glass circle, lower center ---------- */
+.scroll-nav {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--composer-h, 140px) + 12px);
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  width: 46px;
+  height: 46px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--composer-bg);
+  -webkit-backdrop-filter: blur(28px) saturate(100%);
+  backdrop-filter: blur(28px) saturate(100%);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.22), inset 0 1px 0 var(--glass-highlight);
+  opacity: 0;
+  transform: translate(-50%, 8px) scale(0.9);
+  pointer-events: none;
+  transition: opacity 0.25s var(--ease-smooth), transform 0.25s var(--ease-smooth);
+}
+.scroll-nav.show { opacity: 1; transform: translate(-50%, 0) scale(1); pointer-events: auto; }
+.scroll-nav button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--fg);
+  transition: background 0.2s var(--ease-smooth), opacity 0.2s var(--ease-smooth);
+}
+.scroll-nav button + button { border-top: 1px solid var(--glass-border); }
+.scroll-nav button:active:not(:disabled) { background: var(--glass-bg-hover); }
+.scroll-nav button:disabled { opacity: 0.3; }
+.scroll-nav svg { width: 16px; height: 16px; }
+
 
 
 /* ============================================================
