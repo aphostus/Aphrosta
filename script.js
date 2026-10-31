@@ -9955,31 +9955,158 @@ function startSignArt() {
   const el = document.getElementById('signin-art');
   if (!el) return;
   clearInterval(signArtTimer);
-  const RAMP = ' .:-=+*#%@';
-  let cols = 0, rows = 0, t = 0;
+  const RAMP = " .,:;-~=+*oxO#%@";
+  const N = RAMP.length - 1;
+  let cols = 0, rows = 0, asp = 1.8, buf = null, ov = null, starH = null;
+  let cx = 0, cy = 0, R = 1, t = 0;
+  const t0 = performance.now();
+  const hash = (x, y) => {
+    let h = (Math.imul(x, 374761393) + Math.imul(y, 668265263)) | 0;
+    h = Math.imul(h ^ (h >>> 13), 1274126177);
+    return ((h ^ (h >>> 16)) >>> 0) / 4294967295;
+  };
   const fit = () => {
     el.textContent = '';
     const probe = document.createElement('span');
     probe.textContent = 'M'.repeat(20);
     el.appendChild(probe);
-    const cw = probe.getBoundingClientRect().width / 20 || 6;
-    const ch = parseFloat(getComputedStyle(el).lineHeight) || 11;
+    const cw = probe.getBoundingClientRect().width / 20 || 4.2;
+    const ch = parseFloat(getComputedStyle(el).lineHeight) || 7;
+    asp = ch / cw;
     cols = Math.ceil(window.innerWidth / cw) + 1;
     rows = Math.ceil(window.innerHeight / ch) + 1;
+    buf = new Float32Array(cols * rows);
+    ov = new Uint8Array(cols * rows);
+    starH = new Float32Array(cols * rows);
+    for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) starH[y * cols + x] = hash(x, y);
+    cx = cols * 0.5;
+    cy = rows * 0.36;
+    R = cols * 0.09;
     el.textContent = '';
   };
+  // brightness write that never paints inside the black hole
+  const put = (x, y, v) => {
+    const xi = Math.round(x), yi = Math.round(y);
+    if (xi < 0 || yi < 0 || xi >= cols || yi >= rows) return;
+    const ddx = xi - cx, ddy = (yi - cy) * asp;
+    if (ddx * ddx + ddy * ddy < R * R) return;
+    const i = yi * cols + xi;
+    if (v > buf[i]) { buf[i] = v; ov[i] = 0; }
+  };
+  const starChar = (h, tw) => {
+    if (h < 0.004) return tw > 0.45 ? 42 : 43;
+    if (h < 0.015) return tw > 0.7 ? 43 : (tw > 0.3 ? 46 : 0);
+    return tw > 0.4 ? 46 : 0;
+  };
   const frame = () => {
+    t = (performance.now() - t0) / 1000;
+    buf.fill(0);
+    const total = cols * rows;
+
+    // stars: positions are precomputed, only the twinkle is live
+    for (let i = 0; i < total; i++) {
+      const h = starH[i];
+      ov[i] = h < 0.035 ? starChar(h, 0.5 + 0.5 * Math.sin(t * (1.2 + h * 55) + h * 300)) : 0;
+    }
+
+    // ringed planet, lit from the upper left
+    const px = cols * 0.17, py = rows * 0.13, pr = cols * 0.075;
+    const pyr = Math.ceil(pr / asp);
+    for (let y = Math.max(0, Math.floor(py - pyr * 1.4)); y < Math.min(rows, py + pyr * 1.4); y++) {
+      for (let x = Math.max(0, Math.floor(px - pr * 2)); x < Math.min(cols, px + pr * 2); x++) {
+        const i = y * cols + x;
+        const pdx = x - px, pdy = (y - py) * asp;
+        const prr = Math.sqrt(pdx * pdx + pdy * pdy);
+        if (prr < pr) {
+          const nx = pdx / pr, ny = pdy / pr, nz = Math.sqrt(Math.max(0, 1 - nx * nx - ny * ny));
+          const lum = Math.max(0, nx * -0.55 + ny * -0.45 + nz * 0.7);
+          buf[i] = 0.06 + lum * (0.8 + 0.2 * Math.sin(ny * 9 + nx * 1.5));
+          ov[i] = 0;
+        }
+        const qy = pdy + pdx * 0.35;
+        const q = Math.sqrt((pdx / (pr * 1.9)) ** 2 + (qy / (pr * 0.5)) ** 2);
+        if (Math.abs(q - 1) < 0.08 && !(prr < pr && qy < 0)) { buf[i] = Math.max(buf[i], 0.6); ov[i] = 0; }
+      }
+    }
+
+    // black hole: lensed stars, photon ring, lensed arch, accretion disk
+    const ca = Math.cos(-0.32), sa = Math.sin(-0.32);
+    const hy = Math.ceil((R * 5) / asp);
+    for (let y = Math.max(0, Math.floor(cy - hy)); y < Math.min(rows, cy + hy); y++) {
+      for (let x = Math.max(0, Math.floor(cx - R * 5)); x < Math.min(cols, cx + R * 5); x++) {
+        const i = y * cols + x;
+        const dx = x - cx, dy = (y - cy) * asp;
+        const r2 = dx * dx + dy * dy;
+        const r = Math.sqrt(r2);
+        if (r < R) { buf[i] = 0; ov[i] = 0; }
+        else if (r < R * 5) {
+          const k = Math.min(0.9, (R * R * 2.2) / r2);
+          const sx = Math.round(cx + dx * (1 - k)), sy = Math.round(cy + (dy * (1 - k)) / asp);
+          const h = (sx >= 0 && sy >= 0 && sx < cols && sy < rows) ? starH[sy * cols + sx] : 1;
+          ov[i] = h < 0.035 ? starChar(h, 0.5 + 0.5 * Math.sin(t * (1.2 + h * 55) + h * 300)) : 0;
+        }
+        if (r >= R * 4) continue;
+        const ex = dx * ca + dy * sa;
+        const ey = -dx * sa + dy * ca;
+        const ax = Math.abs(ex);
+        let b = buf[i];
+        if (r >= R && r < R * 1.16) {
+          b = 1; ov[i] = 0;
+        } else if (r >= R * 1.16 && r < R * 1.9 && ey < 0 && ax < R * 1.6) {
+          const sw = 0.5 + 0.5 * Math.sin(Math.atan2(dy, dx) * 5 - t * 3 + r * 0.4);
+          b = Math.max(b, 0.3 + 0.55 * sw * (1 - (r - R * 1.16) / (R * 0.74)));
+          ov[i] = 0;
+        }
+        const th = R * 0.2 * (1 - 0.55 * ax / (R * 3.8));
+        if (ax < R * 3.8 && Math.abs(ey) < th) {
+          const fall = 1 - ax / (R * 3.8);
+          const sw = 0.5 + 0.5 * Math.sin(ax * 0.9 - t * 4 + (ex < 0 ? 3.1 : 0));
+          b = Math.max(b, Math.min(1, (0.25 + 0.75 * fall) * (0.6 + 0.4 * sw) * (ex > 0 ? 1 : 0.72) * 1.15));
+          ov[i] = 0;
+        }
+        buf[i] = b;
+      }
+    }
+
+    // shooting stars
+    for (let m = 0; m < 4; m++) {
+      const P = 6 + m * 2.3, off = m * 3.1;
+      const k = Math.floor((t + off) / P);
+      const u = ((t + off) % P) / 2.0;
+      if (u >= 1) continue;
+      const dir = hash(k, m * 7 + 3) > 0.5 ? 1 : -1;
+      const sx0 = dir > 0 ? hash(k, m * 7 + 1) * cols * 0.6 : cols - hash(k, m * 7 + 1) * cols * 0.6;
+      const sy0 = hash(k, m * 7 + 2) * rows * 0.5;
+      const run = cols * 0.7 * u;
+      const hx = sx0 + dir * run, hy = sy0 + run * 0.42;
+      for (let j = 0; j < 18; j += 0.5) {
+        put(hx - dir * j, hy - j * 0.42, j === 0 ? 1 : 0.95 - j / 20);
+      }
+      put(hx + dir, hy, 0.7); put(hx, hy - 1, 0.5); put(hx, hy + 1, 0.5);
+    }
+
+    // supernova shockwave every 20s
+    const EP = 20, ek = Math.floor(t / EP), eph = t % EP;
+    if (eph < 5) {
+      const ecx = hash(ek, 901) * cols, ecy = hash(ek, 902) * rows * 0.6;
+      const rad = eph * cols * 0.2, fade = 1 - eph / 5;
+      const steps = Math.max(24, Math.floor(rad * 7));
+      for (let s = 0; s < steps; s++) {
+        const a = (s / steps) * Math.PI * 2;
+        put(ecx + Math.cos(a) * rad, ecy + Math.sin(a) * rad / asp, 0.95 * fade);
+        put(ecx + Math.cos(a) * (rad - 1.2), ecy + Math.sin(a) * (rad - 1.2) / asp, 0.5 * fade);
+      }
+      if (eph < 0.3) {
+        for (let yy = -3; yy <= 3; yy++) for (let xx = -6; xx <= 6; xx++) put(ecx + xx, ecy + yy, 1 - eph * 2);
+      }
+    }
+
     let out = '';
     for (let y = 0; y < rows; y++) {
       let row = '';
       for (let x = 0; x < cols; x++) {
-        const v = Math.sin(x * 0.16 + t)
-          + Math.sin(y * 0.22 - t * 1.3)
-          + Math.sin((x + y) * 0.09 + t * 0.7)
-          + Math.sin(Math.hypot(x - cols / 2, (y - rows / 2) * 1.8) * 0.18 - t * 2);
-        const n = (v + 4) / 8;
-        const i = Math.max(0, Math.min(RAMP.length - 1, Math.floor(n * RAMP.length)));
-        row += RAMP[i];
+        const i = y * cols + x, v = buf[i];
+        row += (ov[i] && v < 0.35) ? String.fromCharCode(ov[i]) : RAMP[Math.min(N, (v * N + 0.5) | 0)];
       }
       out += row + (y < rows - 1 ? '\n' : '');
     }
@@ -9996,9 +10123,8 @@ function startSignArt() {
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   signArtTimer = setInterval(() => {
     if (!el.isConnected) { clearInterval(signArtTimer); return; }
-    t += 0.12;
     el.textContent = frame();
-  }, 70);
+  }, 90);
 }
 
 function showSignInButton() {
