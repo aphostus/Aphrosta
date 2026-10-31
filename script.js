@@ -9898,7 +9898,8 @@ let signInConsent = false;
 async function autoSignIn() {
   if (authBlocked) return;
   if (auth.currentUser) return;
-  if (!signInConsent) { hideLoader(); showSignInButton(); return; }  if (authBusy) return;
+  if (!signInConsent) { hideLoader(); showSignInButton(); return; }
+  if (authBusy) return;
   const now = Date.now();
   if (now < postSignOutCooldown) { setTimeout(autoSignIn, postSignOutCooldown - now + 100); return; }
   if (now < authCooldownUntil) { setTimeout(autoSignIn, authCooldownUntil - now + 100); return; }
@@ -9949,32 +9950,44 @@ function renderSigningIn() {
   }, 8000);
 }
 
-const SIGNIN_ART = String.raw`              .  *  .
-          .-"""""""""-.
-        .'   _     _   '.
-       /    (_)   (_)    \
-      ;        .-.        ;
-      |       ( v )       |
-      ;     .  '-'  .     ;
-       \   /'.     .'\   /
-     .--'-'/  '---'  \'-'--.
-    /    /  /|     |\  \    \
-   |    |  / |     | \  |    |
-   |    | /  |  *  |  \ |    |
-    \   |/   |     |   \|   /
-     '.  \   '.   .'   /  .'
-       '-.\    '-'    /.-'
-          |  ~  ~  ~  |
-          | ~  ~  ~  ~|
-          |  ~  ~  ~  |
-         /'-._______.-'\
-        '---------------'`;
+let signArtTimer = null;
+function startSignArt() {
+  const el = document.getElementById('signin-art');
+  if (!el) return;
+  clearInterval(signArtTimer);
+  const W = 64, H = 24;
+  const RAMP = ' .:-=+*#%@';
+  const frame = (t) => {
+    let out = '';
+    for (let y = 0; y < H; y++) {
+      let row = '';
+      for (let x = 0; x < W; x++) {
+        const v = Math.sin(x * 0.18 + t)
+          + Math.sin(y * 0.4 - t * 1.3)
+          + Math.sin((x + y) * 0.12 + t * 0.7)
+          + Math.sin(Math.hypot(x - W / 2, (y - H / 2) * 2) * 0.25 - t * 2);
+        const n = (v + 4) / 8;
+        const i = Math.max(0, Math.min(RAMP.length - 1, Math.floor(n * RAMP.length)));
+        row += RAMP[i];
+      }
+      out += row + (y < H - 1 ? '\n' : '');
+    }
+    return out;
+  };
+  let t = 0;
+  el.textContent = frame(t);
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  signArtTimer = setInterval(() => {
+    if (!el.isConnected) { clearInterval(signArtTimer); return; }
+    t += 0.12;
+    el.textContent = frame(t);
+  }, 70);
+}
 
 function showSignInButton() {
-  const existing = document.getElementById('signin-btn');
-  if (existing) {
-    signInConsent = false;
-    existing.disabled = !document.getElementById('signin-agree').checked;
+  const existingBtn = document.getElementById('signin-btn');
+  if (existingBtn) {
+    existingBtn.disabled = !document.getElementById('signin-agree').checked;
     return;
   }
   appEl.innerHTML = `
@@ -9991,7 +10004,7 @@ function showSignInButton() {
         </label>
       </div>
     </div>`;
-  document.getElementById('signin-art').textContent = SIGNIN_ART;
+  startSignArt();
   const cb = document.getElementById('signin-agree');
   const btn = document.getElementById('signin-btn');
   cb.onchange = () => { btn.disabled = !cb.checked; };
