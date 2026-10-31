@@ -1108,6 +1108,7 @@ Object.assign(ICONS, {
 });
 ICONS.infoSm  = svg('<path d="M4 4h16v12H8l-4 4z"/><path d="M12 8v3M12 13h.01"/>', 14);
 delete ICONS.memory; delete ICONS.pen;
+ICONS.branchTree = svg('<path d="M12 21v-7"/><path d="M12 14c0-3-5-3-5-7"/><path d="M12 14c0-3 5-3 5-7"/><circle cx="7" cy="5" r="2"/><circle cx="17" cy="5" r="2"/>', 15);
 
 /* ---------- BRAND MARK ---------- */
 let _amN = 0;
@@ -4090,7 +4091,7 @@ function initComposer() {
 
   const currentThinkAi = () => {
     const m = currentSession.messages[currentSession.messages.length - 1];
-    return m?.role === 'assistant' ? m : null;
+    return m?.role === 'assistant' && !m.hidden ? m : null;
   };
   const sameThinkModel = (ai) =>
     !!ai &&
@@ -4219,7 +4220,8 @@ function initComposer() {
 
   const getMax = () => {
     const overhead = wrap.offsetHeight - input.offsetHeight;
-    return Math.max(MIN_H, main.clientHeight - topbar.offsetHeight - overhead - 8);
+    const vh = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+    return Math.max(MIN_H, Math.min(main.clientHeight - topbar.offsetHeight - overhead - 8, Math.floor(vh * 0.5) - overhead));
   };
 
   const fit = () => {
@@ -8681,6 +8683,7 @@ function msgElRaw(m, i) {
       btn('copy', 'Copy', ICONS.copy) +
       (last && m.status === 'incomplete' ? btn('continue', 'Continue reply', ICONS.continueReply) : '') +
       btn('voice', 'Read aloud', ICONS.volume) +
+      btn('branch', 'Branch from here', ICONS.branchTree) +
       btn('like', 'Good response', m.feedback === 'like' ? ICONS.thumbUpOn : ICONS.thumbUp, m.feedback === 'like') +
       btn('dislike', 'Bad response', m.feedback === 'dislike' ? ICONS.thumbDownOn : ICONS.thumbDown, m.feedback === 'dislike') +
       (last ? btn('regen', 'Regenerate', ICONS.regen) : '') +
@@ -8711,7 +8714,7 @@ function renderMessages() {
   const box = q$('#messages');
   const welcome = q$('.welcome');
   if (!box) return;
-  const n = currentSession.messages.length;
+  const n = currentSession.messages.filter((m) => !m.hidden).length;
   buildStepCards(currentSession.messages);
   box.replaceChildren(...buildMsgEls(currentSession.messages));
   box.classList.toggle('hidden', n === 0);
@@ -8961,6 +8964,8 @@ async function onMessageAction(btn) {
       return;
     }
     sendChatMessage('', true, null, true);
+  } else if (a === 'branch') {
+    branchFrom(i);
   } else if (a === 'retry') {
     if (chatBusy) return;
     retryFailed();
@@ -8983,6 +8988,28 @@ async function onMessageAction(btn) {
       btn.classList.remove('on');
     });
   }
+}
+
+/* Branch: new blank-looking session; the chat up to this reply stays as hidden context (the AI's memory) */
+function branchFrom(i) {
+  if (chatBusy) { toast('Stop the response before branching. (D06)', 'info'); return; }
+  const src = currentSession.messages.slice(0, i + 1).filter((m) => !m.__failed && !m.__empty);
+  if (!src.length) return;
+  const ctx = src.map((m) => {
+    const c = JSON.parse(JSON.stringify({ ...m, attachments: undefined }));
+    delete c.feedback; delete c.pubHide; delete c.reasoning;
+    delete c.thinkModel; delete c.thinkVariant; delete c.thinkId;
+    c.hidden = true;
+    return c;
+  });
+  currentSession = { ...newDraft(), messages: ctx };
+  chatStick = true;
+  clearDraft();
+  resetNewSessionUi();
+  renderSessionUi();
+  closeSidebarMobile();
+  q$('.composer-input')?.focus();
+  toast('Branched. The new session remembers the chat up to that reply.', 'success', 2600);
 }
 
 function retryFailed() {
