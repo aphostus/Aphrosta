@@ -1577,6 +1577,9 @@ mark.sb-hit.is-cur {
 }
 .lib-grab { width: 38px; height: 4px; margin: 4px auto 8px; border-radius: 4px; background: rgba(var(--fg-rgb), 0.2); }
 .lib-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.lib-head-act { display: flex; align-items: center; gap: 2px; }
+.lib-vis.is-off { opacity: 0.55; }
+.lib-card-eye { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; color: rgba(var(--fg-rgb), 0.5); }
 .lib-h { font-size: calc(16px * var(--ts)); font-weight: 600; color: var(--fg); }
 .lib-lab {
   display: flex;

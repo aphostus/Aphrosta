@@ -1915,7 +1915,7 @@ function libSplit(text) {
   return out;
 }
 
-async function libSave({ title, instructions, files }) {
+async function libSave({ title, instructions, files, hidden }) {
   const parts = [];
   const meta = [];
   for (const file of files) {
@@ -1933,7 +1933,7 @@ async function libSave({ title, instructions, files }) {
   }
   const fk = [...counts].sort((a, b) => b[1] - a[1]).slice(0, 150).map((e) => e[0]);
   const item = {
-    id: uid(), title, instructions, files: meta,
+    id: uid(), title, instructions, hidden: !!hidden, files: meta,
     fileName: meta.length > 1 ? meta.length + ' files' : meta[0].name,
     size: meta.reduce((a, f) => a + f.size, 0),
     parts: parts.length, ik: libTokens(title + ' ' + instructions), fk, t: Date.now()
@@ -1953,10 +1953,10 @@ async function libSave({ title, instructions, files }) {
   return item;
 }
 
-async function libUpdate(id, title, instructions) {
+async function libUpdate(id, title, instructions, hidden) {
   const it = libItems.find((i) => i.id === id);
   if (!it) throw new Error('missing');
-  const next = { ...it, title, instructions, ik: libTokens(title + ' ' + instructions) };
+  const next = { ...it, title, instructions, hidden: !!hidden, ik: libTokens(title + ' ' + instructions) };
   const db = await libDb();
   await new Promise((res, rej) => {
     const tx = db.transaction('items', 'readwrite');
@@ -1992,11 +1992,11 @@ function libScan(itemId, fn) {
 
 async function libContextFor(query) {
   if (!libItems.length) await libLoad();
-  if (!libItems.length) return '';
+  if (!libItems.some((it) => !it.hidden)) return '';
   const q = libTokens(query);
   const flat = String(query).toLowerCase().replace(/[^a-z0-9\u00c0-\uffff]+/g, '');
   const askLib = /\b(library|libraries|my files?)\b/i.test(query);
-  const scored = libItems.map((it) => {
+  const scored = libItems.filter((it) => !it.hidden).map((it) => {
     let s = 0;
     for (const w of q) { if (it.ik.includes(w)) s += 3; else if (it.fk.includes(w)) s += 1; }
     const tf = it.title.toLowerCase().replace(/[^a-z0-9\u00c0-\uffff]+/g, '');
@@ -2054,6 +2054,7 @@ function libRender() {
       <div class="lib-card-top">
         <h4 class="lib-card-title">${esc(it.title)}</h4>
         <div class="lib-card-act">
+          <span class="lib-card-eye" role="img" aria-label="${it.hidden ? 'Hidden from AI' : 'Visible to AI'}">${it.hidden ? ICONS.eyeOff : ICONS.eye}</span>
           <button class="icon-btn" type="button" data-lib-edit="${esc(it.id)}" aria-label="Edit">${ICONS.pencil}</button>
           <button class="icon-btn" type="button" data-lib-del="${esc(it.id)}" aria-label="Delete">${ICONS.trash}</button>
         </div>
@@ -2085,13 +2086,16 @@ function openLibSheet(edit) {
       <div class="lib-grab"></div>
       <div class="lib-head">
         <h3 class="lib-h">${edit ? 'Edit' : 'Create'}</h3>
-        <button class="icon-btn" type="button" id="lib-close" aria-label="Close">${ICONS.stClose}</button>
+        <div class="lib-head-act">
+          <button class="icon-btn lib-vis${edit?.hidden ? ' is-off' : ''}" type="button" id="lib-vis" aria-pressed="${edit?.hidden ? 'true' : 'false'}" aria-label="${edit?.hidden ? 'Hidden from AI' : 'Visible to AI'}">${edit?.hidden ? ICONS.eyeOff : ICONS.eye}</button>
+          <button class="icon-btn" type="button" id="lib-close" aria-label="Close">${ICONS.stClose}</button>
+        </div>
       </div>
       <label class="lib-lab">Name
         <input class="lib-in" id="lib-title" maxlength="80" autocomplete="off" placeholder="e.g. Brand guidelines" value="${esc(edit?.title)}">
       </label>
-      <label class="lib-lab">Instructions
-        <textarea class="lib-in lib-ta" id="lib-instr" rows="5" maxlength="1500" placeholder="When and how should the AI use this? e.g. Use it when I ask about pricing. Quote exact numbers.">${esc(edit?.instructions)}</textarea>
+      <label class="lib-lab">Information
+        <textarea class="lib-in lib-ta" id="lib-instr" rows="5" maxlength="1500" placeholder="Add details about this item. e.g. Prices, rules, or notes you want to keep.">${esc(edit?.instructions)}</textarea>
       </label>
       <div class="lib-lab">Files
         <div class="lib-flist" id="lib-flist"></div>
@@ -2107,6 +2111,16 @@ function openLibSheet(edit) {
   const fileIn = el.querySelector('#lib-file');
   el.addEventListener('click', (e) => { if (e.target === el) closeLibSheet(); });
   el.querySelector('#lib-close').addEventListener('click', closeLibSheet);
+  let hid = !!edit?.hidden;
+  const visBtn = el.querySelector('#lib-vis');
+  visBtn.addEventListener('click', () => {
+    hid = !hid;
+    visBtn.innerHTML = hid ? ICONS.eyeOff : ICONS.eye;
+    visBtn.classList.toggle('is-off', hid);
+    visBtn.setAttribute('aria-pressed', hid ? 'true' : 'false');
+    visBtn.setAttribute('aria-label', hid ? 'Hidden from AI' : 'Visible to AI');
+    toast(hid ? 'Hidden: only you can see this.' : 'Visible: the AI can see this.', 'info', 1600);
+  });
   el.querySelector('#lib-pick').addEventListener('click', () => fileIn.click());
   const picked = [];
   const flist = el.querySelector('#lib-flist');
@@ -2146,13 +2160,13 @@ function openLibSheet(edit) {
     saveBtn.textContent = 'Saving...';
     try {
       if (edit) {
-        await libUpdate(edit.id, title, instructions);
+        await libUpdate(edit.id, title, instructions, hid);
         toast('Changes saved.', 'success', 1800);
         closeLibSheet();
         libRender();
         return;
       }
-      const item = await libSave({ title, instructions, files });
+      const item = await libSave({ title, instructions, files, hidden: hid });
       toast(item.parts ? 'Saved in ' + item.parts + ' parts.' : 'Saved. Contents can\u2019t be read, so only the name is used.', 'success', 2200);
       closeLibSheet();
       libRender();
@@ -7444,7 +7458,7 @@ async function fmExternal(query, session) {
     out.set(name, { f: { name, code: text, lines: text.split('\n').length, lang: ext, ext }, cur: false, fresh: false, t, src });
   };
   if (!libItems.length) await libLoad().catch(() => {});
-  const libIds = new Set(libItems.map((i) => i.id));
+  const libIds = new Set(libItems.filter((i) => !i.hidden).map((i) => i.id));
   const have = new Set();
   try {
     (await fmAllStored()).forEach((r) => {
@@ -7462,7 +7476,7 @@ async function fmExternal(query, session) {
   try {
     const q = libTokens(query);
     const flat = String(query).toLowerCase();
-    const cands = libItems.filter((it) => it.parts > 0 && (q.some((w) => it.ik.includes(w)) || libFilesOf(it).some((f) => flat.includes(String(f.name).toLowerCase())))).slice(0, 3);
+    const cands = libItems.filter((it) => !it.hidden && it.parts > 0 && (q.some((w) => it.ik.includes(w)) || libFilesOf(it).some((f) => flat.includes(String(f.name).toLowerCase())))).slice(0, 3);
     for (const it of cands) {
       for (const fm of libFilesOf(it)) {
         if (!fm.parts || have.has('lib:' + it.id + ':' + fm.name)) continue;
