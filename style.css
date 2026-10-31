@@ -4290,7 +4290,7 @@ mark.ab-mark {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 8px 10px 42px;
+  padding: 8px 8px 10px 16px;
   border-top: 1px solid var(--glass-border);
 }
 .sess-pw .pw-in {
