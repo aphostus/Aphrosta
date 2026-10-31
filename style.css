@@ -2674,7 +2674,7 @@ html[data-status-mode="auto"][data-status="offline"]
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12), inset 0 1px 0 var(--glass-highlight);
 }
 .msg-user .msg-card { align-self: stretch; }
-.msg-sec { min-width: 0; }
+.msg-sec { min-width: 0; position: relative; }
 .msg-sec + .msg-sec { border-top: 1px solid rgba(var(--fg-rgb), 0.04); }
 .msg-sec-main { display: flex; flex-direction: column; gap: 6px; padding: 10px 14px; }
 .msg-card .msg-bubble {
@@ -4118,4 +4118,47 @@ mark.ab-mark {
   border-radius: 10px;
 }
 @keyframes msgStripes { to { background-position: 28.28px 0; } }
+
+/* ---------- Public card controls + password lock ---------- */
+.msg-pubctl { position: absolute; top: 8px; right: 8px; z-index: 2; display: flex; align-items: center; gap: 2px; }
+.pc-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; color: var(--gray-mid); border-radius: 8px;
+  touch-action: manipulation;
+  transition: color 0.2s var(--ease-smooth), background 0.2s var(--ease-smooth), transform 0.2s var(--ease-bounce);
+}
+.pc-btn svg { width: 16px; height: 16px; }
+.pc-btn:hover { color: var(--fg); background: var(--glass-bg-hover); }
+.pc-btn:active { transform: scale(0.9); }
+.pc-btn.on { color: var(--accent); }
+.msg-card.has-pubctl .msg-sec-user .msg-user-col { padding-right: 68px; }
+.msg-card.has-pubctl > .msg-sec-main:first-child { padding-top: 44px; }
+
+.msg-card.pw-locked > .msg-sec:not(:first-child):not(.msg-sec-pw) { display: none; }
+.msg-card.pw-locked > .msg-sec:first-child { min-height: 46px; }
+.msg-card.pw-locked > .msg-sec:first-child > :not(.msg-pubctl) { display: none; }
+.msg-card.pw-locked .pc-lock { display: none; }
+
+.msg-sec-pw { display: flex; align-items: center; gap: 8px; padding: 8px 14px 10px; animation: msgIn 0.25s var(--ease-spring); }
+.pw-in {
+  flex: 1; min-width: 0; height: 36px; padding: 0 12px;
+  font-size: max(16px, calc(16px * var(--ts))); letter-spacing: 0.08em; color: var(--fg);
+  background: rgba(var(--fg-rgb), 0.04); border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm); outline: none;
+  transition: border-color 0.2s var(--ease-smooth);
+}
+.pw-in:focus { border-color: rgba(var(--fg-rgb), 0.28); }
+.pw-in::placeholder { letter-spacing: 0; color: var(--gray-mid); }
+.pw-go {
+  flex-shrink: 0; height: 36px; padding: 0 14px;
+  font-size: calc(12.5px * var(--ts)); font-weight: 600;
+  color: var(--on-accent); background: var(--accent); border-radius: var(--radius-pill);
+  touch-action: manipulation;
+}
+.pw-go:active { transform: scale(0.96); }
+.pw-go.pw-danger { color: var(--bad); background: var(--glass-bg); border: 1px solid var(--glass-border); }
+
+/* edit mode: hide the person icon and both new icons over the stripes */
+.msg-card.is-editing .msg-sec-user .msg-user-ico { visibility: hidden; }
+.msg-card.is-editing .msg-pubctl { display: none !important; }
 

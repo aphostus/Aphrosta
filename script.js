@@ -725,6 +725,9 @@ const ERR_CODES = {
   H08: ['Not an image', 'Pick an image file.'],
   H09: ['Card details look wrong', 'Check the name, number, expiry and CVV.'],
   H10: ['Library form incomplete', 'Add a title, instructions and at least one file.'],
+  H11: ['Password must be 10 characters', 'Type exactly 10 characters, then tap Lock.'],
+  H12: ['Wrong password', 'Check the password and try again. It cannot be recovered if forgotten.'],
+  H13: ['Could not lock the message', 'Encryption needs https or localhost. Try again.'],
   I01: ['Instruction override blocked', 'Your message tried to change the AI\u2019s rules. The harmful part was removed and the AI answers with a harmless decoy. Rephrase it as a normal question.'],
   I02: ['Hidden instructions removed from a file', 'An attached file contained text that tried to give the AI orders. That text was removed before the AI read the file.'],
   I03: ['Hidden instructions removed from the library', 'A library item contained text that tried to give the AI orders. That text was removed before the AI used it.'],
@@ -1038,6 +1041,9 @@ Object.assign(ICONS, {
 /* fix identical-drawing clones */
 ICONS.newChat = svg('<path d="M21 12a8 8 0 01-8 8H4l2.5-3.5A8 8 0 1121 12z"/><path d="M12 9v6M9 12h6"/>');
 ICONS.closeLg = svg('<circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/>', 20);
+ICONS.unlock = svg('<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7.5a4 4 0 017.46-2"/>', 16);
+ICONS.keyOff = svg('<circle cx="7.5" cy="16.5" r="3.5"/><path d="M10 14l9.5-9.5M15 9l3 3M17.5 6.5l2.5 2.5"/>', 16);
+ICONS.keyOn = ICONS.keyOff.replace('<circle cx="7.5" cy="16.5" r="3.5"/>', '<circle cx="7.5" cy="16.5" r="3.5" fill="currentColor"/>');
 
 /* ---------- SETTINGS ICONS (one unique drawing per spot, uniform 16px; chevrons 14px) ---------- */
 Object.assign(ICONS, {
@@ -2836,7 +2842,7 @@ const SearchBar = () => `
           <div class="sbar-row sbar-idrow">
             <button class="sbar-vis" type="button" data-action="sb-vis" data-state="private" aria-label="Private. Tap to make public">
               <span class="sbar-vis-priv">${ICONS.lock}</span>
-              <span class="sbar-vis-pub">${ICONS.globe}</span>
+              <span class="sbar-vis-pub">${ICONS.unlock}</span>
             </button>
             <div class="sbar-pill">
               <input class="sbar-code" type="text" maxlength="30" aria-label="Chat ID" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" value="">
@@ -5626,7 +5632,7 @@ const Cloud = (() => {
   const sig = (x) => {
     const last = x.messages[x.messages.length - 1];
     const fb = x.messages.reduce((n, m) => n + (m.feedback ? 1 : 0), 0);
-    return `${x.updated}|${x.pinned}|${x.pinnedAt}|${x.title}|${x.messages.length}|${last?.content?.length || 0}|${fb}|${x.shareCode || ''}|${x.sharePub ? 1 : 0}`;
+    return `${x.updated}|${x.pinned}|${x.pinnedAt}|${x.title}|${x.messages.length}|${last?.content?.length || 0}|${fb}|${x.shareCode || ''}|${x.sharePub ? 1 : 0}|${x.messages.map((m) => (m.pubHide ? 'h' : '') + (m.pw ? 'p' + m.pw.iv : '')).join('')}`;
   };
   const docOf = (...p) => doc(db, 'users', uid, ...p);
   const batchId = (pid, mid, period, keyId) =>
@@ -6310,15 +6316,15 @@ document.addEventListener('contextmenu', (e) => {
 /* public copy lives in the top level "shared" collection, readable by any signed-in user */
 function pubBody(s) {
   const msgs = s.messages
-    .filter((m) => !m.hidden && (m.role === 'user' || m.role === 'assistant') && m.content)
-    .map((m) => ({ role: m.role, content: String(m.content) }));
+    .filter((m) => !m.hidden && !m.pubHide && (m.role === 'user' || m.role === 'assistant') && (m.content || (m.pw && m.pw.ct)))
+    .map((m) => (m.pw && m.pw.ct ? { role: m.role, pw: { s: m.pw.s, iv: m.pw.iv, ct: m.pw.ct } } : { role: m.role, content: String(m.content) }));
   while (new TextEncoder().encode(JSON.stringify(msgs)).length > 900000 && msgs.length > 2) msgs.shift();
   return { owner: currentUser.uid, title: String(s.title || 'Shared chat').slice(0, 80), messages: msgs, updated: Date.now() };
 }
 
 async function pubPushOne(s, force) {
   if (!currentUser || !s.sharePub || !s.shareCode || !s.messages.length) return;
-  const sg = `${s.title}|${s.messages.length}|${s.messages[s.messages.length - 1]?.content?.length || 0}`;
+  const sg = `${s.title}|${s.messages.length}|${s.messages[s.messages.length - 1]?.content?.length || 0}|${s.messages.map((m) => (m.pubHide ? 'h' : '') + (m.pw ? 'p' + m.pw.iv : '')).join('')}`;
   if (!force && pubSig.get(s.id) === sg) return;
   await setDoc(doc(db, 'shared', s.shareCode), pubBody(s));
   pubSig.set(s.id, sg);
@@ -6398,6 +6404,7 @@ async function sbSetPublic(on) {
     sbBusy = false;
   }
   sbSyncShare();
+  renderMessages();
 }
 
 async function sbLoad() {
@@ -6413,8 +6420,10 @@ async function sbLoad() {
     const d = snap.data();
     const now = Date.now();
     const msgs = (Array.isArray(d.messages) ? d.messages : [])
-      .filter((m) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
-      .map((m) => ({ role: m.role, content: m.content, t: now }));
+      .filter((m) => m && (m.role === 'user' || m.role === 'assistant') && (typeof m.content === 'string' || (m.pw && m.pw.ct)))
+      .map((m) => (m.pw && m.pw.ct
+        ? { role: m.role, content: '[Locked message]', t: now, pw: { s: m.pw.s, iv: m.pw.iv, ct: m.pw.ct } }
+        : { role: m.role, content: m.content, t: now }));
     if (!msgs.length) { toast('That chat is empty.', 'info'); return; }
     const copy = {
       id: uid(), title: String(d.title || 'Shared chat').slice(0, 80), messages: msgs,
@@ -8035,6 +8044,152 @@ function msgUserSecFrom(uel) {
   return { sec, acts };
 }
 
+/* ---------- PUBLIC CARD CONTROLS + PASSWORD LOCK ---------- */
+const pwOpen = new WeakSet();
+const pwPlain = new WeakMap();
+const PW_ITER = 150000;
+const PW_LEN = 10;
+const pwB64 = (u8) => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
+const pwUn = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+const pwBody = (m) => (m.pw && !m.pw.own ? (pwPlain.get(m) || '') : (m.content || ''));
+const pwMsgs = (card) => String(card.dataset.ids || '').split(',').map((k) => currentSession.messages[+k]).filter(Boolean);
+
+async function pwKey(pass, salt) {
+  if (!window.crypto || !crypto.subtle) throw new Error('needs https or localhost');
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: PW_ITER, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+}
+
+async function pwSeal(pass, msgs) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const key = await pwKey(pass, salt);
+  const out = [];
+  for (const m of msgs) {
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(String(m.content || '')));
+    out.push({ s: pwB64(salt), iv: pwB64(iv), ct: pwB64(new Uint8Array(ct)), own: true });
+  }
+  return out;
+}
+
+async function pwOpenAll(pass, msgs) {
+  const out = [];
+  for (const m of msgs) {
+    if (!m.pw) { out.push(null); continue; }
+    try {
+      const key = await pwKey(pass, pwUn(m.pw.s));
+      const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: pwUn(m.pw.iv) }, key, pwUn(m.pw.ct));
+      out.push(new TextDecoder().decode(pt));
+    } catch (_) { return null; }
+  }
+  return out;
+}
+
+function pwDecorate(card, m, i, pu) {
+  if (!currentSession.sharePub) return;
+  const ids = pu ? [pu.i, i] : [i];
+  card.dataset.ids = ids.join(',');
+  const msgs = pwMsgs(card);
+  const hidden = msgs.some((x) => x.pubHide);
+  const hasPw = msgs.some((x) => x.pw);
+  const locked = hasPw && msgs.some((x) => x.pw && !pwOpen.has(x));
+  const ctl = document.createElement('div');
+  ctl.className = 'msg-pubctl';
+  ctl.innerHTML = `<button class="pc-btn pc-lock${hidden ? ' on' : ''}" type="button" data-pc="vis" aria-label="${hidden ? 'Never public. Tap to include' : 'Included in public view. Tap to hide'}" title="${hidden ? 'Never public' : 'Included in public view'}">${hidden ? ICONS.lock : ICONS.unlock}</button><button class="pc-btn pc-key${hasPw ? ' on' : ''}" type="button" data-pc="key" aria-label="${hasPw ? 'Password protected' : 'Add password'}" title="${hasPw ? 'Password protected' : 'Add password'}">${hasPw ? ICONS.keyOn : ICONS.keyOff}</button>`;
+  card.firstElementChild.appendChild(ctl);
+  card.classList.add('has-pubctl');
+  card.classList.toggle('pw-locked', locked);
+}
+
+function pwRow(card, mode) {
+  const old = card.querySelector('.msg-sec-pw');
+  if (old) { const same = old.dataset.mode === mode; old.remove(); if (same) return; }
+  const msgs = pwMsgs(card);
+  const own = msgs.some((x) => x.pw && x.pw.own);
+  const row = document.createElement('div');
+  row.className = 'msg-sec msg-sec-pw';
+  row.dataset.mode = mode;
+  row.innerHTML = (mode === 'set' || mode === 'unlock')
+    ? `<input class="pw-in" type="password" maxlength="${PW_LEN}" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="${mode === 'set' ? 'Set a 10 character password' : 'Enter password'}" aria-label="Password"><button class="pw-go" type="button" data-pw="go">${mode === 'set' ? 'Lock' : 'Open'}</button>`
+    : `<button class="pw-go" type="button" data-pw="relock">Lock now</button>${own ? '<button class="pw-go pw-danger" type="button" data-pw="remove">Remove password</button>' : ''}`;
+  card.firstElementChild.after(row);
+  row.querySelector('.pw-in')?.focus();
+}
+
+async function pwGo(card) {
+  const row = card?.querySelector('.msg-sec-pw');
+  const inp = row?.querySelector('.pw-in');
+  if (!row || !inp || row.dataset.busy) return;
+  const msgs = pwMsgs(card);
+  const mode = row.dataset.mode;
+  const bad = () => { inp.classList.add('input-error'); setTimeout(() => inp.classList.remove('input-error'), 700); };
+  if (mode === 'set') {
+    if (inp.value.length !== PW_LEN) { bad(); toast(`Password must be exactly ${PW_LEN} characters. (H11)`, 'error'); return; }
+    row.dataset.busy = '1';
+    try {
+      const seals = await pwSeal(inp.value, msgs);
+      msgs.forEach((m, n) => { m.pw = seals[n]; pwOpen.delete(m); });
+      persistSessions();
+      renderMessages();
+      toast('Message locked with your password.', 'success', 2000);
+    } catch (_) { delete row.dataset.busy; toast('Could not lock the message. (H13)'); }
+    return;
+  }
+  if (!inp.value) { bad(); return; }
+  row.dataset.busy = '1';
+  const texts = await pwOpenAll(inp.value, msgs);
+  delete row.dataset.busy;
+  if (!texts) { bad(); inp.select(); toast('Wrong password. (H12)', 'error', 2200); return; }
+  msgs.forEach((m, n) => { if (!m.pw) return; pwOpen.add(m); if (!m.pw.own) pwPlain.set(m, texts[n]); });
+  renderMessages();
+}
+
+function pcAct(kind, card) {
+  const msgs = pwMsgs(card);
+  if (kind === 'vis') {
+    const on = !msgs.some((x) => x.pubHide);
+    msgs.forEach((x) => { if (on) x.pubHide = true; else delete x.pubHide; });
+    persistSessions();
+    renderMessages();
+    toast(on ? 'Never public. Hidden from the public copy.' : 'Included in the public copy.', 'info', 1800);
+    return;
+  }
+  const has = msgs.some((x) => x.pw);
+  const locked = has && msgs.some((x) => x.pw && !pwOpen.has(x));
+  if (!has && chatBusy && msgs.includes(currentSession.messages[currentSession.messages.length - 1])) {
+    toast('Wait for the reply to finish first.', 'info', 1800);
+    return;
+  }
+  pwRow(card, locked ? 'unlock' : has ? 'manage' : 'set');
+}
+
+function pwAct(kind, card) {
+  if (kind === 'go') return pwGo(card);
+  const msgs = pwMsgs(card);
+  if (kind === 'relock') { msgs.forEach((m) => pwOpen.delete(m)); renderMessages(); return; }
+  if (kind === 'remove') {
+    msgs.forEach((m) => { delete m.pw; pwOpen.delete(m); });
+    persistSessions();
+    renderMessages();
+    toast('Password removed.', 'success', 1800);
+  }
+}
+
+document.addEventListener('click', (e) => {
+  const b = e.target.closest?.('.msg-card [data-pc], .msg-card [data-pw]');
+  if (!b) return;
+  const card = b.closest('.msg-card');
+  if (b.dataset.pw) pwAct(b.dataset.pw, card);
+  else pcAct(b.dataset.pc, card);
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' || !e.target.classList || !e.target.classList.contains('pw-in')) return;
+  e.preventDefault();
+  e.stopPropagation();
+  pwGo(e.target.closest('.msg-card'));
+}, true);
+
 function msgEl(m, i, pu) {
   const el = msgElRaw(m, i);
   const user = m.role === 'user';
@@ -8076,6 +8231,7 @@ function msgEl(m, i, pu) {
     card.appendChild(ft);
   }
   if (!user && !acts && !String(m.content || '').trim()) card.classList.add('is-bare');
+  pwDecorate(card, m, i, pu);
   el.appendChild(card);
   foldSync(card, thinkShown.has(m) ? m.reasoning : m.content);
   return el;
@@ -8164,7 +8320,7 @@ function msgElRaw(m, i) {
     if (m.content) {
       const b = document.createElement('div');
       b.className = 'msg-bubble';
-      b.textContent = m.content;
+      b.textContent = pwBody(m);
       el.appendChild(b);
     }
     if (m.shield && ERR_CODES[m.shield]) {
@@ -8194,7 +8350,7 @@ function msgElRaw(m, i) {
     body.classList.add('msg-thoughts');
     body.textContent = m.reasoning || '';
   } else {
-    setMsgBody(body, m.content);
+    setMsgBody(body, pwBody(m));
   }
 
   const cards = stepCards.get(m);
@@ -8463,13 +8619,13 @@ async function onMessageAction(btn) {
   if (!m) return;
   const a = btn.dataset.a;
   if (a === 'copy') {
-    if (await copyText(m.content)) {
+    if (await copyText(pwBody(m))) {
       btn.innerHTML = ICONS.copiedCheck;
       sfx('copy'); haptic(8);
       setTimeout(() => { btn.innerHTML = ICONS.copy; }, 1400);
     } else toast('Couldn\u2019t copy. (D09)');
   } else if (a === 'voice') {
-    if (m.content) speak(m.content, btn);
+    if (m.content) speak(pwBody(m), btn);
   } else if (a === 'like' || a === 'dislike') {
     m.feedback = m.feedback === a ? null : a;
     MessageRecorder.log({ type: 'feedback', sessionId: currentSession.id, value: m.feedback });
