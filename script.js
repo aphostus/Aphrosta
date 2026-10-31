@@ -3017,7 +3017,7 @@ const SpkFollow = (() => {
   const norm = (w) => String(w).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
   const count = (s) => (String(s).match(/\S+/g) || []).length;
   const SKIP = '.code-glass, pre, button, .file-materials, .file-single, .chart-card, .mmd-card, .rich-tool, script, style';
-  let st = null, raf = 0, cur = -1, userAt = 0;
+  let st = null, raf = 0, cur = -1, userAt = 0, tm = 0, unit = 62;
   ['wheel', 'touchmove'].forEach((ev) => document.addEventListener(ev, () => { userAt = Date.now(); }, { passive: true, capture: true }));
 
   function domWords(body) {
@@ -3048,6 +3048,7 @@ const SpkFollow = (() => {
   function stop() {
     cancelAnimationFrame(raf);
     raf = 0;
+    clearInterval(tm); tm = 0;
     if (ok) { try { CSS.highlights.delete('spk-word'); } catch (_) {} }
     if (st) {
       st.card.classList.remove('spk-follow');
@@ -3130,7 +3131,41 @@ const SpkFollow = (() => {
     raf = requestAnimationFrame(loop);
   }
 
-  return { start, stop, at, audio, count, wordTimes };
+  /* fallback for voices with no word events (Android Google voices): estimate by time, self-calibrating */
+  function est(base, txt, rate) {
+    const ws = String(txt).match(/\S+/g) || [];
+    const cum = [];
+    let tot = 0;
+    ws.forEach((w) => { tot += w.length + 1 + (/[.,;:!?]$/.test(w) ? 4 : 0); cum.push(tot); });
+    const o = {
+      real: false,
+      t0: 0,
+      begin() {
+        if (o.real || !st) return;
+        o.t0 = Date.now();
+        clearInterval(tm);
+        tm = setInterval(() => {
+          if (o.real || !st) { clearInterval(tm); tm = 0; return; }
+          const w = (Date.now() - o.t0) * rate / unit;
+          let k = 0;
+          while (k < cum.length - 1 && cum[k] <= w) k++;
+          at(base + k);
+        }, 70);
+      },
+      stop() { clearInterval(tm); tm = 0; },
+      end() {
+        o.stop();
+        if (!o.real && o.t0 && ws.length >= 4 && tot) {
+          const m = (Date.now() - o.t0) * rate / tot;
+          unit = Math.min(200, Math.max(25, unit * 0.5 + m * 0.5));
+        }
+        if (ws.length) at(base + ws.length - 1);
+      }
+    };
+    return o;
+  }
+
+  return { start, stop, at, audio, count, wordTimes, est };
 })();
 
 let speakGen = 0, speakTimer = 0;
@@ -3191,14 +3226,19 @@ const speakBrowser = function (text, btn = null) {
     const chunkTxt = chunks[i++];
     const u = new SpeechSynthesisUtterance(chunkTxt);
     const base = wBase;
+    const est = SpkFollow.est(base, chunkTxt, rate);
+    u.onstart = () => est.begin();
     wBase += SpkFollow.count(chunkTxt);
     u.onboundary = (ev) => {
-      if (gen === speakGen && ev.name !== 'sentence') SpkFollow.at(base + SpkFollow.count(chunkTxt.slice(0, ev.charIndex)));
+      if (gen !== speakGen || ev.name === 'sentence') return;
+      est.real = true;
+      est.stop();
+      SpkFollow.at(base + SpkFollow.count(chunkTxt.slice(0, ev.charIndex)));
     };
     u.lang = v?.lang || settings.langOut || 'en';
     if (v) u.voice = v;
     u.rate = rate; u.pitch = pitch;
-    u.onend = next;
+    u.onend = () => { est.end(); next(); };
     u.onerror = (e) => {
       if (gen !== speakGen) return;
       if (e.error === 'not-allowed') {
