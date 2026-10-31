@@ -1005,6 +1005,37 @@ mark.sb-hit.is-cur {
 .attach-btn svg { transition: transform 0.3s var(--ease-bounce); }
 .attach-btn:hover svg { transform: rotate(-15deg); }
 
+/* resize-to-hide: composer fades and slides down */
+.composer-wrap {
+  transition: opacity 0.32s var(--ease-smooth), transform 0.32s var(--ease-smooth);
+}
+.composer-wrap.composer-hidden {
+  opacity: 0;
+  transform: translateY(calc(100% + 24px));
+  pointer-events: none;
+}
+
+/* attach long press: glow + trash icon */
+.attach-btn { position: relative; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.attach-ico-main,
+.attach-ico-trash {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.25s var(--ease-smooth), transform 0.3s var(--ease-bounce);
+}
+.attach-ico-trash { position: absolute; inset: 0; opacity: 0; transform: scale(0.4) rotate(-20deg); }
+.attach-btn.lp-trash .attach-ico-main { opacity: 0; transform: scale(0.4) rotate(20deg); }
+.attach-btn.lp-trash .attach-ico-trash { opacity: 1; transform: none; }
+.composer .attach-btn.lp-glow {
+  color: var(--accent);
+  background: var(--glass-bg-hover);
+  border-color: var(--accent);
+  box-shadow: 0 0 18px rgba(var(--accent-rgb), 0.55), 0 0 5px rgba(var(--accent-rgb), 0.75);
+  animation: lpGlow 0.9s ease-in-out infinite alternate;
+}
+@media (prefers-reduced-motion: reduce) { .composer .attach-btn.lp-glow { animation: none; } }
+
 .agent-btn svg { transition: transform 0.3s var(--ease-bounce); }
 .agent-btn:hover .agent-icon-robot svg { transform: scale(1.08); }
 

@@ -2805,7 +2805,7 @@ const Composer = () => `
           <div class="wave" aria-hidden="true">${WAVE_BARS}</div>
         </div>
         <div class="composer-spacer"></div>
-        <button class="attach-btn" type="button" data-action="attach" aria-label="Attach">${ICONS.attach}</button>
+        <button class="attach-btn" type="button" data-action="attach" aria-label="Attach"><span class="attach-ico-main">${ICONS.attach}</span><span class="attach-ico-trash">${ICONS.trash}</span></button>
         <button class="send-btn" type="button" data-action="send" aria-label="Switch to speech">
           <span class="send-icon send-icon-switch">${ICONS.switch}</span>
           <span class="send-icon send-icon-chat">${ICONS.newChat}</span>
@@ -4527,6 +4527,37 @@ function initComposer() {
     setAgent(!agentOn);
   });
 
+  /* drag the resize handle 10% below the base height: composer fades + slides away */
+  const HIDE_RATIO = 0.9;
+  let cmpHidden = false;
+  let hideTapAt = 0;
+  const hideComposer = () => {
+    if (cmpHidden) return;
+    cmpHidden = true;
+    hideTapAt = 0;
+    input.blur();
+    wrap.classList.add('composer-hidden');
+    wrap.setAttribute('aria-hidden', 'true');
+    toast('Double tap to bring back', 'info', 2600);
+  };
+  const showComposer = () => {
+    if (!cmpHidden) return;
+    cmpHidden = false;
+    hideTapAt = 0;
+    wrap.classList.remove('composer-hidden');
+    wrap.removeAttribute('aria-hidden');
+  };
+  const onHiddenTap = (e) => {
+    if (!cmpHidden) return;
+    if (e.target.closest && e.target.closest('button, [data-action]')) { showComposer(); return; }
+    const now = Date.now();
+    if (now - hideTapAt < 320) showComposer();
+    else hideTapAt = now;
+  };
+  if (document.__cmpRestore) document.removeEventListener('pointerdown', document.__cmpRestore, true);
+  document.__cmpRestore = onHiddenTap;
+  document.addEventListener('pointerdown', onHiddenTap, true);
+
   let drag = null;
   let lastTap = 0;
   const blockScroll = (e) => e.preventDefault();
@@ -4545,6 +4576,7 @@ function initComposer() {
     if (!drag) return;
     const dy = drag.y - e.clientY;
     if (Math.abs(dy) > 3) drag.moved = true;
+    drag.raw = drag.h + dy;
     userMin = Math.min(Math.max(drag.h + dy, MIN_H), getMax());
     fit();
   });
@@ -4552,10 +4584,12 @@ function initComposer() {
   const endDrag = () => {
     if (!drag) return;
     const wasTap = !drag.moved;
+    const shouldHide = drag.moved && drag.raw !== undefined && drag.raw < MIN_H * HIDE_RATIO;
     drag = null;
     composer.classList.remove('resizing');
     document.documentElement.classList.remove('resizing');
     document.removeEventListener('touchmove', blockScroll);
+    if (shouldHide) { hideComposer(); return; }
     if (wasTap) {
       const now = Date.now();
       if (now - lastTap < 320) { userMin = MIN_H; fit(); lastTap = 0; }
@@ -4583,6 +4617,61 @@ function initComposer() {
     addFiles(attachInput.files || []);
     attachInput.value = '';
   });
+
+  /* long press on attach: 0.5s glow + trash icon, 2.5s clears the composer */
+  const clearComposer = () => {
+    input.value = '';
+    input.style.height = '';
+    input.scrollTop = 0;
+    pendingFiles = [];
+    try { sessionStorage.removeItem(PENDING_SS); } catch (_) {}
+    refreshPill?.();
+    syncAttachUi();
+    composer.__syncState?.();
+    composer.__syncIdle?.();
+    composer.__syncSend?.();
+    fit();
+  };
+  let alpGlowT = 0, alpFireT = 0, alpDownAt = 0, alpSuppress = false;
+  const alpReset = () => {
+    clearTimeout(alpGlowT);
+    clearTimeout(alpFireT);
+    attachBtn.classList.remove('lp-glow', 'lp-trash');
+  };
+  attachBtn.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    alpReset();
+    alpDownAt = Date.now();
+    alpSuppress = false;
+    if (!accountActive) return;
+    alpGlowT = setTimeout(() => {
+      attachBtn.classList.add('lp-glow', 'lp-trash');
+      haptic(10);
+    }, 500);
+    alpFireT = setTimeout(() => {
+      alpReset();
+      alpSuppress = true;
+      haptic(25);
+      clearComposer();
+    }, 2500);
+  });
+  const alpEnd = () => {
+    if (alpDownAt && Date.now() - alpDownAt >= 500) alpSuppress = true;
+    alpDownAt = 0;
+    alpReset();
+    if (alpSuppress) setTimeout(() => { alpSuppress = false; }, 350);
+  };
+  attachBtn.addEventListener('pointerup', alpEnd);
+  attachBtn.addEventListener('pointercancel', alpEnd);
+  attachBtn.addEventListener('pointerleave', alpEnd);
+  attachBtn.addEventListener('contextmenu', (e) => e.preventDefault());
+  attachBtn.addEventListener('click', (e) => {
+    if (!alpSuppress) return;
+    alpSuppress = false;
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+  }, true);
 
   composer.addEventListener('click', (e) => {
     if (e.target.closest('[data-action="think-close"]')) {
