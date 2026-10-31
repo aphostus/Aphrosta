@@ -8898,14 +8898,14 @@ async function copySession(id) {
   toast(ok ? 'Session copied.' : 'Couldn\u2019t copy. (D09)', ok ? 'success' : 'error', 1800);
 }
 
-/* Long press a pinned chat, then drag to reorder. Only when 3 or more chats are pinned. */
+/* Long press a pinned chat, then drag to reorder. Only when 2 or more chats are pinned. */
 function bindPinDrag() {
   let timer = 0, drag = null, down = null, x0 = 0, y0 = 0, swallow = false;
-  const block = (e) => e.preventDefault();
+  const block = (e) => { if (drag && e.cancelable) e.preventDefault(); };
+  document.addEventListener('touchmove', block, { passive: false });
   const items = () => [...document.querySelectorAll('[data-list="pinned"] .chat-item')];
   const cancel = () => { clearTimeout(timer); timer = 0; down = null; };
   const finish = (commit) => {
-    document.removeEventListener('touchmove', block);
     cancel();
     if (!drag) return;
     const d = drag;
@@ -8929,7 +8929,7 @@ function bindPinDrag() {
     const it = e.target.closest && e.target.closest('[data-list="pinned"] .chat-item');
     if (!it || e.target.closest('.chat-actions')) return;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
-    if (sessions.filter((s) => s.pinned).length < 3 || sessionQuery.trim()) return;
+    if (sessions.filter((s) => s.pinned).length < 2 || sessionQuery.trim()) return;
     cancel();
     x0 = e.clientX;
     y0 = e.clientY;
@@ -8941,7 +8941,6 @@ function bindPinDrag() {
       it.classList.add('is-dragging');
       it.parentElement.classList.add('is-reordering');
       haptic(15);
-      document.addEventListener('touchmove', block, { passive: false });
     }, 450);
   }, true);
   document.addEventListener('pointermove', (e) => {
