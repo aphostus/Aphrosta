@@ -8166,17 +8166,31 @@ function pwKeep(card, fn) {
   const st = stageEl();
   if (!st || !card) { fn(); return; }
   const ids = card.dataset.ids;
+  const openIds = new Set([...st.querySelectorAll('.msg-card.open')].map((c) => c.dataset.ids));
   const wasBottom = st.scrollHeight - st.scrollTop - st.clientHeight < 90;
   const top = st.scrollTop;
   const off = card.getBoundingClientRect().top - st.getBoundingClientRect().top;
   const restore = () => {
-    const nc = [...st.querySelectorAll('.msg-card')].find((c) => c.dataset.ids === ids);
-    if (wasBottom) st.scrollTop = st.scrollHeight;
-    else if (nc) st.scrollTop += nc.getBoundingClientRect().top - st.getBoundingClientRect().top - off;
+    const all = [...st.querySelectorAll('.msg-card')];
+    const nc = all.find((c) => c.dataset.ids === ids);
+    if (wasBottom && (!nc || nc === all[all.length - 1])) st.scrollTop = st.scrollHeight;
+    else if (nc) st.scrollTop += nc.getBoundingClientRect().top - st.getBoundingClientRect().top - Math.max(off, -Math.max(0, nc.offsetHeight - 120));
     else st.scrollTop = top;
     sbLastTop = st.scrollTop;
   };
   fn();
+  st.querySelectorAll('.msg-card.is-long').forEach((c) => {
+    if (!openIds.has(c.dataset.ids)) return;
+    c.classList.add('open');
+    const tg = c.querySelector('.msg-sec-main > .msg-body, .msg-sec-main > .msg-bubble');
+    if (tg) {
+      tg.style.transition = 'none';
+      tg.style.maxHeight = 'none';
+      requestAnimationFrame(() => requestAnimationFrame(() => { tg.style.transition = ''; }));
+    }
+    const fb = c.querySelector('.msg-fold');
+    if (fb) fb.textContent = 'Hide...';
+  });
   st.querySelectorAll('.msg').forEach((el) => { el.style.animation = 'none'; });
   restore();
   requestAnimationFrame(restore);
