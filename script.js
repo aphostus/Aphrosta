@@ -7990,7 +7990,7 @@ function cardsEl(cards) {
 }
 
 /* ---------- MESSAGE CARDS (glass sections, fold, scroll arrows) ---------- */
-const FOLD_CHARS = 500;
+const FOLD_CHARS = 1500;
 const tokShort = (n) => (n < 1000
   ? '~' + n + 'T'
   : '~' + (n < 10000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') : Math.round(n / 1000)) + 'kT');
@@ -8051,6 +8051,7 @@ function msgEl(m, i) {
     ft.innerHTML = `<span class="msg-meta"><span class="msg-time">${esc(msgStamp(m.t))}</span>${mn ? `<span class="msg-model">${esc(mn)}</span>` : ''}</span><span class="msg-tok">${tokShort(estTokens(m.content))}</span>`;
     card.appendChild(ft);
   }
+  if (!user && !acts && !String(m.content || '').trim()) card.classList.add('is-bare');
   el.appendChild(card);
   foldSync(card, m.content);
   return el;
@@ -8059,8 +8060,22 @@ function msgEl(m, i) {
 document.addEventListener('click', (e) => {
   const b = e.target.closest?.('.msg-fold');
   if (!b) return;
-  const open = b.closest('.msg-card').classList.toggle('open');
+  const card = b.closest('.msg-card');
+  const tgt = card.querySelector('.msg-sec-main > .msg-body, .msg-sec-main > .msg-bubble');
+  const open = card.classList.toggle('open');
   b.textContent = open ? 'Hide...' : 'Show...';
+  if (!tgt) return;
+  tgt.style.maxHeight = tgt.scrollHeight + 'px';
+  if (open) {
+    tgt.addEventListener('transitionend', function done(ev) {
+      if (ev.propertyName !== 'max-height') return;
+      tgt.removeEventListener('transitionend', done);
+      if (card.classList.contains('open')) tgt.style.maxHeight = 'none';
+    });
+  } else {
+    void tgt.offsetHeight;
+    tgt.style.maxHeight = '';
+  }
 });
 
 /* up / down arrows: only on a still screen, no typing, no popups */
@@ -9149,6 +9164,7 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
       if (body) {
         if (chatBusy && ai.content.length > 8000) body.textContent = ai.content;
         else setMsgBody(body, ai.content);
+        if (ai.content.trim()) body.closest('.msg-card')?.classList.remove('is-bare');
       }
       scrollDown();
     }

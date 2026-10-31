@@ -2716,13 +2716,35 @@ html[data-status-mode="auto"][data-status="offline"]
   border: 0;
   cursor: pointer;
 }
-.msg-card.is-long:not(.open) .msg-sec-main > .msg-body,
-.msg-card.is-long:not(.open) .msg-sec-main > .msg-bubble {
-  max-height: 12em;
+.msg-card.is-long .msg-sec-main > .msg-body,
+.msg-card.is-long .msg-sec-main > .msg-bubble {
+  max-height: 24em;
   overflow: hidden;
-  -webkit-mask-image: linear-gradient(#000 65%, transparent);
-  mask-image: linear-gradient(#000 65%, transparent);
+  -webkit-mask-image: linear-gradient(#000, #000), linear-gradient(#000, transparent);
+  mask-image: linear-gradient(#000, #000), linear-gradient(#000, transparent);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: top, bottom;
+  mask-position: top, bottom;
+  -webkit-mask-size: 100% calc(100% - 3em), 100% 3em;
+  mask-size: 100% calc(100% - 3em), 100% 3em;
+  transition: max-height 0.4s cubic-bezier(0.22, 1, 0.36, 1), -webkit-mask-size 0.4s ease, mask-size 0.4s ease;
 }
+.msg-card.is-long.open .msg-sec-main > .msg-body,
+.msg-card.is-long.open .msg-sec-main > .msg-bubble {
+  -webkit-mask-size: 100% 100%, 100% 0;
+  mask-size: 100% 100%, 100% 0;
+}
+.msg-card { transition: background 0.3s var(--ease-smooth), border-color 0.3s var(--ease-smooth), box-shadow 0.3s var(--ease-smooth); }
+.msg-card.is-bare {
+  background: none;
+  border-color: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  overflow: visible;
+}
+.msg-card.is-bare .msg-sec-main { padding: 0; }
 
 /* ---------- SCROLL ARROWS: glass circle, lower center ---------- */
 .scroll-nav {
@@ -2732,8 +2754,8 @@ html[data-status-mode="auto"][data-status="offline"]
   z-index: 6;
   display: flex;
   flex-direction: column;
-  width: 46px;
-  height: 46px;
+  width: 60px;
+  height: 60px;
   overflow: hidden;
   border-radius: 50%;
   background: var(--composer-bg);
@@ -2758,7 +2780,7 @@ html[data-status-mode="auto"][data-status="offline"]
 .scroll-nav button + button { border-top: 1px solid var(--glass-border); }
 .scroll-nav button:active:not(:disabled) { background: var(--glass-bg-hover); }
 .scroll-nav button:disabled { opacity: 0.3; }
-.scroll-nav svg { width: 16px; height: 16px; }
+.scroll-nav svg { width: 20px; height: 20px; }
 
 
 
