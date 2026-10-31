@@ -6317,7 +6317,7 @@ document.addEventListener('contextmenu', (e) => {
 function pubBody(s) {
   const msgs = s.messages
     .filter((m) => !m.hidden && !m.pubHide && (m.role === 'user' || m.role === 'assistant') && (m.content || (m.pw && m.pw.ct)))
-    .map((m) => (m.pw && m.pw.ct ? { role: m.role, pw: { s: m.pw.s, iv: m.pw.iv, ct: m.pw.ct } } : { role: m.role, content: String(m.content) }));
+    .map((m) => (m.pw && m.pw.ct ? { role: m.role, pw: { s: m.pw.s, iv: m.pw.iv, ct: m.pw.ct } } : { role: m.role, content: String(m.content), ...(m.role === 'assistant' && m.reasoning ? { reasoning: String(m.reasoning).slice(0, 20000) } : {}) }));
   while (new TextEncoder().encode(JSON.stringify(msgs)).length > 900000 && msgs.length > 2) msgs.shift();
   return { owner: currentUser.uid, title: String(s.title || 'Shared chat').slice(0, 80), messages: msgs, updated: Date.now() };
 }
@@ -6423,7 +6423,7 @@ async function sbLoad() {
       .filter((m) => m && (m.role === 'user' || m.role === 'assistant') && (typeof m.content === 'string' || (m.pw && m.pw.ct)))
       .map((m) => (m.pw && m.pw.ct
         ? { role: m.role, content: '[Locked message]', t: now, pw: { s: m.pw.s, iv: m.pw.iv, ct: m.pw.ct } }
-        : { role: m.role, content: m.content, t: now }));
+        : { role: m.role, content: m.content, t: now, ...(m.role === 'assistant' && typeof m.reasoning === 'string' && m.reasoning ? { reasoning: m.reasoning.slice(0, 20000) } : {}) }));
     if (!msgs.length) { toast('That chat is empty.', 'info'); return; }
     const copy = {
       id: uid(), title: String(d.title || 'Shared chat').slice(0, 80), messages: msgs,
@@ -8149,6 +8149,19 @@ async function pwGo(card) {
   pwKeep(card, renderMessages);
 }
 
+function pwFollow(btn) {
+  const st = stageEl();
+  if (!st || !btn) return;
+  const y0 = btn.getBoundingClientRect().top;
+  const t0 = performance.now();
+  const step = () => {
+    st.scrollTop += btn.getBoundingClientRect().top - y0;
+    sbLastTop = st.scrollTop;
+    if (performance.now() - t0 < 480) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
 function pwKeep(card, fn) {
   const st = stageEl();
   if (!st || !card) { fn(); return; }
@@ -8299,6 +8312,7 @@ document.addEventListener('click', (e) => {
   b.textContent = open ? 'Hide...' : 'Show...';
   if (!tgt) return;
   tgt.style.maxHeight = tgt.scrollHeight + 'px';
+  pwFollow(b);
   if (open) {
     tgt.addEventListener('transitionend', function done(ev) {
       if (ev.propertyName !== 'max-height') return;
@@ -8429,7 +8443,7 @@ function msgElRaw(m, i) {
       btn('like', 'Good response', m.feedback === 'like' ? ICONS.thumbUpOn : ICONS.thumbUp, m.feedback === 'like') +
       btn('dislike', 'Bad response', m.feedback === 'dislike' ? ICONS.thumbDownOn : ICONS.thumbDown, m.feedback === 'dislike') +
       (last ? btn('regen', 'Regenerate', ICONS.regen) : '') +
-      (!last && m.reasoning ? btn('think', thinkShown.has(m) ? 'Show reply' : 'Show thoughts', ICONS.book, thinkShown.has(m)) : '');
+      ((!last || currentSession.clone) && m.reasoning ? btn('think', thinkShown.has(m) ? 'Show reply' : 'Show thoughts', ICONS.book, thinkShown.has(m)) : '');
   }
   el.appendChild(act);
   return el;
@@ -8711,7 +8725,7 @@ async function onMessageAction(btn) {
     retryFailed();
   } else if (a === 'think') {
     if (thinkShown.has(m)) thinkShown.delete(m); else thinkShown.add(m);
-    renderMessages();
+    pwKeep(btn.closest('.msg-card'), renderMessages);
   } else if (a === 'edit') {
     const ui = btn.dataset.ui != null ? +btn.dataset.ui : i;
     const card = btn.closest('.msg-card');
