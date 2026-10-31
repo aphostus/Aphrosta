@@ -619,13 +619,7 @@ html.has-vv #app-shell { height: var(--app-h); }
   opacity: 0;
   pointer-events: none;
 }
-/* new session with no messages: no search bar */
-.sbar-wrap.is-empty .sbar {
-  transform: translateY(-140%);
-  opacity: 0;
-  pointer-events: none;
-  visibility: hidden;
-}
+/* new session with no messages: search bar stays visible so a chat ID can be pasted */
 .main > .stage { padding-top: 54px; }
 .sbar-row {
   display: flex;
@@ -845,7 +839,7 @@ mark.sb-hit.is-cur {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  padding: 0 18px var(--composer-h, 140px);
+  padding: 0 18px calc(var(--composer-h, 140px) + 10px);
   scrollbar-width: thin;
   scrollbar-color: rgba(var(--fg-rgb), 0.12) transparent;
   overflow-anchor: none;
@@ -2609,7 +2603,7 @@ html[data-status-mode="auto"][data-status="offline"]
   width: 100%;
   max-width: var(--content-w);
   margin: 0 auto;
-  padding: 8px 0 28px;
+  padding: 8px 0 0;
   display: flex;
   flex-direction: column;
   gap: 22px;
@@ -4156,7 +4150,26 @@ mark.ab-mark {
   touch-action: manipulation;
 }
 .pw-go:active { transform: scale(0.96); }
-.pw-go.pw-danger { color: var(--bad); background: var(--glass-bg); border: 1px solid var(--glass-border); }
+.pw-go.pw-danger { color: var(--gray-light); background: var(--glass-bg); border: 1px solid var(--glass-border); }
+.pw-eye {
+  flex-shrink: 0; width: 36px; height: 36px;
+  display: grid; place-items: center;
+  color: var(--gray-light); background: var(--glass-bg);
+  border: 1px solid var(--glass-border); border-radius: var(--radius-pill);
+  touch-action: manipulation;
+}
+.pw-eye svg { width: 18px; height: 18px; }
+.pw-eye[aria-pressed="true"] { color: var(--accent); }
+.pw-eye:active { transform: scale(0.94); }
+.msg-card.pw-shake { animation: pwShake 0.45s var(--ease-smooth); }
+@keyframes pwShake {
+  15% { transform: translateX(-7px); }
+  30% { transform: translateX(7px); }
+  45% { transform: translateX(-5px); }
+  60% { transform: translateX(5px); }
+  75% { transform: translateX(-2px); }
+  90% { transform: translateX(2px); }
+}
 
 /* edit mode: hide the person icon and both new icons over the stripes */
 .msg-card.is-editing .msg-sec-user .msg-user-ico { visibility: hidden; }
