@@ -4200,7 +4200,7 @@ mark.ab-mark {
 .msg-card.is-editing .msg-pubctl { display: none !important; }
 
 /* ---------- Pinned chats: long press to reorder ---------- */
-[data-list="pinned"] .chat-item { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.chat-list .chat-item { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 .chat-item.is-dragging {
   position: relative;
   z-index: 5;
@@ -4210,6 +4210,35 @@ mark.ab-mark {
   transition: none;
 }
 .chat-list.is-reordering { touch-action: none; }
+
+/* drag a chat past the list: bottom = download JSON, top = upload JSON */
+.io-zone {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 52px;
+  border-radius: 14px;
+  border: 1px dashed var(--glass-border);
+  background: var(--surface-1);
+  color: var(--fg);
+  font-size: 13px;
+  opacity: 0;
+  transform: scale(0.96);
+  pointer-events: none;
+  transition: opacity 0.18s var(--ease-smooth), transform 0.18s var(--ease-smooth), background 0.18s var(--ease-smooth);
+}
+.io-zone svg { width: 18px; height: 18px; stroke-width: 1.8; }
+.io-zone b { font-weight: 600; }
+.io-up { top: calc(16px + var(--safe-top)); }
+.io-down { bottom: calc(12px + var(--safe-bottom)); }
+.sidebar.io-drag .io-zone { opacity: 0.85; transform: none; }
+.sidebar.io-drag .io-zone.on { opacity: 1; background: var(--glass-bg-hover); border-style: solid; border-color: var(--fg); }
+.side-btn-primary.is-io { background: var(--glass-bg-hover); }
 
 /* ---------- Swipe: left archives, right shows stats ---------- */
 .chat-item { position: relative; touch-action: pan-y; }

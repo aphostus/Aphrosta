@@ -1026,6 +1026,8 @@ ICONS.thumbDownOn = ICONS.thumbDown.replace('fill="none"', 'fill="currentColor"'
 ICONS.pushpinOn   = ICONS.pushpin.replace('fill="none"', 'fill="currentColor"');
 ICONS.archive = svg('<rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 002 2h12a2 2 0 002-2V8"/><path d="M10 12h4"/>', 15);
 ICONS.restore = svg('<path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 010 11H11"/>', 15);
+ICONS.ioUp = svg('<path d="M12 20V9"/><path d="M7 13l5-5 5 5"/><path d="M5 4h14"/>', 18);
+ICONS.ioDown = svg('<path d="M12 4v11"/><path d="M7 11l5 5 5-5"/><path d="M5 20h14"/>', 18);
 ICONS.book = svg('<path d="M12 7v14"/><path d="M3 18a1 1 0 01-1-1V4a1 1 0 011-1h5a4 4 0 014 4 4 4 0 014-4h5a1 1 0 011 1v13a1 1 0 01-1 1h-6a3 3 0 00-3 3 3 3 0 00-3-3z"/>', 15);
 
 /* ---------- NEW ICONS (Fix 4) ---------- */
@@ -1341,6 +1343,8 @@ let Avatar = (user, cls = '') => {
 
 const Sidebar = (user) => `
   <aside class="sidebar" id="sidebar" aria-label="Sidebar">
+    <div class="io-zone io-up" aria-hidden="true">${ICONS.ioUp}<b>Release to replace from JSON</b></div>
+    <div class="io-zone io-down" aria-hidden="true">${ICONS.ioDown}<b>Release to download JSON</b></div>
     <div class="side-head">
       <img class="brand-icon" src="${ICON_SRC}" alt="">
       <span class="brand-name">${APP_NAME}</span>
@@ -5831,7 +5835,7 @@ const Cloud = (() => {
   const sig = (x) => {
     const last = x.messages[x.messages.length - 1];
     const fb = x.messages.reduce((n, m) => n + (m.feedback ? 1 : 0), 0);
-    return `${x.updated}|${x.archived ? 1 : 0}|${x.pinned}|${x.pinnedAt}|${x.title}|${x.messages.length}|${last?.content?.length || 0}|${fb}|${x.shareCode || ''}|${x.sharePub ? 1 : 0}|${x.messages.map((m) => (m.pubHide ? 'h' : '') + (m.pw ? 'p' + m.pw.iv : '')).join('')}`;
+    return `${x.updated}|${x.archived ? 1 : 0}|${x.pinned}|${x.pinnedAt}|${x.orderAt || 0}|${x.title}|${x.messages.length}|${last?.content?.length || 0}|${fb}|${x.shareCode || ''}|${x.sharePub ? 1 : 0}|${x.messages.map((m) => (m.pubHide ? 'h' : '') + (m.pw ? 'p' + m.pw.iv : '')).join('')}`;
   };
   const docOf = (...p) => doc(db, 'users', uid, ...p);
   const batchId = (pid, mid, period, keyId) =>
@@ -8750,7 +8754,7 @@ function renderSessionList() {
   const q = sessionQuery.trim().toLowerCase();
   const match = (s) => !q || String(s.title || '').toLowerCase().includes(q) || s.messages.some((m) => String(m.content || '').toLowerCase().includes(q));
   const pinned = sessions.filter((s) => !s.archived && s.pinned && match(s)).sort((a, b) => b.pinnedAt - a.pinnedAt);
-  const normal = sessions.filter((s) => !s.archived && !s.pinned && match(s)).sort((a, b) => b.updated - a.updated);
+  const normal = sessions.filter((s) => !s.archived && !s.pinned && match(s)).sort((a, b) => (b.orderAt || b.updated) - (a.orderAt || a.updated));
 
   const count = q$('[data-pin-count]');
   if (count) count.textContent = `${sessions.filter((s) => s.pinned).length}/${MAX_PINS}`;
@@ -8905,12 +8909,26 @@ async function copySession(id) {
   toast(ok ? 'Session copied.' : 'Couldn\u2019t copy. (D09)', ok ? 'success' : 'error', 1800);
 }
 
-/* Long press a pinned chat, then drag to reorder. Only when 2 or more chats are pinned. */
+/* Long press any chat, then drag to reorder. Drag past the list: bottom = download JSON, top = replace from JSON. */
 function bindPinDrag() {
-  let timer = 0, drag = null, down = null, x0 = 0, y0 = 0, swallow = false;
+  let timer = 0, drag = null, down = null, x0 = 0, y0 = 0, swallow = false, curList = null, ioZone = null;
+  const ioShow = (on) => document.getElementById('sidebar')?.classList.toggle('io-drag', on);
+  const ioSet = (z) => {
+    ioZone = z;
+    const sb = document.getElementById('sidebar');
+    sb?.querySelector('.io-up')?.classList.toggle('on', z === 'up');
+    sb?.querySelector('.io-down')?.classList.toggle('on', z === 'down');
+  };
+  const ioTrack = (y) => {
+    const sc = document.querySelector('.side-scroll');
+    if (!sc) return;
+    const r = sc.getBoundingClientRect();
+    const z = y > r.bottom + 10 ? 'down' : y < r.top - 10 ? 'up' : null;
+    if (z !== ioZone) { if (z) haptic(10); ioSet(z); }
+  };
   const block = (e) => { if (drag && e.cancelable) e.preventDefault(); };
   document.addEventListener('touchmove', block, { passive: false });
-  const items = () => [...document.querySelectorAll('[data-list="pinned"] .chat-item')];
+  const items = () => (curList ? [...curList.querySelectorAll('.chat-item')] : []);
   const cancel = () => { clearTimeout(timer); timer = 0; down = null; };
   const finish = (commit) => {
     cancel();
@@ -8919,24 +8937,29 @@ function bindPinDrag() {
     drag = null;
     d.el.classList.remove('is-dragging');
     d.el.style.transform = '';
-    document.querySelectorAll('[data-list="pinned"]').forEach((l) => l.classList.remove('is-reordering'));
-    if (commit && d.el.isConnected) {
-      const order = items().map((el) => el.dataset.id);
-      if (order.join('|') !== d.before.join('|')) {
-        const t = Date.now();
-        order.forEach((id, k) => { const s = sessions.find((x) => x.id === id); if (s) s.pinnedAt = t - k; });
-        persistSessions();
-      }
+    document.querySelectorAll('.chat-list').forEach((l) => l.classList.remove('is-reordering'));
+    const zone = commit ? ioZone : null;
+    const dragId = d.el.dataset.id;
+    const field = curList && curList.dataset.list === 'pinned' ? 'pinnedAt' : 'orderAt';
+    const order = items().map((el) => el.dataset.id);
+    ioSet(null);
+    ioShow(false);
+    curList = null;
+    if (!zone && commit && d.el.isConnected && !sessionQuery.trim() && order.join('|') !== d.before.join('|')) {
+      const t = Date.now();
+      order.forEach((id, k) => { const s = sessions.find((x) => x.id === id); if (s) s[field] = t - k; });
+      persistSessions();
     }
     renderSessionList();
+    if (zone === 'down') exportSession(dragId);
+    else if (zone === 'up') ioPickFile((text) => ioApplyReplace(dragId, text));
     swallow = true;
     setTimeout(() => { swallow = false; }, 350);
   };
   document.addEventListener('pointerdown', (e) => {
-    const it = e.target.closest && e.target.closest('[data-list="pinned"] .chat-item');
+    const it = e.target.closest && e.target.closest('.chat-list .chat-item');
     if (!it || e.target.closest('.chat-actions')) return;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
-    if (sessions.filter((s) => s.pinned).length < 2 || sessionQuery.trim()) return;
     cancel();
     x0 = e.clientX;
     y0 = e.clientY;
@@ -8944,7 +8967,9 @@ function bindPinDrag() {
     timer = setTimeout(() => {
       timer = 0;
       if (!it.isConnected) return;
+      curList = it.parentElement;
       drag = { el: it, before: items().map((el) => el.dataset.id) };
+      ioShow(true);
       it.classList.add('is-dragging');
       it.parentElement.classList.add('is-reordering');
       haptic(15);
@@ -8967,17 +8992,18 @@ function bindPinDrag() {
     }
     const r = el.getBoundingClientRect();
     el.style.transform = 'translateY(' + Math.round(e.clientY - (r.top + r.height / 2)) + 'px)';
+    ioTrack(e.clientY);
   }, true);
   document.addEventListener('pointerup', () => { drag ? finish(true) : cancel(); }, true);
   document.addEventListener('pointercancel', () => { drag ? finish(false) : cancel(); }, true);
   document.addEventListener('click', (e) => {
-    if (swallow && e.target.closest && e.target.closest('[data-list="pinned"] .chat-item')) {
+    if (swallow && e.target.closest && e.target.closest('.chat-list .chat-item')) {
       e.stopPropagation();
       e.preventDefault();
     }
   }, true);
   document.addEventListener('contextmenu', (e) => {
-    if ((drag || down) && e.target.closest && e.target.closest('[data-list="pinned"] .chat-item')) e.preventDefault();
+    if ((drag || down) && e.target.closest && e.target.closest('.chat-list .chat-item')) e.preventDefault();
   }, true);
 }
 
@@ -9001,6 +9027,182 @@ function duplicateSession(id) {
   renderSessionList();
   toast('Session duplicated.', 'success', 1800);
   if (!chatBusy) openSession(copy.id);
+}
+
+/* ---------- Session JSON export / import ---------- */
+const IO_TYPE = 'aphrosta.session';
+const IO_VER = 1;
+const IO_MAX = 8 * 1024 * 1024;
+const IO_MAX_MSGS = 5000;
+
+const ioName = (t) => String(t || 'session').replace(/[^\w-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40) || 'session';
+
+/* download one session: password locked and never-public messages are left out */
+function exportSession(id) {
+  const s = sessions.find((x) => x.id === id) || (currentSession.id === id ? currentSession : null);
+  if (!s) return;
+  const live = s.messages.filter((m) => !m.__empty && !m.__failed);
+  const kept = live.filter((m) => !m.pw && !m.pubHide);
+  if (!kept.length) { toast('Nothing to export in that session.', 'info', 2000); return; }
+  const messages = kept.map((m) => {
+    const { attachments, __empty, __failed, __error, pw, pubHide, ...rest } = m;
+    return rest;
+  });
+  const data = {
+    app: 'Aphrosta', type: IO_TYPE, version: IO_VER, exported: new Date().toISOString(),
+    omittedLocked: live.length - kept.length,
+    session: {
+      title: String(s.title || 'Session'), created: s.created || null, updated: s.updated || null,
+      pinned: !!s.pinned, visibility: s.sharePub ? 'public' : 'private', messages
+    }
+  };
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+  a.download = `aphrosta-${ioName(s.title)}-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  const skipped = live.length - kept.length;
+  toast(`Downloaded \u201c${s.title}\u201d${skipped ? ` (${skipped} locked skipped)` : ''}.`, 'success', 2200);
+}
+
+/* check the file shape and rebuild clean message objects (nothing unknown gets through) */
+function ioParse(text) {
+  let d;
+  try { d = JSON.parse(text); } catch (_) { return { error: 'That file is not valid JSON.' }; }
+  const isObj = (v) => v && typeof v === 'object' && !Array.isArray(v);
+  if (!isObj(d)) return { error: 'Wrong format: the file must hold one JSON object.' };
+  if (d.type !== IO_TYPE) return { error: 'This is not an Aphrosta session file.' };
+  if (typeof d.version !== 'number' || d.version > IO_VER) return { error: 'This file version is not supported.' };
+  const x = d.session;
+  if (!isObj(x)) return { error: 'The file has no "session" object.' };
+  if (!Array.isArray(x.messages) || !x.messages.length) return { error: 'The session in this file has no messages.' };
+  if (x.messages.length > IO_MAX_MSGS) return { error: `Too many messages (max ${IO_MAX_MSGS}).` };
+  const now = Date.now();
+  const messages = [];
+  for (let i = 0; i < x.messages.length; i++) {
+    const m = x.messages[i];
+    const at = `Message ${i + 1}`;
+    if (!isObj(m)) return { error: `${at} is not an object.` };
+    if (m.role !== 'user' && m.role !== 'assistant') return { error: `${at} has a bad "role".` };
+    if (typeof m.content !== 'string') return { error: `${at} has no text "content".` };
+    if (m.feedback != null && m.feedback !== 'like' && m.feedback !== 'dislike') return { error: `${at} has a bad "feedback".` };
+    if (m.reasoning != null && typeof m.reasoning !== 'string') return { error: `${at} has a bad "reasoning".` };
+    if (m.t != null && !Number.isFinite(m.t)) return { error: `${at} has a bad "t" time.` };
+    const c = { role: m.role, content: m.content.slice(0, 200000), t: Number.isFinite(m.t) ? m.t : now };
+    if (m.feedback) c.feedback = m.feedback;
+    if (m.role === 'assistant' && m.reasoning) c.reasoning = m.reasoning.slice(0, 20000);
+    ['provider', 'model', 'effort', 'thinkModel', 'thinkVariant'].forEach((k) => { if (typeof m[k] === 'string') c[k] = m[k].slice(0, 80); });
+    if (Number.isFinite(m.thinkMs)) c.thinkMs = m.thinkMs;
+    if (m.hidden === true) c.hidden = true;
+    messages.push(c);
+  }
+  const title = typeof x.title === 'string' && x.title.trim() ? x.title.trim().slice(0, 80) : 'Imported session';
+  return { title, messages };
+}
+
+/* open the file picker, read the file, hand the text to cb */
+function ioPickFile(cb) {
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = 'application/json,.json';
+  inp.style.display = 'none';
+  inp.addEventListener('change', async () => {
+    const f = inp.files && inp.files[0];
+    inp.remove();
+    if (!f) return;
+    if (!/\.json$/i.test(f.name) && f.type !== 'application/json') { toast('Pick a .json file.', 'error', 2600); return; }
+    if (f.size > IO_MAX) { toast('That file is too large (max 8 MB).', 'error', 2800); return; }
+    let text;
+    try { text = await f.text(); } catch (_) { toast('Could not read that file.', 'error', 2600); return; }
+    cb(text);
+  });
+  document.body.appendChild(inp);
+  inp.click();
+}
+
+/* overshoot up: replace this session with the file (always private afterwards) */
+function ioApplyReplace(id, text) {
+  const s = sessions.find((x) => x.id === id);
+  if (!s) return;
+  if (chatBusy && currentSession.id === id) { toast('Stop the response first. (D06)', 'info'); return; }
+  const r = ioParse(text);
+  if (r.error) { toast(r.error, 'error', 4200); return; }
+  if (s.sharePub) { pubDrop(s); pubSig.delete(s.id); s.sharePub = false; }
+  s.title = r.title;
+  s.messages = r.messages;
+  s.updated = Date.now();
+  persistSessions();
+  if (currentSession.id === id) { renderSessionUi(); scrollDown(true); }
+  else renderSessionList();
+  toast('Session replaced from file. It is private.', 'success', 2400);
+}
+
+/* long press Make Session: import the file as a new private session */
+function ioApplyNew(text) {
+  if (chatBusy) { toast('Stop the response before switching sessions. (D06)', 'info'); return; }
+  const r = ioParse(text);
+  if (r.error) { toast(r.error, 'error', 4200); return; }
+  const now = Date.now();
+  const copy = { id: uid(), title: r.title, messages: r.messages, pinned: false, pinnedAt: 0, created: now, updated: now };
+  sessions.unshift(copy);
+  currentSession = copy;
+  chatStick = true;
+  clearDraft();
+  persistSessions();
+  resetNewSessionUi();
+  renderSessionUi();
+  scrollDown(true);
+  closeSidebarMobile();
+  toast('Session imported. It is private.', 'success', 2200);
+}
+
+/* hold Make Session 0.5s (buzz), then let go: the file picker opens (a picker needs the release tap) */
+function bindMakeSessionImport() {
+  let timer = 0, armed = false, x0 = 0, y0 = 0, swallow = false;
+  const btn = () => q$('[data-action="new-chat"]');
+  const over = (e) => {
+    const r = btn()?.getBoundingClientRect();
+    return !!r && e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+  };
+  const clear = () => { clearTimeout(timer); timer = 0; btn()?.classList.remove('is-io'); };
+  document.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    if (!e.target.closest || !e.target.closest('#sidebar') || !over(e)) return;
+    armed = false;
+    clear();
+    x0 = e.clientX; y0 = e.clientY;
+    timer = setTimeout(() => {
+      timer = 0;
+      if (chatBusy) { toast('Stop the response before importing. (D06)', 'info'); return; }
+      armed = true;
+      haptic(15);
+      btn()?.classList.add('is-io');
+      toast('Release to choose a JSON file.', 'info', 1600);
+    }, 500);
+  }, true);
+  document.addEventListener('pointermove', (e) => {
+    if (timer && Math.hypot(e.clientX - x0, e.clientY - y0) > 10) clear();
+    if (armed && !over(e)) { armed = false; clear(); }
+  }, true);
+  document.addEventListener('pointerup', () => {
+    const go = armed;
+    armed = false;
+    clear();
+    if (!go) return;
+    swallow = true;
+    setTimeout(() => { swallow = false; }, 400);
+    ioPickFile(ioApplyNew);
+  }, true);
+  document.addEventListener('pointercancel', () => { armed = false; clear(); }, true);
+  document.addEventListener('click', (e) => {
+    if (swallow && e.target.closest && e.target.closest('[data-action="new-chat"]')) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+  }, true);
+  document.addEventListener('contextmenu', (e) => {
+    if ((timer || armed) && over(e)) e.preventDefault();
+  }, true);
 }
 
 /* Archive: unpin, hide from the side menu, keep it in the Archive drawer */
@@ -10478,6 +10680,7 @@ function initSessions() {
     sessionsBound = true;
     bindPinDrag();
     bindSwipe();
+    bindMakeSessionImport();
     appEl.addEventListener('click', (e) => {
       const fc = e.target.closest('.file-card');
       if (fc) return onFileCard(fc);
