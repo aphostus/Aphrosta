@@ -3890,3 +3890,14 @@ mark.ab-mark {
 .mmd-full-body svg { display: block; margin: 0 auto; }
 .mmd-view { max-height: 380px; overflow: auto; }
 .mmd-fixbtn { margin-top: 10px; }
+
+/* ---------- Sign-in / Sign-up screen ---------- */
+.signin-screen { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; justify-content: space-between; align-items: center; background: #000; color: #fff; padding: env(safe-area-inset-top, 0px) 0 0; box-sizing: border-box; }
+.signin-art { flex: 1; display: flex; align-items: center; justify-content: center; margin: 0; padding: 24px 12px 12px; font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Courier New", monospace; font-size: clamp(8px, 3.6vw, 15px); line-height: 1.12; color: #fff; white-space: pre; overflow: hidden; user-select: none; }
+.signin-card { width: 100%; max-width: 480px; box-sizing: border-box; background: #fff; color: #0a0a0a; border-radius: 28px 28px 0 0; padding: 26px 22px calc(22px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 16px; }
+.signin-btn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 14px 18px; font-size: 16px; font-weight: 600; color: #0a0a0a; background: #fff; border: 1.5px solid #cfcfcf; border-radius: 999px; cursor: pointer; transition: opacity .2s, border-color .2s; }
+.signin-btn:disabled { opacity: .35; cursor: not-allowed; }
+.signin-btn:not(:disabled):active { border-color: #0a0a0a; }
+.signin-agree { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; line-height: 1.45; color: #8a8a8a; cursor: pointer; }
+.signin-agree input { flex: none; width: 18px; height: 18px; margin: 1px 0 0; accent-color: #8a8a8a; }
+

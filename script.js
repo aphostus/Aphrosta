@@ -9893,11 +9893,12 @@ let authBusy = false;
 let authBlocked = false;
 let authCooldownUntil = 0;
 let postSignOutCooldown = 0;
+let signInConsent = false;
 
 async function autoSignIn() {
   if (authBlocked) return;
   if (auth.currentUser) return;
-  if (authBusy) return;
+  if (!signInConsent) { hideLoader(); showSignInButton(); return; }  if (authBusy) return;
   const now = Date.now();
   if (now < postSignOutCooldown) { setTimeout(autoSignIn, postSignOutCooldown - now + 100); return; }
   if (now < authCooldownUntil) { setTimeout(autoSignIn, authCooldownUntil - now + 100); return; }
@@ -9939,6 +9940,7 @@ async function autoSignIn() {
 
 let signInFallback = null;
 function renderSigningIn() {
+  signInConsent = false;
   appEl.innerHTML = '';
   showLoader();
   clearTimeout(signInFallback);
@@ -9947,9 +9949,58 @@ function renderSigningIn() {
   }, 8000);
 }
 
+const SIGNIN_ART = String.raw`              .  *  .
+          .-"""""""""-.
+        .'   _     _   '.
+       /    (_)   (_)    \
+      ;        .-.        ;
+      |       ( v )       |
+      ;     .  '-'  .     ;
+       \   /'.     .'\   /
+     .--'-'/  '---'  \'-'--.
+    /    /  /|     |\  \    \
+   |    |  / |     | \  |    |
+   |    | /  |  *  |  \ |    |
+    \   |/   |     |   \|   /
+     '.  \   '.   .'   /  .'
+       '-.\    '-'    /.-'
+          |  ~  ~  ~  |
+          | ~  ~  ~  ~|
+          |  ~  ~  ~  |
+         /'-._______.-'\
+        '---------------'`;
+
 function showSignInButton() {
-  appEl.innerHTML = '<div style="display:grid;place-items:center;height:100vh"><button id="signin-btn" style="padding:12px 24px;font-size:16px">Sign in with Google</button></div>';
-  document.getElementById('signin-btn').onclick = () => { authBusy = false; autoSignIn(); };
+  const existing = document.getElementById('signin-btn');
+  if (existing) {
+    signInConsent = false;
+    existing.disabled = !document.getElementById('signin-agree').checked;
+    return;
+  }
+  appEl.innerHTML = `
+    <div class="signin-screen">
+      <pre class="signin-art" id="signin-art" aria-hidden="true"></pre>
+      <div class="signin-card">
+        <button id="signin-btn" class="signin-btn" disabled>
+          <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.5 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.2 5.5-4.7 7.2l7.6 5.9c4.4-4.1 6.9-10.1 6.9-17.6z"/><path fill="#FBBC05" d="M10.5 28.7a14.5 14.5 0 0 1 0-9.4l-7.9-6.1a24 24 0 0 0 0 21.6l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.9 2.3-8.3 2.3-6.3 0-11.6-4-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>
+          <span>Sign-in/Sign-up</span>
+        </button>
+        <label class="signin-agree">
+          <input type="checkbox" id="signin-agree">
+          <span>I agree to the About &amp; License, Terms &amp; Conditions, and Rules &amp; Policies.</span>
+        </label>
+      </div>
+    </div>`;
+  document.getElementById('signin-art').textContent = SIGNIN_ART;
+  const cb = document.getElementById('signin-agree');
+  const btn = document.getElementById('signin-btn');
+  cb.onchange = () => { btn.disabled = !cb.checked; };
+  btn.onclick = () => {
+    if (!cb.checked) return;
+    signInConsent = true;
+    authBusy = false;
+    autoSignIn();
+  };
 }
 
 /* ---------- Lock helpers (Fix 1) ---------- */
