@@ -8729,6 +8729,7 @@ function sessionItem(s) {
       <span>${esc(s.title)}</span>
     </button>
     <span class="chat-actions">
+      <button class="chat-act" type="button" data-act="copy" aria-label="Copy session">${ICONS.copy}</button>
       <button class="chat-act${s.pinned ? ' on' : ''}" type="button" data-act="pin" aria-label="${s.pinned ? 'Unpin' : 'Pin'} session">${s.pinned ? ICONS.pushpinOn : ICONS.pushpin}</button>
       <button class="chat-act" type="button" data-act="del" aria-label="Delete session">${ICONS.trash}</button>
     </span>
@@ -8876,6 +8877,102 @@ async function renameSession(id) {
   s.updated = Date.now();
   persistSessions();
   renderSessionList();
+}
+
+/* Copy a whole session exactly as it is displayed (hidden context and failed replies left out) */
+async function copySession(id) {
+  const s = sessions.find((x) => x.id === id) || (currentSession.id === id ? currentSession : null);
+  if (!s) return;
+  const parts = [];
+  s.messages.forEach((m) => {
+    if (m.hidden || m.__failed || m.__empty || (m.role !== 'user' && m.role !== 'assistant')) return;
+    let t = m.pw && !pwOpen.has(m) ? '[Locked message]' : stripToolLines(pwBody(m));
+    if (m.role === 'assistant' && settings.agentPlan) t = splitPlanParts(t).clean;
+    const files = (m.attachments || []).map((a) => '[Attached: ' + a.name + ']').join('\n');
+    t = [files, t].filter(Boolean).join('\n').trim();
+    if (!t) return;
+    parts.push((m.role === 'user' ? 'You' : 'Assistant') + ':\n' + t);
+  });
+  if (!parts.length) { toast('Nothing to copy in that session.', 'info', 1800); return; }
+  const ok = await copyText(parts.join('\n\n'));
+  toast(ok ? 'Session copied.' : 'Couldn\u2019t copy. (D09)', ok ? 'success' : 'error', 1800);
+}
+
+/* Long press a pinned chat, then drag to reorder. Only when 3 or more chats are pinned. */
+function bindPinDrag() {
+  let timer = 0, drag = null, down = null, x0 = 0, y0 = 0, swallow = false;
+  const block = (e) => e.preventDefault();
+  const items = () => [...document.querySelectorAll('[data-list="pinned"] .chat-item')];
+  const cancel = () => { clearTimeout(timer); timer = 0; down = null; };
+  const finish = (commit) => {
+    document.removeEventListener('touchmove', block);
+    cancel();
+    if (!drag) return;
+    const d = drag;
+    drag = null;
+    d.el.classList.remove('is-dragging');
+    d.el.style.transform = '';
+    document.querySelectorAll('[data-list="pinned"]').forEach((l) => l.classList.remove('is-reordering'));
+    if (commit && d.el.isConnected) {
+      const order = items().map((el) => el.dataset.id);
+      if (order.join('|') !== d.before.join('|')) {
+        const t = Date.now();
+        order.forEach((id, k) => { const s = sessions.find((x) => x.id === id); if (s) s.pinnedAt = t - k; });
+        persistSessions();
+      }
+    }
+    renderSessionList();
+    swallow = true;
+    setTimeout(() => { swallow = false; }, 350);
+  };
+  document.addEventListener('pointerdown', (e) => {
+    const it = e.target.closest && e.target.closest('[data-list="pinned"] .chat-item');
+    if (!it || e.target.closest('.chat-actions')) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    if (sessions.filter((s) => s.pinned).length < 3 || sessionQuery.trim()) return;
+    cancel();
+    x0 = e.clientX;
+    y0 = e.clientY;
+    down = true;
+    timer = setTimeout(() => {
+      timer = 0;
+      if (!it.isConnected) return;
+      drag = { el: it, before: items().map((el) => el.dataset.id) };
+      it.classList.add('is-dragging');
+      it.parentElement.classList.add('is-reordering');
+      haptic(15);
+      document.addEventListener('touchmove', block, { passive: false });
+    }, 450);
+  }, true);
+  document.addEventListener('pointermove', (e) => {
+    if (down && !drag && Math.hypot(e.clientX - x0, e.clientY - y0) > 8) cancel();
+    if (!drag) return;
+    const el = drag.el;
+    if (!el.isConnected) { finish(false); return; }
+    el.style.transform = '';
+    const prev = el.previousElementSibling, next = el.nextElementSibling;
+    if (prev) {
+      const pr = prev.getBoundingClientRect();
+      if (e.clientY < pr.top + pr.height / 2) el.parentNode.insertBefore(el, prev);
+    }
+    if (next) {
+      const nr = next.getBoundingClientRect();
+      if (e.clientY > nr.top + nr.height / 2) el.parentNode.insertBefore(next, el);
+    }
+    const r = el.getBoundingClientRect();
+    el.style.transform = 'translateY(' + Math.round(e.clientY - (r.top + r.height / 2)) + 'px)';
+  }, true);
+  document.addEventListener('pointerup', () => { drag ? finish(true) : cancel(); }, true);
+  document.addEventListener('pointercancel', () => { drag ? finish(false) : cancel(); }, true);
+  document.addEventListener('click', (e) => {
+    if (swallow && e.target.closest && e.target.closest('[data-list="pinned"] .chat-item')) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+  }, true);
+  document.addEventListener('contextmenu', (e) => {
+    if ((drag || down) && e.target.closest && e.target.closest('[data-list="pinned"] .chat-item')) e.preventDefault();
+  }, true);
 }
 
 async function deleteSession(id) {
@@ -10207,6 +10304,7 @@ function initSessions() {
 
   if (!sessionsBound) {
     sessionsBound = true;
+    bindPinDrag();
     appEl.addEventListener('click', (e) => {
       const fc = e.target.closest('.file-card');
       if (fc) return onFileCard(fc);
@@ -10222,6 +10320,7 @@ function initSessions() {
         const a = act.dataset.act;
         if (a === 'pin') return togglePin(item.dataset.id);
         if (a === 'rename') return renameSession(item.dataset.id);
+        if (a === 'copy') return copySession(item.dataset.id);
         return deleteSession(item.dataset.id);
       }
       openSession(item.dataset.id);
