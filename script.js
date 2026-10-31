@@ -5853,7 +5853,7 @@ const Cloud = (() => {
   const sig = (x) => {
     const last = x.messages[x.messages.length - 1];
     const fb = x.messages.reduce((n, m) => n + (m.feedback ? 1 : 0), 0);
-    return `${x.updated}|${x.archived ? 1 : 0}|${x.pinned}|${x.pinnedAt}|${x.orderAt || 0}|${x.title}|${x.messages.length}|${last?.content?.length || 0}|${fb}|${x.shareCode || ''}|${x.sharePub ? 1 : 0}|${x.messages.map((m) => (m.pubHide ? 'h' : '') + (m.pw ? 'p' + m.pw.iv : '')).join('')}`;
+    return `${x.lock ? 'L' + x.lock.iv : ''}|${x.updated}|${x.archived ? 1 : 0}|${x.pinned}|${x.pinnedAt}|${x.orderAt || 0}|${x.title}|${x.messages.length}|${last?.content?.length || 0}|${fb}|${x.shareCode || ''}|${x.sharePub ? 1 : 0}|${x.messages.map((m) => (m.pubHide ? 'h' : '') + (m.pw ? 'p' + m.pw.iv : '')).join('')}`;
   };
   const docOf = (...p) => doc(db, 'users', uid, ...p);
   const batchId = (pid, mid, period, keyId) =>
@@ -8752,25 +8752,137 @@ function sessionItem(s) {
     <span class="chat-under chat-under-stat"></span>
     <span class="chat-under chat-under-arc">${ICONS.archive}<b>Archive</b></span>
     <div class="chat-slide">
-    <button class="chat-open" type="button" title="${esc(s.title)}">
+    <button class="chat-open" type="button" title="${esc(sessLocked(s) ? 'Locked session' : s.title)}">
       <span class="chat-act" data-act="rename" aria-label="Rename session" style="margin-right:2px;width:24px;height:24px;vertical-align:middle;">${ICONS.renameChat}</span>
-      <span>${esc(s.title)}</span>
+      <span>${esc(sessLocked(s) ? 'Locked session' : s.title)}</span>
     </button>
     <span class="chat-actions">
       <button class="chat-act" type="button" data-act="copy" aria-label="Duplicate session" title="Duplicate session">${ICONS.copy}</button>
+      <button class="chat-act${s.lock ? ' on' : ''}" type="button" data-act="key" aria-label="${s.lock ? 'Session locked' : 'Lock session'}" title="${s.lock ? 'Session locked' : 'Lock session'}">${s.lock ? ICONS.keyOn : ICONS.keyOff}</button>
       <button class="chat-act${s.pinned ? ' on' : ''}" type="button" data-act="pin" aria-label="${s.pinned ? 'Unpin' : 'Pin'} session">${s.pinned ? ICONS.pushpinOn : ICONS.pushpin}</button>
       <button class="chat-act" type="button" data-act="del" aria-label="Delete session">${ICONS.trash}</button>
     </span>
     </div>
+    ${sessPwRowHtml(s)}
   </div>`;
 }
+
+/* ---------- SESSION KEY (password lock on the left panel) ---------- */
+const sessOpen = new Set();
+let sessPw = null;
+const sessLocked = (s) => !!(s.lock && !sessOpen.has(s.id));
+
+function sessPwRowHtml(s) {
+  if (!sessPw || sessPw.id !== s.id) return '';
+  const m = sessPw.mode;
+  const inner = m === 'manage'
+    ? '<button class="pw-go" type="button" data-sp="relock">Lock</button><button class="pw-go pw-danger" type="button" data-sp="remove">Remove</button>'
+    : `<input class="pw-in" type="password" maxlength="${PW_LEN}" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="${m === 'set' ? 'Set a 10 character password' : 'Enter password'}" aria-label="Password"><button class="pw-eye" type="button" data-sp="eye" aria-label="Show password" aria-pressed="false"><span data-eye-on hidden>${ICONS.eye}</span><span data-eye-off>${ICONS.eyeOff}</span></button><button class="pw-go" type="button" data-sp="go">${m === 'set' ? 'Lock' : 'Open'}</button>`;
+  return `<div class="sess-pw" data-id="${esc(s.id)}" data-mode="${m}">${inner}</div>`;
+}
+
+function sessPwShow(id, mode) {
+  sessPw = sessPw && sessPw.id === id && sessPw.mode === mode ? null : { id, mode };
+  renderSessionList();
+  q$('.sess-pw .pw-in')?.focus({ preventScroll: true });
+}
+
+function sessionKey(id) {
+  const s = sessions.find((x) => x.id === id);
+  if (!s) return;
+  sessPwShow(id, !s.lock ? 'set' : sessOpen.has(id) ? 'manage' : 'unlock');
+}
+
+async function sessPwAct(btn) {
+  const row = btn.closest('.sess-pw');
+  const id = row && row.dataset.id;
+  const s = sessions.find((x) => x.id === id);
+  if (!s) return;
+  const kind = btn.dataset.sp;
+  const inp = row.querySelector('.pw-in');
+  const bad = () => { if (!inp) return; inp.classList.add('input-error'); setTimeout(() => inp.classList.remove('input-error'), 700); };
+  const stamp = () => { if (!s.orderAt) s.orderAt = s.updated; s.updated = Date.now(); };
+
+  if (kind === 'eye') {
+    if (!inp) return;
+    const show = inp.type === 'password';
+    inp.type = show ? 'text' : 'password';
+    btn.querySelector('[data-eye-on]').hidden = !show;
+    btn.querySelector('[data-eye-off]').hidden = show;
+    btn.setAttribute('aria-pressed', String(show));
+    btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+    inp.focus();
+    return;
+  }
+
+  if (kind === 'relock') {
+    if (chatBusy && currentSession.id === id) { toast('Stop the response first. (D06)', 'info'); return; }
+    sessOpen.delete(id);
+    sessPw = null;
+    if (currentSession.id === id) {
+      currentSession = newDraft();
+      clearDraft();
+      resetNewSessionUi();
+      renderSessionUi();
+    } else renderSessionList();
+    return;
+  }
+
+  if (kind === 'remove') {
+    delete s.lock;
+    sessOpen.delete(id);
+    sessPw = null;
+    stamp();
+    persistSessions();
+    renderSessionList();
+    toast('Session password removed.', 'success', 1800);
+    return;
+  }
+
+  if (kind === 'go') {
+    if (row.dataset.busy || !inp) return;
+    if (row.dataset.mode === 'set') {
+      if (inp.value.length !== PW_LEN) { bad(); toast(`Password must be exactly ${PW_LEN} characters. (H11)`, 'error'); return; }
+      row.dataset.busy = '1';
+      try {
+        const seal = (await pwSeal(inp.value, [{ content: 'aphrosta-session-lock' }]))[0];
+        s.lock = { s: seal.s, iv: seal.iv, ct: seal.ct };
+        sessOpen.add(id);
+        sessPw = null;
+        stamp();
+        persistSessions();
+        renderSessionList();
+        toast('Session locked with your password.', 'success', 2000);
+      } catch (_) { delete row.dataset.busy; toast('Could not lock the session. (H13)'); }
+      return;
+    }
+    if (!inp.value) { bad(); return; }
+    row.dataset.busy = '1';
+    const ok = await pwOpenAll(inp.value, [{ pw: s.lock }]);
+    delete row.dataset.busy;
+    if (!ok) { bad(); inp.select(); toast('Wrong password. (H12)', 'error', 2200); return; }
+    sessOpen.add(id);
+    sessPw = null;
+    renderSessionList();
+    openSession(id);
+  }
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' || !e.target.closest) return;
+  const row = e.target.closest('.sess-pw');
+  if (!row) return;
+  e.preventDefault();
+  const go = row.querySelector('[data-sp="go"]');
+  if (go) sessPwAct(go);
+}, true);
 
 function renderSessionList() {
   const pinnedBox = q$('[data-list="pinned"]');
   const chatsBox = q$('[data-list="chats"]');
   if (!pinnedBox || !chatsBox) return;
   const q = sessionQuery.trim().toLowerCase();
-  const match = (s) => !q || String(s.title || '').toLowerCase().includes(q) || s.messages.some((m) => String(m.content || '').toLowerCase().includes(q));
+  const match = (s) => !q || (sessLocked(s) ? 'locked session'.includes(q) : (String(s.title || '').toLowerCase().includes(q) || s.messages.some((m) => String(m.content || '').toLowerCase().includes(q))));
   const pinned = sessions.filter((s) => !s.archived && s.pinned && match(s)).sort((a, b) => b.pinnedAt - a.pinnedAt);
   const normal = sessions.filter((s) => !s.archived && !s.pinned && match(s)).sort((a, b) => (b.orderAt || b.updated) - (a.orderAt || a.updated));
 
@@ -8869,6 +8981,7 @@ function openSession(id) {
   if (chatBusy) { toast('Stop the response before switching sessions. (D06)', 'info'); return; }
   const s = sessions.find((x) => x.id === id);
   if (!s) return;
+  if (sessLocked(s)) { sessPwShow(id, 'unlock'); return; }
   currentSession = s;
   chatStick = true;
   clearDraft();
@@ -8976,7 +9089,7 @@ function bindPinDrag() {
   };
   document.addEventListener('pointerdown', (e) => {
     const it = e.target.closest && e.target.closest('.chat-list .chat-item');
-    if (!it || e.target.closest('.chat-actions')) return;
+    if (!it || e.target.closest('.chat-actions, .sess-pw')) return;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     cancel();
     x0 = e.clientX;
@@ -9274,7 +9387,7 @@ function bindSwipe() {
       closeStat();
       if (same) { held(); it = null; return; }
     }
-    if (!el || e.target.closest('.chat-actions')) { it = null; return; }
+    if (!el || e.target.closest('.chat-actions, .sess-pw')) { it = null; return; }
     if (e.pointerType === 'mouse' && e.button !== 0) { it = null; return; }
     it = el; slide = el.querySelector('.chat-slide');
     x0 = e.clientX; y0 = e.clientY; dx = 0; mode = 0; w = el.offsetWidth;
@@ -10706,12 +10819,17 @@ function initSessions() {
       const ma = e.target.closest('.msg-act');
       if (ma) return onMessageAction(ma);
 
+      const sp = e.target.closest('[data-sp]');
+      if (sp) return sessPwAct(sp);
+      if (e.target.closest('.sess-pw')) return;
+
       const item = e.target.closest('.chat-item');
       if (!item) return;
       const act = e.target.closest('[data-act]');
       if (act) {
         e.stopPropagation();
         const a = act.dataset.act;
+        if (a === 'key') return sessionKey(item.dataset.id);
         if (a === 'pin') return togglePin(item.dataset.id);
         if (a === 'rename') return renameSession(item.dataset.id);
         if (a === 'copy') return duplicateSession(item.dataset.id);

@@ -4276,3 +4276,14 @@ mark.ab-mark {
   mask-size: 100% calc(100% - 1.5em), 100% 1.5em;
 }
 
+/* ---------- Session key row (left panel) ---------- */
+.chat-item { flex-wrap: wrap; }
+.sess-pw {
+  flex: 0 0 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px 8px;
+  animation: msgIn 0.25s var(--ease-spring);
+}
+
