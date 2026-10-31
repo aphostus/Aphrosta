@@ -635,8 +635,8 @@ function inboxPush(message, type) {
 }
 
 function toast(message, type = 'error', duration = 2800) {
-  inboxPush(message, type);
   if (!settings.notifications) return;
+  inboxPush(message, type);
   const host = ensureToastHost();
   if ([...host.children].some((el) => el.dataset.msg === message)) return;
   while (host.children.length >= 3) host.firstElementChild.remove();
@@ -8278,7 +8278,7 @@ const msgModelName = (m) => {
 };
 const msgEffortTag = (m) => {
   const e = m.effort && EFFORT_LEVELS.find((x) => x.id === m.effort);
-  return e ? esc(e.name) + ' effort \u00b7 ' : '';
+  return e ? esc(e.name) + ' ' : '';
 };
 const msgProvLogo = (m) => MODEL_PROVIDERS.find((p) => p.id === m.provider)?.logo || '';
 const MSG_USER_ICO = svg('<circle cx="12" cy="8" r="3.6"/><path d="M5 20c.8-3.6 3.6-5.4 7-5.4s6.2 1.8 7 5.4"/>', 15);
