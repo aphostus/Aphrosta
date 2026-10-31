@@ -2808,6 +2808,7 @@ const Composer = () => `
         <button class="attach-btn" type="button" data-action="attach" aria-label="Attach">${ICONS.attach}</button>
         <button class="send-btn" type="button" data-action="send" aria-label="Switch to speech">
           <span class="send-icon send-icon-switch">${ICONS.switch}</span>
+          <span class="send-icon send-icon-chat">${ICONS.newChat}</span>
           <span class="send-icon send-icon-go">${ICONS.rocket}</span>
           <span class="send-icon send-icon-stop"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><rect x="1" y="1" width="12" height="12" rx="2.5" fill="currentColor"/></svg></span>
         </button>
@@ -4425,7 +4426,44 @@ function initComposer() {
     submit();
   });
 
+  /* long press on the switch button: 0.5s glow + Chat icon, 2.5s new session */
+  let lpGlowT = 0, lpFireT = 0, lpGlowed = false, lpSuppress = false;
+  const lpReset = () => {
+    clearTimeout(lpGlowT);
+    clearTimeout(lpFireT);
+    sendBtn.classList.remove('lp-glow', 'lp-chat');
+  };
+  sendBtn.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    if (!accountActive || chatBusy || sendBtn.classList.contains('has-text')) return;
+    lpReset();
+    lpGlowed = false;
+    lpGlowT = setTimeout(() => {
+      lpGlowed = true;
+      sendBtn.classList.add('lp-glow', 'lp-chat');
+      haptic(10);
+    }, 500);
+    lpFireT = setTimeout(() => {
+      lpReset();
+      lpGlowed = false;
+      lpSuppress = true;
+      haptic(25);
+      newSession();
+    }, 2500);
+  });
+  const lpEnd = () => {
+    if (lpGlowed) lpSuppress = true;
+    lpGlowed = false;
+    lpReset();
+    if (lpSuppress) setTimeout(() => { lpSuppress = false; }, 350);
+  };
+  sendBtn.addEventListener('pointerup', lpEnd);
+  sendBtn.addEventListener('pointercancel', lpEnd);
+  sendBtn.addEventListener('pointerleave', lpEnd);
+  sendBtn.addEventListener('contextmenu', (e) => e.preventDefault());
+
   sendBtn.addEventListener('click', () => {
+    if (lpSuppress) { lpSuppress = false; return; }
     if (!accountActive) { toast('Your account is deactivated. Activate it in Account settings to chat. (D01)', 'info', 3200); return; }
     if (chatBusy) { stopGeneration(); return; }
     if (mode === 'text' && (input.value.trim() || pendingFiles.length)) { submit(); return; }
@@ -7998,6 +8036,7 @@ function renderSessionUi() {
   syncSessionControls();
   refreshTokenMeter();
   q$('.composer')?.__syncThink?.();
+  q$('.sbar-wrap')?.classList.toggle('is-empty', !currentSession.messages.length);
   const si = q$('[data-role="session-search"]');
   if (si && si.value !== sessionQuery) si.value = sessionQuery;
 }

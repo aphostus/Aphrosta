@@ -619,6 +619,13 @@ html.has-vv #app-shell { height: var(--app-h); }
   opacity: 0;
   pointer-events: none;
 }
+/* new session with no messages: no search bar */
+.sbar-wrap.is-empty .sbar {
+  transform: translateY(-140%);
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
 .main > .stage { padding-top: 54px; }
 .sbar-row {
   display: flex;
@@ -1171,6 +1178,23 @@ mark.sb-hit.is-cur {
 .send-btn.has-text .send-icon-go { opacity: 1; transform: none; }
 
 .send-icon-stop { opacity: 0; transform: scale(0.4); }
+
+/* long press: glow + Chat icon */
+.send-btn { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.send-icon-chat { opacity: 0; transform: scale(0.4) rotate(-20deg); }
+.send-btn.lp-chat .send-icon-switch { opacity: 0; transform: scale(0.4) rotate(20deg); }
+.send-btn.lp-chat .send-icon-chat { opacity: 1; transform: none; }
+.send-btn.lp-glow {
+  color: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 18px rgba(var(--accent-rgb), 0.55), 0 0 5px rgba(var(--accent-rgb), 0.75);
+  animation: lpGlow 0.9s ease-in-out infinite alternate;
+}
+@keyframes lpGlow {
+  from { box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.35), 0 0 3px rgba(var(--accent-rgb), 0.5); }
+  to   { box-shadow: 0 0 26px rgba(var(--accent-rgb), 0.8), 0 0 8px rgba(var(--accent-rgb), 0.9); }
+}
+@media (prefers-reduced-motion: reduce) { .send-btn.lp-glow { animation: none; } }
 .send-btn.is-busy {
   color: var(--fg);
   background: var(--glass-bg-hover);
