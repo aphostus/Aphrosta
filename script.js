@@ -1343,8 +1343,8 @@ let Avatar = (user, cls = '') => {
 
 const Sidebar = (user) => `
   <aside class="sidebar" id="sidebar" aria-label="Sidebar">
-    <div class="io-zone io-up" aria-hidden="true">${ICONS.ioUp}<b>Release to replace from JSON</b></div>
-    <div class="io-zone io-down" aria-hidden="true">${ICONS.ioDown}<b>Release to download JSON</b></div>
+    <div class="io-zone io-up" aria-hidden="true">${ICONS.ioUp}</div>
+    <div class="io-zone io-down" aria-hidden="true">${ICONS.ioDown}</div>
     <div class="side-head">
       <img class="brand-icon" src="${ICON_SRC}" alt="">
       <span class="brand-name">${APP_NAME}</span>
