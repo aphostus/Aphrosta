@@ -4412,7 +4412,8 @@ html[data-motion="reduce"] .sess-pw { animation: none; }
 .ops-cr .ops-crumbs { flex: 1; min-width: 0; }
 .ops-cr .ops-tk { flex: none; font-size: calc(12px * var(--ts)); font-weight: 600; color: var(--gray-mid); }
 .ops-ed .ops-row { flex: none; height: 52px; box-sizing: border-box; }
-.ops-ed .ops-tree { box-sizing: border-box; flex: 1 1 auto; min-height: 208px; max-height: calc(7 * 52px + 10px); }
+.ops-ed .ops-tree { box-sizing: border-box; flex: 1 1 auto; min-height: 218px; max-height: calc(4 * 52px + 10px); }
+.ops-cc { color: #000; }
 .ops-ed { flex: 1 0 auto; }
 .ops-ed > .lib-lab:last-child { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
 .ops-ed > .lib-lab:last-child > .ops-st { flex: 1 1 auto; min-height: 0; }
