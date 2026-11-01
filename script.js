@@ -3202,13 +3202,12 @@ function connRender() {
     return `
     <div class="lib-card ops-card conn-card" style="--oc:${esc(opsInk(c.color || OPS_COLORS[0]))};--pc:${esc(ink ? 'var(--fg)' : (c.color || OPS_COLORS[0]))}">
       <div class="lib-card-top">
-        <h4 class="lib-card-title"><span class="ops-ico">${connLogo(pv)}</span>${esc(c.name)}</h4>
+        <h4 class="lib-card-title"><span class="ops-ico">${ICONS.connCode}</span>${esc(c.name)}</h4>
         <div class="lib-card-act">
           <button class="icon-btn" type="button" data-conn-open="${esc(c.id)}" aria-label="Edit">${ICONS.pencil}</button>
           <button class="icon-btn" type="button" data-conn-del="${esc(c.id)}" aria-label="Delete">${ICONS.trash}</button>
         </div>
       </div>
-      ${pv ? `<p class="lib-card-meta">${esc(pv.name)}</p>` : ''}
       ${c.description ? `<p class="lib-card-instr">${esc(c.description)}</p>` : ''}
     </div>`;
   }).join('');
