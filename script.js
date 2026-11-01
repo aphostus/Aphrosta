@@ -2461,9 +2461,9 @@ async function opsTreeInit(panel, project) {
     if (selSet.size) {
       return `<span class="ops-hint">${selSet.size} selected</span><button class="ops-tb" type="button" data-ops-act="copy">Copy</button><button class="ops-tb" type="button" data-ops-act="move">Move</button><button class="ops-tb" type="button" data-ops-act="del">Delete</button><button class="ops-tb ops-sq" type="button" data-ops-act="cancel" aria-label="Cancel">${ICONS.close}</button>`;
     }
-    return `<button class="ops-tb" type="button" data-ops-add="file">${ICONS.plus}<span>File</span></button><button class="ops-tb" type="button" data-ops-add="folder">${ICONS.plus}<span>Folder</span></button>`;
+    return `<button class="ops-tb ops-sq" type="button" data-ops-nav="back" aria-label="Back">${ICONS.chevL}</button><button class="ops-tb ops-sq" type="button" data-ops-nav="fwd" aria-label="Forward">${ICONS.chevronR}</button><span class="ops-hint"></span><button class="ops-tb" type="button" data-ops-add="file">${ICONS.plus}<span>File</span></button><button class="ops-tb" type="button" data-ops-add="folder">${ICONS.plus}<span>Folder</span></button>`;
   };
-  const drawBar = () => { if (barEl) barEl.innerHTML = barHtml(); };
+  const drawBar = () => { if (barEl) { barEl.innerHTML = barHtml(); navPaint(); } };
 
   /* select without re-rendering rows, so a held finger keeps its element */
   const paintSel = () => {
@@ -2725,6 +2725,21 @@ async function opsTreeInit(panel, project) {
     } catch (_) { toast('Could not save. Storage may be full. (E06)'); }
   };
 
+  /* (<)(>): step search matches when a pill has input or focus, otherwise walk folders */
+  const fwdStack = [];
+  const searchOn = () => !!((qEl && qEl.value) || (rEl && rEl.value) || document.activeElement === qEl || document.activeElement === rEl);
+  const fwdOk = () => { const n = byId(fwdStack[fwdStack.length - 1]); return !!(sel && n && n.parent === sel); };
+  function navPaint() {
+    const b = panel.querySelector('[data-ops-nav="back"]');
+    const f = panel.querySelector('[data-ops-nav="fwd"]');
+    if (!b || !f) return;
+    const on = searchOn();
+    b.classList.toggle('off', on ? !hits.length : !sel);
+    f.classList.toggle('off', on ? !hits.length : !fwdOk());
+  }
+  ['focusin', 'focusout'].forEach((ev) => panel.addEventListener(ev, () => setTimeout(navPaint, 0)));
+  panel.addEventListener('input', () => setTimeout(navPaint, 220));
+  ['pointerdown', 'mousedown'].forEach((ev) => panel.addEventListener(ev, (e) => { if (e.target.closest('[data-ops-nav]')) e.preventDefault(); }));
   const uniq = (parent, name, extra) => {
     const taken = new Set(kids(parent).map((x) => x.name.toLowerCase()));
     extra.filter((x) => x.parent === parent).forEach((x) => taken.add(x.name.toLowerCase()));
@@ -2887,6 +2902,25 @@ async function opsTreeInit(panel, project) {
   box.addEventListener('contextmenu', (e) => e.preventDefault());
 
   panel.addEventListener('click', async (e) => {
+    const nv = e.target.closest('[data-ops-nav]');
+    if (nv) {
+      const back = nv.dataset.opsNav === 'back';
+      if (searchOn()) { stepHit(back ? -1 : 1); return; }
+      if (back) {
+        const here = byId(sel);
+        if (!here) return;
+        fwdStack.push(here.id);
+        sel = here.parent || '';
+        selSet.clear();
+        draw();
+        return;
+      }
+      if (!fwdOk()) return;
+      sel = fwdStack.pop();
+      selSet.clear();
+      draw();
+      return;
+    }
     const addBtn = e.target.closest('[data-ops-add]');
     if (addBtn) { add(addBtn.dataset.opsAdd); return; }
     const act = e.target.closest('[data-ops-act]');
@@ -2904,7 +2938,7 @@ async function opsTreeInit(panel, project) {
       return;
     }
     const cd = e.target.closest('[data-ops-cd]');
-    if (cd) { sel = cd.dataset.opsCd; selSet.clear(); draw(); return; }
+    if (cd) { sel = cd.dataset.opsCd; fwdStack.length = 0; selSet.clear(); draw(); return; }
     const eye = e.target.closest('[data-ops-eye]');
     if (eye) {
       const n = byId(eye.dataset.opsEye);
@@ -2935,7 +2969,7 @@ async function opsTreeInit(panel, project) {
         paintSel();
         return;
       }
-      if (n.kind === 'folder') { sel = n.id; draw(); return; }
+      if (n.kind === 'folder') { sel = n.id; fwdStack.length = 0; draw(); return; }
       if (!clip) opsViewFile(n);
     }
   });
@@ -2971,7 +3005,7 @@ const body = `
         </div>
         <div class="ops-hits" data-ops-hits></div>
       </div>
-      <div class="lib-lab">Files
+      <div class="lib-lab">
         <div class="ops-st">
           <div class="ops-crumbs" data-ops-crumbs></div>
           <div class="ops-bar" data-ops-bar></div>

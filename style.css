@@ -4407,4 +4407,5 @@ html[data-motion="reduce"] .sess-pw { animation: none; }
 .ops-tk { display: inline-flex; align-items: center; gap: 4px; }
 .ops-tk svg { width: 14px; height: 14px; }
 .ops-tsep { color: var(--gray-mid); opacity: 0.6; }
+.ops-bar .ops-sq.off { opacity: 0.3; }
 
