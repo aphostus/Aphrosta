@@ -3214,8 +3214,8 @@ function connRender() {
   }).join('');
   const fitCards = () => {
     const cs = body.querySelectorAll('.conn-card');
-    if (cs.length <= 8) { body.style.maxHeight = ''; body.style.overflowY = ''; return; }
-    const h = cs[7].offsetTop + cs[7].offsetHeight - cs[0].offsetTop;
+    if (cs.length <= 9) { body.style.maxHeight = ''; body.style.overflowY = ''; return; }
+    const h = cs[8].offsetTop + cs[8].offsetHeight - cs[0].offsetTop;
     if (h > 0) { body.style.maxHeight = (h + 8) + 'px'; body.style.overflowY = 'auto'; }
   };
   fitCards();
