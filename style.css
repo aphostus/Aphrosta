@@ -4310,3 +4310,43 @@ mark.ab-mark {
 }
 html[data-motion="reduce"] .sess-pw { animation: none; }
 
+/* ---------- Operations (projects) ---------- */
+.ops-card { border-left: 3px solid var(--oc, var(--fg)); }
+.ops-ico { display: inline-flex; vertical-align: middle; margin-right: 8px; color: var(--oc, var(--fg)); }
+.ops-ico svg { width: 16px; height: 16px; }
+.ops-ed { display: flex; flex-direction: column; gap: 4px; }
+.ops-icons, .ops-colors { display: flex; flex-wrap: wrap; gap: 8px; }
+.ops-pick { display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; color: var(--gray-light); background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 12px; }
+.ops-pick.on { color: var(--oc, var(--fg)); border-color: var(--oc, var(--fg)); box-shadow: 0 0 10px color-mix(in srgb, var(--oc, #fff) 40%, transparent); }
+.ops-sw { width: 30px; height: 30px; border-radius: 50%; background: var(--sw); border: 1px solid rgba(var(--fg-rgb), 0.18); }
+.ops-sw.on { outline: 2px solid var(--sw); outline-offset: 3px; }
+.ops-where { font-size: calc(12px * var(--ts)); font-weight: 400; color: var(--gray-mid); }
+.ops-tbar { display: flex; gap: 6px; flex-wrap: wrap; }
+.ops-tb { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; font-size: calc(12.5px * var(--ts)); font-weight: 600; color: var(--fg); background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--radius-pill); }
+.ops-tb svg { width: 14px; height: 14px; }
+.ops-tb:active { transform: scale(0.96); }
+.ops-tree { display: flex; flex-direction: column; gap: 2px; }
+.ops-empty { padding: 14px 4px; font-size: calc(12.5px * var(--ts)); font-weight: 400; color: var(--gray-mid); }
+.ops-row { display: flex; align-items: center; gap: 2px; padding-left: calc(var(--d, 0) * 16px); border-radius: 10px; transition: opacity 0.2s var(--ease-smooth), background 0.2s var(--ease-smooth); }
+.ops-row.sel { background: color-mix(in srgb, var(--oc, #fff) 14%, transparent); }
+.ops-row.dim { opacity: 0.45; }
+.ops-row-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 8px 6px; text-align: left; font-size: calc(13.5px * var(--ts)); font-weight: 500; color: var(--fg); }
+.ops-row-ico { display: inline-flex; flex-shrink: 0; color: var(--oc, var(--gray-light)); }
+.ops-row-ico svg { width: 16px; height: 16px; }
+.ops-row-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ops-row-meta { flex-shrink: 0; font-size: calc(11px * var(--ts)); font-weight: 400; color: var(--gray-mid); }
+.ops-row .icon-btn { width: 32px; height: 32px; }
+.ops-row .icon-btn svg { width: 16px; height: 16px; }
+.ops-lang { flex-shrink: 0; height: 24px; padding: 0 9px; font-size: calc(10.5px * var(--ts)); font-weight: 700; letter-spacing: 0.04em; color: var(--oc, var(--gray-light)); background: color-mix(in srgb, var(--oc, #fff) 12%, transparent); border: 1px solid color-mix(in srgb, var(--oc, #fff) 30%, transparent); border-radius: var(--radius-pill); }
+.ops-lang:active { transform: scale(0.94); }
+.ops-fbar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ops-count { margin-right: auto; font-size: calc(12px * var(--ts)); font-weight: 600; color: var(--gray-mid); font-variant-numeric: tabular-nums; }
+.ops-sq { width: 34px; padding: 0; justify-content: center; }
+.ops-hits { position: relative; display: flex; flex-direction: column; gap: 2px; max-height: 220px; overflow-y: auto; scrollbar-width: thin; }
+.ops-hits:empty { display: none; }
+.ops-hit { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; padding: 7px 10px; text-align: left; font-weight: 400; color: var(--fg); background: var(--glass-bg); border: 1px solid transparent; border-radius: 10px; }
+.ops-hit.cur { border-color: var(--oc, var(--fg)); background: color-mix(in srgb, var(--oc, #fff) 12%, transparent); }
+.ops-hit-at { font-size: calc(11px * var(--ts)); font-weight: 600; color: var(--oc, var(--gray-mid)); }
+.ops-hit-txt { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: pre; font: calc(12px * var(--ts)) / 1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.ops-hit-txt mark { color: inherit; background: rgba(var(--accent-rgb), 0.35); border-radius: 3px; }
+
