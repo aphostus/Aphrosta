@@ -4421,3 +4421,8 @@ html[data-motion="reduce"] .sess-pw { animation: none; }
 .ops-ck.on::after { border-color: var(--bg); }
 :root[data-theme="light"] .ops-cc svg { color: #fff; filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.65)); }
 
+/* portable find/replace + files card */
+.ops-ed .ops-portable { display: flex; flex-direction: column; margin-top: 22px; min-height: 61vh; padding-bottom: 14px; box-sizing: border-box; }
+.ops-ed .ops-portable .ops-tree { flex: 1 1 auto; min-height: 46vh; max-height: none; }
+.ops-go { background: var(--surface-2); backdrop-filter: none; -webkit-backdrop-filter: none; }
+
