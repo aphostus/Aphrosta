@@ -4094,8 +4094,8 @@ mark.ab-mark {
 .signin-screen.is-light .signin-agree input { accent-color: #000; }
 
 /* ---------- Merged message card (user section on top of AI) ---------- */
-.msg-sec-user { position: relative; display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; min-width: 0; }
-.msg-user-ico { margin: -4px 0 0 -6px; color: var(--gray-light); }
+.msg-sec-user { position: relative; display: flex; flex-direction: column; align-items: stretch; gap: 4px; padding: 12px 14px; min-width: 0; }
+.msg-user-ico { align-self: flex-start; margin: -6px 0 0 -6px; color: var(--gray-light); }
 .msg-user-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .msg-sec-user .msg-bubble { max-height: 14em; overflow-y: auto; }
 .msg-sec-user + .msg-sec { border-top-color: rgba(var(--fg-rgb), 0.08); }
@@ -4137,7 +4137,7 @@ mark.ab-mark {
 .pc-btn:hover { color: var(--fg); background: var(--glass-bg-hover); }
 .pc-btn:active { transform: scale(0.9); }
 .pc-btn.on { color: var(--accent); }
-.msg-card.has-pubctl .msg-sec-user .msg-user-col { padding-right: 68px; }
+.msg-card.has-pubctl .msg-sec-user .msg-user-col { padding-right: 0; }
 .msg-card.has-pubctl > .msg-sec-main:first-child { padding-top: 44px; }
 
 .msg-card.pw-locked > .msg-sec:not(:first-child):not(.msg-sec-pw) { display: none; }

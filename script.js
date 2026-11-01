@@ -11668,6 +11668,10 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
     if (lastMsg && lastMsg.role === 'assistant') {
       session.messages.pop();
     }
+    if (!isContinue) {
+      const realUser = session.messages.map((m) => m.role === 'user' && !m.hidden).lastIndexOf(true);
+      if (realUser >= 0) session.messages.length = realUser + 1;
+    }
   }
 
   if (!regen) {
