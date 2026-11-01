@@ -2255,6 +2255,7 @@ const OPS_NEW_ICONS = {
 };
 Object.keys(OPS_NEW_ICONS).forEach((k) => { ICONS[k] = svg(OPS_NEW_ICONS[k], 16); });
 const OPS_ICONS = Object.keys(OPS_NEW_ICONS);
+ICONS.opsCode = svg('<path d="M8 7l-5 5 5 5"/><path d="M16 7l5 5-5 5"/><path d="M14 4l-4 16"/>', 16);
 const OPS_I = {
   toggle: svg('<path d="M20 11a8 8 0 00-14.5-3.5L4 9"/><path d="M4 4v5h5"/><path d="M4 13a8 8 0 0014.5 3.5L20 15"/><path d="M20 20v-5h-5"/>', 22),
   sThis:  svg('<circle cx="12" cy="12" r="3.2"/><path d="M12 3v3.5M12 17.5V21M3 12h3.5M17.5 12H21"/>', 20),
@@ -2445,7 +2446,7 @@ function opsRender() {
   body.innerHTML = opsItems.slice().sort((a, b) => b.t - a.t).map((p) => `
     <div class="lib-card ops-card" style="--oc:${esc(opsInk(p.color || OPS_COLORS[0]))}">
       <div class="lib-card-top">
-        <h4 class="lib-card-title"><span class="ops-ico">${ICONS[p.icon] || ICONS.navOperations}</span>${esc(p.name)}</h4>
+        <h4 class="lib-card-title"><span class="ops-ico">${ICONS.opsCode}</span>${esc(p.name)}</h4>
         <div class="lib-card-act">
           <button class="icon-btn" type="button" data-ops-open="${esc(p.id)}" aria-label="Open">${ICONS.pencil}</button>
           <button class="icon-btn" type="button" data-ops-del="${esc(p.id)}" aria-label="Delete">${ICONS.trash}</button>
@@ -2590,7 +2591,7 @@ async function opsTreeInit(panel, project) {
     const q = qEl ? qEl.value : '';
     if (cntEl) cntEl.textContent = !q ? '' : hits.length ? `${cur + 1}/${hits.length}${hits.length >= HIT_MAX ? '+' : ''}` : 'No results';
     if (!hitsEl) return;
-    if (!hits.length) { hitsEl.innerHTML = ''; return; }
+    if (!hits.length) { hitsEl.innerHTML = q ? '<p class="ops-empty">No results</p>' : ''; return; }
     const ql = q.length;
     const base = Math.max(0, Math.min(cur - 30, hits.length - 80));
     hitsEl.innerHTML = hits.slice(base, base + 80).map((h, k) => {
@@ -2699,11 +2700,12 @@ async function opsTreeInit(panel, project) {
     toast(`Undid replace in ${back.length} file${back.length === 1 ? '' : 's'}.`, 'success', 2200);
   };
 
-  panel.addEventListener('input', (e) => {
+  ['input', 'keyup', 'change', 'search'].forEach((ev) => panel.addEventListener(ev, (e) => {
     if (!e.target.matches || !e.target.matches('[data-ops-q]')) return;
+    if (ev === 'keyup' && (e.key === 'Enter' || e.key === 'Shift')) return;
     clearTimeout(findTimer);
-    findTimer = setTimeout(() => { cur = 0; findAll(); }, 150);
-  });
+    findTimer = setTimeout(() => { cur = 0; findAll(); }, 120);
+  }, true));
   panel.addEventListener('keydown', (e) => {
     if (e.key !== 'Enter' || !e.target.matches || !e.target.matches('[data-ops-q]')) return;
     e.preventDefault();
@@ -3044,10 +3046,8 @@ const body = `
           <textarea class="lib-in lib-ta" data-ops="instr" maxlength="300" placeholder="Rules">${esc(edit?.instruction || '')}</textarea>
         </label>
       </div>
-      <div class="lib-lab">Icon
-        <div class="ops-icw"><div class="ops-icons">${OPS_ICONS.map((k) => `<button class="ops-pick${k === cur.icon ? ' on' : ''}" type="button" data-ops-icon="${k}" aria-label="${k}">${ICONS[k]}</button>`).join('')}</div></div>
-      </div>
-      ${`<div class="lib-lab">
+      ${`<div class="lib-card ops-portable">
+      <div class="lib-lab">
         <div class="ops-fr">
           <input class="lib-in ops-pill" data-ops-q type="text" placeholder="Find" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
           <input class="lib-in ops-pill" data-ops-r type="text" placeholder="Replace" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
@@ -3061,6 +3061,7 @@ const body = `
           <div class="ops-bar" data-ops-bar></div>
           <div class="ops-tree" data-ops-tree></div>
         </div>
+      </div>
       </div>`}
     </div>`;
   const p = fdOpen(edit ? 'Edit project' : 'New project', edit ? 'Operations' : 'Blank start', body,
