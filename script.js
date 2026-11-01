@@ -5535,6 +5535,10 @@ function initComposer() {
   };
   if (window.ResizeObserver) new ResizeObserver(syncComposerH).observe(wrap);
   syncComposerH();
+  const remeasureComposerH = () => { hLast = -1; writeH(); };
+  requestAnimationFrame(remeasureComposerH);
+  setTimeout(remeasureComposerH, 400);
+  setTimeout(remeasureComposerH, 1200);
 
   const MIN_H = 40;
   let userMin = MIN_H;

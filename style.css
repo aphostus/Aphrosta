@@ -4098,7 +4098,7 @@ mark.ab-mark {
 .msg-user-ico { align-self: flex-start; margin: -6px 0 0 -6px; color: var(--gray-light); }
 .msg-user-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .msg-sec-user .msg-bubble { max-height: 14em; overflow-y: auto; }
-.msg-sec-user + .msg-sec { border-top-color: rgba(var(--fg-rgb), 0.08); }
+.msg-sec-user + .msg-sec { border-top: 1px solid rgba(var(--fg-rgb), 0.2); }
 .msg-card.is-bare .msg-sec-user { display: none; }
 .msg-card.is-bare .msg-sec-main { border-top: 0; }
 .msg-body.msg-thoughts { color: var(--gray-light); font-style: italic; padding-left: 12px; border-left: 2px solid var(--glass-border); }
@@ -4446,8 +4446,8 @@ html[data-motion="reduce"] .sess-pw { animation: none; }
 :root[data-theme="light"] .ops-cc svg { color: #fff; filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.65)); }
 
 /* portable find/replace + files card */
-.ops-ed .ops-portable { display: flex; flex-direction: column; margin-top: 22px; min-height: 61vh; padding-bottom: 14px; box-sizing: border-box; }
-.ops-ed .ops-portable .ops-tree { flex: none; min-height: 0; height: calc(7 * 52px + 10px); max-height: calc(7 * 52px + 10px); }
+.ops-ed .ops-portable { display: flex; flex-direction: column; margin-top: 22px; min-height: 0; padding-bottom: 14px; box-sizing: border-box; }
+.ops-ed .ops-portable .ops-tree { flex: none; min-height: 0; height: calc(6 * 52px + 10px); max-height: calc(6 * 52px + 10px); }
 .ops-go { background: var(--surface-2); backdrop-filter: none; -webkit-backdrop-filter: none; }
 
 /* connections editor: search lives inside the wrapper, wrapper fills down to the bottom like Operations */
