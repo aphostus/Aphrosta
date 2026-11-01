@@ -2455,6 +2455,14 @@ function opsRender() {
       <p class="lib-card-meta">${p.files || 0} files</p>
       ${p.description ? `<p class="lib-card-instr">${esc(p.description)}</p>` : ''}
     </div>`).join('');
+  const fitCards = () => {
+    const cs = body.querySelectorAll('.ops-card');
+    if (cs.length <= 8) { body.style.maxHeight = ''; body.style.overflowY = ''; return; }
+    const h = cs[7].offsetTop + cs[7].offsetHeight - cs[0].offsetTop;
+    if (h > 0) { body.style.maxHeight = (h + 8) + 'px'; body.style.overflowY = 'auto'; }
+  };
+  fitCards();
+  requestAnimationFrame(fitCards);
 }
 
 async function opsRefresh() {
