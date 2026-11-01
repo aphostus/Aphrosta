@@ -3252,7 +3252,7 @@ function connOpenEditor(edit) {
           <textarea class="lib-in lib-ta" data-conn="instr" maxlength="300" placeholder="Rules">${esc(edit?.instruction || '')}</textarea>
         </label>
       </div>
-      <div class="lib-lab">Plugins
+      <div class="lib-lab">
         <div class="conn-list" data-conn-list>${rows}</div>
       </div>
     </div>`;
