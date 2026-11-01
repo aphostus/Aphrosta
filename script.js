@@ -2201,7 +2201,14 @@ document.addEventListener('click', async (e) => {
 });
 
 /* ---------- OPERATIONS: storage + project list + popup shell (Patch 1-2) ---------- */
-const OPS_ICONS = ['navOperations', 'folder', 'book', 'rocket', 'brain', 'globe', 'stSkills', 'navAutomation'];
+const OPS_ICONS = ['navOperations', 'folder', 'brain', 'globe', 'rocket', 'stSkills', 'navAutomation', 'navWorlds', 'navAgents', 'navLibrary',
+  'navConnectors', 'memory', 'lock', 'clock', 'settings', 'link', 'card', 'sliders', 'pushpin', 'stStorage'];
+const OPS_I = {
+  toggle: svg('<rect x="2" y="7" width="20" height="10" rx="5"/><circle cx="16" cy="12" r="2.6" fill="currentColor"/>', 22),
+  sThis:  svg('<circle cx="12" cy="12" r="3.2"/><path d="M12 3v3.5M12 17.5V21M3 12h3.5M17.5 12H21"/>', 20),
+  sAll:   svg('<path d="M12 3.5l8.5 4.5-8.5 4.5L3.5 8 12 3.5z"/><path d="M3.5 12.2l8.5 4.5 8.5-4.5"/><path d="M3.5 16.4l8.5 4.5 8.5-4.5"/>', 20),
+  sUndo:  svg('<path d="M8.5 5L4 9.5 8.5 14"/><path d="M4 9.5h9a6 6 0 010 12h-4"/>', 20)
+};
 const OPS_COLORS = ['#ffffff', '#30d158', '#ff453a', '#ff6bb5', '#ffd60a', '#ff9f0a', '#0a84ff', '#bf5af2', '#40c8e0', '#5e5ce6'];
 const OPS_LANGS = [
   { id: 'js', name: 'JavaScript' }, { id: 'html', name: 'HTML' }, { id: 'css', name: 'CSS' },
@@ -2427,27 +2434,64 @@ async function opsTreeInit(panel, project) {
     : desc(n.id).map(byId).filter((x) => x && x.kind === 'file').reduce((s, x) => s + estTokens(x.text || ''), 0));
   const effHidden = (n) => { let x = n; while (x) { if (x.hidden) return true; x = byId(x.parent); } return false; };
 
-  const row = (n, depth, dim) => {
+  const crumbsEl = panel.querySelector('[data-ops-crumbs]');
+  const barEl = panel.querySelector('[data-ops-bar]');
+  const selSet = new Set();
+  let clip = null;
+  const inClip = (id) => !!clip && clip.ids.some((c) => desc(c).includes(id));
+  const nWord = (n) => `${n} item${n === 1 ? '' : 's'}`;
+
+  const row = (n) => {
     const isDir = n.kind === 'folder';
-    const open = isDir && opsOpenDirs.has(n.id);
-    const meta = isDir ? `${list.filter((x) => x.parent === n.id).length} items \u00b7 ${tokShort(tokOf(n))}` : tokShort(tokOf(n));
-    let html = `<div class="ops-row${dim || n.hidden ? ' dim' : ''}${n.id === sel ? ' sel' : ''}" style="--d:${depth}">
-      <button class="ops-row-main" type="button" data-ops-node="${esc(n.id)}">
-        <span class="ops-row-ico">${isDir ? ICONS.folder : ICONS.cardFile}</span>
-        <span class="ops-row-name">${esc(n.name)}</span>
-        <span class="ops-row-meta">${esc(meta)}</span>
-      </button>
+    const meta = isDir ? `${nWord(kids(n.id).length)} \u00b7 ${tokShort(tokOf(n))}` : tokShort(tokOf(n));
+    const on = selSet.has(n.id);
+    return `<div class="ops-row${n.hidden || effHidden(n) ? ' dim' : ''}${on ? ' sel' : ''}${inClip(n.id) ? ' lock' : ''}" data-ops-id="${esc(n.id)}">
+      <span class="ops-ck${on ? ' on' : ''}"></span>
+      <span class="ops-row-ico">${isDir ? ICONS.folder : ICONS.cardFile}</span>
+      <span class="ops-row-txt"><span class="ops-row-name">${esc(n.name)}</span><span class="ops-row-meta">${esc(meta)}</span></span>
       ${isDir ? '' : `<button class="ops-lang" type="button" data-ops-lang="${esc(n.id)}" aria-label="Change language">${esc(String(n.lang || 'txt').toUpperCase())}</button>`}
       <button class="icon-btn" type="button" data-ops-eye="${esc(n.id)}" aria-label="${n.hidden ? 'Hidden from AI' : 'Visible to AI'}">${n.hidden ? ICONS.eyeOff : ICONS.eye}</button>
-      <button class="icon-btn" type="button" data-ops-rm="${esc(n.id)}" aria-label="Delete">${ICONS.trash}</button>
     </div>`;
-    if (open) kids(n.id).forEach((k) => { html += row(k, depth + 1, dim || n.hidden); });
-    return html;
+  };
+
+  const barHtml = () => {
+    if (clip) {
+      return `<span class="ops-hint">${clip.mode === 'move' ? 'Moving' : 'Copying'} ${nWord(clip.ids.length)}</span><button class="ops-tb" type="button" data-ops-act="paste">Paste here</button><button class="ops-tb ops-sq" type="button" data-ops-act="cancel" aria-label="Cancel">${ICONS.close}</button>`;
+    }
+    if (selSet.size) {
+      return `<span class="ops-hint">${selSet.size} selected</span><button class="ops-tb" type="button" data-ops-act="copy">Copy</button><button class="ops-tb" type="button" data-ops-act="move">Move</button><button class="ops-tb" type="button" data-ops-act="del">Delete</button><button class="ops-tb ops-sq" type="button" data-ops-act="cancel" aria-label="Cancel">${ICONS.close}</button>`;
+    }
+    return `<span class="ops-hint">${nWord(kids(sel).length)}</span><button class="ops-tb" type="button" data-ops-add="file">${ICONS.plus}<span>File</span></button><button class="ops-tb" type="button" data-ops-add="folder">${ICONS.plus}<span>Folder</span></button>`;
+  };
+  const drawBar = () => { if (barEl) barEl.innerHTML = barHtml(); };
+
+  /* select without re-rendering rows, so a held finger keeps its element */
+  const paintSel = () => {
+    box.classList.toggle('selmode', selSet.size > 0);
+    box.querySelectorAll('.ops-row').forEach((r) => {
+      const on = selSet.has(r.dataset.opsId);
+      r.classList.toggle('sel', on);
+      const ck = r.querySelector('.ops-ck');
+      if (ck) ck.classList.toggle('on', on);
+    });
+    drawBar();
   };
 
   const draw = () => {
-    box.innerHTML = list.length ? kids('').map((n) => row(n, 0, false)).join('') : '<p class="ops-empty">No files yet. Add a file or a folder.</p>';
-    if (where) where.textContent = sel ? 'Adding to: ' + pathOf(sel) : 'Adding to: project root';
+    const keep = box.scrollTop;
+    const items = kids(sel);
+    box.innerHTML = items.length ? items.map((n) => row(n)).join('') : `<p class="ops-empty">${sel ? 'This folder is empty.' : 'No files yet. Add a file or a folder.'}</p>`;
+    box.scrollTop = keep;
+    box.classList.toggle('selmode', selSet.size > 0);
+    if (crumbsEl) {
+      const trail = [];
+      let c = byId(sel);
+      while (c) { trail.unshift(c); c = byId(c.parent); }
+      crumbsEl.innerHTML = '<button class="ops-crumb" type="button" data-ops-cd="">Root</button>'
+        + trail.map((t) => `<span class="ops-sep">/</span><button class="ops-crumb" type="button" data-ops-cd="${esc(t.id)}">${esc(t.name)}</button>`).join('');
+      crumbsEl.scrollLeft = crumbsEl.scrollWidth;
+    }
+    drawBar();
     const totEl = panel.querySelector('[data-ops-total]');
     if (totEl) {
       const fl = list.filter((x) => x.kind === 'file');
@@ -2629,6 +2673,42 @@ async function opsTreeInit(panel, project) {
     if (e.target.closest('[data-ops-undo]')) undoReplace();
   });
 
+  /* one button: tap = run, long press = This / All / Undo */
+  const goBtn = panel.querySelector('[data-ops-go]');
+  const GO = {
+    this: { i: OPS_I.sThis, t: 'Replace this match' },
+    all: { i: OPS_I.sAll, t: 'Replace all matches' },
+    undo: { i: OPS_I.sUndo, t: 'Undo last replace' }
+  };
+  let goMode = 'this';
+  let goTimer = 0;
+  let goLong = false;
+  const goDraw = () => {
+    if (!goBtn) return;
+    goBtn.dataset.mode = goMode;
+    goBtn.innerHTML = GO[goMode].i;
+    goBtn.setAttribute('aria-label', GO[goMode].t);
+  };
+  if (goBtn) {
+    const goStop = () => clearTimeout(goTimer);
+    goBtn.addEventListener('pointerdown', () => {
+      goLong = false;
+      goStop();
+      goTimer = setTimeout(() => {
+        goLong = true;
+        goMode = goMode === 'this' ? 'all' : goMode === 'all' ? 'undo' : 'this';
+        goDraw();
+        if (navigator.vibrate) { try { navigator.vibrate(15); } catch (_) { /* no haptics */ } }
+      }, 450);
+    });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => goBtn.addEventListener(ev, goStop));
+    goBtn.addEventListener('contextmenu', (e) => e.preventDefault());
+    goBtn.addEventListener('click', () => {
+      if (goLong) { goLong = false; return; }
+      if (goMode === 'undo') undoReplace();
+      else replaceWith(goMode === 'all' ? 'all' : 'one');
+    });
+  }
   const add = async (kind) => {
     const name = await promptDialog({ title: kind === 'folder' ? 'New folder' : 'New file', label: sel ? 'In ' + pathOf(sel) : 'In project root', value: '', confirmLabel: 'Create', maxlength: 60 });
     if (name == null) return;
@@ -2645,26 +2725,186 @@ async function opsTreeInit(panel, project) {
     } catch (_) { toast('Could not save. Storage may be full. (E06)'); }
   };
 
-  panel.addEventListener('click', async (e) => {
-    const addBtn = e.target.closest('[data-ops-add]');
-    if (addBtn) { add(addBtn.dataset.opsAdd); return; }
-    if (e.target.closest('[data-ops-root]')) { sel = ''; draw(); return; }
-    const node = e.target.closest('[data-ops-node]');
-    if (node) {
-      const n = byId(node.dataset.opsNode);
-      if (!n) return;
-      if (n.kind === 'folder') {
-        if (opsOpenDirs.has(n.id)) opsOpenDirs.delete(n.id); else opsOpenDirs.add(n.id);
-        sel = n.id;
-      } else {
-        sel = n.parent;
-        draw();
-        opsViewFile(n);
-        return;
-      }
+  const uniq = (parent, name, extra) => {
+    const taken = new Set(kids(parent).map((x) => x.name.toLowerCase()));
+    extra.filter((x) => x.parent === parent).forEach((x) => taken.add(x.name.toLowerCase()));
+    if (!taken.has(name.toLowerCase())) return name;
+    const dot = name.lastIndexOf('.');
+    const base = dot > 0 ? name.slice(0, dot) : name;
+    const ext = dot > 0 ? name.slice(dot) : '';
+    let k = 2;
+    while (taken.has(`${base} (${k})${ext}`.toLowerCase())) k++;
+    return `${base} (${k})${ext}`;
+  };
+
+  /* move or copy items into a folder (dest '' = project root) */
+  const moveItems = async (ids, dest, mode) => {
+    const top = ids.map(byId).filter(Boolean);
+    if (!top.length) return false;
+    if (top.some((n) => n.kind === 'folder' && desc(n.id).includes(dest))) { toast('A folder cannot go inside itself.', 'info', 2000); return false; }
+    const stamp = Date.now();
+    const out = [];
+    if (mode === 'move') {
+      top.forEach((n) => {
+        if (n.parent === dest) return;
+        n.name = uniq(dest, n.name, []);
+        n.parent = dest;
+        n.t = stamp;
+        out.push(n);
+      });
+    } else {
+      const made = [];
+      const clone = (n, parent, name) => {
+        const c = { ...n, id: uid(), parent, name, t: stamp };
+        made.push(c);
+        kids(n.id).forEach((k) => clone(k, c.id, k.name));
+      };
+      top.forEach((n) => clone(n, dest, uniq(dest, n.name, made)));
+      out.push(...made);
+    }
+    if (!out.length) return true;
+    try { await Promise.all(out.map((f) => opsPutFile(f))); } catch (_) { toast('Could not save. Storage may be full. (E06)'); return false; }
+    if (mode === 'copy') list.push(...out);
+    toast(`${mode === 'move' ? 'Moved' : 'Copied'} ${nWord(top.length)}.`, 'success', 1600);
+    await sync();
+    return true;
+  };
+
+  const delSel = async () => {
+    const top = [...selSet].map(byId).filter(Boolean);
+    if (!top.length) return;
+    const ids = [...new Set(top.flatMap((n) => desc(n.id)))];
+    const one = top.length === 1;
+    const yes = await confirmDialog({
+      title: one ? (top[0].kind === 'folder' ? 'Delete folder?' : 'Delete file?') : 'Delete items?',
+      message: one
+        ? `\u201c${top[0].name}\u201d${ids.length > 1 ? ' and everything inside it' : ''} will be removed from this device.`
+        : `${top.length} items${ids.length > top.length ? ' and everything inside them' : ''} will be removed from this device.`,
+      confirmLabel: 'Delete', danger: true
+    });
+    if (!yes) return;
+    try { await Promise.all(ids.map(opsDelFile)); } catch (_) { toast('Could not delete. (E07)'); return; }
+    list = list.filter((x) => !ids.includes(x.id));
+    if (ids.includes(sel)) sel = '';
+    selSet.clear();
+    draw();
+    await sync();
+  };
+
+  /* long press selects, then drag onto a folder or a path chip to move */
+  let pt = null;
+  let drag = null;
+  let ghost = null;
+  let ignoreClick = false;
+  const holdClick = () => { ignoreClick = true; setTimeout(() => { ignoreClick = false; }, 60); };
+  const dropAt = (x, y) => {
+    const el = document.elementFromPoint(x, y);
+    if (!el) return null;
+    const r = el.closest('.ops-row');
+    if (r && box.contains(r)) {
+      const n = byId(r.dataset.opsId);
+      if (n && n.kind === 'folder' && !drag.ids.some((i) => desc(i).includes(n.id))) return { el: r, id: n.id };
+      return null;
+    }
+    const cb = el.closest('[data-ops-cd]');
+    if (cb && crumbsEl && crumbsEl.contains(cb) && cb.dataset.opsCd !== sel) return { el: cb, id: cb.dataset.opsCd };
+    return null;
+  };
+  const stopDrag = () => {
+    if (ghost) { ghost.remove(); ghost = null; }
+    box.classList.remove('dragging');
+    panel.querySelectorAll('.drop').forEach((x) => x.classList.remove('drop'));
+  };
+  const onMove = (ev) => {
+    if (!pt) return;
+    const far = Math.hypot(ev.clientX - pt.x, ev.clientY - pt.y) > 8;
+    if (!pt.long) { if (far) clearTimeout(pt.timer); return; }
+    if (!drag && far) {
+      drag = { ids: [...selSet], hit: null };
+      ghost = document.createElement('div');
+      ghost.className = 'ops-ghost';
+      ghost.textContent = nWord(drag.ids.length);
+      document.body.appendChild(ghost);
+      box.classList.add('dragging');
+    }
+    if (!drag) return;
+    ghost.style.left = (ev.clientX + 14) + 'px';
+    ghost.style.top = (ev.clientY + 14) + 'px';
+    const h = dropAt(ev.clientX, ev.clientY);
+    if ((h && h.el) !== (drag.hit && drag.hit.el)) {
+      if (drag.hit) drag.hit.el.classList.remove('drop');
+      if (h) h.el.classList.add('drop');
+      drag.hit = h;
+    }
+  };
+  const endPt = () => {
+    document.removeEventListener('pointermove', onMove);
+    document.removeEventListener('pointerup', onUp);
+    document.removeEventListener('pointercancel', onCancel);
+  };
+  const onUp = async () => {
+    endPt();
+    const p = pt;
+    pt = null;
+    if (p) clearTimeout(p.timer);
+    if (drag) {
+      const d = drag;
+      drag = null;
+      stopDrag();
+      holdClick();
+      if (d.hit && await moveItems(d.ids, d.hit.id, 'move')) selSet.clear();
       draw();
       return;
     }
+    if (p && p.long) holdClick();
+  };
+  const onCancel = () => {
+    endPt();
+    if (pt) clearTimeout(pt.timer);
+    pt = null;
+    drag = null;
+    stopDrag();
+  };
+  box.addEventListener('pointerdown', (e) => {
+    const r = e.target.closest('.ops-row');
+    if (!r || e.target.closest('button') || clip || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    const id = r.dataset.opsId;
+    endPt();
+    if (pt) clearTimeout(pt.timer);
+    pt = { id, x: e.clientX, y: e.clientY, long: false, timer: 0 };
+    pt.timer = setTimeout(() => {
+      if (!pt) return;
+      pt.long = true;
+      selSet.add(id);
+      paintSel();
+      if (navigator.vibrate) { try { navigator.vibrate(12); } catch (_) { /* no haptics */ } }
+    }, 420);
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+    document.addEventListener('pointercancel', onCancel);
+  });
+  box.addEventListener('touchmove', (e) => { if (pt && pt.long) e.preventDefault(); }, { passive: false });
+  box.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  panel.addEventListener('click', async (e) => {
+    const addBtn = e.target.closest('[data-ops-add]');
+    if (addBtn) { add(addBtn.dataset.opsAdd); return; }
+    const act = e.target.closest('[data-ops-act]');
+    if (act) {
+      const a = act.dataset.opsAct;
+      if (a === 'cancel') { selSet.clear(); clip = null; draw(); return; }
+      if ((a === 'copy' || a === 'move') && selSet.size) { clip = { mode: a, ids: [...selSet] }; selSet.clear(); draw(); return; }
+      if (a === 'paste' && clip) {
+        const c = clip;
+        if (await moveItems(c.ids, sel, c.mode)) clip = null;
+        draw();
+        return;
+      }
+      if (a === 'del') await delSel();
+      return;
+    }
+    const cd = e.target.closest('[data-ops-cd]');
+    if (cd) { sel = cd.dataset.opsCd; selSet.clear(); draw(); return; }
     const eye = e.target.closest('[data-ops-eye]');
     if (eye) {
       const n = byId(eye.dataset.opsEye);
@@ -2685,22 +2925,18 @@ async function opsTreeInit(panel, project) {
       draw();
       return;
     }
-    const rm = e.target.closest('[data-ops-rm]');
-    if (rm) {
-      const n = byId(rm.dataset.opsRm);
+    const rw = e.target.closest('.ops-row');
+    if (rw && box.contains(rw)) {
+      if (ignoreClick) return;
+      const n = byId(rw.dataset.opsId);
       if (!n) return;
-      const ids = desc(n.id);
-      const yes = await confirmDialog({
-        title: n.kind === 'folder' ? 'Delete folder?' : 'Delete file?',
-        message: `\u201c${n.name}\u201d${ids.length > 1 ? ' and everything inside it' : ''} will be removed from this device.`,
-        confirmLabel: 'Delete', danger: true
-      });
-      if (!yes) return;
-      try { await Promise.all(ids.map(opsDelFile)); } catch (_) { toast('Could not delete. (E07)'); return; }
-      list = list.filter((x) => !ids.includes(x.id));
-      if (ids.includes(sel)) sel = '';
-      draw();
-      await sync();
+      if (selSet.size) {
+        if (selSet.has(n.id)) selSet.delete(n.id); else selSet.add(n.id);
+        paintSel();
+        return;
+      }
+      if (n.kind === 'folder') { sel = n.id; draw(); return; }
+      if (!clip) opsViewFile(n);
     }
   });
   draw();
@@ -2708,45 +2944,43 @@ async function opsTreeInit(panel, project) {
 
 function opsOpenEditor(edit) {
   const cur = { icon: edit?.icon || OPS_ICONS[0], color: edit?.color || OPS_COLORS[0] };
-  const body = `
+const body = `
     <div class="ops-ed" style="--oc:${esc(cur.color)}">
-      <label class="lib-lab">Name
-        <input class="lib-in" data-ops="name" maxlength="60" autocomplete="off" placeholder="e.g. Aphrosta website" value="${esc(edit?.name || '')}">
-      </label>
-      <label class="lib-lab">Description
-        <textarea class="lib-in lib-ta" data-ops="desc" rows="3" maxlength="300" placeholder="One line about this project">${esc(edit?.description || '')}</textarea>
-      </label>
+      <div class="ops-r1">
+        <label class="lib-lab">Name
+          <input class="lib-in" data-ops="name" maxlength="60" autocomplete="off" placeholder="e.g. Aphrosta website" value="${esc(edit?.name || '')}">
+        </label>
+        <button class="ops-cc" type="button" data-ops-cc aria-label="Next color">${OPS_I.toggle}</button>
+      </div>
+      <div class="ops-r2">
+        <label class="lib-lab">Description
+          <textarea class="lib-in lib-ta" data-ops="desc" maxlength="300" placeholder="One line about this project">${esc(edit?.description || '')}</textarea>
+        </label>
+        <label class="lib-lab">Instruction
+          <textarea class="lib-in lib-ta" data-ops="instr" maxlength="300" placeholder="Rules">${esc(edit?.instruction || '')}</textarea>
+        </label>
+      </div>
       <div class="lib-lab">Icon
         <div class="ops-icons">${OPS_ICONS.map((k) => `<button class="ops-pick${k === cur.icon ? ' on' : ''}" type="button" data-ops-icon="${k}" aria-label="${k}">${ICONS[k]}</button>`).join('')}</div>
       </div>
-      <div class="lib-lab">Color
-        <div class="ops-colors">${OPS_COLORS.map((c) => `<button class="ops-sw${c === cur.color ? ' on' : ''}" type="button" data-ops-color="${c}" style="--sw:${c}" aria-label="${c}"></button>`).join('')}</div>
-      </div>
       ${edit ? `<div class="lib-lab">Files
-        <div class="ops-where" data-ops-where>Adding to: project root</div>
-        <div class="ops-where" data-ops-total></div>
-        <div class="ops-tbar">
-          <button class="ops-tb" type="button" data-ops-add="file">${ICONS.plus}<span>File</span></button>
-          <button class="ops-tb" type="button" data-ops-add="folder">${ICONS.plus}<span>Folder</span></button>
-          <button class="ops-tb" type="button" data-ops-root>Root</button>
+        <div class="ops-st">
+          <div class="ops-crumbs" data-ops-crumbs></div>
+          <div class="ops-bar" data-ops-bar></div>
+          <div class="ops-tree" data-ops-tree></div>
         </div>
-        <div class="ops-tree" data-ops-tree></div>
+        <div class="ops-where" data-ops-total></div>
       </div>
       <div class="lib-lab">Find and replace
-        <input class="lib-in" data-ops-q type="text" placeholder="Find in all files" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
-        <input class="lib-in" data-ops-r type="text" placeholder="Replace with" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+        <div class="ops-fr">
+          <input class="lib-in ops-pill" data-ops-q type="text" placeholder="Find" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+          <input class="lib-in ops-pill" data-ops-r type="text" placeholder="Replace" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+          <button class="ops-go" type="button" data-ops-go data-mode="this" aria-label="Replace this match">${OPS_I.sThis}</button>
+        </div>
         <div class="ops-fbar">
           <span class="ops-count" data-ops-count></span>
           <button class="ops-tb ops-sq" type="button" data-ops-prev aria-label="Previous match">${ICONS.chevL}</button>
           <button class="ops-tb ops-sq" type="button" data-ops-next aria-label="Next match">${ICONS.chevronR}</button>
-        </div>
-        <div class="ops-fbar">
-          <button class="ops-tb" type="button" data-ops-rep="one">One</button>
-          <button class="ops-tb" type="button" data-ops-rep="file">This file</button>
-          <button class="ops-tb" type="button" data-ops-rep="all">All files</button>
-        </div>
-        <div class="ops-fbar">
-          <button class="ops-tb" type="button" data-ops-undo>Undo</button>
         </div>
         <div class="ops-hits" data-ops-hits></div>
       </div>` : '<p class="lib-note">Save first, then you can add files and folders.</p>'}
@@ -2762,11 +2996,9 @@ function opsOpenEditor(edit) {
       p.querySelectorAll('[data-ops-icon]').forEach((b) => b.classList.toggle('on', b === ic));
       return;
     }
-    const sw = e.target.closest('[data-ops-color]');
-    if (sw) {
-      cur.color = sw.dataset.opsColor;
+    if (e.target.closest('[data-ops-cc]')) {
+      cur.color = OPS_COLORS[(OPS_COLORS.indexOf(cur.color) + 1) % OPS_COLORS.length];
       ed.style.setProperty('--oc', cur.color);
-      p.querySelectorAll('[data-ops-color]').forEach((b) => b.classList.toggle('on', b === sw));
       return;
     }
     const b = e.target.closest('[data-fd]');
@@ -2777,7 +3009,7 @@ function opsOpenEditor(edit) {
     if (!name) { toast('Add a project name. (H10)', 'info', 2000); return; }
     const now = Date.now();
     const rec = {
-      id: edit?.id || uid(), name, description: p.querySelector('[data-ops="desc"]').value.trim(),
+      id: edit?.id || uid(), name, description: p.querySelector('[data-ops="desc"]').value.trim(), instruction: p.querySelector('[data-ops="instr"]').value.trim(),
       icon: cur.icon, color: cur.color, files: opsItems.find((x) => x.id === edit?.id)?.files || 0, created: edit?.created || now, t: now
     };
     try {
