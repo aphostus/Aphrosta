@@ -4310,6 +4310,20 @@ mark.ab-mark {
 }
 html[data-motion="reduce"] .sess-pw { animation: none; }
 
+/* ---------- Connections ---------- */
+.conn-logo { display: block; width: 18px; height: 18px; object-fit: contain; }
+.conn-card .conn-logo { width: 16px; height: 16px; }
+:root[data-theme="light"] .conn-logo.ink { filter: invert(1); }
+.conn-ltr { font-size: 13px; font-weight: 700; line-height: 1; color: var(--pc, var(--fg)); }
+.conn-list { display: flex; flex-direction: column; gap: 6px; max-height: 320px; padding: 2px; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+.conn-row { flex: none; display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 0 12px; text-align: left; color: var(--fg); background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 12px; transition: transform 0.15s, border-color 0.2s, box-shadow 0.2s; }
+.conn-row:active { transform: scale(0.98); }
+.conn-row.on { border-color: var(--pc, var(--fg)); box-shadow: 0 0 10px color-mix(in srgb, var(--pc, #fff) 35%, transparent); }
+.conn-tile { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 9px; background: color-mix(in srgb, var(--pc, #fff) 14%, transparent); }
+.conn-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: calc(14px * var(--ts)); font-weight: 600; }
+.conn-go { flex: none; display: inline-flex; color: var(--gray-mid); }
+.conn-go svg { width: 14px; height: 14px; }
+
 /* ---------- Operations (projects) ---------- */
 .ops-card { border-left: 3px solid var(--oc, var(--fg)); }
 .ops-ico { display: inline-flex; vertical-align: middle; margin-right: 8px; color: var(--oc, var(--fg)); }

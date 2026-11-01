@@ -3137,6 +3137,196 @@ document.addEventListener('click', async (e) => {
   opsRender();
 });
 
+/* ---------- CONNECTIONS: cards + provider list ---------- */
+ICONS.connCode = svg('<path d="M8 7l-5 5 5 5"/><path d="M16 7l5 5-5 5"/><path d="M12 4v16"/>', 16);
+const CONN_PROVIDERS = [
+  { id: 'github',  name: 'GitHub',       slug: 'github',      color: '#ffffff', ink: true,  url: 'https://github.com/login' },
+  { id: 'gdrive',  name: 'Google Drive', slug: 'googledrive', color: '#1fa463', ink: false, url: 'https://drive.google.com' },
+  { id: 'gmail',   name: 'Gmail',        slug: 'gmail',       color: '#ea4335', ink: false, url: 'https://mail.google.com' },
+  { id: 'notion',  name: 'Notion',       slug: 'notion',      color: '#ffffff', ink: true,  url: 'https://www.notion.so/login' },
+  { id: 'slack',   name: 'Slack',        slug: 'slack',       color: '#e01e5a', ink: false, url: 'https://slack.com/signin' },
+  { id: 'discord', name: 'Discord',      slug: 'discord',     color: '#5865f2', ink: false, url: 'https://discord.com/login' },
+  { id: 'dropbox', name: 'Dropbox',      slug: 'dropbox',     color: '#0061ff', ink: false, url: 'https://www.dropbox.com/login' },
+  { id: 'spotify', name: 'Spotify',      slug: 'spotify',     color: '#1db954', ink: false, url: 'https://accounts.spotify.com' },
+  { id: 'figma',   name: 'Figma',        slug: 'figma',       color: '#f24e1e', ink: false, url: 'https://www.figma.com/login' },
+  { id: 'vercel',  name: 'Vercel',       slug: 'vercel',      color: '#ffffff', ink: true,  url: 'https://vercel.com/login' }
+];
+const connProv = (id) => CONN_PROVIDERS.find((p) => p.id === id) || null;
+const connLs = () => (keyScope ? 'aphrosta.conns.' + keyScope : 'aphrosta.conns');
+let connItems = [];
+
+function connLoad() {
+  try {
+    const a = JSON.parse(localStorage.getItem(connLs()) || '[]');
+    connItems = Array.isArray(a) ? a : [];
+  } catch (_) { connItems = []; }
+}
+
+function connSave() {
+  localStorage.setItem(connLs(), JSON.stringify(connItems));
+}
+
+function connLogo(pv) {
+  if (!pv) return ICONS.connCode;
+  return `<img class="conn-logo${pv.ink ? ' ink' : ''}" src="https://cdn.simpleicons.org/${esc(pv.slug)}/${esc(pv.color.slice(1))}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-ltr="${esc(pv.name.charAt(0))}">`;
+}
+
+document.addEventListener('error', (e) => {
+  const im = e.target;
+  if (!im || !im.classList || !im.classList.contains('conn-logo')) return;
+  const s = document.createElement('span');
+  s.className = 'conn-ltr';
+  s.textContent = im.dataset.ltr || '?';
+  im.replaceWith(s);
+}, true);
+
+function connEmptyHtml() {
+  return `<div class="np-empty"><span class="np-empty-ico">${ICONS.navConnectors}</span><h3 class="np-empty-title">Nothing Placed Yet</h3><p class="np-empty-desc">Your connections will show up here.</p></div>`;
+}
+
+function connRender() {
+  const panel = document.getElementById('nav-panel');
+  const body = panel?.querySelector('.np-body');
+  if (!body || panel.getAttribute('aria-label') !== 'Connectors') return;
+  if (!connItems.length) {
+    body.classList.remove('lib-list');
+    body.style.maxHeight = '';
+    body.style.overflowY = '';
+    body.innerHTML = connEmptyHtml();
+    return;
+  }
+  body.classList.add('lib-list');
+  body.innerHTML = connItems.slice().sort((a, b) => b.t - a.t).map((c) => {
+    const pv = connProv(c.provider);
+    const ink = (pv && pv.ink) || String(c.color || '').toLowerCase() === '#ffffff';
+    return `
+    <div class="lib-card ops-card conn-card" style="--oc:${esc(opsInk(c.color || OPS_COLORS[0]))};--pc:${esc(ink ? 'var(--fg)' : (c.color || OPS_COLORS[0]))}">
+      <div class="lib-card-top">
+        <h4 class="lib-card-title"><span class="ops-ico">${connLogo(pv)}</span>${esc(c.name)}</h4>
+        <div class="lib-card-act">
+          <button class="icon-btn" type="button" data-conn-open="${esc(c.id)}" aria-label="Edit">${ICONS.pencil}</button>
+          <button class="icon-btn" type="button" data-conn-del="${esc(c.id)}" aria-label="Delete">${ICONS.trash}</button>
+        </div>
+      </div>
+      ${pv ? `<p class="lib-card-meta">${esc(pv.name)}</p>` : ''}
+      ${c.description ? `<p class="lib-card-instr">${esc(c.description)}</p>` : ''}
+    </div>`;
+  }).join('');
+  const fitCards = () => {
+    const cs = body.querySelectorAll('.conn-card');
+    if (cs.length <= 8) { body.style.maxHeight = ''; body.style.overflowY = ''; return; }
+    const h = cs[7].offsetTop + cs[7].offsetHeight - cs[0].offsetTop;
+    if (h > 0) { body.style.maxHeight = (h + 8) + 'px'; body.style.overflowY = 'auto'; }
+  };
+  fitCards();
+  requestAnimationFrame(fitCards);
+}
+
+function connRefresh() {
+  connLoad();
+  connRender();
+}
+
+function connOpenEditor(edit) {
+  const cur = { provider: edit?.provider || '', color: edit?.color || OPS_COLORS[0] };
+  const draftId = edit?.id || uid();
+  let autoName = !edit?.name || (connProv(edit.provider)?.name === edit.name);
+  const rows = CONN_PROVIDERS.map((pv) => `
+    <button class="conn-row${cur.provider === pv.id ? ' on' : ''}" type="button" data-conn-pick="${esc(pv.id)}" style="--pc:${esc(pv.ink ? 'var(--fg)' : pv.color)}">
+      <span class="conn-tile">${connLogo(pv)}</span>
+      <span class="conn-name">${esc(pv.name)}</span>
+      <span class="conn-go">${ICONS.chevronR}</span>
+    </button>`).join('');
+  const body = `
+    <div class="ops-ed" style="--oc:${esc(opsInk(cur.color))}">
+      <div class="ops-r1">
+        <label class="lib-lab">Name
+          <input class="lib-in" data-conn="name" maxlength="60" autocomplete="off" placeholder="e.g. My GitHub" value="${esc(edit?.name || '')}">
+        </label>
+        <button class="ops-cc" type="button" data-conn-cc aria-label="Next color">${OPS_I.toggle}</button>
+      </div>
+      <div class="ops-r2">
+        <label class="lib-lab">Description
+          <textarea class="lib-in lib-ta" data-conn="desc" maxlength="300" placeholder="One line about this connection">${esc(edit?.description || '')}</textarea>
+        </label>
+        <label class="lib-lab">Instruction
+          <textarea class="lib-in lib-ta" data-conn="instr" maxlength="300" placeholder="Rules">${esc(edit?.instruction || '')}</textarea>
+        </label>
+      </div>
+      <div class="lib-lab">Connect to
+        <div class="conn-list" data-conn-list>${rows}</div>
+      </div>
+    </div>`;
+  const p = fdOpen(edit ? 'Edit connection' : 'New connection', 'Connections', body,
+    '<button class="fd-pill" type="button" data-fd="conn-save">Save</button>');
+  const ed = p.querySelector('.ops-ed');
+  const nameIn = p.querySelector('[data-conn="name"]');
+  nameIn.addEventListener('input', () => { autoName = false; });
+  p.addEventListener('click', (e) => {
+    const pk = e.target.closest('[data-conn-pick]');
+    if (pk) {
+      const pv = connProv(pk.dataset.connPick);
+      if (!pv) return;
+      cur.provider = pv.id;
+      cur.color = pv.color;
+      ed.style.setProperty('--oc', opsInk(cur.color));
+      p.querySelectorAll('[data-conn-pick]').forEach((b) => b.classList.toggle('on', b === pk));
+      if (autoName || !nameIn.value.trim()) { nameIn.value = pv.name; autoName = true; }
+      try { window.open(pv.url, '_blank', 'noopener'); } catch (_) { toast('Could not open ' + pv.name + '.'); }
+      return;
+    }
+    if (e.target.closest('[data-conn-cc]')) {
+      cur.color = OPS_COLORS[(OPS_COLORS.indexOf(cur.color) + 1) % OPS_COLORS.length];
+      ed.style.setProperty('--oc', opsInk(cur.color));
+      return;
+    }
+    const b = e.target.closest('[data-fd]');
+    if (!b) return;
+    if (b.dataset.fd === 'close') { fdClose(); return; }
+    if (b.dataset.fd !== 'conn-save') return;
+    const name = nameIn.value.trim();
+    if (!name) { toast('Add a connection name.', 'info', 2000); return; }
+    const now = Date.now();
+    const rec = {
+      id: draftId, name, description: p.querySelector('[data-conn="desc"]').value.trim(),
+      instruction: p.querySelector('[data-conn="instr"]').value.trim(),
+      provider: cur.provider, color: cur.color, created: edit?.created || now, t: now
+    };
+    const prev = connItems.slice();
+    const i = connItems.findIndex((x) => x.id === draftId);
+    if (i >= 0) connItems[i] = rec; else connItems.push(rec);
+    try {
+      connSave();
+      fdClose();
+      connRender();
+      toast(edit ? 'Connection saved.' : 'Connection created.', 'success', 1800);
+    } catch (_) {
+      connItems = prev;
+      toast('Could not save. Storage may be full.');
+    }
+  });
+  if (canAutoFocus()) nameIn.focus();
+}
+
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-conn-open]');
+  if (!b) return;
+  const it = connItems.find((x) => x.id === b.dataset.connOpen);
+  if (it) connOpenEditor(it);
+});
+
+document.addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-conn-del]');
+  if (!b) return;
+  const it = connItems.find((x) => x.id === b.dataset.connDel);
+  if (!it) return;
+  const yes = await confirmDialog({ title: 'Delete connection?', message: `\u201c${it.name}\u201d will be removed from this device.`, confirmLabel: 'Delete', danger: true });
+  if (!yes) return;
+  connItems = connItems.filter((x) => x.id !== it.id);
+  try { connSave(); } catch (_) { toast('Could not delete.'); }
+  connRender();
+});
+
 /* ---------- NAV SIDE PANEL (Alpha placeholder) ---------- */
 const NAV_PANELS = {
   'nav-connectors': { title: 'Connectors',  icon: 'navConnectors', desc: 'Linked apps and data sources will show up here.' },
@@ -3181,6 +3371,7 @@ function openNavPanel(key) {
   panel.classList.add('open');
   if (key === 'nav-data') libRefresh();
   else if (key === 'nav-operations') opsRefresh();
+  else if (key === 'nav-connectors') connRefresh();
 }
 
 function closeNavPanel() {
@@ -11967,6 +12158,7 @@ function initShell() {
       const npLabel = document.getElementById('nav-panel')?.getAttribute('aria-label');
       if (npLabel === 'Library') openLibSheet();
       else if (npLabel === 'Operations') opsOpenEditor();
+      else if (npLabel === 'Connectors') connOpenEditor();
       else soon();
     }
   });
