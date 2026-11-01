@@ -3140,18 +3140,187 @@ document.addEventListener('click', async (e) => {
 /* ---------- CONNECTIONS: cards + provider list ---------- */
 ICONS.connCode = svg('<path d="M8 7l-5 5 5 5"/><path d="M16 7l5 5-5 5"/><path d="M12 4v16"/>', 16);
 const CONN_PROVIDERS = [
-  { id: 'github',  name: 'GitHub',       slug: 'github',      color: '#ffffff', ink: true,  url: 'https://github.com/login' },
-  { id: 'gdrive',  name: 'Google Drive', slug: 'googledrive', color: '#1fa463', ink: false, url: 'https://drive.google.com' },
-  { id: 'gmail',   name: 'Gmail',        slug: 'gmail',       color: '#ea4335', ink: false, url: 'https://mail.google.com' },
-  { id: 'notion',  name: 'Notion',       slug: 'notion',      color: '#ffffff', ink: true,  url: 'https://www.notion.so/login' },
-  { id: 'slack',   name: 'Slack',        slug: 'slack',       color: '#e01e5a', ink: false, url: 'https://slack.com/signin' },
-  { id: 'discord', name: 'Discord',      slug: 'discord',     color: '#5865f2', ink: false, url: 'https://discord.com/login' },
-  { id: 'dropbox', name: 'Dropbox',      slug: 'dropbox',     color: '#0061ff', ink: false, url: 'https://www.dropbox.com/login' },
-  { id: 'spotify', name: 'Spotify',      slug: 'spotify',     color: '#1db954', ink: false, url: 'https://accounts.spotify.com' },
-  { id: 'figma',   name: 'Figma',        slug: 'figma',       color: '#f24e1e', ink: false, url: 'https://www.figma.com/login' },
-  { id: 'vercel',  name: 'Vercel',       slug: 'vercel',      color: '#ffffff', ink: true,  url: 'https://vercel.com/login' }
+  { id: 'openmeteo',   name: 'Open-Meteo',   slug: 'openmeteo',         color: '#4aa3ff', ink: false, kw: 'weather|forecast|temperature|rain|humid|wind',
+    blurb: 'Weather and a 3-day forecast for any city. No key needed.', acts: 'weather {"place":"city"}', fields: [] },
+  { id: 'wikipedia',   name: 'Wikipedia',    slug: 'wikipedia',         color: '#ffffff', ink: true,  kw: 'wikipedia|wiki',
+    blurb: 'Looks up article summaries. No key needed.', acts: 'summary {"query":"topic"}', fields: [] },
+  { id: 'github',      name: 'GitHub',       slug: 'github',            color: '#ffffff', ink: true,  kw: 'github|repo|repository|issues?|commits?',
+    blurb: 'Lists repos, open issues and recent commits. Public data works without a token. A token adds private repos and higher limits.',
+    acts: 'repos {"user":"name"} | issues {"repo":"owner/name"} | commits {"repo":"owner/name"}',
+    fields: [
+      { k: 'token', label: 'Personal access token', ph: 'ghp_... (read-only is enough)', secret: true,  req: false },
+      { k: 'user',  label: 'Your GitHub username',  ph: 'octocat',                       secret: false, req: false }
+    ] },
+  { id: 'nasa',        name: 'NASA',         slug: 'nasa',              color: '#e03c31', ink: false, kw: 'nasa|apod|astronomy picture',
+    blurb: 'Astronomy Picture of the Day. Works with the shared DEMO_KEY, or add your own free key from api.nasa.gov.',
+    acts: 'apod {}',
+    fields: [ { k: 'key', label: 'NASA API key', ph: 'Empty = DEMO_KEY', secret: true, req: false } ] },
+  { id: 'dictionary',  name: 'Dictionary',   slug: 'dictionarydotcom',  color: '#38bdf8', ink: false, kw: 'define|definition|meaning of|dictionary',
+    blurb: 'English word definitions. No key needed.', acts: 'define {"word":"word"}', fields: [] },
+  { id: 'currency',    name: 'Currency',     slug: 'wise',              color: '#22c55e', ink: false, kw: 'exchange rate|convert|currency|usd|eur|php|gbp|jpy',
+    blurb: 'Live exchange rates and conversions. No key needed.', acts: 'convert {"from":"USD","to":"PHP","amount":1}', fields: [] },
+  { id: 'coingecko',   name: 'CoinGecko',    slug: 'coingecko',         color: '#8dc63f', ink: false, kw: 'bitcoin|ethereum|crypto|btc|eth|coin price',
+    blurb: 'Crypto price, 24h change and market cap. No key needed.', acts: 'price {"coin":"bitcoin"}', fields: [] },
+  { id: 'hackernews',  name: 'Hacker News',  slug: 'ycombinator',       color: '#ff6600', ink: false, kw: 'hacker ?news',
+    blurb: 'Current top stories. No key needed.', acts: 'top {"count":6}', fields: [] },
+  { id: 'tmdb',        name: 'TMDB Movies',  slug: 'themoviedatabase',  color: '#01b4e4', ink: false, kw: 'movie|film|tmdb',
+    blurb: 'Search movies or see what is trending. Needs a free v3 API key from themoviedb.org/settings/api.',
+    acts: 'search {"query":"title"} | trending {}',
+    fields: [ { k: 'key', label: 'TMDB API key (v3)', ph: 'Paste your key', secret: true, req: true } ] },
+  { id: 'openlibrary', name: 'Open Library', slug: 'internetarchive',   color: '#ffffff', ink: true,  kw: 'book|author|novel|open ?library',
+    blurb: 'Search books and authors. No key needed.', acts: 'search {"query":"title or author"}', fields: [] }
 ];
 const connProv = (id) => CONN_PROVIDERS.find((p) => p.id === id) || null;
+
+/* ---- connection engine start ---- */
+const connNorm = (s) => String(s || '').toLowerCase().replace(/[^a-z]/g, '');
+function connReady() {
+  connLoad();
+  return connItems.filter((c) => {
+    const pv = connProv(c.provider);
+    return pv && pv.fields.every((f) => !f.req || (c.cfg && c.cfg[f.k]));
+  });
+}
+function connHint(t) {
+  try {
+    return connReady().some((c) => new RegExp('\\b(' + connProv(c.provider).kw + ')', 'i').test(String(t || '')));
+  } catch (_) { return false; }
+}
+function connDoc() {
+  const seen = new Set();
+  const lines = [];
+  connReady().forEach((c) => {
+    if (seen.has(c.provider)) return;
+    seen.add(c.provider);
+    const pv = connProv(c.provider);
+    lines.push(`${pv.id} = ${pv.acts}${c.instruction ? ' [user rule: ' + c.instruction + ']' : ''}`);
+  });
+  return 'connect {"service":"ID","action":"ACTION", ...params} runs a service the user connected in Connections. Use it whenever the question fits one of these. Connected: ' + lines.join(' ; ');
+}
+const cj = async (url, signal, headers) => {
+  const r = await fetch(url, { signal, headers });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+};
+const wmo = (c) => (c === 0 ? 'clear' : c <= 3 ? 'partly cloudy' : c <= 48 ? 'fog' : c <= 57 ? 'drizzle' : c <= 67 ? 'rain' : c <= 77 ? 'snow' : c <= 82 ? 'showers' : c >= 95 ? 'thunderstorm' : 'mixed');
+const CONN_RUN = {
+  async openmeteo(act, a, cfg, sg) {
+    const place = String(a.place || '').trim();
+    if (!place) return 'Error: need "place".';
+    const g = await cj('https://geocoding-api.open-meteo.com/v1/search?count=1&name=' + encodeURIComponent(place), sg);
+    const L = g.results && g.results[0];
+    if (!L) return 'No place found for ' + place;
+    const w = await cj('https://api.open-meteo.com/v1/forecast?latitude=' + L.latitude + '&longitude=' + L.longitude + '&current=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,wind_speed_10m,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=3', sg);
+    const c = w.current, d = w.daily;
+    let s = `${L.name}, ${L.country || ''}: now ${c.temperature_2m}C (feels ${c.apparent_temperature}C), ${wmo(c.weather_code)}, humidity ${c.relative_humidity_2m}%, wind ${c.wind_speed_10m} km/h, rain ${c.precipitation} mm.`;
+    d.time.forEach((t, i) => { s += `\n${t}: ${d.temperature_2m_min[i]} to ${d.temperature_2m_max[i]}C, rain chance ${d.precipitation_probability_max[i]}%`; });
+    return s;
+  },
+  async wikipedia(act, a, cfg, sg) {
+    const q = String(a.query || a.topic || '').trim();
+    if (!q) return 'Error: need "query".';
+    const j = await cj('https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrlimit=1&gsrsearch=' + encodeURIComponent(q) + '&prop=extracts%7Cinfo&exintro=1&explaintext=1&exchars=1100&inprop=url&format=json&origin=*', sg);
+    const pg = Object.values((j.query || {}).pages || {})[0];
+    return pg ? pg.title + '\n' + pg.fullurl + '\n' + String(pg.extract || '').replace(/\s+/g, ' ') : 'No article found for ' + q;
+  },
+  async github(act, a, cfg, sg) {
+    const h = { Accept: 'application/vnd.github+json' };
+    if (cfg.token) h.Authorization = 'Bearer ' + cfg.token;
+    const base = 'https://api.github.com';
+    if (act === 'issues' || act === 'commits') {
+      const repo = String(a.repo || '').trim();
+      if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) return 'Error: need "repo" like owner/name.';
+      if (act === 'issues') {
+        const j = await cj(base + '/repos/' + repo + '/issues?state=open&per_page=8', sg, h);
+        return j.length ? j.map((i) => '#' + i.number + ' ' + i.title).join('\n') : 'No open issues.';
+      }
+      const j = await cj(base + '/repos/' + repo + '/commits?per_page=6', sg, h);
+      return j.map((c) => c.sha.slice(0, 7) + ' ' + String(c.commit.message).split('\n')[0]).join('\n');
+    }
+    const user = String(a.user || cfg.user || '').trim();
+    const u = user ? base + '/users/' + encodeURIComponent(user) + '/repos?sort=updated&per_page=8' : (cfg.token ? base + '/user/repos?sort=updated&per_page=8' : '');
+    if (!u) return 'Error: need a username. Add it in the connection or pass "user".';
+    const j = await cj(u, sg, h);
+    return j.length ? j.map((r) => r.full_name + (r.description ? ' - ' + r.description : '') + ' (' + r.stargazers_count + ' stars)').join('\n') : 'No repos found.';
+  },
+  async nasa(act, a, cfg, sg) {
+    const j = await cj('https://api.nasa.gov/planetary/apod?api_key=' + encodeURIComponent(cfg.key || 'DEMO_KEY'), sg);
+    return j.title + ' (' + j.date + ')\n' + String(j.explanation || '').slice(0, 600) + '\n' + (j.hdurl || j.url || '');
+  },
+  async dictionary(act, a, cfg, sg) {
+    const w = String(a.word || '').trim();
+    if (!w) return 'Error: need "word".';
+    let j;
+    try { j = await cj('https://api.dictionaryapi.dev/api/v2/entries/en/' + encodeURIComponent(w), sg); }
+    catch (e) { if (/404/.test(e.message)) return 'No definition found for ' + w; throw e; }
+    const e0 = j[0];
+    return e0.word + (e0.phonetic ? ' ' + e0.phonetic : '') + '\n' + e0.meanings.slice(0, 3).map((m) => m.partOfSpeech + ': ' + ((m.definitions[0] || {}).definition || '')).join('\n');
+  },
+  async currency(act, a, cfg, sg) {
+    const f = String(a.from || 'USD').toUpperCase();
+    const t = String(a.to || 'EUR').toUpperCase();
+    const n = Number(a.amount || 1);
+    const j = await cj('https://open.er-api.com/v6/latest/' + encodeURIComponent(f), sg);
+    const r = j.rates && j.rates[t];
+    if (!r) return 'Error: unknown currency code.';
+    return n + ' ' + f + ' = ' + (n * r).toFixed(2) + ' ' + t + ' (rate ' + r + ', updated ' + String(j.time_last_update_utc || '').slice(0, 16) + ')';
+  },
+  async coingecko(act, a, cfg, sg) {
+    const q = String(a.coin || '').trim();
+    if (!q) return 'Error: need "coin".';
+    const s = await cj('https://api.coingecko.com/api/v3/search?query=' + encodeURIComponent(q), sg);
+    const c = (s.coins || [])[0];
+    if (!c) return 'No coin found for ' + q;
+    const j = await cj('https://api.coingecko.com/api/v3/simple/price?ids=' + encodeURIComponent(c.id) + '&vs_currencies=usd&include_24hr_change=true&include_market_cap=true', sg);
+    const p = j[c.id] || {};
+    return c.name + ' (' + c.symbol + '): $' + p.usd + ', 24h ' + (p.usd_24h_change != null ? p.usd_24h_change.toFixed(2) + '%' : 'n/a') + ', market cap $' + Math.round(p.usd_market_cap || 0).toLocaleString('en-US');
+  },
+  async hackernews(act, a, cfg, sg) {
+    const n = Math.min(Math.max(parseInt(a.count, 10) || 6, 1), 8);
+    const ids = (await cj('https://hacker-news.firebaseio.com/v0/topstories.json', sg)).slice(0, n);
+    const items = await Promise.all(ids.map((id) => cj('https://hacker-news.firebaseio.com/v0/item/' + id + '.json', sg)));
+    return items.filter(Boolean).map((i, k) => (k + 1) + '. ' + i.title + ' (' + (i.score || 0) + ' pts) ' + (i.url || 'https://news.ycombinator.com/item?id=' + i.id)).join('\n');
+  },
+  async tmdb(act, a, cfg, sg) {
+    const k = encodeURIComponent(cfg.key || '');
+    let j;
+    if (act === 'trending') {
+      j = await cj('https://api.themoviedb.org/3/trending/movie/week?api_key=' + k, sg);
+    } else {
+      const q = String(a.query || '').trim();
+      if (!q) return 'Error: need "query".';
+      j = await cj('https://api.themoviedb.org/3/search/movie?api_key=' + k + '&query=' + encodeURIComponent(q), sg);
+    }
+    const r = (j.results || []).slice(0, 4);
+    return r.length ? r.map((m) => m.title + ' (' + String(m.release_date || '').slice(0, 4) + ') ' + (m.vote_average || 0).toFixed(1) + '/10 - ' + String(m.overview || '').slice(0, 160)).join('\n') : 'No movies found.';
+  },
+  async openlibrary(act, a, cfg, sg) {
+    const q = String(a.query || '').trim();
+    if (!q) return 'Error: need "query".';
+    const j = await cj('https://openlibrary.org/search.json?limit=5&fields=title,author_name,first_publish_year&q=' + encodeURIComponent(q), sg);
+    const d = j.docs || [];
+    return d.length ? d.map((b) => b.title + ' - ' + (b.author_name || ['unknown']).slice(0, 2).join(', ') + (b.first_publish_year ? ' (' + b.first_publish_year + ')' : '')).join('\n') : 'No books found.';
+  }
+};
+async function connRun(a) {
+  a = a || {};
+  const want = connNorm(a.service);
+  const ready = connReady();
+  const c = ready.find((x) => x.provider === want || connNorm((connProv(x.provider) || {}).name) === want);
+  const pv = c && connProv(c.provider);
+  if (!pv || !CONN_RUN[pv.id]) {
+    return 'Error: service not connected. Connected: ' + (ready.map((x) => x.provider).join(', ') || 'none') + '.';
+  }
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 20000);
+  try {
+    return String(await CONN_RUN[pv.id](String(a.action || '').toLowerCase(), a, c.cfg || {}, ctl.signal)).slice(0, 1400);
+  } catch (e) {
+    const m = e && e.name === 'AbortError' ? 'timed out' : ((e && e.message) || 'network error');
+    return 'Error: ' + pv.name + ' failed (' + m + ').' + (/HTTP 40[13]/.test(m) ? ' Check the key or token in Connections.' : '');
+  } finally { clearTimeout(timer); }
+}
+/* ---- connection engine end ---- */
 const connLs = () => (keyScope ? 'aphrosta.conns.' + keyScope : 'aphrosta.conns');
 let connItems = [];
 
@@ -3230,12 +3399,21 @@ function connOpenEditor(edit) {
   const cur = { provider: edit?.provider || '', color: edit?.color || OPS_COLORS[0] };
   const draftId = edit?.id || uid();
   let autoName = !edit?.name || (connProv(edit.provider)?.name === edit.name);
+  const cfgOld = edit?.cfg || {};
   const rows = CONN_PROVIDERS.map((pv) => `
-    <button class="conn-row${cur.provider === pv.id ? ' on' : ''}" type="button" data-conn-pick="${esc(pv.id)}" style="--pc:${esc(pv.ink ? 'var(--fg)' : pv.color)}">
-      <span class="conn-tile">${connLogo(pv)}</span>
-      <span class="conn-name">${esc(pv.name)}</span>
-      <span class="conn-go">${ICONS.chevronR}</span>
-    </button>`).join('');
+    <div class="conn-item${cur.provider === pv.id ? ' open' : ''}" data-conn-item="${esc(pv.id)}" data-q="${esc((pv.name + ' ' + pv.blurb).toLowerCase())}">
+      <button class="conn-row${cur.provider === pv.id ? ' on' : ''}" type="button" data-conn-pick="${esc(pv.id)}" style="--pc:${esc(pv.ink ? 'var(--fg)' : pv.color)}">
+        <span class="conn-tile">${connLogo(pv)}</span>
+        <span class="conn-name">${esc(pv.name)}</span>
+        <span class="conn-go">${ICONS.chevronR}</span>
+      </button>
+      <div class="conn-more">
+        <p class="field-note">${esc(pv.blurb)}</p>
+        ${pv.fields.map((f) => `<label class="lib-lab">${esc(f.label)}${f.req ? '' : ' (optional)'}
+          <input class="lib-in${f.secret ? ' conn-secret' : ''}" data-conn-f="${esc(pv.id)}" data-k="${esc(f.k)}" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="${esc(f.ph)}" value="${esc(edit?.provider === pv.id ? (cfgOld[f.k] || '') : '')}">
+        </label>`).join('')}
+      </div>
+    </div>`).join('');
   const body = `
     <div class="ops-ed" style="--oc:${esc(opsInk(cur.color))}">
       <div class="ops-r1">
@@ -3253,7 +3431,8 @@ function connOpenEditor(edit) {
         </label>
       </div>
       <div class="lib-lab">
-        <div class="conn-list" data-conn-list>${rows}</div>
+        <input class="lib-in conn-search" type="text" data-conn-search autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Search services" aria-label="Search services">
+        <div class="conn-list" data-conn-list>${rows}<p class="field-note conn-none" data-conn-none hidden>No match.</p></div>
       </div>
     </div>`;
   const p = fdOpen(edit ? 'Edit connection' : 'New connection', 'Connections', body,
@@ -3261,6 +3440,17 @@ function connOpenEditor(edit) {
   const ed = p.querySelector('.ops-ed');
   const nameIn = p.querySelector('[data-conn="name"]');
   nameIn.addEventListener('input', () => { autoName = false; });
+  p.querySelector('[data-conn-search]')?.addEventListener('input', (ev) => {
+    const q = ev.target.value.trim().toLowerCase();
+    let n = 0;
+    p.querySelectorAll('[data-conn-item]').forEach((it) => {
+      const hit = !q || it.dataset.q.includes(q);
+      it.hidden = !hit;
+      if (hit) n++;
+    });
+    const none = p.querySelector('[data-conn-none]');
+    if (none) none.hidden = n > 0;
+  });
   p.addEventListener('click', (e) => {
     const pk = e.target.closest('[data-conn-pick]');
     if (pk) {
@@ -3271,7 +3461,16 @@ function connOpenEditor(edit) {
       ed.style.setProperty('--oc', opsInk(cur.color));
       p.querySelectorAll('[data-conn-pick]').forEach((b) => b.classList.toggle('on', b === pk));
       if (autoName || !nameIn.value.trim()) { nameIn.value = pv.name; autoName = true; }
-      try { window.open(pv.url, '_blank', 'noopener'); } catch (_) { toast('Could not open ' + pv.name + '.'); }
+      const item = pk.closest('[data-conn-item]');
+      const wasOpen = !!item && item.classList.contains('open');
+      p.querySelectorAll('[data-conn-item].open').forEach((x) => x.classList.remove('open'));
+      if (item && !wasOpen) {
+        item.classList.add('open');
+        const lst = item.closest('[data-conn-list]');
+        requestAnimationFrame(() => {
+          if (lst) lst.scrollTop += item.getBoundingClientRect().top - lst.getBoundingClientRect().top - 6;
+        });
+      }
       return;
     }
     if (e.target.closest('[data-conn-cc]')) {
@@ -3285,11 +3484,20 @@ function connOpenEditor(edit) {
     if (b.dataset.fd !== 'conn-save') return;
     const name = nameIn.value.trim();
     if (!name) { toast('Add a connection name.', 'info', 2000); return; }
+    const pvSel = connProv(cur.provider);
+    if (!pvSel) { toast('Pick a service first.', 'info', 2000); return; }
+    const miss = pvSel.fields.find((f) => f.req && !(p.querySelector('[data-conn-f="' + pvSel.id + '"][data-k="' + f.k + '"]')?.value || '').trim());
+    if (miss) {
+      p.querySelector('[data-conn-item="' + pvSel.id + '"]')?.classList.add('open');
+      toast('Add the ' + miss.label + '.', 'info', 2200);
+      return;
+    }
     const now = Date.now();
     const rec = {
       id: draftId, name, description: p.querySelector('[data-conn="desc"]').value.trim(),
       instruction: p.querySelector('[data-conn="instr"]').value.trim(),
-      provider: cur.provider, color: cur.color, created: edit?.created || now, t: now
+      provider: cur.provider, cfg: Object.fromEntries([...p.querySelectorAll('[data-conn-f="' + cur.provider + '"]')].map((i) => [i.dataset.k, i.value.trim()])),
+      color: cur.color, created: edit?.created || now, t: now
     };
     const prev = connItems.slice();
     const i = connItems.findIndex((x) => x.id === draftId);
@@ -11126,10 +11334,11 @@ const TOOL_DOCS = {
   web_search: 'web_search {"query": "..."} searches the web for current information',
   fetch_url: 'fetch_url {"url": "https://..."} reads a web page as text',
   calculator: 'calculator {"expression": "..."} exact maths using + - * / % ^ ( ) sqrt sin cos tan log ln abs round floor ceil min max pi e',
-  current_time: 'current_time {} returns the user\'s current date and time'
+  current_time: 'current_time {} returns the user\'s current date and time',
+  get connect() { return connDoc(); }
 };
 
-const enabledAgentTools = () => (!settings.agentTools ? [] : Object.keys(TOOL_DOCS).filter((k) => (k !== 'web_search' && k !== 'fetch_url') || settings.skillWeb));
+const enabledAgentTools = () => (!settings.agentTools ? [] : Object.keys(TOOL_DOCS).filter((k) => ((k !== 'web_search' && k !== 'fetch_url') || settings.skillWeb) && (k !== 'connect' || connReady().length)));
 
 async function readerFetch(target, signal) {
   const tries = [
@@ -11223,7 +11432,9 @@ const AGENT_TOOLS = {
   async current_time() {
     const d = new Date();
     return `${d.toString()} | ISO ${d.toISOString()}`;
-  }
+  },
+
+  async connect(args) { return connRun(args); }
 };
 
 function parseToolCalls(text) {
@@ -11285,7 +11496,7 @@ async function autoResearch(text) {
       out.push(`[tool_result fetch_url ${u}]\n${String(r).slice(0, 1500)}\n[/tool_result]`);
     }
     const isCasual = /^\s*(hi|hello|hey|yo|thanks?|thank you|ok(ay)?|yes|no|lol|bye|good (morning|night|evening))\b[\s!.?,]*$/i.test(t);
-    const wantsSearch = !isCasual && !urls.length && !SKIP_WEB_RE.test(t) && !/```/.test(t) && (NEEDS_WEB_RE.test(t) ||
+    const wantsSearch = !isCasual && !urls.length && !SKIP_WEB_RE.test(t) && !connHint(t) && !/```/.test(t) && (NEEDS_WEB_RE.test(t) ||
       (/\?/.test(t) && t.length > 20) ||
       (t.length > 60 && /\b(who|what|when|where|which|why|how)\b/i.test(t)));
     if (wantsSearch) {

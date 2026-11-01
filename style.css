@@ -4323,6 +4323,16 @@ html[data-motion="reduce"] .sess-pw { animation: none; }
 .conn-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: calc(14px * var(--ts)); font-weight: 600; }
 .conn-go { flex: none; display: inline-flex; color: var(--gray-mid); }
 .conn-go svg { width: 14px; height: 14px; }
+.conn-search { margin-bottom: 6px; }
+.conn-list { max-height: 340px; }
+.conn-item { flex: none; display: flex; flex-direction: column; }
+.conn-item[hidden] { display: none; }
+.conn-more { display: none; flex-direction: column; gap: 8px; padding: 10px 6px 6px; }
+.conn-item.open .conn-more { display: flex; }
+.conn-item .conn-go { transition: transform 0.2s; }
+.conn-item.open .conn-go { transform: rotate(90deg); }
+.conn-secret { -webkit-text-security: disc; text-security: disc; }
+.conn-none { padding: 10px; text-align: center; }
 
 /* ---------- Operations (projects) ---------- */
 .ops-card { border-left: 3px solid var(--oc, var(--fg)); }
