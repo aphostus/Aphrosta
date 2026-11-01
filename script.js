@@ -3168,7 +3168,23 @@ const CONN_PROVIDERS = [
     acts: 'search {"query":"title"} | trending {}',
     fields: [ { k: 'key', label: 'TMDB API key (v3)', ph: 'Paste your key', secret: true, req: true } ] },
   { id: 'openlibrary', name: 'Open Library', slug: 'internetarchive',   color: '#ffffff', ink: true,  kw: 'book|author|novel|open ?library',
-    blurb: 'Search books and authors. No key needed.', acts: 'search {"query":"title or author"}', fields: [] }
+    blurb: 'Search books and authors. No key needed.', acts: 'search {"query":"title or author"}', fields: [] },
+  { id: 'npm', name: 'npm', slug: 'npm', color: '#cb3837', ink: false, kw: 'npm',
+    blurb: 'Latest version, license and weekly downloads of a package. No key needed.', acts: 'info {"package":"name"}', fields: [] },
+  { id: 'countries', name: 'Countries', slug: 'openstreetmap', color: '#7ebc6f', ink: false, kw: 'capital of|country info|restcountries',
+    blurb: 'Capital, population, area, languages and currency of a country. No key needed.', acts: 'info {"country":"name"}', fields: [] },
+  { id: 'pokemon', name: 'Pokemon', slug: 'pokemon', color: '#ffcb05', ink: false, kw: 'pokemon|pokedex',
+    blurb: 'Types, stats and abilities of a Pokemon. No key needed.', acts: 'info {"name":"pikachu"}', fields: [] },
+  { id: 'earthquakes', name: 'Earthquakes', slug: 'usgs', color: '#ff6b3d', ink: false, kw: 'earthquakes?|quakes?',
+    blurb: 'Significant earthquakes from the USGS this week. No key needed.', acts: 'recent {}', fields: [] },
+  { id: 'holidays', name: 'Holidays', slug: 'googlecalendar', color: '#4285f4', ink: false, kw: 'public holidays?',
+    blurb: 'Upcoming public holidays for a country (2 letter code). No key needed.', acts: 'list {"country":"PH"}', fields: [] },
+  { id: 'trivia', name: 'Trivia', slug: 'opentrivia', color: '#a78bfa', ink: false, kw: 'trivia',
+    blurb: 'A random multiple choice trivia question with the answer. No key needed.', acts: 'random {}', fields: [] },
+  { id: 'jokes', name: 'Jokes', slug: 'jokes', color: '#ffd60a', ink: false, kw: 'joke',
+    blurb: 'A safe random joke. No key needed.', acts: 'random {"category":"Programming"}', fields: [] },
+  { id: 'stackoverflow', name: 'Stack Overflow', slug: 'stackoverflow', color: '#f48024', ink: false, kw: 'stack ?overflow',
+    blurb: 'Searches Stack Overflow questions. No key needed.', acts: 'search {"query":"question"}', fields: [] }
 ];
 const connProv = (id) => CONN_PROVIDERS.find((p) => p.id === id) || null;
 
@@ -3300,6 +3316,65 @@ const CONN_RUN = {
     const j = await cj('https://openlibrary.org/search.json?limit=5&fields=title,author_name,first_publish_year&q=' + encodeURIComponent(q), sg);
     const d = j.docs || [];
     return d.length ? d.map((b) => b.title + ' - ' + (b.author_name || ['unknown']).slice(0, 2).join(', ') + (b.first_publish_year ? ' (' + b.first_publish_year + ')' : '')).join('\n') : 'No books found.';
+  },
+  async npm(act, a, cfg, sg) {
+    const p = String(a.package || a.name || '').trim();
+    if (!p) return 'Error: need "package".';
+    const enc = encodeURIComponent(p).replace('%40', '@');
+    const m = await cj('https://registry.npmjs.org/' + enc + '/latest', sg);
+    let dl = '';
+    try { const d = await cj('https://api.npmjs.org/downloads/point/last-week/' + enc, sg); dl = ', ' + d.downloads.toLocaleString('en-US') + ' downloads last week'; } catch (_) {}
+    return m.name + '@' + m.version + (m.description ? ' - ' + m.description : '') + dl + (m.license ? ', license ' + (m.license.type || m.license) : '');
+  },
+  async countries(act, a, cfg, sg) {
+    const q = String(a.country || a.name || '').trim();
+    if (!q) return 'Error: need "country".';
+    let j;
+    try { j = await cj('https://restcountries.com/v3.1/name/' + encodeURIComponent(q) + '?fields=name,capital,population,region,languages,currencies,area', sg); }
+    catch (e) { if (/404/.test(e.message)) return 'No country found for ' + q; throw e; }
+    const c = j[0];
+    return c.name.common + ' (' + c.region + '): capital ' + (c.capital || ['n/a']).join(', ') + ', population ' + c.population.toLocaleString('en-US') + ', area ' + Math.round(c.area || 0).toLocaleString('en-US') + ' km2, languages ' + Object.values(c.languages || {}).join(', ') + ', currencies ' + Object.values(c.currencies || {}).map((x) => x.name).join(', ');
+  },
+  async pokemon(act, a, cfg, sg) {
+    const n = String(a.name || '').trim().toLowerCase();
+    if (!n) return 'Error: need "name".';
+    let j;
+    try { j = await cj('https://pokeapi.co/api/v2/pokemon/' + encodeURIComponent(n), sg); }
+    catch (e) { if (/404/.test(e.message)) return 'No Pokemon found for ' + n; throw e; }
+    return j.name + ' #' + j.id + ': types ' + j.types.map((t) => t.type.name).join('/') + ', height ' + (j.height / 10) + ' m, weight ' + (j.weight / 10) + ' kg, abilities ' + j.abilities.map((x) => x.ability.name).join(', ') + ', stats ' + j.stats.map((s) => s.stat.name + ' ' + s.base_stat).join(', ');
+  },
+  async earthquakes(act, a, cfg, sg) {
+    const j = await cj('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/significant_week.geojson', sg);
+    const f = (j.features || []).slice(0, 6);
+    return f.length ? f.map((x) => 'M' + x.properties.mag + ' ' + x.properties.place + ' (' + new Date(x.properties.time).toISOString().slice(0, 16).replace('T', ' ') + ' UTC)').join('\n') : 'No significant earthquakes this week.';
+  },
+  async holidays(act, a, cfg, sg) {
+    const cc = String(a.country || 'US').trim().toUpperCase().slice(0, 2);
+    const yr = parseInt(a.year, 10) || new Date().getFullYear();
+    const j = await cj('https://date.nager.at/api/v3/PublicHolidays/' + yr + '/' + encodeURIComponent(cc), sg);
+    const today = new Date().toISOString().slice(0, 10);
+    const up = j.filter((h) => h.date >= today).slice(0, 8);
+    return (up.length ? up : j.slice(0, 8)).map((h) => h.date + ' ' + h.name).join('\n');
+  },
+  async trivia(act, a, cfg, sg) {
+    const j = await cj('https://opentdb.com/api.php?amount=1&type=multiple', sg);
+    const q = (j.results || [])[0];
+    if (!q) return 'No trivia available right now.';
+    const d = (s) => { const t = document.createElement('textarea'); t.innerHTML = s; return t.value; };
+    return d(q.category) + ' (' + q.difficulty + '): ' + d(q.question) + '\nOptions: ' + [q.correct_answer, ...q.incorrect_answers].map(d).sort().join(' | ') + '\nAnswer: ' + d(q.correct_answer);
+  },
+  async jokes(act, a, cfg, sg) {
+    const cat = /^(programming|misc|pun|spooky|christmas|any)$/i.test(String(a.category || '')) ? a.category : 'Any';
+    const j = await cj('https://v2.jokeapi.dev/joke/' + cat + '?safe-mode', sg);
+    return j.type === 'twopart' ? j.setup + '\n' + j.delivery : String(j.joke || 'No joke found.');
+  },
+  async stackoverflow(act, a, cfg, sg) {
+    const q = String(a.query || '').trim();
+    if (!q) return 'Error: need "query".';
+    const j = await cj('https://api.stackexchange.com/2.3/search/advanced?order=desc&sort=relevance&pagesize=5&site=stackoverflow&q=' + encodeURIComponent(q), sg);
+    const d = (s) => { const t = document.createElement('textarea'); t.innerHTML = s; return t.value; };
+    const it = j.items || [];
+    return it.length ? it.map((x) => d(x.title) + ' (' + x.score + ' votes, ' + (x.is_answered ? 'answered' : 'open') + ') ' + x.link).join('\n') : 'No questions found.';
   }
 };
 async function connRun(a) {
@@ -3431,8 +3506,10 @@ function connOpenEditor(edit) {
         </label>
       </div>
       <div class="lib-lab">
-        <input class="lib-in conn-search" type="text" data-conn-search autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Search services" aria-label="Search services">
-        <div class="conn-list" data-conn-list>${rows}<p class="field-note conn-none" data-conn-none hidden>No match.</p></div>
+        <div class="conn-wrap">
+          <input class="lib-in conn-search" type="text" data-conn-search autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Search services" aria-label="Search services">
+          <div class="conn-list" data-conn-list>${rows}<p class="field-note conn-none" data-conn-none hidden>No match.</p></div>
+        </div>
       </div>
     </div>`;
   const p = fdOpen(edit ? 'Edit connection' : 'New connection', 'Connections', body,

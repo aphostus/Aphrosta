@@ -4450,3 +4450,10 @@ html[data-motion="reduce"] .sess-pw { animation: none; }
 .ops-ed .ops-portable .ops-tree { flex: none; min-height: 0; height: calc(7 * 52px + 10px); max-height: calc(7 * 52px + 10px); }
 .ops-go { background: var(--surface-2); backdrop-filter: none; -webkit-backdrop-filter: none; }
 
+/* connections editor: search lives inside the wrapper, wrapper fills down to the bottom like Operations */
+.ops-ed .conn-wrap { box-sizing: border-box; flex: 1 1 auto; display: flex; flex-direction: column; gap: 8px; min-height: calc(7 * 52px + 62px); padding: 8px; border: 1px solid var(--glass-border); border-radius: 14px; background: var(--glass-bg); }
+.ops-ed .conn-wrap .conn-search { flex: none; margin: 0; }
+.ops-ed .conn-wrap .conn-list { flex: 1 1 0; min-height: 0; max-height: none; padding: 0; border: 0; border-radius: 0; background: none; scrollbar-width: none; }
+.ops-ed .conn-wrap .conn-list::-webkit-scrollbar { display: none; }
+.ops-ed .conn-wrap .conn-row { min-height: 52px; }
+
