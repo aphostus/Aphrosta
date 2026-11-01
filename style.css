@@ -4408,4 +4408,9 @@ html[data-motion="reduce"] .sess-pw { animation: none; }
 .ops-tk svg { width: 14px; height: 14px; }
 .ops-tsep { color: var(--gray-mid); opacity: 0.6; }
 .ops-bar .ops-sq.off { opacity: 0.3; }
+.ops-cr { display: flex; align-items: center; gap: 8px; }
+.ops-cr .ops-crumbs { flex: 1; min-width: 0; }
+.ops-cr .ops-tk { flex: none; font-size: calc(12px * var(--ts)); font-weight: 600; color: var(--gray-mid); }
+.ops-ed .ops-row { height: 44px; box-sizing: border-box; }
+.ops-ed .ops-tree { box-sizing: border-box; max-height: 318px; }
 

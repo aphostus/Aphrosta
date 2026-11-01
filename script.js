@@ -2492,13 +2492,8 @@ async function opsTreeInit(panel, project) {
       crumbsEl.scrollLeft = crumbsEl.scrollWidth;
     }
     drawBar();
-    const totEl = panel.querySelector('[data-ops-total]');
-    if (totEl) {
-      const fl = list.filter((x) => x.kind === 'file');
-      const all = fl.reduce((s, x) => s + estTokens(x.text || ''), 0);
-      const vis = fl.filter((x) => !effHidden(x)).reduce((s, x) => s + estTokens(x.text || ''), 0);
-      totEl.innerHTML = `<span class="ops-tk">${ICONS.eyeOff}${tokShort(all - vis)}</span><span class="ops-tsep">|</span><span class="ops-tk">${tokShort(all)}</span><span class="ops-tsep">|</span><span class="ops-tk">${ICONS.eye}${tokShort(vis)}</span>`;
-    }
+    const tokEl = panel.querySelector('[data-ops-tok]');
+    if (tokEl) tokEl.textContent = tokShort(list.filter((x) => x.kind === 'file').reduce((s, x) => s + estTokens(x.text || ''), 0));
     findAll();
   };
 
@@ -2978,6 +2973,8 @@ async function opsTreeInit(panel, project) {
 
 function opsOpenEditor(edit) {
   const cur = { icon: edit?.icon || OPS_ICONS[0], color: edit?.color || OPS_COLORS[0] };
+  const draftId = edit?.id || uid();
+  let saved = false;
 const body = `
     <div class="ops-ed" style="--oc:${esc(cur.color)}">
       <div class="ops-r1">
@@ -2997,7 +2994,7 @@ const body = `
       <div class="lib-lab">Icon
         <div class="ops-icw"><div class="ops-icons">${OPS_ICONS.map((k) => `<button class="ops-pick${k === cur.icon ? ' on' : ''}" type="button" data-ops-icon="${k}" aria-label="${k}">${ICONS[k]}</button>`).join('')}</div></div>
       </div>
-      ${edit ? `<div class="lib-lab">
+      ${`<div class="lib-lab">
         <div class="ops-fr">
           <input class="lib-in ops-pill" data-ops-q type="text" placeholder="Find" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
           <input class="lib-in ops-pill" data-ops-r type="text" placeholder="Replace" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
@@ -3007,12 +3004,11 @@ const body = `
       </div>
       <div class="lib-lab">
         <div class="ops-st">
-          <div class="ops-crumbs" data-ops-crumbs></div>
+          <div class="ops-cr"><span class="ops-tk" data-ops-tok></span><span class="ops-tsep">|</span><div class="ops-crumbs" data-ops-crumbs></div></div>
           <div class="ops-bar" data-ops-bar></div>
           <div class="ops-tree" data-ops-tree></div>
         </div>
-        <div class="ops-where" data-ops-total></div>
-      </div>` : '<p class="lib-note">Save first, then you can add files and folders.</p>'}
+      </div>`}
     </div>`;
   const p = fdOpen(edit ? 'Edit project' : 'New project', edit ? 'Operations' : 'Blank start', body,
     '<button class="fd-pill" type="button" data-fd="ops-save">Save</button>');
@@ -3021,7 +3017,7 @@ const body = `
   const icWrap = p.querySelector('.ops-icw');
   const icGlow = () => { if (icBox && icWrap) icWrap.classList.toggle('end', icBox.scrollTop + icBox.clientHeight >= icBox.scrollHeight - 2); };
   if (icBox) icBox.addEventListener('scroll', icGlow);
-  if (edit) opsTreeInit(p, edit);
+  opsTreeInit(p, edit || { id: draftId });
   p.addEventListener('click', async (e) => {
     const ic = e.target.closest('[data-ops-icon]');
     if (ic) {
@@ -3036,21 +3032,26 @@ const body = `
     }
     const b = e.target.closest('[data-fd]');
     if (!b) return;
-    if (b.dataset.fd === 'close') { fdClose(); return; }
+    if (b.dataset.fd === 'close') {
+      if (!edit && !saved) opsFiles(draftId).then((l) => l.forEach((f) => opsDelFile(f.id))).catch(() => {});
+      fdClose();
+      return;
+    }
     if (b.dataset.fd !== 'ops-save') return;
     const name = p.querySelector('[data-ops="name"]').value.trim();
     if (!name) { toast('Add a project name. (H10)', 'info', 2000); return; }
     const now = Date.now();
     const rec = {
-      id: edit?.id || uid(), name, description: p.querySelector('[data-ops="desc"]').value.trim(), instruction: p.querySelector('[data-ops="instr"]').value.trim(),
-      icon: cur.icon, color: cur.color, files: opsItems.find((x) => x.id === edit?.id)?.files || 0, created: edit?.created || now, t: now
+      id: draftId, name, description: p.querySelector('[data-ops="desc"]').value.trim(), instruction: p.querySelector('[data-ops="instr"]').value.trim(),
+      icon: cur.icon, color: cur.color, files: await opsFiles(draftId).then((l) => l.filter((x) => x.kind === 'file').length).catch(() => 0), created: edit?.created || now, t: now
     };
     try {
       await opsPutProject(rec);
+      saved = true;
       fdClose();
       opsRender();
       toast(edit ? 'Project saved.' : 'Project created.', 'success', 1800);
-      if (!edit) setTimeout(() => opsOpenEditor(rec), 260);
+
     } catch (_) { toast('Could not save. Storage may be full. (E06)'); }
   });
   if (canAutoFocus()) p.querySelector('[data-ops="name"]')?.focus();
