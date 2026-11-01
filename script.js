@@ -2201,8 +2201,60 @@ document.addEventListener('click', async (e) => {
 });
 
 /* ---------- OPERATIONS: storage + project list + popup shell (Patch 1-2) ---------- */
-const OPS_ICONS = ['navOperations', 'folder', 'brain', 'globe', 'rocket', 'stSkills', 'navAutomation', 'navWorlds', 'navAgents', 'navLibrary',
-  'navConnectors', 'stMemory', 'lock', 'clock', 'settings', 'link', 'card', 'sliders', 'pushpin', 'stStorage'];
+const OPS_NEW_ICONS = {
+  op01: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
+  op02: '<path d="M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z"/>',
+  op03: '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/>',
+  op04: '<path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z"/>',
+  op05: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  op06: '<path d="M7 18a4 4 0 01-.5-8 5.5 5.5 0 0110.7-1A4.5 4.5 0 0117 18z"/>',
+  op07: '<path d="M12 22c4 0 7-2.8 7-6.5 0-3-2-5-3.5-7C15 11 13.5 11.5 13 11c0-3-1-6-3-8 0 4-5 6.5-5 12.5C5 19.2 8 22 12 22z"/>',
+  op08: '<path d="M5 19C5 10 10 5 20 4c0 10-5 15-13 15z"/><path d="M5 19c3-5 6-8 10-10"/>',
+  op09: '<path d="M12 3s6 6.5 6 11a6 6 0 01-12 0c0-4.5 6-11 6-11z"/>',
+  op10: '<path d="M2 20l7-12 4 7 2-3 7 8z"/>',
+  op11: '<circle cx="12" cy="5" r="2"/><path d="M12 7v14M7 11h10M4 15a8 8 0 0016 0"/>',
+  op12: '<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/>',
+  op13: '<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>',
+  op14: '<path d="M6 3h12M6 21h12M7 3v3l5 6-5 6v3M17 3v3l-5 6 5 6v3"/>',
+  op15: '<path d="M6 16v-5a6 6 0 0112 0v5l2 2H4z"/><path d="M10 21h4"/>',
+  op16: '<path d="M3 8h4l2-3h6l2 3h4v12H3z"/><circle cx="12" cy="13" r="3.5"/>',
+  op17: '<path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/>',
+  op18: '<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v4M8 22h8"/>',
+  op19: '<path d="M4 15v-3a8 8 0 0116 0v3"/><rect x="3" y="14" width="4" height="7" rx="1.5"/><rect x="17" y="14" width="4" height="7" rx="1.5"/>',
+  op20: '<rect x="2" y="7" width="20" height="11" rx="5"/><path d="M7 10.5v4M5 12.5h4M16 11h.01M18.5 14h.01"/>',
+  op21: '<path d="M8 7l-5 5 5 5M16 7l5 5-5 5M14 4l-4 16"/>',
+  op22: '<ellipse cx="12" cy="14" rx="5" ry="6"/><path d="M9 6a3 3 0 016 0M3 13h4M17 13h4M4 7l3 3M20 7l-3 3M4 20l3-3M20 20l-3-3M12 9v11"/>',
+  op23: '<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>',
+  op24: '<rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/>',
+  op25: '<path d="M2 9a15 15 0 0120 0M5 12.5a10.5 10.5 0 0114 0M8.5 16a5.5 5.5 0 017 0"/><path d="M12 19.5h.01"/>',
+  op26: '<rect x="2" y="7" width="17" height="10" rx="2"/><path d="M22 11v2M6 10v4M10 10v4"/>',
+  op27: '<rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18.5h2"/>',
+  op28: '<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>',
+  op29: '<path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v7H7z"/>',
+  op30: '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v9h14v-9M12 8v13M12 8C9 8 8 3.5 10.5 3.5S12 8 12 8zM12 8c3 0 4-4.5 1.5-4.5S12 8 12 8z"/>',
+  op31: '<circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.7 12.5h10.6L21 7H6"/>',
+  op32: '<path d="M5 8h14l-1 13H6z"/><path d="M9 8V6a3 3 0 016 0v2"/>',
+  op33: '<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.2"/>',
+  op34: '<path d="M4 9h13v6a5 5 0 01-5 5H9a5 5 0 01-5-5z"/><path d="M17 11h1.5a2.5 2.5 0 010 5H17M7 3v3M11 3v3M15 3v3"/>',
+  op35: '<path d="M4 21v-8h16v8zM4 17c2 1.5 4-1.5 8 0s6 1.5 8 0M12 13V9"/><path d="M12 9c-1.5-1.5-1-3 0-4 1 1 1.5 2.5 0 4z"/>',
+  op36: '<path d="M3 12a9 9 0 0118 0z"/><path d="M12 12v7a2 2 0 004 0"/>',
+  op37: '<path d="M21 3L3 10.5l7 3 3 7z"/><path d="M10 13.5L21 3"/>',
+  op38: '<path d="M3 16v-4l2-5h14l2 5v4z"/><path d="M3 12h18M7 16v2M17 16v2M7 14h.01M17 14h.01"/>',
+  op39: '<circle cx="6" cy="16" r="4"/><circle cx="18" cy="16" r="4"/><path d="M6 16l3.5-7h5.5l3 7M9.5 9L8 6H5.5M12 16l3-7"/>',
+  op40: '<rect x="5" y="3" width="14" height="14" rx="3"/><path d="M5 11h14M9 21l2-4M15 21l-2-4M9 14h.01M15 14h.01"/>',
+  op41: '<path d="M12 3v12M12 4l6 10h-6M12 7L7 14h5"/><path d="M3 19c3 2 6-2 9 0s6 2 9 0"/>',
+  op42: '<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M8.5 8L20 19M8.5 16L20 5"/>',
+  op43: '<path d="M5 3v9a7 7 0 0014 0V3h-4v9a3 3 0 01-6 0V3z"/><path d="M5 7h4M15 7h4"/>',
+  op44: '<path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20M9 3l-2 6 5 12 5-12-2-6"/>',
+  op45: '<path d="M3 19L2 7l5.5 4.5L12 4l4.5 7.5L22 7l-1 12z"/>',
+  op46: '<path d="M7 4h10v6a5 5 0 01-10 0z"/><path d="M7 6H3v2a4 4 0 004 4M17 6h4v2a4 4 0 01-4 4M12 15v4M8 21h8"/>',
+  op47: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
+  op48: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
+  op49: '<path d="M12 3a9 9 0 100 18c1.5 0 2-1 1.5-2s0-2 1.5-2h2a3 3 0 003-3c0-6-4-11-8-11z"/><path d="M7.5 11h.01M10 7.5h.01M15 7.5h.01"/>',
+  op50: '<path d="M12 2l9 5v10l-9 5-9-5V7z"/><path d="M3 7l9 5 9-5M12 12v10"/>'
+};
+Object.keys(OPS_NEW_ICONS).forEach((k) => { ICONS[k] = svg(OPS_NEW_ICONS[k], 16); });
+const OPS_ICONS = Object.keys(OPS_NEW_ICONS);
 const OPS_I = {
   toggle: svg('<path d="M20 11a8 8 0 00-14.5-3.5L4 9"/><path d="M4 4v5h5"/><path d="M4 13a8 8 0 0014.5 3.5L20 15"/><path d="M20 20v-5h-5"/>', 22),
   sThis:  svg('<circle cx="12" cy="12" r="3.2"/><path d="M12 3v3.5M12 17.5V21M3 12h3.5M17.5 12H21"/>', 20),
@@ -2210,6 +2262,7 @@ const OPS_I = {
   sUndo:  svg('<path d="M8.5 5L4 9.5 8.5 14"/><path d="M4 9.5h9a6 6 0 010 12h-4"/>', 20)
 };
 const OPS_COLORS = ['#ffffff', '#30d158', '#ff453a', '#ff6bb5', '#ffd60a', '#ff9f0a', '#0a84ff', '#bf5af2', '#40c8e0', '#5e5ce6'];
+const opsInk = (c) => (String(c).toLowerCase() === '#ffffff' ? 'var(--fg)' : c);
 const OPS_LANGS = [
   { id: 'js', name: 'JavaScript' }, { id: 'html', name: 'HTML' }, { id: 'css', name: 'CSS' },
   { id: 'json', name: 'JSON' }, { id: 'py', name: 'Python' }, { id: 'md', name: 'Markdown' }, { id: 'txt', name: 'Text' }
@@ -2390,7 +2443,7 @@ function opsRender() {
   if (!opsItems.length) { body.classList.remove('lib-list'); body.innerHTML = opsEmptyHtml(); return; }
   body.classList.add('lib-list');
   body.innerHTML = opsItems.slice().sort((a, b) => b.t - a.t).map((p) => `
-    <div class="lib-card ops-card" style="--oc:${esc(p.color || OPS_COLORS[0])}">
+    <div class="lib-card ops-card" style="--oc:${esc(opsInk(p.color || OPS_COLORS[0]))}">
       <div class="lib-card-top">
         <h4 class="lib-card-title"><span class="ops-ico">${ICONS[p.icon] || ICONS.navOperations}</span>${esc(p.name)}</h4>
         <div class="lib-card-act">
@@ -2976,7 +3029,7 @@ function opsOpenEditor(edit) {
   const draftId = edit?.id || uid();
   let saved = false;
 const body = `
-    <div class="ops-ed" style="--oc:${esc(cur.color)}">
+    <div class="ops-ed" style="--oc:${esc(opsInk(cur.color))}">
       <div class="ops-r1">
         <label class="lib-lab">Name
           <input class="lib-in" data-ops="name" maxlength="60" autocomplete="off" placeholder="e.g. Aphrosta website" value="${esc(edit?.name || '')}">
@@ -3027,7 +3080,7 @@ const body = `
     }
     if (e.target.closest('[data-ops-cc]')) {
       cur.color = OPS_COLORS[(OPS_COLORS.indexOf(cur.color) + 1) % OPS_COLORS.length];
-      ed.style.setProperty('--oc', cur.color);
+      ed.style.setProperty('--oc', opsInk(cur.color));
       return;
     }
     const b = e.target.closest('[data-fd]');

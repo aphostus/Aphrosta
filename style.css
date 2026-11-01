@@ -4364,9 +4364,9 @@ html[data-motion="reduce"] .sess-pw { animation: none; }
 .ops-r2 > .lib-lab:first-child { flex: 7 1 0; }
 .ops-r2 > .lib-lab:last-child { flex: 3 1 0; }
 .ops-r2 .lib-ta { height: 84px; min-height: 0; resize: none; padding: 9px 10px; font-size: calc(14px * var(--ts)); }
-.ops-ed .ops-icons { box-sizing: border-box; display: grid; grid-template-columns: repeat(10, 1fr); gap: 6px; height: 59px; padding: 2px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
+.ops-ed .ops-icons { box-sizing: border-box; display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; height: auto; padding: 2px; overflow: visible; }
 .ops-ed .ops-icons::-webkit-scrollbar { display: none; }
-.ops-ed .ops-icons .ops-pick { width: 100%; height: 34px; padding: 0; border-radius: 10px; }
+.ops-ed .ops-icons .ops-pick { width: 100%; min-width: 0; height: 30px; padding: 0; border-radius: 8px; }
 .ops-ed .ops-icons .ops-pick svg { width: 16px; height: 16px; }
 .ops-st { display: flex; flex-direction: column; gap: 6px; }
 .ops-crumbs { display: flex; align-items: center; gap: 2px; overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
@@ -4411,6 +4411,12 @@ html[data-motion="reduce"] .sess-pw { animation: none; }
 .ops-cr { display: flex; align-items: center; gap: 8px; }
 .ops-cr .ops-crumbs { flex: 1; min-width: 0; }
 .ops-cr .ops-tk { flex: none; font-size: calc(12px * var(--ts)); font-weight: 600; color: var(--gray-mid); }
-.ops-ed .ops-row { height: 44px; box-sizing: border-box; }
-.ops-ed .ops-tree { box-sizing: border-box; max-height: 318px; }
+.ops-ed .ops-row { flex: none; height: 52px; box-sizing: border-box; }
+.ops-ed .ops-tree { box-sizing: border-box; flex: 1 1 auto; min-height: 208px; max-height: calc(7 * 52px + 10px); }
+.ops-ed { flex: 1 0 auto; }
+.ops-ed > .lib-lab:last-child { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+.ops-ed > .lib-lab:last-child > .ops-st { flex: 1 1 auto; min-height: 0; }
+.ops-icw::after { display: none; }
+.ops-ck.on::after { border-color: var(--bg); }
+:root[data-theme="light"] .ops-cc svg { color: #fff; filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.65)); }
 
