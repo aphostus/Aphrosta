@@ -4399,4 +4399,12 @@ html[data-motion="reduce"] .sess-pw { animation: none; }
 .ops-go { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; color: var(--oc, var(--fg)); background: var(--glass-bg); border: 1px solid var(--oc, var(--glass-border)); backdrop-filter: blur(10px); touch-action: manipulation; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 .ops-go:active { transform: translate(-50%, -50%) scale(0.92); }
 .ops-go svg { width: 20px; height: 20px; }
+.ops-icw { position: relative; }
+.ops-icw::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 26px; pointer-events: none; border-radius: 0 0 12px 12px; background: linear-gradient(to top, color-mix(in srgb, var(--oc, #fff) 45%, transparent), transparent); box-shadow: 0 8px 14px -6px color-mix(in srgb, var(--oc, #fff) 55%, transparent); transition: opacity 0.2s; }
+.ops-icw.end::after { opacity: 0; }
+.ops-bar { justify-content: flex-end; }
+.ops-ed .ops-where[data-ops-total] { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.ops-tk { display: inline-flex; align-items: center; gap: 4px; }
+.ops-tk svg { width: 14px; height: 14px; }
+.ops-tsep { color: var(--gray-mid); opacity: 0.6; }
 

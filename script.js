@@ -2202,9 +2202,9 @@ document.addEventListener('click', async (e) => {
 
 /* ---------- OPERATIONS: storage + project list + popup shell (Patch 1-2) ---------- */
 const OPS_ICONS = ['navOperations', 'folder', 'brain', 'globe', 'rocket', 'stSkills', 'navAutomation', 'navWorlds', 'navAgents', 'navLibrary',
-  'navConnectors', 'memory', 'lock', 'clock', 'settings', 'link', 'card', 'sliders', 'pushpin', 'stStorage'];
+  'navConnectors', 'stMemory', 'lock', 'clock', 'settings', 'link', 'card', 'sliders', 'pushpin', 'stStorage'];
 const OPS_I = {
-  toggle: svg('<rect x="2" y="7" width="20" height="10" rx="5"/><circle cx="16" cy="12" r="2.6" fill="currentColor"/>', 22),
+  toggle: svg('<path d="M20 11a8 8 0 00-14.5-3.5L4 9"/><path d="M4 4v5h5"/><path d="M4 13a8 8 0 0014.5 3.5L20 15"/><path d="M20 20v-5h-5"/>', 22),
   sThis:  svg('<circle cx="12" cy="12" r="3.2"/><path d="M12 3v3.5M12 17.5V21M3 12h3.5M17.5 12H21"/>', 20),
   sAll:   svg('<path d="M12 3.5l8.5 4.5-8.5 4.5L3.5 8 12 3.5z"/><path d="M3.5 12.2l8.5 4.5 8.5-4.5"/><path d="M3.5 16.4l8.5 4.5 8.5-4.5"/>', 20),
   sUndo:  svg('<path d="M8.5 5L4 9.5 8.5 14"/><path d="M4 9.5h9a6 6 0 010 12h-4"/>', 20)
@@ -2461,7 +2461,7 @@ async function opsTreeInit(panel, project) {
     if (selSet.size) {
       return `<span class="ops-hint">${selSet.size} selected</span><button class="ops-tb" type="button" data-ops-act="copy">Copy</button><button class="ops-tb" type="button" data-ops-act="move">Move</button><button class="ops-tb" type="button" data-ops-act="del">Delete</button><button class="ops-tb ops-sq" type="button" data-ops-act="cancel" aria-label="Cancel">${ICONS.close}</button>`;
     }
-    return `<span class="ops-hint">${nWord(kids(sel).length)}</span><button class="ops-tb" type="button" data-ops-add="file">${ICONS.plus}<span>File</span></button><button class="ops-tb" type="button" data-ops-add="folder">${ICONS.plus}<span>Folder</span></button>`;
+    return `<button class="ops-tb" type="button" data-ops-add="file">${ICONS.plus}<span>File</span></button><button class="ops-tb" type="button" data-ops-add="folder">${ICONS.plus}<span>Folder</span></button>`;
   };
   const drawBar = () => { if (barEl) barEl.innerHTML = barHtml(); };
 
@@ -2497,7 +2497,7 @@ async function opsTreeInit(panel, project) {
       const fl = list.filter((x) => x.kind === 'file');
       const all = fl.reduce((s, x) => s + estTokens(x.text || ''), 0);
       const vis = fl.filter((x) => !effHidden(x)).reduce((s, x) => s + estTokens(x.text || ''), 0);
-      totEl.textContent = `Tokens: ${tokShort(all)} total \u00b7 ${tokShort(vis)} visible to AI`;
+      totEl.innerHTML = `<span class="ops-tk">${ICONS.eyeOff}${tokShort(all - vis)}</span><span class="ops-tsep">|</span><span class="ops-tk">${tokShort(all)}</span><span class="ops-tsep">|</span><span class="ops-tk">${ICONS.eye}${tokShort(vis)}</span>`;
     }
     findAll();
   };
@@ -2961,33 +2961,32 @@ const body = `
         </label>
       </div>
       <div class="lib-lab">Icon
-        <div class="ops-icons">${OPS_ICONS.map((k) => `<button class="ops-pick${k === cur.icon ? ' on' : ''}" type="button" data-ops-icon="${k}" aria-label="${k}">${ICONS[k]}</button>`).join('')}</div>
+        <div class="ops-icw"><div class="ops-icons">${OPS_ICONS.map((k) => `<button class="ops-pick${k === cur.icon ? ' on' : ''}" type="button" data-ops-icon="${k}" aria-label="${k}">${ICONS[k]}</button>`).join('')}</div></div>
       </div>
-      ${edit ? `<div class="lib-lab">Files
+      ${edit ? `<div class="lib-lab">
+        <div class="ops-fr">
+          <input class="lib-in ops-pill" data-ops-q type="text" placeholder="Find" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+          <input class="lib-in ops-pill" data-ops-r type="text" placeholder="Replace" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+          <button class="ops-go" type="button" data-ops-go data-mode="this" aria-label="Replace this match">${OPS_I.sThis}</button>
+        </div>
+        <div class="ops-hits" data-ops-hits></div>
+      </div>
+      <div class="lib-lab">Files
         <div class="ops-st">
           <div class="ops-crumbs" data-ops-crumbs></div>
           <div class="ops-bar" data-ops-bar></div>
           <div class="ops-tree" data-ops-tree></div>
         </div>
         <div class="ops-where" data-ops-total></div>
-      </div>
-      <div class="lib-lab">Find and replace
-        <div class="ops-fr">
-          <input class="lib-in ops-pill" data-ops-q type="text" placeholder="Find" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
-          <input class="lib-in ops-pill" data-ops-r type="text" placeholder="Replace" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
-          <button class="ops-go" type="button" data-ops-go data-mode="this" aria-label="Replace this match">${OPS_I.sThis}</button>
-        </div>
-        <div class="ops-fbar">
-          <span class="ops-count" data-ops-count></span>
-          <button class="ops-tb ops-sq" type="button" data-ops-prev aria-label="Previous match">${ICONS.chevL}</button>
-          <button class="ops-tb ops-sq" type="button" data-ops-next aria-label="Next match">${ICONS.chevronR}</button>
-        </div>
-        <div class="ops-hits" data-ops-hits></div>
       </div>` : '<p class="lib-note">Save first, then you can add files and folders.</p>'}
     </div>`;
   const p = fdOpen(edit ? 'Edit project' : 'New project', edit ? 'Operations' : 'Blank start', body,
     '<button class="fd-pill" type="button" data-fd="ops-save">Save</button>');
   const ed = p.querySelector('.ops-ed');
+  const icBox = p.querySelector('.ops-icons');
+  const icWrap = p.querySelector('.ops-icw');
+  const icGlow = () => { if (icBox && icWrap) icWrap.classList.toggle('end', icBox.scrollTop + icBox.clientHeight >= icBox.scrollHeight - 2); };
+  if (icBox) icBox.addEventListener('scroll', icGlow);
   if (edit) opsTreeInit(p, edit);
   p.addEventListener('click', async (e) => {
     const ic = e.target.closest('[data-ops-icon]');
