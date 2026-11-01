@@ -4423,6 +4423,6 @@ html[data-motion="reduce"] .sess-pw { animation: none; }
 
 /* portable find/replace + files card */
 .ops-ed .ops-portable { display: flex; flex-direction: column; margin-top: 22px; min-height: 61vh; padding-bottom: 14px; box-sizing: border-box; }
-.ops-ed .ops-portable .ops-tree { flex: 1 1 auto; min-height: 46vh; max-height: none; }
+.ops-ed .ops-portable .ops-tree { flex: none; min-height: 0; height: calc(7 * 52px + 10px); max-height: calc(7 * 52px + 10px); }
 .ops-go { background: var(--surface-2); backdrop-filter: none; -webkit-backdrop-filter: none; }
 
