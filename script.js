@@ -1865,6 +1865,7 @@ const LIB_MAX_CHUNKS = 4;
 const LIB_STOP = new Set('the and for you your with that this from have are was but not can how what when where about into out any all has had its our one more than then them they their there will would should could also just like make get use using'.split(' '));
 let libItems = [];
 let libContext = '';
+let opsContext = '';
 let libDbP = null;
 
 const libTokens = (s) => [...new Set((String(s).replace(/([a-z0-9])([A-Z])/g, '$1 $2').toLowerCase().match(/[a-z0-9\u00c0-\uffff]{3,}/g) || []).filter((w) => !LIB_STOP.has(w)))];
@@ -2258,6 +2259,96 @@ async function opsDelProject(id) {
 async function opsFiles(projectId) {
   const db = await opsDb();
   return libReq(db.transaction('files').objectStore('files').index('project').getAll(IDBKeyRange.only(projectId)));
+}
+
+const OPS_BUDGET = 9000;
+const OPS_WHOLE = 3000;
+
+function opsExcerpt(text, q, cap) {
+  const L = String(text).split('\n');
+  const hit = new Set();
+  if (q.length) {
+    L.forEach((l, i) => {
+      const t = l.toLowerCase();
+      if (q.some((w) => t.includes(w))) for (let k = Math.max(0, i - 2); k <= Math.min(L.length - 1, i + 4); k++) hit.add(k);
+    });
+  }
+  if (!hit.size) for (let k = 0; k < Math.min(L.length, 40); k++) hit.add(k);
+  let out = '';
+  let used = 0;
+  let last = -2;
+  for (const i of [...hit].sort((a, b) => a - b)) {
+    const row = (i + 1) + '| ' + L[i].slice(0, 200) + '\n';
+    if (used + row.length > cap) { out += '... (more not shown)\n'; break; }
+    if (i !== last + 1 && out) out += '...\n';
+    out += row;
+    used += row.length;
+    last = i;
+  }
+  return out.trimEnd();
+}
+
+async function opsContextFor(query, prev) {
+  if (!opsItems.length) await opsLoad();
+  if (!opsItems.length) return '';
+  const qs = String(query || '');
+  const hay = (qs + '\n' + String(prev || '')).toLowerCase();
+  const rx = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const want = opsItems.filter((p) => {
+    const nm = String(p.name || '').trim().toLowerCase();
+    return nm.length >= 2 && new RegExp('(^|[^a-z0-9])' + rx(nm) + '($|[^a-z0-9])').test(hay);
+  });
+  const names = new Set(hay.match(/[a-z0-9_\-]+\.[a-z0-9]{2,5}/g) || []);
+  let every = null;
+  if (names.size) {
+    const db = await opsDb();
+    every = await libReq(db.transaction('files').objectStore('files').getAll());
+    every.forEach((f) => {
+      if (f.kind !== 'file' || !names.has(String(f.name).toLowerCase())) return;
+      const p = opsItems.find((x) => x.id === f.project);
+      if (p && !want.includes(p)) want.push(p);
+    });
+  }
+  if (!want.length) {
+    if (!/\boperations?\b/i.test(qs)) return '';
+    return 'OPERATIONS (live data, available to you right now): the user keeps coding projects here. Projects: ' + opsItems.slice(0, 30).map((p) => '"' + p.name + '"').join(', ') + '. Ask the user to name a project or file to load it. Never say you cannot access Operations.';
+  }
+  let q = libTokens(qs);
+  if (!q.length) q = libTokens(String(prev || '').slice(0, 800));
+  let left = OPS_BUDGET;
+  const out = [];
+  for (const p of want.slice(0, 3)) {
+    const files = every ? every.filter((f) => f.project === p.id) : await opsFiles(p.id);
+    const byId = new Map(files.map((f) => [f.id, f]));
+    const off = (n) => { for (let x = n, g = 0; x && g < 50; x = byId.get(x.parent), g++) if (x.hidden) return true; return false; };
+    const pathOf = (n) => { const a = []; for (let x = n, g = 0; x && g < 50; x = byId.get(x.parent), g++) a.unshift(x.name); return a.join('/'); };
+    const vis = files.filter((f) => f.kind === 'file' && !off(f))
+      .map((f) => ({ f, path: pathOf(f), text: String(f.text || '') }))
+      .sort((a, b) => a.path.localeCompare(b.path));
+    const idx = vis.map((v) => '- ' + v.path + ' (' + (v.f.lang || 'txt') + ', ' + v.text.split('\n').length + ' lines, ' + v.text.length + ' chars)');
+    const scored = vis.map((v) => {
+      const low = v.text.toLowerCase();
+      const explicit = names.has(String(v.f.name).toLowerCase()) || hay.includes(v.path.toLowerCase());
+      const hits = q.filter((w) => low.includes(w)).length;
+      return { v, explicit, hits };
+    });
+    let pick = scored.filter((s) => s.explicit).concat(scored.filter((s) => !s.explicit && s.hits > 0).sort((a, b) => b.hits - a.hits).slice(0, 3));
+    let heads = false;
+    if (!pick.length) { pick = scored.slice(0, 4); heads = true; }
+    const parts = [];
+    for (const s of pick) {
+      if (left < 300) break;
+      const whole = !heads && s.explicit && s.v.text.length <= OPS_WHOLE && s.v.text.length <= left;
+      let body;
+      if (whole) body = s.v.text.split('\n').map((l, i) => (i + 1) + '| ' + l).join('\n');
+      else body = opsExcerpt(s.v.text, heads ? [] : q, Math.min(s.explicit ? 3500 : 2000, left));
+      if (!body) continue;
+      left -= body.length;
+      parts.push('[' + s.v.path + (whole ? ' (whole file)' : ' (excerpts)') + ']\n' + body);
+    }
+    out.push('OPERATIONS PROJECT "' + p.name + '"' + (p.description ? ' (' + String(p.description).slice(0, 300).replace(/\s+/g, ' ') + ')' : '') + '. Files visible to you:\n' + (idx.join('\n') || '(no visible files)') + (parts.length ? '\nLoaded now (line numbers are shown as "N| " and are not part of the code):\n' + parts.join('\n\n') : ''));
+  }
+  return 'OPERATIONS (live data, available to you right now): the user keeps coding projects here. When the user mentions a project by name or one of its files, they mean the data below. Never say you cannot access it. Only the file list and the parts shown are loaded, so never claim to have read the rest. If you need another file or other lines, say exactly which file and what to look for, and it will load with the next message. Do the request using only what is loaded.\n\n' + out.join('\n\n');
 }
 
 async function opsPutFile(f) {
@@ -10381,7 +10472,7 @@ function buildMessages() {
     images.forEach((a) => parts.push({ type: 'image_url', image_url: { url: a.dataUrl } }));
     return { role: 'user', content: parts };
   });
-  return [{ role: 'system', content: (libContext ? libContext + '\n\n' : '') + systemPrompt() + (libContext ? '\n\nReminder: the user\u2019s library items and excerpts are listed at the top of this message. Use them whenever the user asks about their library or files.' : '') + (pendingToolContext ? '\n\n' + pendingToolContext : '') + (editCtx ? '\n\n' + editCtx : '') + (shieldAlert ? '\n\n' + Shield.ALERT : '') + lockNote(ctx.filter((x) => x.content === LOCK_STUB).length) }, ...ctx];
+  return [{ role: 'system', content: (libContext ? libContext + '\n\n' : '') + (opsContext ? opsContext + '\n\n' : '') + systemPrompt() + (libContext ? '\n\nReminder: the user\u2019s library items and excerpts are listed at the top of this message. Use them whenever the user asks about their library or files.' : '') + (pendingToolContext ? '\n\n' + pendingToolContext : '') + (editCtx ? '\n\n' + editCtx : '') + (shieldAlert ? '\n\n' + Shield.ALERT : '') + lockNote(ctx.filter((x) => x.content === LOCK_STUB).length) }, ...ctx];
 }
 
 const ADAPTERS = {
@@ -10828,6 +10919,10 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
   const sLib = Shield.clean(libContext);
   pendingToolContext = sTool.text ? Shield.wrap(sTool.text, 'web-or-tool') : '';
   libContext = sLib.text ? Shield.wrap(sLib.text, 'library') : '';
+  const prevAi = [...session.messages].reverse().find((m) => m.role === 'assistant' && !m.hidden && m !== ai && m.content);
+  opsContext = await opsContextFor(seedText, prevAi ? String(prevAi.content) : '').catch((e) => { console.warn('[E02] Operations lookup failed:', e); return ''; });
+  const sOps = Shield.clean(opsContext);
+  opsContext = sOps.text ? Shield.wrap(sOps.text, 'operations') : '';
   editCtx = '';
   if (!isContinue) {
     const fmc = await fmPrepare(seedText, session).catch(() => null);
