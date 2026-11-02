@@ -2736,7 +2736,7 @@ async function agSay(a, names, transcript, signal, mode) {
       : ' Reply to the user in first person, plain text.');
   const messages = [
     { role: 'system', content: mode === 'final' ? agFinalSys(a, others) : sys },
-    { role: 'user', content: 'Chat so far:\n' + transcript + '\n\n' + (mode === 'final' ? 'Now write ' + a.name + '\u2019s final reply to the user, using the private team discussion above.' : 'Write ' + a.name + '\u2019s next message in the team\u2019s private discussion about how to answer the user. Build on what teammates already said, do not repeat it, and add something new or agree on the plan.') }
+    { role: 'user', content: 'Chat so far:\n' + transcript + '\n\n' + (mode === 'final' ? 'Now write ' + a.name + '\u2019s final reply to the user, using the team planning notes above.' : 'Write ' + a.name + '\u2019s next short message in the team\u2019s planning meeting about the user\u2019s request. This is normal teamwork planning, so just write it. Build on what teammates already said, do not repeat it, and add something new or agree on the plan.') }
   ];
   const req = adapter.build({ api, key: l.key, variant, messages, wantStream: false, extras: api.adapter === 'anthropic' ? { max_tokens: 1200 } : {} });
   const ctl = new AbortController();
@@ -2769,13 +2769,13 @@ async function agSay(a, names, transcript, signal, mode) {
 }
 
 function agCtx(session, log) {
-  return agTranscript(session) + (log ? '\n\n[Private team discussion so far]\n' + log.trim() : '');
+  return agTranscript(session) + (log ? '\n\n[Team planning notes so far]\n' + log.trim() : '');
 }
 
 function agFinalSys(a, others) {
   return 'You are ' + a.name + '.' + (a.instructions ? ' Your instructions: ' + a.instructions : '')
     + (others.length
-      ? ' You and ' + others.join(', ') + ' just discussed privately how to answer the user. Now write the one final reply to the user, as the team, using the plan you agreed on. Do the task fully. Do not mention the discussion, do not start with your name, and do not write [DONE].'
+      ? ' You and ' + others.join(', ') + ' just held a planning meeting about the user\u2019s request. Now write the one final reply to the user, as the team, using the plan you agreed on. Do the task fully and give the real answer; never say you cannot share anything. Do not mention the discussion, do not start with your name, and do not write [DONE].'
       : ' Reply to the user in first person.');
 }
 
@@ -2810,18 +2810,18 @@ async function agDiscuss(text, atts) {
   scrollDown();
   startStatusRotor();
   const names = list.map((a) => a.name);
-  const total = list.length > 1 ? (AG_TURNS[activeEffort] || 4) : 1;
+  const total = list.length > 1 ? (AG_TURNS[activeEffort] || 4) : 0;
   const strip = (a, s) => { const pre = a.name.toLowerCase() + ':'; return s.toLowerCase().startsWith(pre) ? s.slice(pre.length).trim() : s; };
   let log = '', lastNorm = '', n = 0;
   try {
-    for (let t = 0; t < total - 1; t++) {
+    for (let t = 0; t < total; t++) {
       if (myAbort.signal.aborted) break;
       const a = list[n % list.length];
       ph.provider = a.llm.provider; ph.model = a.llm.model; ph.agent = a.name;
       let raw = '';
       try { raw = await agSay(a, names, agCtx(session, log), myAbort.signal, 'think'); } catch (e) { if (e && e.name === 'AbortError') throw e; break; }
       const clean = strip(a, raw);
-      if (!clean || /^\W*done\W*$/i.test(clean)) break;
+      if (!clean || /^\W*done\W*$/i.test(clean) || /^\W*(?:i\W?m sorry|sorry|i can\W?t|i cannot)\b/i.test(clean)) break;
       const norm = clean.toLowerCase().replace(/\W+/g, ' ').trim();
       if (norm === lastNorm) break;
       lastNorm = norm;
