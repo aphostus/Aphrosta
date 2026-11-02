@@ -1419,7 +1419,6 @@ const Sidebar = (user) => `
         <span class="profile-name">${esc(user.displayName || 'User')}</span>
         <span class="profile-plan">Free plan</span>
       </div>
-      <button class="fd-ic arch-btn wrld-btn" type="button" data-action="nav-worlds" aria-label="Worlds" title="Worlds">${ICONS.navWorlds}</button>
       <button class="fd-ic arch-btn" type="button" data-action="archive" aria-label="Archive" title="Archive">${ICONS.archive}</button>
       <button class="pill-btn" type="button" data-action="upgrade">Upgrade</button>
     </div>
@@ -11293,6 +11292,46 @@ function openWorlds() {
   });
 }
 
+/* long press on the profile (menu): 0.5s glow, 1s opens the Worlds popup */
+(() => {
+  const SEL = '.side-foot .avatar, .side-foot .profile-meta';
+  let glowT = 0, fireT = 0, glowEl = null, active = false, sx = 0, sy = 0;
+  const lpReset = () => {
+    clearTimeout(glowT);
+    clearTimeout(fireT);
+    if (glowEl) glowEl.classList.remove('lp-glow');
+    glowEl = null;
+    active = false;
+  };
+  document.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    const hit = e.target.closest ? e.target.closest(SEL) : null;
+    if (!hit) return;
+    lpReset();
+    active = true;
+    sx = e.clientX;
+    sy = e.clientY;
+    const av = hit.closest('.side-foot').querySelector('.avatar');
+    glowT = setTimeout(() => {
+      glowEl = av;
+      if (av) av.classList.add('lp-glow');
+      haptic(10);
+    }, 500);
+    fireT = setTimeout(() => {
+      lpReset();
+      haptic(25);
+      openWorlds();
+    }, 1000);
+  });
+  document.addEventListener('pointermove', (e) => {
+    if (active && Math.hypot(e.clientX - sx, e.clientY - sy) > 10) lpReset();
+  });
+  ['pointerup', 'pointercancel'].forEach((ev) => document.addEventListener(ev, lpReset));
+  document.addEventListener('contextmenu', (e) => {
+    if (e.target.closest && e.target.closest(SEL)) e.preventDefault();
+  });
+})();
+
 async function deleteSession(id) {
   const s = sessions.find((x) => x.id === id);
   if (!s) return;
@@ -13753,7 +13792,7 @@ const KB_SHORTCUTS = [
   { g: 'Navigate', t: 'Show or hide the sidebar', k: 'mod+shift+KeyS', run: () => toggleSidebar() },
   { g: 'Navigate', t: 'Previous session', k: 'alt+ArrowUp', run: () => kbStep(-1) },
   { g: 'Navigate', t: 'Next session', k: 'alt+ArrowDown', run: () => kbStep(1) },
-  { g: 'Navigate', t: 'Open Worlds', k: 'alt+Digit1', run: () => kbClickSel('[data-action="nav-worlds"]') },
+  { g: 'Navigate', t: 'Open Worlds', k: 'alt+Digit1', run: () => openWorlds() },
   { g: 'Navigate', t: 'Open Agents', k: 'alt+Digit2', run: () => kbClickSel('[data-action="nav-agent"]') },
   { g: 'Navigate', t: 'Open Library', k: 'alt+Digit3', run: () => kbClickSel('[data-action="nav-data"]') },
   { g: 'Navigate', t: 'Jump to the top of the chat', k: 'mod+Home', when: (e) => !kbTyping(e.target), run: () => kbScroll(true) },

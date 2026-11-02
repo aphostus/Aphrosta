@@ -4262,7 +4262,9 @@ mark.ab-mark {
 .wrld-ring { transform-origin: 12px 12px; animation: wrldSpin 6s linear infinite; }
 @keyframes wrldSpin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .wrld-ring { animation: none; } }
-.arch-btn.wrld-btn svg { width: 28px; height: 28px; }
+.side-foot .avatar, .side-foot .profile-meta { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-user-drag: none; }
+.side-foot .avatar.lp-glow { border-color: var(--accent); animation: lpGlow 0.9s ease-in-out infinite alternate; }
+@media (prefers-reduced-motion: reduce) { .side-foot .avatar.lp-glow { animation: none; box-shadow: 0 0 18px rgba(var(--accent-rgb), 0.55); } }
 .arch-list { display: flex; flex-direction: column; gap: 8px; }
 .arch-row { align-items: center; padding: 8px 10px; }
 .arch-row .fd-ic { width: 30px; height: 30px; }
