@@ -7834,8 +7834,16 @@ const Live = (() => {
           <div class="live-ball" data-live="ball">
             <div class="live-pop">
               <svg class="live-svg" viewBox="0 0 200 200" aria-hidden="true">
-                <defs><radialGradient id="lvBody" cx="36%" cy="30%" r="78%"><stop offset="0" style="stop-color:var(--live-hi)"/><stop offset="1" style="stop-color:var(--live-lo)"/></radialGradient></defs>
+                <defs>
+                  <radialGradient id="lvBody" cx="34%" cy="28%" r="85%"><stop offset="0" style="stop-color:var(--live-hi)"/><stop offset=".55" style="stop-color:color-mix(in srgb,var(--live-hi) 78%,var(--live-lo))"/><stop offset="1" style="stop-color:var(--live-lo)"/></radialGradient>
+                  <radialGradient id="lvRim" cx="50%" cy="50%" r="50%"><stop offset=".68" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".34"/></radialGradient>
+                  <radialGradient id="lvSpec" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#fff" stop-opacity=".9"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+                  <radialGradient id="lvBounce" cx="50%" cy="100%" r="60%"><stop offset="0" stop-color="#fff" stop-opacity=".28"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+                  <clipPath id="lvClip"><circle cx="100" cy="100" r="88"/></clipPath>
+                </defs>
                 <circle cx="100" cy="100" r="88" fill="url(#lvBody)"/>
+                <g clip-path="url(#lvClip)"><circle cx="100" cy="100" r="88" fill="url(#lvRim)"/><ellipse cx="100" cy="176" rx="64" ry="26" fill="url(#lvBounce)"/></g>
+                <ellipse cx="68" cy="52" rx="40" ry="22" transform="rotate(-32 68 52)" fill="url(#lvSpec)"/>
                 <g class="lv-look">
                   <path class="lv-brow lv-brow-l" d="M56 70H84"/><path class="lv-brow lv-brow-r" d="M116 70H144"/>
                   <g class="lv-eyes">
