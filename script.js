@@ -2715,6 +2715,166 @@ const AG_AV_PART = {
   }
 };
 
+const AG_AV_CATS = ['hat', 'glasses', 'shoes', 'inhand', 'offhand', 'face', 'neck', 'cape', 'hair', 'aura', 'pet', 'outfit', 'expr'];
+const agPart = (c, id) => (id && id !== 'none' && AG_AV_PART[c] && AG_AV_PART[c][id]) || '';
+Object.assign(AG_AV_PART.hat, {
+  cowboy: '<ellipse cx="32" cy="15" rx="15" ry="3.2" fill="#8b5a2b"/><path d="M23 15Q23 6 32 6Q41 6 41 15Z" fill="#a8703a"/>',
+  chef: '<rect x="23" y="11" width="18" height="6" fill="#f5f5f5"/><circle cx="26" cy="9" r="5" fill="#f5f5f5"/><circle cx="32" cy="6" r="5.5" fill="#f5f5f5"/><circle cx="38" cy="9" r="5" fill="#f5f5f5"/>',
+  pirate: '<path d="M17 16Q32 -2 47 16Q32 12 17 16Z" fill="#26262a"/><circle cx="32" cy="9" r="2" fill="#f5f5f5"/>',
+  helmet: '<path d="M18 19Q18 4 32 4Q46 4 46 19Z" fill="#8e8e93"/><rect x="31" y="4" width="2" height="12" fill="#c7c7cc"/>',
+  santa: '<path d="M19 17Q22 3 36 5Q46 8 44 17Z" fill="#ff453a"/><rect x="18" y="14" width="28" height="4.5" rx="2.2" fill="#fff"/><circle cx="40" cy="4" r="3" fill="#fff"/>'
+});
+Object.assign(AG_AV_PART.glasses, {
+  heart: '<g fill="#ff6bb5"><path d="M20 28Q23 24 26 28Q29 24 32 28Q26 36 20 28Z"/><path d="M32 28Q35 24 38 28Q41 24 44 28Q38 36 32 28Z"/></g>',
+  star: '<g fill="#ffd60a" stroke="#c79a00" stroke-width=".8"><path d="M26 25l1.8 3.7 4 .6-2.9 2.8.7 4L26 34l-3.6 1.9.7-4-2.9-2.8 4-.6z"/><path d="M38 25l1.8 3.7 4 .6-2.9 2.8.7 4L38 34l-3.6 1.9.7-4-2.9-2.8 4-.6z"/></g>',
+  goggles: '<rect x="18" y="26" width="28" height="9" rx="4.5" fill="#40c8e0" fill-opacity=".5" stroke="#111" stroke-width="1.6"/><path d="M32 26v9" stroke="#111" stroke-width="1.6"/>',
+  threed: '<g fill-opacity=".6" stroke="#111" stroke-width="1.2"><rect x="20" y="27" width="11" height="8" rx="1.5" fill="#ff453a"/><rect x="33" y="27" width="11" height="8" rx="1.5" fill="#0a84ff"/></g>',
+  visor: '<rect x="18" y="27" width="28" height="7" rx="3" fill="#30d158" fill-opacity=".75" stroke="#111" stroke-width="1.2"/>',
+  eyepatch: '<path d="M20 25L44 36" stroke="#111" stroke-width="1.2"/><ellipse cx="38" cy="31" rx="5" ry="4.5" fill="#111"/>',
+  cateye: '<g fill="none" stroke="#bf5af2" stroke-width="1.8"><path d="M20 27L31 29Q31 35 25 35Q20 35 20 27Z"/><path d="M44 27L33 29Q33 35 39 35Q44 35 44 27Z"/></g>',
+  pixel: '<g fill="#111"><rect x="19" y="27" width="26" height="3"/><rect x="19" y="30" width="12" height="4"/><rect x="33" y="30" width="12" height="4"/></g>'
+});
+Object.assign(AG_AV_PART.shoes, {
+  heels: '<g fill="#e0245e"><path d="M19 47h8l1 5h-10z"/><path d="M37 47h8l1 5h-10z"/><rect x="18" y="52" width="2" height="3"/><rect x="36" y="52" width="2" height="3"/></g>',
+  skates: '<g fill="#f2f2f2" stroke="#8e8e93"><rect x="18" y="47" width="12" height="5" rx="2"/><rect x="34" y="47" width="12" height="5" rx="2"/></g><g fill="#0a84ff"><rect x="18" y="53" width="12" height="1.6"/><rect x="34" y="53" width="12" height="1.6"/></g>',
+  clogs: '<g fill="#d9a45b"><ellipse cx="24" cy="51" rx="7" ry="3.4"/><ellipse cx="40" cy="51" rx="7" ry="3.4"/></g>',
+  socks: '<g fill="#ffd60a"><rect x="19" y="46" width="10" height="6" rx="2.5"/><rect x="35" y="46" width="10" height="6" rx="2.5"/></g><g fill="#ff453a"><rect x="19" y="47" width="10" height="1.6"/><rect x="35" y="47" width="10" height="1.6"/></g>',
+  rocket: '<g fill="#d1d1d6"><rect x="20" y="46" width="8" height="6" rx="2"/><rect x="36" y="46" width="8" height="6" rx="2"/></g><g fill="#ff9f0a"><path d="M21 52h6l-3 4z"/><path d="M37 52h6l-3 4z"/></g>',
+  wellies: '<g fill="#30d158"><rect x="19" y="44" width="10" height="9" rx="2.5"/><rect x="35" y="44" width="10" height="9" rx="2.5"/></g>',
+  bunny: '<g fill="#ffb3d1"><ellipse cx="24" cy="51" rx="7" ry="3.6"/><ellipse cx="40" cy="51" rx="7" ry="3.6"/><ellipse cx="20" cy="47" rx="1.6" ry="3"/><ellipse cx="44" cy="47" rx="1.6" ry="3"/></g>',
+  hover: '<g fill="#40c8e0" fill-opacity=".8"><ellipse cx="24" cy="53" rx="8" ry="2.2"/><ellipse cx="40" cy="53" rx="8" ry="2.2"/></g><g fill="#fff"><ellipse cx="24" cy="50.5" rx="6" ry="2.6"/><ellipse cx="40" cy="50.5" rx="6" ry="2.6"/></g>'
+});
+Object.assign(AG_AV_PART.inhand, {
+  umbrella: '<rect x="50.3" y="26" width="1.6" height="22" fill="#5c3a1b"/><path d="M42 27Q51 14 60 27Q55 24 51 27Q47 24 42 27Z" fill="#ff453a"/>',
+  lollipop: '<rect x="50.4" y="28" width="1.6" height="20" fill="#f2f2f2"/><circle cx="51" cy="23" r="6" fill="#ff6bb5"/><circle cx="51" cy="23" r="2.4" fill="#fff"/>',
+  magnifier: '<rect x="50" y="33" width="2" height="15" rx="1" fill="#8b5a2b"/><circle cx="51" cy="28" r="5.5" fill="#9fdcff" fill-opacity=".5" stroke="#8e8e93" stroke-width="1.6"/>',
+  mic: '<rect x="50.3" y="30" width="1.8" height="18" fill="#555"/><circle cx="51.2" cy="26" r="5" fill="#8e8e93"/>',
+  brush: '<rect x="50.2" y="30" width="2" height="18" rx="1" fill="#8b5a2b"/><path d="M49 30Q51 18 53 30Z" fill="#bf5af2"/>',
+  icecream: '<path d="M47 32L51 48L55 32Z" fill="#d9a45b"/><circle cx="51" cy="29" r="5" fill="#ffb3d1"/><circle cx="51" cy="24" r="3.5" fill="#f2f2f2"/>',
+  flag: '<rect x="50.2" y="14" width="1.8" height="34" fill="#8e8e93"/><path d="M52 15h10l-3 4 3 4H52z" fill="#ff453a"/>'
+});
+Object.assign(AG_AV_PART.offhand, {
+  phone: '<rect x="7" y="29" width="10" height="17" rx="2" fill="#26262a"/><rect x="8.5" y="31" width="7" height="12" rx="1" fill="#40c8e0"/>',
+  map: '<path d="M4 32l5 2 5-2 5 2v12l-5-2-5 2-5-2z" fill="#f5deb3" stroke="#8b5a2b" stroke-width="1"/><path d="M9 34v12M14 32v12" stroke="#8b5a2b" stroke-width=".8"/>',
+  gift: '<rect x="6" y="33" width="14" height="13" rx="1.5" fill="#ff453a"/><rect x="12" y="33" width="2" height="13" fill="#ffd60a"/><rect x="6" y="38" width="14" height="2" fill="#ffd60a"/>',
+  potion: '<path d="M10 28h6v5l4 9q1 5-7 5t-7-5l4-9z" fill="#bf5af2" fill-opacity=".85" stroke="#8e8e93" stroke-width="1"/><rect x="10" y="26" width="6" height="3" fill="#8b5a2b"/>',
+  trophy: '<path d="M7 29h12v6q0 6-6 6t-6-6z" fill="#ffd60a"/><rect x="12" y="41" width="2" height="4" fill="#c79a00"/><rect x="9" y="45" width="8" height="2.4" rx="1" fill="#c79a00"/>',
+  clipboard: '<rect x="6" y="28" width="14" height="19" rx="1.8" fill="#8b5a2b"/><rect x="8" y="31" width="10" height="14" fill="#fff"/><rect x="10" y="26.5" width="6" height="3.5" rx="1" fill="#8e8e93"/>',
+  apple: '<circle cx="13" cy="38" r="6" fill="#ff453a"/><rect x="12.4" y="29" width="1.4" height="4" fill="#5c3a1b"/><path d="M14 31q4-3 5 0q-3 2-5 0z" fill="#30d158"/>'
+});
+AG_AV_PART.face = {
+  blush: '<g fill="#ff6b8b" fill-opacity=".55"><ellipse cx="22" cy="36" rx="3.2" ry="2"/><ellipse cx="42" cy="36" rx="3.2" ry="2"/></g>',
+  mustache: '<path d="M32 36Q28 33 24 36Q28 39 32 37Q36 39 40 36Q36 33 32 36Z" fill="#5c3a1b"/>',
+  goatee: '<path d="M28 40Q32 48 36 40Q32 42 28 40Z" fill="#5c3a1b"/>',
+  freckles: '<g fill="#8b5a2b"><circle cx="22" cy="35" r=".9"/><circle cx="25" cy="36.5" r=".9"/><circle cx="23.5" cy="38" r=".9"/><circle cx="39" cy="35" r=".9"/><circle cx="42" cy="36.5" r=".9"/><circle cx="40.5" cy="38" r=".9"/></g>',
+  scar: '<path d="M41 25L45 36" stroke="#c4281f" stroke-width="1.4"/><path d="M40 29l3 1.4M42 33l3 1.4" stroke="#c4281f" stroke-width="1"/>',
+  bandaid: '<rect x="35" y="32" width="9" height="4" rx="2" transform="rotate(-25 39 34)" fill="#f5c8a0" stroke="#c9936a" stroke-width=".6"/>',
+  warpaint: '<g stroke="#ff453a" stroke-width="1.6" stroke-linecap="round"><path d="M20 34l5 1M20 37l5 .5M44 34l-5 1M44 37l-5 .5"/></g>',
+  clownnose: '<circle cx="32" cy="34.5" r="3.2" fill="#ff453a"/><circle cx="31" cy="33.5" r=".9" fill="#fff" fill-opacity=".7"/>',
+  mask: '<path d="M19 33Q32 31 45 33L43 42Q32 46 21 42Z" fill="#a5d8ff" stroke="#6fb4e8" stroke-width=".8"/><path d="M22 36h20M22 39h20" stroke="#6fb4e8" stroke-width=".6"/>',
+  whiskers: '<g stroke="#111" stroke-width=".9"><path d="M18 34l7 1M18 37l7-.5M46 34l-7 1M46 37l-7-.5"/></g><path d="M31 34h2l-1 1.5z" fill="#ff6bb5"/>',
+  fangs: '<path d="M28.5 39l1.2 3 1.2-3zM33.1 39l1.2 3 1.2-3z" fill="#fff" stroke="#999" stroke-width=".4"/>',
+  tear: '<path d="M26 34Q23.5 38 26 40Q28.5 38 26 34Z" fill="#6fd0ff"/>'
+};
+AG_AV_PART.neck = {
+  scarf: '<path d="M20 44Q32 50 44 44L45 48Q32 54 19 48Z" fill="#ff453a"/><rect x="38" y="46" width="5" height="9" rx="1" fill="#c4281f"/>',
+  bowtie: '<path d="M32 46L24 42v8zM32 46L40 42v8z" fill="#ff453a"/><circle cx="32" cy="46" r="2" fill="#c4281f"/>',
+  tie: '<path d="M30 45h4l1.5 8-3.5 2.5-3.5-2.5z" fill="#0a84ff"/><path d="M30 45h4l-1 2h-2z" fill="#0866c2"/>',
+  necklace: '<path d="M21 43Q32 54 43 43" fill="none" stroke="#ffd60a" stroke-width="1.6"/><circle cx="32" cy="50" r="2.4" fill="#ff6bb5"/>',
+  pearls: '<g fill="#f5f5f5" stroke="#bbb" stroke-width=".4"><circle cx="22" cy="44" r="1.8"/><circle cx="25" cy="47" r="1.8"/><circle cx="29" cy="49" r="1.8"/><circle cx="35" cy="49" r="1.8"/><circle cx="39" cy="47" r="1.8"/><circle cx="42" cy="44" r="1.8"/></g>',
+  bell: '<path d="M21 44Q32 50 43 44" fill="none" stroke="#ff453a" stroke-width="2"/><circle cx="32" cy="50" r="2.6" fill="#ffd60a"/>',
+  dogtag: '<path d="M22 43Q32 50 42 43" fill="none" stroke="#8e8e93" stroke-width="1.2"/><rect x="29" y="48" width="6" height="8" rx="2" fill="#d1d1d6" stroke="#8e8e93"/>',
+  bandana: '<path d="M19 44h26L32 56z" fill="#ff453a"/><g fill="#fff"><circle cx="26" cy="47" r="1"/><circle cx="32" cy="50" r="1"/><circle cx="38" cy="47" r="1"/></g>',
+  lei: '<circle cx="22" cy="44" r="2.6" fill="#ff6bb5"/><circle cx="26" cy="48" r="2.6" fill="#ffd60a"/><circle cx="32" cy="50" r="2.6" fill="#ff9f0a"/><circle cx="38" cy="48" r="2.6" fill="#ffd60a"/><circle cx="42" cy="44" r="2.6" fill="#ff6bb5"/>',
+  medal: '<path d="M26 43l6 8 6-8" fill="none" stroke="#0a84ff" stroke-width="2"/><circle cx="32" cy="53" r="3.6" fill="#ffd60a" stroke="#c79a00"/>',
+  chain: '<path d="M21 43Q32 52 43 43" fill="none" stroke="#c7c7cc" stroke-width="2.4" stroke-dasharray="2.4 1.4"/>',
+  ribbon: '<path d="M20 45Q32 50 44 45" fill="none" stroke="#ff6bb5" stroke-width="2.4"/><path d="M32 48l-5 5M32 48l5 5" stroke="#ff6bb5" stroke-width="2.2" stroke-linecap="round"/>'
+};
+AG_AV_PART.cape = {
+  cape: '<path d="M20 22Q32 14 44 22L52 52H12z" fill="#ff453a"/>',
+  angel: '<g fill="#f5f5f5" stroke="#d1d1d6"><path d="M18 28Q4 20 4 36Q10 34 18 40z"/><path d="M46 28Q60 20 60 36Q54 34 46 40z"/></g>',
+  bat: '<g fill="#3a3a44"><path d="M18 28L4 22 8 30 5 38 14 34 18 40z"/><path d="M46 28L60 22 56 30 59 38 50 34 46 40z"/></g>',
+  butterfly: '<g fill-opacity=".85"><path d="M19 26Q4 10 5 28Q6 36 19 36z" fill="#bf5af2"/><path d="M45 26Q60 10 59 28Q58 36 45 36z" fill="#bf5af2"/><ellipse cx="11" cy="40" rx="6" ry="5" fill="#ff6bb5"/><ellipse cx="53" cy="40" rx="6" ry="5" fill="#ff6bb5"/></g>',
+  backpack: '<rect x="18" y="20" width="28" height="30" rx="7" fill="#0a84ff"/><rect x="24" y="36" width="16" height="9" rx="2" fill="#0866c2"/>',
+  jetpack: '<g fill="#8e8e93"><rect x="14" y="22" width="9" height="22" rx="3"/><rect x="41" y="22" width="9" height="22" rx="3"/></g><g fill="#ff9f0a"><path d="M15 44h7l-3.500 9zM42 44h7l-3.500 9z"/></g>',
+  tail: '<path d="M44 44Q60 44 58 28Q56 36 44 38z" fill="#ff9f0a"/>',
+  shell: '<ellipse cx="32" cy="34" rx="20" ry="18" fill="#30d158"/><path d="M32 16v36M18 24l28 20M46 24L18 44" stroke="#1fa347" stroke-width="1.2" fill="none"/>',
+  quiver: '<rect x="42" y="16" width="8" height="26" rx="3" transform="rotate(20 46 29)" fill="#8b5a2b"/><g stroke="#d1d1d6" stroke-width="1.4"><path d="M47 12l2 8M51 14l1 8"/></g>',
+  fairy: '<g fill="#9fe8ff" fill-opacity=".7" stroke="#6fb4e8"><ellipse cx="12" cy="24" rx="8" ry="12" transform="rotate(-25 12 24)"/><ellipse cx="52" cy="24" rx="8" ry="12" transform="rotate(25 52 24)"/></g>',
+  fins: '<g fill="#40c8e0"><path d="M30 14h4l-2-9z"/><path d="M16 30L4 24 8 36z"/><path d="M48 30L60 24 56 36z"/></g>',
+  guitar: '<rect x="42" y="6" width="3" height="26" transform="rotate(25 43 20)" fill="#8b5a2b"/><ellipse cx="50" cy="42" rx="8" ry="10" fill="#d9a45b" transform="rotate(25 50 42)"/>'
+};
+AG_AV_PART.hair = {
+  bunny: '<ellipse cx="25" cy="7" rx="3.2" ry="8" fill="#f5f5f5" stroke="#d1d1d6"/><ellipse cx="39" cy="7" rx="3.2" ry="8" fill="#f5f5f5" stroke="#d1d1d6"/><ellipse cx="25" cy="8" rx="1.4" ry="5" fill="#ffb3d1"/><ellipse cx="39" cy="8" rx="1.4" ry="5" fill="#ffb3d1"/>',
+  catears: '<path d="M20 17L22 5L30 14zM44 17L42 5L34 14z" fill="#3a3a44"/><path d="M23 14L23.5 8L27 13zM41 14L40.5 8L37 13z" fill="#ffb3d1"/>',
+  horns: '<path d="M22 16Q18 6 24 4Q22 10 27 14zM42 16Q46 6 40 4Q42 10 37 14z" fill="#ff453a"/>',
+  antlers: '<g stroke="#8b5a2b" stroke-width="2" fill="none" stroke-linecap="round"><path d="M25 15L22 5M22 9L17 7M22 5L24 2M39 15L42 5M42 9L47 7M42 5L40 2"/></g>',
+  antenna: '<path d="M32 15Q30 8 34 3" stroke="#555" stroke-width="1.6" fill="none"/><circle cx="34" cy="3" r="2.6" fill="#ff453a"/>',
+  bow: '<path d="M32 12L22 6v12zM32 12L42 6v12z" fill="#ff6bb5"/><circle cx="32" cy="12" r="2.4" fill="#e0245e"/>',
+  mohawk: '<path d="M26 15L28 2L31 12L33 0L36 12L38 4L40 15Z" fill="#30d158"/>',
+  afro: '<g fill="#3a2a1b"><circle cx="22" cy="12" r="6"/><circle cx="32" cy="8" r="7"/><circle cx="42" cy="12" r="6"/></g>',
+  sprout: '<rect x="31.2" y="8" width="1.6" height="8" fill="#30d158"/><path d="M32 9Q24 4 24 11Q30 12 32 9zM32 9Q40 4 40 11Q34 12 32 9z" fill="#30d158"/>',
+  bun: '<circle cx="32" cy="9" r="6" fill="#5c3a1b"/><rect x="26" y="13" width="12" height="2" fill="#ff453a"/>',
+  unicorn: '<path d="M32 1L35 15H29z" fill="#ffd60a"/><path d="M30 10L34 8M29.5 13L35 11" stroke="#ff9f0a" stroke-width="1"/>',
+  headphones: '<path d="M19 20Q19 4 32 4Q45 4 45 20" fill="none" stroke="#26262a" stroke-width="2.4"/><rect x="16" y="17" width="5" height="9" rx="2" fill="#bf5af2"/><rect x="43" y="17" width="5" height="9" rx="2" fill="#bf5af2"/>'
+};
+AG_AV_PART.aura = {
+  glow: '<circle cx="32" cy="31" r="26" fill="#ffd60a" fill-opacity=".28"/><circle cx="32" cy="31" r="21" fill="#ffd60a" fill-opacity=".22"/>',
+  sparkles: '<g fill="#ffd60a"><path d="M10 14l1.6 4 4 1.6-4 1.6L10 25l-1.6-3.8-4-1.6 4-1.6z"/><path d="M52 10l1.2 3 3 1.2-3 1.2L52 18l-1.2-3.4-3-1.2 3-1.2z"/><path d="M54 40l1.4 3.4 3.4 1.4-3.4 1.4L54 50l-1.4-3.8-3.4-1.4 3.4-1.4z"/><path d="M8 44l1 2.6 2.6 1-2.6 1L8 52l-1-3.4-2.6-1 2.6-1z"/></g>',
+  hearts: '<g fill="#ff6bb5"><path d="M10 14q-4-4-1-7 2-2 4 0 2-2 4 0 3 3-1 7z"/><path d="M50 22q-3-3-1-5 1.6-1.6 3 0 1.6-1.6 3 0 2 2-1 5z"/><path d="M52 48q-3-3-1-5 1.6-1.6 3 0 1.6-1.6 3 0 2 2-1 5z"/></g>',
+  flames: '<g fill="#ff9f0a"><path d="M8 52Q2 38 12 28Q10 38 16 40Q14 30 20 20Q20 34 26 36z"/><path d="M56 52Q62 38 52 28Q54 38 48 40Q50 30 44 20Q44 34 38 36z"/></g><g fill="#ff453a" fill-opacity=".7"><path d="M10 52Q8 44 14 38Q14 46 18 48z"/><path d="M54 52Q56 44 50 38Q50 46 46 48z"/></g>',
+  snow: '<g fill="#fff"><circle cx="9" cy="14" r="2"/><circle cx="54" cy="12" r="2.4"/><circle cx="14" cy="36" r="1.6"/><circle cx="52" cy="34" r="2"/><circle cx="46" cy="54" r="1.8"/><circle cx="18" cy="54" r="2.2"/></g>',
+  notes: '<g fill="#bf5af2"><path d="M8 18v-9l7-1.6v9" fill="none" stroke="#bf5af2" stroke-width="1.6"/><circle cx="6.5" cy="19" r="2.2"/><circle cx="13.5" cy="16.4" r="2.2"/><path d="M50 40v-9l6-1.4v9" fill="none" stroke="#bf5af2" stroke-width="1.6"/><circle cx="48.5" cy="41" r="2"/><circle cx="54.5" cy="38.6" r="2"/></g>',
+  lightning: '<g fill="#ffd60a"><path d="M10 10l-5 12h5l-3 12 10-15h-6z"/><path d="M54 24l-5 12h5l-3 12 10-15h-6z"/></g>',
+  rainbow: '<g fill="none" stroke-width="2.4"><path d="M6 36Q32 -2 58 36" stroke="#ff453a"/><path d="M9 36Q32 2 55 36" stroke="#ffd60a"/><path d="M12 36Q32 6 52 36" stroke="#30d158"/><path d="M15 36Q32 10 49 36" stroke="#0a84ff"/></g>',
+  bubbles: '<g fill="#9fdcff" fill-opacity=".35" stroke="#9fdcff"><circle cx="10" cy="20" r="5"/><circle cx="54" cy="14" r="4"/><circle cx="52" cy="46" r="6"/><circle cx="14" cy="48" r="3.4"/></g>',
+  stars: '<g fill="#ffd60a"><path d="M10 10l1.6 3.4 3.6.4-2.7 2.4.8 3.6L10 18l-3.3 1.8.8-3.6L4.8 13.8l3.6-.4z"/><path d="M54 30l1.4 3 3.2.4-2.4 2.1.7 3.2-2.9-1.7-2.9 1.7.7-3.2-2.4-2.1 3.2-.4z"/><path d="M14 46l1.2 2.6 2.8.3-2.1 1.9.6 2.8-2.5-1.4-2.5 1.4.6-2.8-2.1-1.9 2.8-.3z"/></g>',
+  leaves: '<g fill="#30d158"><path d="M8 20q8-6 10 4-8 4-10-4z"/><path d="M50 14q8 0 6 8-8 0-6-8z"/><path d="M52 44q8 2 4 9-8-2-4-9z"/><path d="M10 46q8-2 8 6-8 2-8-6z"/></g>',
+  ring: '<ellipse cx="32" cy="31" rx="28" ry="9" fill="none" stroke="#0a84ff" stroke-width="2.4" stroke-opacity=".8" transform="rotate(-18 32 31)"/>'
+};
+AG_AV_PART.pet = {
+  cat: '<g fill="#ff9f0a"><ellipse cx="54" cy="52" rx="6" ry="4.5"/><circle cx="54" cy="45" r="4.6"/><path d="M50 42l1-4 3 2zM58 42l-1-4-3 2z"/></g><g fill="#111"><circle cx="52.4" cy="45" r=".8"/><circle cx="55.6" cy="45" r=".8"/></g>',
+  dog: '<g fill="#d9a45b"><ellipse cx="54" cy="52" rx="6" ry="4.5"/><circle cx="54" cy="45" r="4.6"/><ellipse cx="49.6" cy="45" rx="2" ry="3.6" fill="#8b5a2b"/><ellipse cx="58.4" cy="45" rx="2" ry="3.6" fill="#8b5a2b"/></g><g fill="#111"><circle cx="52.6" cy="44.6" r=".8"/><circle cx="55.4" cy="44.6" r=".8"/><circle cx="54" cy="46.6" r="1"/></g>',
+  bird: '<ellipse cx="54" cy="50" rx="6" ry="5" fill="#0a84ff"/><path d="M59 49l4 1.4-4 1.4z" fill="#ff9f0a"/><circle cx="56" cy="48.6" r=".9" fill="#111"/><path d="M50 51q3-4 6 0z" fill="#0866c2"/>',
+  fish: '<ellipse cx="53" cy="48" rx="6.5" ry="4" fill="#ff9f0a"/><path d="M59 48l4-3.4v6.8z" fill="#ff9f0a"/><circle cx="50.4" cy="47" r=".9" fill="#111"/>',
+  rabbit: '<ellipse cx="54" cy="52" rx="6" ry="4.5" fill="#f5f5f5"/><circle cx="54" cy="46" r="4.2" fill="#f5f5f5"/><ellipse cx="52" cy="38.6" rx="1.4" ry="4" fill="#f5f5f5"/><ellipse cx="56" cy="38.6" rx="1.4" ry="4" fill="#f5f5f5"/><circle cx="52.6" cy="45.6" r=".8" fill="#111"/><circle cx="55.4" cy="45.6" r=".8" fill="#111"/>',
+  snail: '<ellipse cx="54" cy="55" rx="8" ry="2.6" fill="#d9c9a0"/><circle cx="52" cy="50" r="5" fill="#8b5a2b"/><circle cx="52" cy="50" r="2.4" fill="none" stroke="#d9a45b"/><path d="M59 54l1-5M61 54l1-4" stroke="#d9c9a0" stroke-width="1"/>',
+  turtle: '<ellipse cx="53" cy="51" rx="7" ry="4.6" fill="#30d158"/><circle cx="61" cy="50" r="2.6" fill="#8be28f"/><g fill="#8be28f"><rect x="47" y="54" width="3" height="2.6" rx="1"/><rect x="56" y="54" width="3" height="2.6" rx="1"/></g>',
+  ghost: '<path d="M48 56V46Q48 38 54 38Q60 38 60 46V56l-2-2-2 2-2-2-2 2z" fill="#f5f5f5" fill-opacity=".92"/><circle cx="52.4" cy="45" r="1" fill="#111"/><circle cx="56.4" cy="45" r="1" fill="#111"/>',
+  slime: '<path d="M46 56Q46 42 54 42Q62 42 62 56z" fill="#30d158" fill-opacity=".85"/><circle cx="51.6" cy="49" r="1.1" fill="#111"/><circle cx="56.4" cy="49" r="1.1" fill="#111"/>',
+  dragon: '<ellipse cx="53" cy="51" rx="6" ry="4.6" fill="#bf5af2"/><circle cx="58" cy="46" r="3.6" fill="#bf5af2"/><path d="M56 43l1-3 1.6 2.6zM59 43l1.4-3 .8 3z" fill="#ff453a"/><path d="M47 49q-5-5 0-8 1 4 4 5z" fill="#9b3fd0"/><circle cx="58.6" cy="45.6" r=".8" fill="#111"/>',
+  bee: '<ellipse cx="54" cy="46" rx="5" ry="3.6" fill="#ffd60a"/><path d="M52 42.6v6.8M55 42.6v6.8" stroke="#111" stroke-width="1.3"/><ellipse cx="51" cy="41" rx="3" ry="2" fill="#9fdcff" fill-opacity=".7"/><ellipse cx="56" cy="41" rx="3" ry="2" fill="#9fdcff" fill-opacity=".7"/>',
+  chick: '<circle cx="54" cy="51" r="6" fill="#ffd60a"/><path d="M59 51l3 1-3 1z" fill="#ff9f0a"/><circle cx="56" cy="49.4" r=".9" fill="#111"/><path d="M53 45q1-3 3 0" stroke="#ffd60a" stroke-width="1.2" fill="none"/>'
+};
+AG_AV_PART.outfit = {
+  stripes: '<g stroke="#fff" stroke-opacity=".75" stroke-width="2.4"><path d="M18 40h28M19 44h26"/></g>',
+  belt: '<rect x="17" y="40" width="30" height="3.4" fill="#5c3a1b"/><rect x="29.5" y="39.4" width="5" height="4.6" rx=".8" fill="#ffd60a"/>',
+  overalls: '<path d="M20 38h24v8H20z" fill="#0a84ff"/><path d="M24 38l-1-8M40 38l1-8" stroke="#0a84ff" stroke-width="2.4"/><circle cx="24" cy="39" r="1.2" fill="#ffd60a"/><circle cx="40" cy="39" r="1.2" fill="#ffd60a"/>',
+  armor: '<path d="M20 36h24v8Q32 50 20 44z" fill="#a8a8b0" stroke="#6b6b73"/><path d="M32 36v12" stroke="#6b6b73"/>',
+  tux: '<path d="M26 36L32 46 38 36" fill="#fff"/><path d="M20 36l8 11M44 36l-8 11" stroke="#26262a" stroke-width="3"/><path d="M30 38l2 1.4 2-1.4-2-1z" fill="#26262a"/>',
+  apron: '<path d="M24 36h16l2 11H22z" fill="#f5f5f5" stroke="#d1d1d6"/><rect x="28" y="41" width="8" height="4" rx=".8" fill="#e5e5ea"/>',
+  vest: '<path d="M22 35L30 36 28 47H22zM42 35L34 36 36 47H42z" fill="#ff9f0a"/><path d="M28 38h8" stroke="#fff" stroke-width="1.2"/>',
+  jersey: '<path d="M20 35h24l1 12H19z" fill="#ff453a"/><text x="32" y="45" font-size="9" font-weight="700" text-anchor="middle" fill="#fff" font-family="sans-serif">7</text>',
+  tutu: '<path d="M18 42Q32 38 46 42L50 48Q32 44 14 48z" fill="#ff9ec7"/>',
+  sash: '<path d="M20 33L44 46" stroke="#bf5af2" stroke-width="4.4"/><path d="M26 36L38 43" stroke="#ffd60a" stroke-width="1" stroke-dasharray="1.4 1.4"/>',
+  spots: '<g fill="#fff" fill-opacity=".7"><circle cx="24" cy="40" r="1.8"/><circle cx="31" cy="44" r="1.6"/><circle cx="38" cy="40" r="1.8"/><circle cx="43" cy="44" r="1.4"/></g>',
+  hoodie: '<path d="M22 34Q32 40 42 34" fill="none" stroke="#6b6b73" stroke-width="3"/><path d="M29 38v6M35 38v6" stroke="#fff" stroke-width="1.2"/><rect x="25" y="42" width="14" height="5" rx="1.5" fill="#6b6b73" fill-opacity=".5"/>'
+};
+AG_AV_PART.expr = {
+  grin: '<path d="M24.6 31Q26 28.6 27.4 31M36.6 31Q38 28.6 39.4 31" stroke="#111" stroke-width="1.6" fill="none" stroke-linecap="round"/><path d="M27 36Q32 43 37 36z" fill="#111"/>',
+  wink: '<path d="M24 31h4" stroke="#111" stroke-width="1.8" stroke-linecap="round"/><circle cx="38" cy="31" r="2.4" fill="#111"/><path d="M28 37Q32 41 36 37" fill="none" stroke="#111" stroke-width="1.4" stroke-linecap="round"/>',
+  surprised: '<circle cx="26" cy="30" r="2.8" fill="#fff" stroke="#111"/><circle cx="38" cy="30" r="2.8" fill="#fff" stroke="#111"/><circle cx="26" cy="30" r="1.2" fill="#111"/><circle cx="38" cy="30" r="1.2" fill="#111"/><ellipse cx="32" cy="38.5" rx="2.4" ry="3" fill="#111"/>',
+  sleepy: '<path d="M23.5 31Q26 33.4 28.5 31M35.5 31Q38 33.4 40.5 31" stroke="#111" stroke-width="1.6" fill="none" stroke-linecap="round"/><path d="M29 38h6" stroke="#111" stroke-width="1.4" stroke-linecap="round"/><text x="41" y="27" font-size="6" fill="#111" font-family="sans-serif">z</text>',
+  angry: '<circle cx="26" cy="32" r="2.2" fill="#111"/><circle cx="38" cy="32" r="2.2" fill="#111"/><path d="M22.6 27.4l6 2.4M41.4 27.4l-6 2.4" stroke="#111" stroke-width="1.8" stroke-linecap="round"/><path d="M28 40Q32 36 36 40" fill="none" stroke="#111" stroke-width="1.6" stroke-linecap="round"/>',
+  sad: '<circle cx="26" cy="31" r="2.2" fill="#111"/><circle cx="38" cy="31" r="2.2" fill="#111"/><path d="M23 27.6l6-1.4M41 27.6l-6-1.4" stroke="#111" stroke-width="1.4" stroke-linecap="round"/><path d="M28 40Q32 36.4 36 40" fill="none" stroke="#111" stroke-width="1.5" stroke-linecap="round"/>',
+  hearteyes: '<g fill="#ff453a"><path d="M26 34Q22 31 23.6 28.6Q25.4 27 26 29Q26.6 27 28.4 28.6Q30 31 26 34z"/><path d="M38 34Q34 31 35.6 28.6Q37.4 27 38 29Q38.6 27 40.4 28.6Q42 31 38 34z"/></g><path d="M28 37Q32 41.4 36 37" fill="none" stroke="#111" stroke-width="1.5" stroke-linecap="round"/>',
+  dizzy: '<g stroke="#111" stroke-width="1.5" stroke-linecap="round"><path d="M23.6 28.6l4.8 4.8M28.4 28.6l-4.8 4.8M35.6 28.6l4.8 4.8M40.4 28.6l-4.8 4.8"/></g><path d="M28 39Q30 37 32 39T36 39" fill="none" stroke="#111" stroke-width="1.4"/>',
+  catface: '<circle cx="26" cy="31" r="2.2" fill="#111"/><circle cx="38" cy="31" r="2.2" fill="#111"/><path d="M29 38Q30.5 40 32 38Q33.5 40 35 38" fill="none" stroke="#111" stroke-width="1.4" stroke-linecap="round"/><path d="M31 35h2l-1 1.4z" fill="#ff6bb5"/>',
+  silly: '<circle cx="26" cy="30" r="2.6" fill="#111"/><circle cx="38" cy="32" r="2" fill="#111"/><path d="M28 37Q32 40 36 37" fill="none" stroke="#111" stroke-width="1.4" stroke-linecap="round"/><path d="M32 38.4v3.6q0 2 2.4 1.4V38.8z" fill="#ff6b8b"/>',
+  smug: '<path d="M23.6 31h4.8M35.6 31h4.8" stroke="#111" stroke-width="1.8" stroke-linecap="round"/><path d="M28 38Q33 40 37 36.6" fill="none" stroke="#111" stroke-width="1.5" stroke-linecap="round"/>',
+  worried: '<circle cx="26" cy="31" r="2.4" fill="#111"/><circle cx="38" cy="31" r="2.4" fill="#111"/><path d="M23 27l6-1.8M41 27l-6-1.8" stroke="#111" stroke-width="1.3" stroke-linecap="round"/><path d="M28 39h2l1.4-1.4 1.4 1.4 1.4-1.4 1.4 1.4h2" fill="none" stroke="#111" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>'
+};
+
 function agAvNorm(a) {
   const o = a && typeof a === 'object' ? a : {};
   const has = (k, v) => v === 'none' || Object.prototype.hasOwnProperty.call(AG_AV_PART[k], v);
@@ -2723,7 +2883,7 @@ function agAvNorm(a) {
     body: OPS_COLORS.includes(o.body) ? o.body : OPS_COLORS[0],
     shape: AG_AV_SHAPES.includes(o.shape) ? o.shape : 'circle'
   };
-  ['hat', 'glasses', 'shoes', 'inhand', 'offhand'].forEach((k) => { r[k] = has(k, o[k]) ? o[k] : 'none'; });
+  AG_AV_CATS.forEach((k) => { r[k] = has(k, o[k]) ? o[k] : 'none'; });
   return r;
 }
 
@@ -2734,17 +2894,18 @@ function agAvSvg(av, nobg) {
   const hand = (x) => '<circle cx="' + x + '" cy="41" r="3.2"/>';
   return '<svg class="ag-av-svg" viewBox="0 0 64 64" aria-hidden="true">'
     + (nobg ? '' : '<rect width="64" height="64" rx="14" fill="' + a.bg + '" fill-opacity=".45"/>')
-    + (a.offhand !== 'none' ? P.offhand[a.offhand] : '')
+    + agPart('aura', a.aura) + agPart('cape', a.cape) + (a.offhand !== 'none' ? P.offhand[a.offhand] : '')
     + (a.inhand !== 'none' ? P.inhand[a.inhand] : '')
     + '<g fill="' + a.body + '" stroke="' + a.body + '" stroke-width="3" stroke-linejoin="round">' + hand(13) + hand(51) + AG_AV_BODY[a.shape] + '</g>'
-    + (a.shoes !== 'none' ? P.shoes[a.shoes] : '')
-    + '<g transform="translate(0 ' + ey + ')"><circle cx="26" cy="31" r="2.4" fill="#111"/><circle cx="38" cy="31" r="2.4" fill="#111"/><path d="M29 37Q32 40 35 37" fill="none" stroke="#111" stroke-width="1.4" stroke-linecap="round"/>'
-    + (a.glasses !== 'none' ? P.glasses[a.glasses] : '') + '</g>'
-    + (a.hat !== 'none' ? P.hat[a.hat] : '')
+    + (a.shoes !== 'none' ? P.shoes[a.shoes] : '') + agPart('outfit', a.outfit) + agPart('neck', a.neck) + agPart('pet', a.pet)
+    + '<g transform="translate(0 ' + ey + ')">' + (agPart('expr', a.expr) || '<circle cx="26" cy="31" r="2.4" fill="#111"/><circle cx="38" cy="31" r="2.4" fill="#111"/><path d="M29 37Q32 40 35 37" fill="none" stroke="#111" stroke-width="1.4" stroke-linecap="round"/>')
+    + (a.glasses !== 'none' ? P.glasses[a.glasses] : '') + agPart('face', a.face) + '</g>'
+    + agPart('hair', a.hair) + (a.hat !== 'none' ? P.hat[a.hat] : '')
     + '</svg>';
 }
 
 const AG_AV_VB = { hat: '12 0 40 20', glasses: '16 22 32 18', shoes: '10 44 44 12', inhand: '40 8 24 44', offhand: '0 20 26 34' };
+Object.assign(AG_AV_VB, { face: '16 22 32 22', neck: '14 38 36 20', cape: '2 8 60 50', hair: '12 0 40 28', aura: '2 4 60 56', pet: '36 34 28 26', outfit: '14 28 36 24', expr: '20 24 24 20' });
 function agAvPartSvg(cat, id, av) {
   const a = agAvNorm(av);
   const inner = cat === 'shape'
@@ -2762,7 +2923,7 @@ function agAvBind(el, cur) {
   const optsEl = el.querySelector('[data-ag-av-opts]');
   if (!art || !prev || !catsEl || !optsEl) return;
   let cat = 'shape';
-  const CATS = [['shape', 'Shape'], ['body', 'Body'], ['back', 'Back'], ['hat', 'Hat'], ['glasses', 'Glasses'], ['shoes', 'Shoes'], ['inhand', 'In-hand'], ['offhand', 'Off-hand']];
+  const CATS = [['shape', 'Shape'], ['body', 'Body'], ['back', 'Back'], ['hat', 'Hat'], ['glasses', 'Glasses'], ['shoes', 'Shoes'], ['inhand', 'In-hand'], ['offhand', 'Off-hand'], ['face', 'Face'], ['neck', 'Neck'], ['cape', 'Cape'], ['hair', 'Hair'], ['aura', 'Aura'], ['pet', 'Pet'], ['outfit', 'Outfit'], ['expr', 'Mood']];
   const key = (c) => (c === 'back' ? 'bg' : c);
   const ids = (c) => (c === 'shape' ? AG_AV_SHAPES : (c === 'body' || c === 'back') ? OPS_COLORS : ['none'].concat(Object.keys(AG_AV_PART[c])));
   const paint = () => {
@@ -2774,7 +2935,7 @@ function agAvBind(el, cur) {
       const on = cur.avatar[k] === id ? ' on' : '';
       if (cat === 'body' || cat === 'back') return '<button class="ag-av-opt ag-av-sw' + on + '" type="button" data-ag-av-pick="' + id + '" aria-label="' + id + '" style="--sw:' + id + '"></button>';
       if (id === 'none') return '<button class="ag-av-opt' + on + '" type="button" data-ag-av-pick="none" aria-label="None">' + ICONS.close + '</button>';
-      return '<button class="ag-av-opt' + (cat === 'glasses' ? ' lite' : '') + on + '" type="button" data-ag-av-pick="' + id + '" aria-label="' + id + '">' + agAvPartSvg(cat, id, cur.avatar) + '</button>';
+      return '<button class="ag-av-opt' + (['glasses', 'face', 'expr'].includes(cat) ? ' lite' : '') + on + '" type="button" data-ag-av-pick="' + id + '" aria-label="' + id + '">' + agAvPartSvg(cat, id, cur.avatar) + '</button>';
     }).join('');
   };
   const rnd = (list) => list[Math.floor(Math.random() * list.length)];
@@ -2787,7 +2948,7 @@ function agAvBind(el, cur) {
       const bg = rnd(OPS_COLORS);
       let body = rnd(OPS_COLORS);
       if (body === bg) body = OPS_COLORS[(OPS_COLORS.indexOf(bg) + 1) % OPS_COLORS.length];
-      cur.avatar = { bg, body, shape: rnd(AG_AV_SHAPES), hat: rnd(ids('hat')), glasses: rnd(ids('glasses')), shoes: rnd(ids('shoes')), inhand: rnd(ids('inhand')), offhand: rnd(ids('offhand')) };
+      cur.avatar = { bg, body, shape: rnd(AG_AV_SHAPES), hat: rnd(ids('hat')), glasses: rnd(ids('glasses')), shoes: rnd(ids('shoes')), inhand: rnd(ids('inhand')), offhand: rnd(ids('offhand')), face: rnd(ids('face')), neck: rnd(ids('neck')), cape: rnd(ids('cape')), hair: rnd(ids('hair')), aura: rnd(ids('aura')), pet: rnd(ids('pet')), outfit: rnd(ids('outfit')), expr: rnd(ids('expr')) };
       paint();
     }
   });
