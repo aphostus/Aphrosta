@@ -1395,6 +1395,45 @@ mark.sb-hit.is-cur {
 .toast.success .toast-ico { color: var(--accent); }
 .toast-msg { flex: 1; min-width: 0; color: var(--gray-light); }
 
+/* ---- toast v2: [X ring] ........ [CODE detail] ---- */
+.toast.tk { justify-content: space-between; gap: 12px; padding: 6px 14px 6px 6px; }
+.tk-x {
+  position: relative; flex: none; display: grid; place-items: center;
+  width: 30px; height: 30px; border-radius: 50%;
+  color: var(--gray-light); background: var(--glass-bg);
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  touch-action: manipulation;
+}
+.tk-ring { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); pointer-events: none; }
+.tk-ring circle {
+  fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round;
+  stroke-dasharray: 81.68; stroke-dashoffset: 0;
+  animation: tkDrain 5s linear forwards;
+}
+@keyframes tkDrain { to { stroke-dashoffset: 81.68; } }
+.tk-ico { display: inline-flex; }
+.tk-ico svg { width: 14px; height: 14px; }
+.tk-rev { display: none; }
+.tk-x.is-rev { color: var(--accent); }
+.tk-x.is-rev .tk-rev { display: inline-flex; }
+.tk-x.is-rev .tk-cls { display: none; }
+.tk-txt { display: flex; align-items: baseline; justify-content: flex-end; gap: 8px; min-width: 0; margin-left: auto; text-align: right; }
+.tk-code { font-weight: 700; letter-spacing: 0.04em; font-variant-numeric: tabular-nums; color: var(--fg); }
+.tk-det { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--gray-mid); }
+.toast.error .tk-code { color: var(--bad); }
+.toast.success .tk-code { color: var(--ok); }
+
+[data-code] { border-radius: 8px; }
+.code-flash { animation: codeFlash 1.3s linear 1; }
+@keyframes codeFlash {
+  0%   { background: rgba(var(--accent-rgb), 0.45); }
+  15%  { background: transparent; }
+  30%  { background: rgba(var(--accent-rgb), 0.45); }
+  45%  { background: transparent; }
+  60%  { background: rgba(var(--accent-rgb), 0.45); }
+  100% { background: transparent; }
+}
+
 @keyframes toast-in  { to { opacity: 1; transform: translateY(0); } }
 @keyframes toast-out { to { opacity: 0; transform: translateY(6px); } }
 

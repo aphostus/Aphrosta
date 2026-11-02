@@ -687,17 +687,65 @@ const TOAST_ICON = {
 
 const INBOX_LS = 'aphrosta.inbox';
 let inboxItems = (() => { const l = lsGet(INBOX_LS, []); return Array.isArray(l) ? l : []; })();
+const TOAST_MAP = [
+  [/copied|duplicated/i, 'S01'],
+  [/removed|deleted|cleared|forgotten|archived|private again/i, 'S03'],
+  [/restored|refreshed|put back/i, 'S04'],
+  [/created|imported|exported|downloaded|branched|public\./i, 'S05'],
+  [/saved|selected|updated|activated|now active|allowed|locked|started/i, 'S02'],
+  [/coming soon/i, 'N01'],
+  [/stop the response|wait for|still running|finish/i, 'N02'],
+  [/nothing to|no reply|no .* found|empty|no match|no public/i, 'N03'],
+  [/already in a new/i, 'N04'],
+  [/hidden:|visible:|keep at least/i, 'N05']
+];
+
+function toastInfo(message, type) {
+  const s = String(message || '');
+  const m = s.match(/\(([A-Z])(\d{2,3})\)/);
+  let key = '';
+  if (m) key = m[1] + String(parseInt(m[2], 10)).padStart(2, '0');
+  else if (type !== 'error') {
+    const hit = TOAST_MAP.find(([re]) => re.test(s));
+    key = hit ? hit[1] : (type === 'success' ? 'S00' : 'N00');
+  } else key = 'C01';
+  if (!ERR_CODES[key]) key = type === 'success' ? 'S00' : type === 'error' ? 'C01' : 'N00';
+  return {
+    c: key[0] + key.slice(1).padStart(3, '0'),
+    d: ERR_CODES[key][0].split(/\s+/).slice(0, 3).join(' ')
+  };
+}
+
+function openCodeGuide(code) {
+  setTimeout(() => {
+    openSettings();
+    setTimeout(() => {
+      openAboutPage('help');
+      setTimeout(() => {
+        const t = document.querySelector('#about-page [data-code="' + code + '"]');
+        if (!t) return;
+        t.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        t.classList.remove('code-flash');
+        void t.offsetWidth;
+        t.classList.add('code-flash');
+        setTimeout(() => t.classList.remove('code-flash'), 1400);
+      }, 450);
+    }, 150);
+  }, 80);
+}
+
 function inboxPush(message, type) {
   const now = Date.now();
   const last = inboxItems[0];
   if (last && last.m === message && now - last.t < 5000) return;
-  inboxItems.unshift({ m: String(message), k: type || 'info', t: now });
+  const ti = toastInfo(message, type);
+  inboxItems.unshift({ m: String(message), c: ti.c, d: ti.d, k: type || 'info', t: now });
   if (inboxItems.length > 50) inboxItems.length = 50;
   lsSet(INBOX_LS, inboxItems);
   try { if (document.querySelector('[data-fd-inbox-list]')) renderInbox(); } catch (_) {}
 }
 
-function toast(message, type = 'error', duration = 2800) {
+function toast(message, type = 'error', duration = 5000, undo = null) {
   if (!settings.notifications) return;
   inboxPush(message, type);
   const host = ensureToastHost();
@@ -705,11 +753,13 @@ function toast(message, type = 'error', duration = 2800) {
   while (host.children.length >= 3) host.firstElementChild.remove();
 
   const el = document.createElement('div');
-  el.className = `toast ${type}`;
+  el.className = `toast tk ${type}`;
   el.dataset.msg = message;
   el.setAttribute('role', type === 'error' ? 'alert' : 'status');
-  el.innerHTML = `<span class="toast-ico">${(TOAST_ICON[type] || TOAST_ICON.info)()}</span><span class="toast-msg"></span>`;
-  el.querySelector('.toast-msg').textContent = message;
+  const info = toastInfo(message, type);
+  el.innerHTML = `<button class="tk-x" type="button" aria-label="Dismiss"><svg class="tk-ring" viewBox="0 0 30 30" aria-hidden="true"><circle cx="15" cy="15" r="13"/></svg><span class="tk-ico tk-cls">${ICONS.stClose}</span><span class="tk-ico tk-rev">${ICONS.stReset}</span></button><span class="tk-txt"><b class="tk-code"></b><span class="tk-det"></span></span>`;
+  el.querySelector('.tk-code').textContent = info.c;
+  el.querySelector('.tk-det').textContent = info.d;
   host.appendChild(el);
 
   let gone = false;
@@ -719,8 +769,34 @@ function toast(message, type = 'error', duration = 2800) {
     el.classList.add('leaving');
     el.addEventListener('animationend', () => el.remove(), { once: true });
   };
-  el.addEventListener('click', (e) => { e.stopPropagation(); dismiss(); });
-  setTimeout(dismiss, duration);
+  const xb = el.querySelector('.tk-x');
+  let holdT = 0, armed = false, downAt = 0;
+  const reset = () => { clearTimeout(holdT); holdT = 0; armed = false; downAt = 0; xb.classList.remove('is-rev'); };
+  xb.addEventListener('pointerdown', (e) => {
+    e.stopPropagation();
+    reset();
+    downAt = Date.now();
+    if (undo) holdT = setTimeout(() => { armed = true; xb.classList.add('is-rev'); haptic(10); }, 250);
+  });
+  xb.addEventListener('pointerup', (e) => {
+    e.stopPropagation();
+    if (!downAt) return;
+    const held = Date.now() - downAt;
+    const was = armed;
+    reset();
+    if (!was) { dismiss(); return; }
+    if (held >= 500) { try { undo(); } catch (_) {} dismiss(); }
+  });
+  ['pointerleave', 'pointercancel'].forEach((ev) => xb.addEventListener(ev, reset));
+  xb.addEventListener('contextmenu', (e) => e.preventDefault());
+  xb.addEventListener('click', (e) => e.stopPropagation());
+  el.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (e.target.closest('.tk-x')) return;
+    dismiss();
+    openCodeGuide(info.c);
+  });
+  setTimeout(dismiss, 5000);
 }
 
 /* ---------- ERROR CODES ----------
@@ -735,7 +811,10 @@ const ERR_CATS = {
   F: 'Feedback',
   G: 'Voice and microphone',
   H: 'Permissions, settings and forms',
-  I: 'Prompt injection defense'
+  I: 'Prompt injection defense',
+  L: 'Live mode',
+  S: 'Success notices',
+  N: 'Info notices'
 };
 const ERR_CODES = {
   A01: ['Sign-in failed', 'Allow pop-ups for this site and try again. It retries on its own.'],
@@ -810,6 +889,27 @@ const ERR_CODES = {
   I02: ['Hidden instructions removed from a file', 'An attached file contained text that tried to give the AI orders. That text was removed before the AI read the file.'],
   I03: ['Hidden instructions removed from the library', 'A library item contained text that tried to give the AI orders. That text was removed before the AI used it.'],
   I04: ['Hidden instructions removed from web or tool results', 'A web page or tool result contained text that tried to give the AI orders. That text was removed.'],
+  L01: ['Mic blocked', 'Allow the microphone in your browser site settings.'],
+  L02: ['Live voice failed', 'Groq could not hear you. Try again.'],
+  L03: ['Reply running', 'Wait for the current reply to finish.'],
+  L04: ['Mic turned off', 'Turn it on in Settings, Permissions.'],
+  L05: ['Live unsupported', 'This browser cannot run Live mode.'],
+  L06: ['Recording unsupported', 'This browser cannot record audio.'],
+  D10: ['Clipboard blocked', 'Nothing to paste, or clipboard access was blocked.'],
+  D11: ['Edit not saved', 'The file edit could not be saved.'],
+  D12: ['Bad code text', 'Code cannot contain three backticks in a row.'],
+  S00: ['Done', 'The action finished.'],
+  S01: ['Copied', 'Text or data was copied.'],
+  S02: ['Saved', 'A change was saved, selected or turned on.'],
+  S03: ['Removed', 'Something was deleted, cleared or archived. For session delete, session archive and API key removal, hold the circle button until it turns into the revert icon, then release after half a second to undo. You have 5 seconds.'],
+  S04: ['Restored', 'Something was restored or refreshed.'],
+  S05: ['Created', 'Something was created, imported or exported.'],
+  N00: ['Notice', 'General information.'],
+  N01: ['Coming soon', 'This feature is not ready yet.'],
+  N02: ['Please wait', 'Wait for the running reply to finish.'],
+  N03: ['Nothing found', 'There was nothing to show or do.'],
+  N04: ['Already here', 'You are already in that place.'],
+  N05: ['Visibility changed', 'An item was hidden from or shown to the AI.'],
   I05: ['System prompt request blocked', 'Your message asked the AI to reveal its hidden instructions. The request was removed and the AI answers with a harmless decoy.']
 };
 /* ---------- PROMPT-INJECTION SHIELD ----------
@@ -5757,7 +5857,7 @@ function renderInbox() {
       html += `<div class="fd-group"><div class="fd-group-head">${esc(dayLabel(it.t))}</div>`;
       last = d;
     }
-    html += `<div class="fd-card fd-k-${esc(it.k)}"><span class="fd-badge">${ico[it.k] || FD_I.info}</span><span class="fd-card-main"><span class="fd-card-text">${esc(it.m)}</span><span class="fd-card-sub">${esc(clock(it.t))}</span></span></div>`;
+    html += `<div class="fd-card fd-k-${esc(it.k)}"><span class="fd-badge">${ico[it.k] || FD_I.info}</span><span class="fd-card-main"><span class="fd-card-text">${esc(it.c ? it.c + ' \u00b7 ' + it.d : it.m)}</span><span class="fd-card-sub">${esc(clock(it.t))}</span></span></div>`;
   });
   box.innerHTML = html + '</div>';
 }
@@ -13420,7 +13520,7 @@ function archiveSession(id) {
   s.archived = true; s.archivedAt = Date.now();
   persistSessions();
   renderSessionList();
-  toast(`Archived \u201c${s.title}\u201d.`, 'info', 1800);
+  toast(`Archived \u201c${s.title}\u201d.`, 'info', 5000, () => { s.archived = false; delete s.archivedAt; persistSessions(); renderSessionList(); });
 }
 
 function restoreSession(id) {
@@ -13652,11 +13752,18 @@ async function deleteSession(id) {
     danger: true
   });
   if (!yes) return;
+  const wasCurrent = currentSession.id === id;
   pubDrop(s);
   sessions = sessions.filter((x) => x.id !== id);
   persistSessions();
   if (currentSession.id === id) { currentSession = newDraft(); clearDraft(); }
   renderSessionUi();
+  toast('Session deleted.', 'success', 5000, () => {
+    if (!sessions.some((x) => x.id === s.id)) sessions.push(s);
+    if (wasCurrent && !chatBusy) currentSession = s;
+    persistSessions();
+    renderSessionUi();
+  });
 }
 
 async function copyText(t) {
@@ -15325,6 +15432,8 @@ function initShell() {
         TokenRecorder.purgeKey(id, oldKeyId);
         Cloud.purgeUsage(id, oldKeyId);
       }
+      const oldKey = apiKeys[id];
+      const wasActive = activeModel === id;
       delete apiKeys[id];
       if (activeModel === id) activeModel = null;
       persistApiKeys();
@@ -15333,7 +15442,15 @@ function initShell() {
       refreshTokenMeter();
       const inp = provider.querySelector('.provider-input');
       if (inp) inp.value = '';
-      toast('API key removed.', 'success');
+      toast('API key removed.', 'success', 5000, () => {
+        if (!oldKey) return;
+        apiKeys[id] = oldKey;
+        if (wasActive) activeModel = id;
+        persistApiKeys();
+        updateModelButton();
+        renderProviderList();
+        refreshTokenMeter();
+      });
       return;
     }
   });
@@ -16183,7 +16300,7 @@ const abLic = (name, lic, what) => `<h4>${esc(name)}<span class="ab-tag">${esc(l
 
 const abErrCodesHtml = () => Object.keys(ERR_CATS).map((c) =>
   `<h4>${esc(c + ' \u00b7 ' + ERR_CATS[c])}</h4>` +
-  Object.keys(ERR_CODES).filter((k) => k[0] === c).map((k) => `<p><b>${k}</b> ${esc(ERR_CODES[k][0])}. ${esc(ERR_CODES[k][1])}</p>`).join('')
+  Object.keys(ERR_CODES).filter((k) => k[0] === c).map((k) => { const pc = k[0] + k.slice(1).padStart(3, '0'); return `<p data-code="${pc}"><b>${pc}</b> ${esc(ERR_CODES[k][0])}. ${esc(ERR_CODES[k][1])}</p>`; }).join('')
 ).join('');
 
 const AB_PAGES = {
