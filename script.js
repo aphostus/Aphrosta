@@ -10844,7 +10844,12 @@ function bindPinDrag() {
       persistSessions();
     }
     renderSessionList();
-    if (zone === 'down') exportSession(dragId);
+    const dragS = sessions.find((x) => x.id === dragId);
+    if (zone && dragS && sessLocked(dragS)) {
+      const rowEl = [...document.querySelectorAll('.chat-item')].find((x) => x.dataset.id === dragId);
+      lockShake(rowEl && rowEl.querySelector('.chat-slide'));
+    }
+    else if (zone === 'down') exportSession(dragId);
     else if (zone === 'up') ioPickFile((text) => ioApplyReplace(dragId, text));
     swallow = true;
     setTimeout(() => { swallow = false; }, 350);
@@ -11130,6 +11135,25 @@ function sessionStats(s) {
   return `${t} | ${b} | ${cards} Cd`;
 }
 
+/* Locked session: shake + buzz instead of running the gesture */
+function lockShake(el) {
+  if (el) {
+    try {
+      el.animate([
+        { transform: 'translateX(0)' },
+        { transform: 'translateX(-7px)', offset: 0.15 },
+        { transform: 'translateX(7px)', offset: 0.3 },
+        { transform: 'translateX(-5px)', offset: 0.45 },
+        { transform: 'translateX(5px)', offset: 0.6 },
+        { transform: 'translateX(-2px)', offset: 0.75 },
+        { transform: 'translateX(2px)', offset: 0.9 },
+        { transform: 'translateX(0)' }
+      ], { duration: 450, easing: 'ease-out' });
+    } catch (_) {}
+  }
+  try { navigator.vibrate?.(30); } catch (_) {}
+}
+
 /* Swipe a session: left = archive, right = stats (stays until you tap or ~4.5s) */
 function bindSwipe() {
   let it = null, slide = null, x0 = 0, y0 = 0, dx = 0, mode = 0, w = 0, openEl = null, timer = 0, swallow = false;
@@ -11164,7 +11188,7 @@ function bindSwipe() {
       const s = sessions.find((x) => x.id === it.dataset.id);
       if (!s) { it = null; return; }
       mode = 1;
-      it.querySelector('.chat-under-stat').textContent = sessionStats(s);
+      it.querySelector('.chat-under-stat').textContent = sessLocked(s) ? '' : sessionStats(s);
       it.classList.add('is-swipe', 'is-swiping');
     }
     dx = mx;
@@ -11185,6 +11209,9 @@ function bindSwipe() {
       sl.style.transform = 'translateX(-100%)';
       haptic(10);
       setTimeout(() => { archiveSession(el.dataset.id); if (el.isConnected) reset(el); }, 200);
+    } else if (dx > th && (() => { const ls = sessions.find((x) => x.id === el.dataset.id); return !!(ls && sessLocked(ls)); })()) {
+      reset(el);
+      lockShake(sl);
     } else if (dx > th) {
       sl.style.transform = 'translateX(100%)';
       haptic(10);
@@ -11198,6 +11225,20 @@ function bindSwipe() {
     if (el && mode === 1) { mode = 0; reset(el); }
   }, true);
   document.addEventListener('scroll', () => { if (openEl) closeStat(); }, true);
+  const sbEl = document.getElementById('sidebar');
+  if (sbEl && window.MutationObserver) {
+    let sbWasOpen = sbEl.classList.contains('open');
+    new MutationObserver(() => {
+      const isOpen = sbEl.classList.contains('open');
+      if (sbWasOpen && !isOpen && sessionQuery) {
+        sessionQuery = '';
+        const si = document.querySelector('[data-role="session-search"]');
+        if (si) si.value = '';
+        renderSessionList();
+      }
+      sbWasOpen = isOpen;
+    }).observe(sbEl, { attributes: true, attributeFilter: ['class'] });
+  }
   document.addEventListener('click', (e) => {
     if (swallow && e.target.closest && e.target.closest('.chat-list .chat-item')) {
       e.stopPropagation();
