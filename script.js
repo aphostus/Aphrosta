@@ -2663,6 +2663,7 @@ function agOpenSandbox(title, sb, onSave, base = 'agent.txt') {
 
 /* ---------- AGENT AVATAR ---------- */
 const AG_SHUF = svg('<path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/>', 16);
+const AG_RESET = svg('<path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/>', 16);
 const AG_AV_SHAPES = ['circle', 'square', 'triangle', 'star', 'hexagon', 'heart', 'diamond', 'pentagon', 'cross', 'blob'];
 const AG_AV_BODY = {
   circle: '<circle cx="32" cy="31" r="16"/>',
@@ -2890,6 +2891,7 @@ function agAvNorm(a) {
 function agAvSvg(av, nobg) {
   const a = agAvNorm(av);
   const P = AG_AV_PART;
+  const gid = 'agsh' + (agAvSvg._n = (agAvSvg._n || 0) + 1);
   const ey = (AG_AV_EYE[a.shape] || 31) - 31;
   const hand = (x) => '<circle cx="' + x + '" cy="41" r="3.2"/>';
   return '<svg class="ag-av-svg" viewBox="0 0 64 64" aria-hidden="true">'
@@ -2897,6 +2899,8 @@ function agAvSvg(av, nobg) {
     + agPart('aura', a.aura) + agPart('cape', a.cape) + (a.offhand !== 'none' ? P.offhand[a.offhand] : '')
     + (a.inhand !== 'none' ? P.inhand[a.inhand] : '')
     + '<g fill="' + a.body + '" stroke="' + a.body + '" stroke-width="3" stroke-linejoin="round">' + hand(13) + hand(51) + AG_AV_BODY[a.shape] + '</g>'
+    + '<defs><linearGradient id="' + gid + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".38"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".28"/></linearGradient></defs>'
+    + '<g fill="url(#' + gid + ')" stroke="url(#' + gid + ')" stroke-width="3" stroke-linejoin="round">' + hand(13) + hand(51) + AG_AV_BODY[a.shape] + '</g>'
     + (a.shoes !== 'none' ? P.shoes[a.shoes] : '') + agPart('outfit', a.outfit) + agPart('neck', a.neck) + agPart('pet', a.pet)
     + '<g transform="translate(0 ' + ey + ')">' + (agPart('expr', a.expr) || '<circle cx="26" cy="31" r="2.4" fill="#111"/><circle cx="38" cy="31" r="2.4" fill="#111"/><path d="M29 37Q32 40 35 37" fill="none" stroke="#111" stroke-width="1.4" stroke-linecap="round"/>')
     + (a.glasses !== 'none' ? P.glasses[a.glasses] : '') + agPart('face', a.face) + '</g>'
@@ -2914,7 +2918,7 @@ function agAvPartSvg(cat, id, av) {
   return '<svg class="ag-av-svg" viewBox="' + (AG_AV_VB[cat] || '8 8 48 44') + '" aria-hidden="true">' + inner + '</svg>';
 }
 
-const agAvHtml = () => '<div class="lib-lab">Avatar<div class="ag-av"><div class="ag-av-prev" data-ag-av-prev><button class="ag-av-shuf" type="button" data-ag-av-shuf aria-label="Randomize avatar">' + AG_SHUF + '</button><div class="ag-av-art" data-ag-av-art></div></div><div class="ag-av-ctl"><div class="ag-chips" data-ag-av-cats></div><div class="ag-av-opts" data-ag-av-opts></div></div></div></div>';
+const agAvHtml = () => '<div class="lib-lab">Avatar<div class="ag-av"><div class="ag-av-prev" data-ag-av-prev><button class="ag-av-shuf ag-av-reset" type="button" data-ag-av-reset aria-label="Reset avatar">' + AG_RESET + '</button><button class="ag-av-shuf" type="button" data-ag-av-shuf aria-label="Randomize avatar">' + AG_SHUF + '</button><div class="ag-av-art" data-ag-av-art></div></div><div class="ag-av-ctl"><div class="ag-chips" data-ag-av-cats></div><div class="ag-av-opts" data-ag-av-opts></div></div></div></div>';
 
 function agAvBind(el, cur) {
   const art = el.querySelector('[data-ag-av-art]');
@@ -2922,6 +2926,7 @@ function agAvBind(el, cur) {
   const catsEl = el.querySelector('[data-ag-av-cats]');
   const optsEl = el.querySelector('[data-ag-av-opts]');
   if (!art || !prev || !catsEl || !optsEl) return;
+  const origAvatar = JSON.parse(JSON.stringify(cur.avatar));
   let cat = 'shape';
   const CATS = [['shape', 'Shape'], ['body', 'Body'], ['back', 'Back'], ['hat', 'Hat'], ['glasses', 'Glasses'], ['shoes', 'Shoes'], ['inhand', 'In-hand'], ['offhand', 'Off-hand'], ['face', 'Face'], ['neck', 'Neck'], ['cape', 'Cape'], ['hair', 'Hair'], ['aura', 'Aura'], ['pet', 'Pet'], ['outfit', 'Outfit'], ['expr', 'Mood']];
   const key = (c) => (c === 'back' ? 'bg' : c);
@@ -2944,6 +2949,11 @@ function agAvBind(el, cur) {
     if (c) { cat = c.dataset.agAvCat; paint(); return; }
     const p = e.target.closest('[data-ag-av-pick]');
     if (p) { cur.avatar[key(cat)] = p.dataset.agAvPick; paint(); return; }
+    if (e.target.closest('[data-ag-av-reset]')) {
+      cur.avatar = JSON.parse(JSON.stringify(origAvatar));
+      paint();
+      return;
+    }
     if (e.target.closest('[data-ag-av-shuf]')) {
       const bg = rnd(OPS_COLORS);
       let body = rnd(OPS_COLORS);

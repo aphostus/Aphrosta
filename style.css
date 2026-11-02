@@ -4498,11 +4498,12 @@ html[data-motion="reduce"] .sess-pw { animation: none; }
 
 /* agent avatar */
 .ag-av { display: flex; gap: 10px; align-items: stretch; }
-.ag-av-prev { position: relative; flex: 40 1 0; min-width: 0; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; padding: 12px; border-radius: 18px; background: color-mix(in srgb, var(--avbg, #0a84ff) 45%, transparent); border: 1px solid color-mix(in srgb, var(--avbg, #0a84ff) 60%, transparent); box-shadow: inset 0 1px 0 var(--glass-highlight); -webkit-backdrop-filter: blur(12px) saturate(140%); backdrop-filter: blur(12px) saturate(140%); }
+.ag-av-prev { position: relative; flex: 40 1 0; min-width: 0; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; padding: 12px; border-radius: 18px; background: radial-gradient(120% 90% at 28% 12%, color-mix(in srgb, var(--avbg, #0a84ff) 55%, #fff 22%), transparent 62%), linear-gradient(160deg, color-mix(in srgb, var(--avbg, #0a84ff) 62%, transparent), color-mix(in srgb, var(--avbg, #0a84ff) 20%, #000 32%)); border: 1px solid color-mix(in srgb, var(--avbg, #0a84ff) 55%, #fff 25%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), inset 0 -18px 30px rgba(0, 0, 0, 0.25), 0 8px 24px color-mix(in srgb, var(--avbg, #0a84ff) 30%, transparent); -webkit-backdrop-filter: blur(12px) saturate(140%); backdrop-filter: blur(12px) saturate(140%); }
 .ag-av-art { width: 100%; height: 100%; }
 .ag-av-svg { display: block; width: 100%; height: 100%; }
 .ag-av-shuf { position: absolute; top: 6px; right: 6px; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; color: var(--fg); background: rgba(var(--fg-rgb), 0.12); border: 1px solid var(--glass-border); }
 .ag-av-shuf:active { transform: scale(0.9); }
+.ag-av-reset { right: auto; left: 6px; }
 .ag-av-ctl { flex: 50 1 0; min-width: 0; contain: size; display: flex; flex-direction: column; gap: 6px; }
 .ag-av-ctl .ag-chips { flex: none; padding-bottom: 0; }
 .ag-av-opts { flex: 1 1 0; min-height: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; align-content: start; overflow-y: auto; scrollbar-width: none; }
