@@ -240,11 +240,14 @@ const elEnabled = () => settings.elOn !== false;
 
 const elAudio = new Audio();
 elAudio.preload = 'auto';
+const elAudio2 = new Audio();
+elAudio2.preload = 'auto';
 let elCtl = null, elResolve = null;
 function elStop() {
   try { if (elCtl) elCtl.abort(); } catch (_) {}
   elCtl = null;
   try { elAudio.pause(); } catch (_) {}
+  try { elAudio2.pause(); } catch (_) {}
   const r = elResolve;
   elResolve = null;
   if (r) r();
@@ -252,6 +255,7 @@ function elStop() {
 const EL_SILENT = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
 function elUnlock() {
   try { elAudio.src = EL_SILENT; const p = elAudio.play(); if (p && p.catch) p.catch(() => {}); } catch (_) {}
+  try { elAudio2.src = EL_SILENT; const p2 = elAudio2.play(); if (p2 && p2.catch) p2.catch(() => {}); } catch (_) {}
 }
 ['pointerdown', 'touchend', 'keydown'].forEach((ev) => document.addEventListener(ev, elUnlock, { once: true, passive: true }));
 
@@ -6605,13 +6609,13 @@ const SpkFollow = (() => {
     reveal(j, r);
   }
 
-  function audio(times, base) {
+  function audio(times, base, el = elAudio) {
     cancelAnimationFrame(raf);
     if (!st || !times || !times.length) return;
     let k = 0;
     const loop = () => {
       if (!st) return;
-      const t = elAudio.currentTime;
+      const t = el.currentTime;
       while (k + 1 < times.length && times[k + 1] <= t) k++;
       at(base + k);
       raf = requestAnimationFrame(loop);
@@ -6785,12 +6789,14 @@ async function elSpeak(text, btn = null) {
       const src = got.src;
       if (gen !== speakGen) { URL.revokeObjectURL(src); return; }
       ahead(i + 1); ahead(i + 2);
+      const el = i % 2 ? elAudio2 : elAudio;
+      if (jobs[i + 1]) jobs[i + 1].then((g) => { const o = (i + 1) % 2 ? elAudio2 : elAudio; if (gen === speakGen && o !== el && o.paused) { o._s = g.src; o.src = g.src; } }).catch(() => {});
       await new Promise((res, rej) => {
         elResolve = res;
-        elAudio.onended = elAudio.onerror = () => { elResolve = null; res(); };
-        elAudio.src = src;
-        SpkFollow.audio(got.times, wBase);
-        const p = elAudio.play();
+        el.onended = el.onerror = () => { elResolve = null; res(); };
+        if (el._s !== src) { el._s = src; el.src = src; }
+        SpkFollow.audio(got.times, wBase, el);
+        const p = el.play();
         if (p && p.catch) p.catch((e) => { elResolve = null; rej(e); });
       });
       URL.revokeObjectURL(src);
@@ -6807,6 +6813,84 @@ async function elSpeak(text, btn = null) {
       speakBrowser(text, btn);
     }
   }
+}
+/* Live mode: speak sentence by sentence while the reply is still being written, gapless (two audio elements swap) */
+function elSpeakStream() {
+  stopSpeaking();
+  const gen = speakGen;
+  const vo = EL_VOICES.find((x) => x.id === settings.elVoice) || EL_VOICES[0];
+  const speed = { slow: 0.85, normal: 1, fast: 1.15 }[settings.voiceOut] || 1;
+  elAudio.defaultPlaybackRate = speed;
+  elAudio2.defaultPlaybackRate = speed;
+  const ctl = new AbortController();
+  elCtl = ctl;
+  const els = [elAudio, elAudio2];
+  const keyP = elKey();
+  keyP.catch(() => {});
+  const jobs = [];
+  const prepped = [];
+  let cur = -1, ended = false, wake = null;
+  const poke = () => { if (wake) { const w = wake; wake = null; w(); } };
+  const grab = async (t) => {
+    const key = await keyP;
+    const r = await fetch('https://api.groq.com/openai/v1/audio/speech', {
+      method: 'POST',
+      signal: ctl.signal,
+      headers: { Authorization: 'Bearer ' + key, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: GROQ_TTS, voice: vo.v, input: t.replace(/[\[\]]/g, ''), response_format: 'wav' })
+    });
+    if (r.status === 401) groqBad();
+    if (!r.ok) throw new Error(r.status === 401 ? 'bad Groq key' : r.status === 429 ? 'Groq limit reached' : 'HTTP ' + r.status);
+    const buf = await r.arrayBuffer();
+    return { src: URL.createObjectURL(new Blob([buf], { type: 'audio/wav' })) };
+  };
+  const prep = (k) => {
+    if (!jobs[k] || prepped[k]) return;
+    prepped[k] = true;
+    jobs[k].then((g) => { const o = els[k % 2]; if (gen === speakGen && g && o.paused) { o._s = g.src; o.src = g.src; } }).catch(() => {});
+  };
+  const done = (async () => {
+    try {
+      for (let i = 0; ; i++) {
+        cur = i;
+        while (!jobs[i]) {
+          if (ended || gen !== speakGen) return;
+          await new Promise((r) => { wake = r; });
+        }
+        if (gen !== speakGen) return;
+        const got = await jobs[i];
+        if (gen !== speakGen) { URL.revokeObjectURL(got.src); return; }
+        const el = els[i % 2];
+        prep(i + 1);
+        await new Promise((res, rej) => {
+          elResolve = res;
+          el.onended = el.onerror = () => { elResolve = null; res(); };
+          if (el._s !== got.src) { el._s = got.src; el.src = got.src; }
+          const p = el.play();
+          if (p && p.catch) p.catch((e) => { elResolve = null; rej(e); });
+        });
+        URL.revokeObjectURL(got.src);
+        if (gen !== speakGen) return;
+      }
+    } catch (e) {
+      if (gen === speakGen && !(e && e.name === 'AbortError')) toast('Groq voice unavailable (' + ((e && e.message) || 'error') + '). (G01)', 'info', 2600);
+    } finally {
+      if (gen === speakGen) stopSpeaking();
+    }
+  })();
+  return {
+    done,
+    push(t) {
+      if (gen !== speakGen || !t) return;
+      chunkForSpeech(t, 120).forEach((c) => {
+        const k = jobs.push(grab(c)) - 1;
+        jobs[k].catch(() => {});
+        if (k === cur + 1) prep(k);
+      });
+      poke();
+    },
+    end() { ended = true; poke(); }
+  };
 }
 let speak = function (text, btn = null) {
   if (elEnabled()) return elSpeak(text, btn);
@@ -7790,14 +7874,72 @@ const Live = (() => {
     if (my === tok) stopSpeaking();
   };
 
+  const speakable = (m) => {
+    let t = String(m.content || '');
+    const k = t.indexOf('[[');
+    if (k >= 0) t = t.slice(0, k);
+    t = splitPlanParts(t).clean;
+    if ((t.match(/```/g) || []).length % 2) t = t.slice(0, t.lastIndexOf('```'));
+    return t;
+  };
+
+  const cutAt = (txt, final, first) => {
+    if (final) return txt.length;
+    const min = first ? 28 : 70;
+    const re = /[.!?\u3002\uff01\uff1f]+["')\]]*(?=\s)|\n/g;
+    let m, at = 0;
+    while ((m = re.exec(txt))) {
+      const e = m.index + m[0].length;
+      if (e < min) continue;
+      at = e;
+      if (first) break;
+    }
+    if (!at && txt.length > 220) at = txt.lastIndexOf(' ', 200) + 1;
+    return at;
+  };
+
   const turn = async (text, my) => {
     said = text;
     setState('thinking', /\?/.test(text) ? 'curious' : 'neutral');
     const before = currentSession.messages.length;
     Promise.resolve(sendChatMessage(text)).catch(() => {});
-    const m = await waitReply(my, before);
+    const useEl = elEnabled();
+    let sp = null, cur = null, done = 0, first = true, calm = 0;
+    const t0 = Date.now();
+    const feed = (final) => {
+      if (!useEl || !cur) return;
+      const txt = speakable(cur);
+      const rest = txt.slice(done);
+      if (!rest.trim()) { if (final) done = txt.length; return; }
+      const n = cutAt(rest, final, first);
+      if (!n) return;
+      const piece = cleanForSpeech(rest.slice(0, n));
+      done += n;
+      if (!piece) return;
+      if (!sp) { sp = elSpeakStream(); setState('speaking', moodOf(piece, said)); ampStart(); }
+      first = false;
+      sp.push(piece);
+    };
+    while (my === tok && Date.now() - t0 < 240000) {
+      const ms = currentSession.messages;
+      const last = ms[ms.length - 1];
+      const tooling = !!(last && (last.hidden || (last.role === 'assistant' && callsOf(last))));
+      if (last && last.role === 'assistant' && !last.hidden && ms.length > before) {
+        if (cur !== last) { cur = last; done = 0; }
+        if (!last.__empty && !last.__failed) feed(false);
+      }
+      if (chatBusy || tooling) {
+        calm = 0;
+        if (!sp && root && root.dataset.state !== 'speaking') setState(tooling ? 'searching' : 'thinking', tooling ? 'curious' : root.dataset.emo);
+      } else if ((calm += 80) >= 400 || (ms.length <= before && Date.now() - t0 > 1800)) break;
+      await sleep(80);
+    }
     if (my !== tok) return;
-    if (m) await say(m, my);
+    if (cur && !cur.__empty && !cur.__failed) {
+      if (useEl) feed(true);
+      else if (cur.content && !callsOf(cur)) await say(cur, my);
+    }
+    if (sp) { sp.end(); await sp.done; ampStop(); }
     if (my !== tok) return;
     arm();
   };
@@ -7875,7 +8017,7 @@ const Live = (() => {
     sendB.addEventListener('click', go);
     $('.live-x').addEventListener('click', close);
     $('.live-ball').addEventListener('click', () => {
-      if (root && root.dataset.state === 'speaking') { haptic(10); stopSpeaking(); }
+      if (root && root.dataset.state === 'speaking') { haptic(10); stopSpeaking(); if (chatBusy) stopGeneration(); }
     });
     document.addEventListener('keydown', onKey);
     const vv = window.visualViewport;
@@ -14300,6 +14442,8 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
 
   const lastUser = session.messages.filter((m) => m.role === 'user' && !m.hidden).slice(-1)[0];
   const seedText = text || lastUser?.content || '';
+  const liveWeb = Live.isOn() && !NEEDS_WEB_RE.test(seedText);
+  const liveLocal = Live.isOn() && !/\b(librar\w*|my files?|files?|projects?|operations?)\b/i.test(seedText);
 
   const ai = {
     role: 'assistant', content: existingContent, provider: pid, model: variant.id, effort: activeEffort, t: Date.now(),
@@ -14315,18 +14459,18 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
   setAiState('thinking');
   startStatusRotor();
 
-  pendingToolContext = isContinue ? '' : await autoResearch(seedText);
-  libContext = await libContextFor(seedText).catch((e) => { console.warn('[E02] Library lookup failed:', e); return ''; });
+  pendingToolContext = (isContinue || liveWeb) ? '' : await autoResearch(seedText);
+  libContext = liveLocal ? '' : await libContextFor(seedText).catch((e) => { console.warn('[E02] Library lookup failed:', e); return ''; });
   const sTool = Shield.clean(pendingToolContext);
   const sLib = Shield.clean(libContext);
   pendingToolContext = sTool.text ? Shield.wrap(sTool.text, 'web-or-tool') : '';
   libContext = sLib.text ? Shield.wrap(sLib.text, 'library') : '';
   const prevAi = [...session.messages].reverse().find((m) => m.role === 'assistant' && !m.hidden && m !== ai && m.content);
-  opsContext = await opsContextFor(seedText, prevAi ? String(prevAi.content) : '').catch((e) => { console.warn('[E02] Operations lookup failed:', e); return ''; });
+  opsContext = liveLocal ? '' : await opsContextFor(seedText, prevAi ? String(prevAi.content) : '').catch((e) => { console.warn('[E02] Operations lookup failed:', e); return ''; });
   const sOps = Shield.clean(opsContext);
   opsContext = sOps.text ? Shield.wrap(sOps.text, 'operations') : '';
   editCtx = '';
-  if (!isContinue) {
+  if (!isContinue && !liveLocal) {
     const fmc = await fmPrepare(seedText, session).catch(() => null);
     if (fmc) {
       const sFm = Shield.clean(fmc.files);
@@ -14354,7 +14498,7 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
     const nowT = performance.now();
     if (nowT - lastPaintAt < 70) { raf = requestAnimationFrame(paint); return; }
     lastPaintAt = nowT;
-    if (ai.content !== lastPaintContent) {
+    if (ai.content !== lastPaintContent && !Live.isOn()) {
       lastPaintContent = ai.content;
       const body = q$('#messages .msg:last-child .msg-body');
       if (body) {
