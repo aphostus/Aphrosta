@@ -2570,6 +2570,7 @@ function agGroupCard(g) {
       <div class="lib-card-top">
         <h4 class="lib-card-title"><span class="ops-ico ag-av-ico">${agBnSvg(g.banner)}</span>${esc(g.name)}</h4>
         <div class="lib-card-act">
+          ${agPlayBtn('group', g.id)}
           <button class="icon-btn" type="button" data-ag-edit="group:${esc(g.id)}" aria-label="Edit">${ICONS.pencil}</button>
           <button class="icon-btn" type="button" data-ag-del="group:${esc(g.id)}" aria-label="Delete">${ICONS.trash}</button>
         </div>
@@ -2589,6 +2590,7 @@ function agAgentCard(a) {
       <div class="lib-card-top">
         <h4 class="lib-card-title"><span class="ops-ico ag-av-ico">${agAvSvg(a.avatar, true)}</span>${esc(a.name)}</h4>
         <div class="lib-card-act">
+          ${agPlayBtn('agent', a.id)}
           <button class="icon-btn" type="button" data-ag-edit="agent:${esc(a.id)}" aria-label="Edit">${ICONS.pencil}</button>
           <button class="icon-btn" type="button" data-ag-del="agent:${esc(a.id)}" aria-label="Delete">${ICONS.trash}</button>
         </div>
@@ -2623,6 +2625,197 @@ function agRender() {
 function agRefresh() {
   agLoad();
   agRender();
+}
+
+/* ---------- AGENTS: play / pause + shared discussion ---------- */
+const AG_PLAY_LS = 'aphrosta.agPlay';
+const AG_TURNS = { minima: 2, low: 3, medium: 4, high: 5, maxima: 6 };
+const AG_PLAY_ICO = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
+const AG_PAUSE_ICO = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>';
+
+(function () {
+  const s = document.createElement('style');
+  s.textContent = '@keyframes agShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(7px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}'
+    + '.ag-shake{animation:agShake .45s}'
+    + '.ag-play.on{color:var(--oc)}'
+    + '.model-pick-btn.ag-lock{opacity:.35;pointer-events:none}'
+    + '.ag-pl-ico{display:inline-flex;width:22px;height:22px;border-radius:50%;overflow:hidden;flex:none;align-items:center;justify-content:center}'
+    + '.ag-pl-ico svg{width:100%;height:100%}'
+    + '.ag-use-row{display:flex;align-items:center;gap:10px;cursor:pointer}'
+    + '.ag-use-row .effort-option-name{flex:1}'
+    + '.ag-use-row input{width:20px;height:20px}';
+  (document.head || document.documentElement).appendChild(s);
+})();
+
+function agPlayInfo() {
+  const p = lsGet(AG_PLAY_LS, null);
+  if (!p || !p.id || (p.kind !== 'group' && p.kind !== 'agent')) return null;
+  if (!agData.groups.length && !agData.agents.length) agLoad();
+  const item = (p.kind === 'group' ? agData.groups : agData.agents).find((x) => x.id === p.id);
+  return item ? { kind: p.kind, id: p.id, item } : null;
+}
+
+const agIsPlaying = (kind, id) => { const p = agPlayInfo(); return !!p && p.kind === kind && p.id === id; };
+
+function agPlayBtn(kind, id) {
+  const on = agIsPlaying(kind, id);
+  return '<button class="icon-btn ag-play' + (on ? ' on' : '') + '" type="button" data-ag-play="' + kind + ':' + esc(id) + '" aria-label="' + (on ? 'Pause' : 'Play') + '">' + (on ? AG_PAUSE_ICO : AG_PLAY_ICO) + '</button>';
+}
+
+const agReady = (a) => !!(a && a.llm && a.llm.provider && a.llm.key && a.llm.model && PROVIDER_API[a.llm.provider]);
+
+function agPlayToggle(kind, id) {
+  const cur = agPlayInfo();
+  if (cur && cur.kind === kind && cur.id === id) {
+    lsSet(AG_PLAY_LS, null);
+  } else if (cur) {
+    const card = Array.from(document.querySelectorAll('[data-ag-card]')).find((x) => x.dataset.agCard === kind + ':' + id);
+    if (card) { card.classList.remove('ag-shake'); void card.offsetWidth; card.classList.add('ag-shake'); }
+    haptic([20, 30, 20]);
+    toast(cur.kind === 'group' ? 'A group is playing. Pause it first.' : 'An agent is playing. Pause it first.', 'info', 2000);
+    return;
+  } else {
+    const list = kind === 'group' ? agData.agents.filter((a) => a.groupId === id) : agData.agents.filter((a) => a.id === id);
+    if (!list.some(agReady)) return toast(kind === 'group' ? 'Add at least one agent with an LLM, key and model to this group.' : 'Add an LLM, API key and model to this agent first.', 'info', 2600);
+    lsSet(AG_PLAY_LS, { kind, id });
+  }
+  haptic(12);
+  agRender();
+  updateModelButton();
+}
+
+function agUsePicker(ap) {
+  if (document.querySelector('.picker-scrim')) return;
+  closeModelMenu();
+  closeEffortMenu();
+  const scrim = document.createElement('div');
+  scrim.className = 'dialog-scrim picker-scrim';
+  const ms = () => agData.agents.filter((a) => a.groupId === ap.id);
+  const row = (a) => '<label class="effort-option ag-use-row"><span class="ag-pl-ico" style="background:' + esc(agAvNorm(a.avatar).bg) + '">' + agAvSvg(a.avatar, true) + '</span><span class="effort-option-name">' + esc(a.name) + '</span><input type="checkbox" data-ag-use="' + esc(a.id) + '"' + (a.use === false ? '' : ' checked') + '></label>';
+  scrim.innerHTML = '<div class="dialog model-picker" role="dialog" aria-modal="true" aria-label="Group agents"><h3 class="dialog-title">' + esc(ap.item.name) + ' agents</h3><div class="picker-groups">' + (ms().map(row).join('') || '<p class="dialog-msg">No agents in this group.</p>') + '</div><div class="dialog-actions"><button class="dialog-btn ok" type="button" data-r="close">Done</button></div></div>';
+  scrim.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (e.target === scrim || e.target.closest('[data-r]')) scrim.remove();
+  });
+  scrim.addEventListener('change', (e) => {
+    const cb = e.target.closest('[data-ag-use]');
+    if (!cb) return;
+    const a = agData.agents.find((x) => x.id === cb.dataset.agUse);
+    if (!a) return;
+    if (!cb.checked && ms().filter((x) => x.use !== false).length <= 1) {
+      cb.checked = true;
+      toast('Keep at least one agent on.', 'info', 1800);
+      return;
+    }
+    a.use = cb.checked;
+    agSave();
+  });
+  document.body.appendChild(scrim);
+}
+
+function agTranscript(session) {
+  return session.messages
+    .filter((m) => !m.hidden && !m.__empty && !m.__failed && m.content)
+    .slice(-20)
+    .map((m) => (m.role === 'user' ? 'User' : (m.agent || 'Assistant')) + ': ' + String(m.agText || m.content).slice(0, 1500))
+    .join('\n');
+}
+
+async function agSay(a, names, transcript, signal) {
+  const l = a.llm;
+  const api = PROVIDER_API[l.provider];
+  const variant = (api.models || []).find((m) => m.id === l.model) || { id: l.model, name: l.model };
+  const adapter = adapterFor(l.provider);
+  const others = names.filter((n) => n !== a.name);
+  const sys = 'You are ' + a.name + '.' + (a.instructions ? ' Your instructions: ' + a.instructions : '')
+    + (others.length
+      ? ' You are in a shared chat with the user and ' + others.join(', ') + '. Plan together and take turns. Write only your own next message, in first person, plain text, under 80 words, without starting with your name. If the plan is settled or you have nothing new to add, reply with exactly [DONE].'
+      : ' Reply to the user in first person, plain text.');
+  const messages = [
+    { role: 'system', content: sys },
+    { role: 'user', content: 'Chat so far:\n' + transcript + '\n\nWrite ' + a.name + '\u2019s next message.' }
+  ];
+  const req = adapter.build({ api, key: l.key, variant, messages, wantStream: false, extras: api.adapter === 'anthropic' ? { max_tokens: 1200 } : {} });
+  const ctl = new AbortController();
+  const to = setTimeout(() => ctl.abort(), 60000);
+  const onAbort = () => ctl.abort();
+  if (signal) signal.addEventListener('abort', onAbort);
+  try {
+    const res = await fetch(req.url, { method: 'POST', signal: ctl.signal, headers: req.headers, body: JSON.stringify(req.body) });
+    if (!res.ok) {
+      const er = new Error(a.name + ': the model returned an error (' + res.status + ').');
+      er.status = res.status;
+      throw er;
+    }
+    const j = await res.json();
+    const text = adapter.readFull ? adapter.readFull(j).content : (j && j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '';
+    return String(text || '').replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+  } finally {
+    clearTimeout(to);
+    if (signal) signal.removeEventListener('abort', onAbort);
+  }
+}
+
+async function agDiscuss(text, atts) {
+  const ap = agPlayInfo();
+  if (!ap || chatBusy) return;
+  const list = ap.kind === 'group' ? agData.agents.filter((a) => a.groupId === ap.id && a.use !== false && agReady(a)) : [ap.item];
+  if (!list.length || !agReady(list[0])) { toast('No ready agents. Check each agent\u2019s LLM, key and model.', 'info', 2600); return; }
+  chatBusy = true;
+  const session = currentSession;
+  const myAbort = new AbortController();
+  chatAbort = myAbort;
+  const files = (atts || []).map((x) => ({ ...x }));
+  session.messages.push({ role: 'user', content: text, t: Date.now(), attachments: files.length ? files : undefined });
+  if (session.draft) {
+    session.draft = false;
+    session.title = makeTitle(text);
+    sessions.push(session);
+    clearDraft();
+  }
+  haptic(12); sfx('send');
+  session.updated = Date.now();
+  persistSessions();
+  chatStick = true;
+  syncSessionControls();
+  renderSessionUi();
+  scrollDown();
+  setAiState('thinking');
+  const max = list.length > 1 ? (AG_TURNS[activeEffort] || 4) : 1;
+  const names = list.map((a) => a.name);
+  let lastNorm = '';
+  try {
+    for (let t = 0; t < max; t++) {
+      if (myAbort.signal.aborted) break;
+      const a = list[t % list.length];
+      let clean = await agSay(a, names, agTranscript(session), myAbort.signal);
+      const pre = a.name.toLowerCase() + ':';
+      if (clean.toLowerCase().startsWith(pre)) clean = clean.slice(pre.length).trim();
+      if (!clean || /^\W*done\W*$/i.test(clean)) break;
+      const norm = clean.toLowerCase().replace(/\W+/g, ' ').trim();
+      if (norm === lastNorm) break;
+      lastNorm = norm;
+      session.messages.push({ role: 'assistant', content: '**' + a.name + ':** ' + clean, agent: a.name, agText: clean, provider: a.llm.provider, model: a.llm.model, effort: activeEffort, t: Date.now(), status: 'complete' });
+      session.updated = Date.now();
+      persistSessions();
+      renderSessionUi();
+      scrollDown();
+    }
+  } catch (e) {
+    if (!(e && e.name === 'AbortError')) {
+      const st = e && e.status;
+      toast((e && e.message) || (st ? 'The model returned an error (' + st + ').' : 'Could not reach the model.'), 'error', 3600);
+    }
+  } finally {
+    chatBusy = false;
+    setAiState('idle');
+    persistSessions();
+    Cloud.flush();
+    syncSessionControls();
+    renderSessionUi();
+    scrollDown(true);
+    sfx('done');
+  }
 }
 
 /* ---------- @AGENT MENTIONS (sandbox text) ---------- */
@@ -3455,7 +3648,7 @@ function agOpenSheet(kind, edit) {
       const insTxt = el.querySelector('#ag-ins').value.trim();
       const lbl = sv.textContent;
       sv.disabled = true;
-      sv.textContent = 'Testing API\u2026';
+      sv.textContent = 'Scanning\u2026';
       try {
         const text = await agIntro({ name, instructions: insTxt, llm: { provider: cur.llm.provider, key: cur.llm.key.trim(), model: cur.llm.model } });
         introNew = { text, sig: name + '\n' + insTxt };
@@ -3497,6 +3690,8 @@ document.addEventListener('click', (e) => {
   };
   const card = e.target.closest('[data-ag-card]');
   if (card && !e.target.closest('button, a, input, label, select, textarea')) { agToggleCard(card); return; }
+  const pl = pick('data-ag-play');
+  if (pl) { agPlayToggle(pl.k, pl.id); return; }
   const t = pick('data-ag-toggle');
   if (t && t.item) { t.item.active = t.item.active === false; agSave(); agRender(); return; }
   const ed = pick('data-ag-edit');
@@ -12866,6 +13061,7 @@ function chatReady() {
     toast('Token limit reached. Raise it in Settings \u2192 Usage, or wait for the timer. (D02)', 'info', 3600);
     return false;
   }
+  if (agPlayInfo()) return true;
   const prov = MODEL_PROVIDERS.find((p) => p.id === activeModel);
   if (!prov || !apiKeys[activeModel]) {
     toast('Choose a model and add its API key first. (D03)', 'info');
@@ -13418,6 +13614,7 @@ function replyStatus(ai, fr, aborted, errored, usage, pid, variant) {
 }
 
 let sendChatMessage = async function (text, regen = false, attachmentsOverride = null, isContinue = false) {
+  if (!chatBusy && !regen && !isContinue && text && agPlayInfo()) return agDiscuss(text, attachmentsOverride);
   if (chatBusy || !chatReady()) return;
   chatBusy = true;
 
@@ -13873,6 +14070,9 @@ const canAutoFocus = () => window.matchMedia('(hover: hover) and (pointer: fine)
 
 function openModelPicker() {
   if (document.querySelector('.picker-scrim')) return;
+  const apk = agPlayInfo();
+  if (apk && apk.kind === 'agent') { toast('An agent is playing. Pause it to change models.', 'info', 2000); return; }
+  if (apk && apk.kind === 'group') { agUsePicker(apk); return; }
   const trigger = document.activeElement;
   closeModelMenu();
   closeEffortMenu();
@@ -14100,9 +14300,13 @@ function updateModelButton() {
   const slot = appEl.querySelector('.model-btn-content');
   if (!slot) return;
   const p = MODEL_PROVIDERS.find((x) => x.id === activeModel);
-  const logo = p ? `<span class="model-btn-logo">${p.logo}</span>` : '';
-  const name = p ? p.name : 'Models';
+  const ap = agPlayInfo();
+  const logo = ap
+    ? `<span class="model-btn-logo ag-pl-ico"${ap.kind === 'agent' ? ` style="background:${esc(agAvNorm(ap.item.avatar).bg)}"` : ''}>${ap.kind === 'group' ? agBnSvg(ap.item.banner) : agAvSvg(ap.item.avatar, true)}</span>`
+    : (p ? `<span class="model-btn-logo">${p.logo}</span>` : '');
+  const name = ap ? ap.item.name : (p ? p.name : 'Models');
   slot.innerHTML = `${logo}<span class="model-name">${esc(name)}</span>${ICONS.chevron}`;
+  appEl.querySelector('.model-pick-btn')?.classList.toggle('ag-lock', !!ap && ap.kind === 'agent');
   appEl?.querySelector('.composer')?.__resetThink?.();
 }
 
