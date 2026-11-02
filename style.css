@@ -4465,3 +4465,21 @@ html[data-motion="reduce"] .sess-pw { animation: none; }
 .ops-ed .conn-wrap .conn-list::-webkit-scrollbar { display: none; }
 .ops-ed .conn-wrap .conn-row { min-height: 52px; }
 
+/* agents: Group / Agent toggle, icon grid, sandbox editor */
+.ag-tog { display: flex; gap: 4px; margin-top: 10px; padding: 3px; border: 1px solid var(--glass-border); border-radius: var(--radius-pill); background: var(--glass-bg); }
+.ag-tab { flex: 1; height: 32px; border-radius: var(--radius-pill); font-size: calc(13px * var(--ts)); font-weight: 600; color: var(--gray-mid); transition: background 0.2s, color 0.2s; }
+.ag-tab.on { color: var(--fg); background: rgba(var(--fg-rgb), 0.12); }
+.ag-off .lib-card-title, .ag-off .lib-card-meta { opacity: 0.45; }
+.ag-card .icon-btn:disabled { opacity: 0.35; }
+.ag-r1 { display: flex; align-items: flex-end; gap: 10px; }
+.ag-r1 .lib-lab { flex: 1; min-width: 0; }
+.ag-icons { display: grid; grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); gap: 6px; max-height: 132px; overflow-y: auto; }
+.ag-ic { display: inline-flex; align-items: center; justify-content: center; height: 40px; border-radius: 12px; color: var(--gray-light); background: var(--glass-bg); border: 1px solid var(--glass-border); }
+.ag-ic.on { color: var(--oc, var(--fg)); border-color: var(--oc, var(--fg)); }
+.ag-chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; scrollbar-width: none; }
+.ag-chips::-webkit-scrollbar { display: none; }
+.ag-chip { flex: none; display: inline-flex; align-items: center; justify-content: center; min-width: 36px; height: 32px; padding: 0 12px; border-radius: var(--radius-pill); font-size: calc(12.5px * var(--ts)); color: var(--gray-mid); background: var(--glass-bg); border: 1px solid var(--glass-border); }
+.ag-chip.on { color: var(--fg); border-color: rgba(var(--fg-rgb), 0.35); }
+.ag-part-h { display: flex; align-items: center; justify-content: space-between; }
+.ag-code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: calc(12.5px * var(--ts)); white-space: pre; overflow-x: auto; }
+

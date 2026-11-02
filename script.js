@@ -2431,6 +2431,302 @@ document.addEventListener('click', (e) => {
   projRender();
 });
 
+/* ---------- AGENTS: Group / Agent toggle (same design as Libraries + Projects) ---------- */
+const AG_LS = 'aphrosta.agents';
+let agData = { groups: [], agents: [] };
+let agMode = 'group';
+
+function agLoad() {
+  const d = lsGet(AG_LS, null);
+  agData = {
+    groups: Array.isArray(d && d.groups) ? d.groups.filter((g) => g && typeof g.id === 'string') : [],
+    agents: Array.isArray(d && d.agents) ? d.agents.filter((a) => a && typeof a.id === 'string') : []
+  };
+}
+const agSave = () => lsSet(AG_LS, agData);
+const agNewSandbox = () => ({ files: [{ id: uid(), name: 'notes.txt', parts: [''] }] });
+const agSbOf = (o) => (o.sandbox && Array.isArray(o.sandbox.files) ? o.sandbox : (o.sandbox = agNewSandbox()));
+const agGroupOf = (a) => agData.groups.find((g) => g.id === a.groupId);
+
+function agEmptyHtml() {
+  return `<div class="np-empty"><span class="np-empty-ico">${ICONS.navAgents}</span><h3 class="np-empty-title">Nothing Placed Yet</h3><p class="np-empty-desc">Your ${agMode === 'group' ? 'groups' : 'agents'} will show up here.</p></div>`;
+}
+
+function agGroupCard(g) {
+  const on = g.active !== false;
+  const n = agData.agents.filter((a) => a.groupId === g.id).length;
+  const f = agSbOf(g).files.length;
+  return `
+    <div class="lib-card ops-card ag-card${on ? '' : ' ag-off'}" style="--oc:${esc(opsInk(g.color || OPS_COLORS[0]))}">
+      <div class="lib-card-top">
+        <h4 class="lib-card-title"><span class="ops-ico">${ICONS[g.icon] || ICONS.opsCode}</span>${esc(g.name)}</h4>
+        <div class="lib-card-act">
+          <button class="icon-btn" type="button" data-ag-toggle="group:${esc(g.id)}" aria-pressed="${on ? 'true' : 'false'}" aria-label="${on ? 'Active' : 'Inactive'}">${on ? ICONS.eye : ICONS.eyeOff}</button>
+          <button class="icon-btn" type="button" data-ag-edit="group:${esc(g.id)}" aria-label="Edit">${ICONS.pencil}</button>
+          <button class="icon-btn" type="button" data-ag-del="group:${esc(g.id)}" aria-label="Delete">${ICONS.trash}</button>
+        </div>
+      </div>
+      <p class="lib-card-meta">${on ? 'Active' : 'Inactive'} \u00b7 ${n} ${n === 1 ? 'agent' : 'agents'} \u00b7 ${f} shared ${f === 1 ? 'file' : 'files'}</p>
+    </div>`;
+}
+
+function agAgentCard(a) {
+  const g = agGroupOf(a);
+  const gOff = !!g && g.active === false;
+  const on = a.active !== false && !gOff;
+  const f = agSbOf(a).files.length;
+  const state = gOff ? 'Group inactive' : (on ? 'Active' : 'Inactive');
+  return `
+    <div class="lib-card ops-card ag-card${on ? '' : ' ag-off'}" style="--oc:${esc(opsInk(g ? (g.color || OPS_COLORS[0]) : OPS_COLORS[0]))}">
+      <div class="lib-card-top">
+        <h4 class="lib-card-title"><span class="ops-ico">${(g && ICONS[g.icon]) || ICONS.opsCode}</span>${esc(a.name)}</h4>
+        <div class="lib-card-act">
+          <button class="icon-btn" type="button" data-ag-toggle="agent:${esc(a.id)}"${gOff ? ' disabled' : ''} aria-pressed="${on ? 'true' : 'false'}" aria-label="${on ? 'Active' : 'Inactive'}">${on ? ICONS.eye : ICONS.eyeOff}</button>
+          <button class="icon-btn" type="button" data-ag-edit="agent:${esc(a.id)}" aria-label="Edit">${ICONS.pencil}</button>
+          <button class="icon-btn" type="button" data-ag-del="agent:${esc(a.id)}" aria-label="Delete">${ICONS.trash}</button>
+        </div>
+      </div>
+      <p class="lib-card-meta">${state} \u00b7 ${g ? esc(g.name) : 'No group'} \u00b7 ${f} ${f === 1 ? 'file' : 'files'}</p>
+    </div>`;
+}
+
+function agRender() {
+  const panel = document.getElementById('nav-panel');
+  const body = panel && panel.querySelector('.np-body');
+  if (!body || panel.getAttribute('aria-label') !== 'Agents') return;
+  const head = panel.querySelector('.np-head');
+  let tog = head.querySelector('.ag-tog');
+  if (!tog) {
+    head.insertAdjacentHTML('beforeend', '<div class="ag-tog" role="group" aria-label="Mode"><button class="ag-tab" type="button" data-ag-mode="group">Group</button><button class="ag-tab" type="button" data-ag-mode="agent">Agent</button></div>');
+    tog = head.querySelector('.ag-tog');
+  }
+  tog.querySelectorAll('[data-ag-mode]').forEach((b) => {
+    const on = b.dataset.agMode === agMode;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+  const list = agMode === 'group' ? agData.groups : agData.agents;
+  if (!list.length) { body.classList.remove('lib-list'); body.innerHTML = agEmptyHtml(); return; }
+  body.classList.add('lib-list');
+  body.innerHTML = list.slice().sort((a, b) => (b.t || 0) - (a.t || 0)).map(agMode === 'group' ? agGroupCard : agAgentCard).join('');
+}
+
+function agRefresh() {
+  agLoad();
+  agRender();
+}
+
+/* sandbox popup: many code files, each file has many parts. Default file is a .txt */
+function agOpenSandbox(title, sb, onSave) {
+  document.getElementById('ag-sb-scrim')?.remove();
+  const work = JSON.parse(JSON.stringify(sb));
+  let cur = work.files[0] ? work.files[0].id : null;
+  const el = document.createElement('div');
+  el.className = 'lib-scrim';
+  el.id = 'ag-sb-scrim';
+  el.innerHTML = `
+    <div class="lib-sheet" role="dialog" aria-label="Sandbox">
+      <div class="lib-grab"></div>
+      <div class="lib-head">
+        <h3 class="lib-h">${esc(title)}</h3>
+        <div class="lib-head-act">
+          <button class="icon-btn" type="button" id="ag-sb-close" aria-label="Close">${ICONS.stClose}</button>
+        </div>
+      </div>
+      <div class="ag-chips" id="ag-sb-chips"></div>
+      <div id="ag-sb-main"></div>
+      <button class="lib-save" id="ag-sb-save" type="button">Save</button>
+    </div>`;
+  document.body.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  const close = () => { el.classList.remove('show'); setTimeout(() => el.remove(), 250); };
+  const chips = el.querySelector('#ag-sb-chips');
+  const main = el.querySelector('#ag-sb-main');
+  const file = () => work.files.find((f) => f.id === cur);
+  const draw = () => {
+    chips.innerHTML = work.files.map((f) => `<button class="ag-chip${f.id === cur ? ' on' : ''}" type="button" data-ag-f="${esc(f.id)}">${esc(f.name)}</button>`).join('')
+      + `<button class="ag-chip" type="button" data-ag-fadd aria-label="Add file">${ICONS.plus}</button>`;
+    const f = file();
+    if (!f) { main.innerHTML = '<p class="lib-note">No files yet. Tap + to add one.</p>'; return; }
+    main.innerHTML = `
+      <label class="lib-lab">File name
+        <input class="lib-in" data-ag-fname maxlength="60" autocomplete="off" autocapitalize="off" spellcheck="false" value="${esc(f.name)}">
+      </label>
+      ${f.parts.map((p, i) => `
+      <div class="lib-lab">
+        <span class="ag-part-h">Part ${i + 1}${f.parts.length > 1 ? `<button class="icon-btn" type="button" data-ag-prm="${i}" aria-label="Remove part">${ICONS.trash}</button>` : ''}</span>
+        <textarea class="lib-in lib-ta ag-code" data-ag-part="${i}" rows="5" spellcheck="false" autocapitalize="off" autocorrect="off">${esc(p)}</textarea>
+      </div>`).join('')}
+      <button class="lib-file" type="button" data-ag-padd>${ICONS.plus}<span>Add part</span></button>
+      <button class="lib-file" type="button" data-ag-fdel>${ICONS.trash}<span>Delete file</span></button>`;
+  };
+  draw();
+  el.addEventListener('click', (e) => {
+    if (e.target === el) { close(); return; }
+    const f = file();
+    const chip = e.target.closest('[data-ag-f]');
+    if (chip) { cur = chip.dataset.agF; draw(); return; }
+    if (e.target.closest('[data-ag-fadd]')) {
+      const n = { id: uid(), name: 'file' + (work.files.length + 1) + '.txt', parts: [''] };
+      work.files.push(n);
+      cur = n.id;
+      draw();
+      return;
+    }
+    if (!f) return;
+    if (e.target.closest('[data-ag-padd]')) { f.parts.push(''); draw(); return; }
+    const rm = e.target.closest('[data-ag-prm]');
+    if (rm) { f.parts.splice(Number(rm.dataset.agPrm), 1); draw(); return; }
+    if (e.target.closest('[data-ag-fdel]')) {
+      work.files = work.files.filter((x) => x.id !== f.id);
+      cur = work.files[0] ? work.files[0].id : null;
+      draw();
+    }
+  });
+  el.addEventListener('input', (e) => {
+    const f = file();
+    if (!f) return;
+    if (e.target.matches('[data-ag-fname]')) {
+      f.name = e.target.value;
+      const c = chips.querySelector('.ag-chip.on');
+      if (c) c.textContent = f.name || 'untitled';
+    } else if (e.target.matches('[data-ag-part]')) {
+      f.parts[Number(e.target.dataset.agPart)] = e.target.value;
+    }
+  });
+  el.querySelector('#ag-sb-close').addEventListener('click', close);
+  el.querySelector('#ag-sb-save').addEventListener('click', () => {
+    work.files.forEach((f) => { f.name = (f.name || '').trim() || 'file.txt'; });
+    onSave(work);
+    close();
+  });
+}
+
+function closeAgSheet() {
+  document.getElementById('ag-sb-scrim')?.remove();
+  const el = document.getElementById('ag-scrim');
+  if (!el) return;
+  el.classList.remove('show');
+  setTimeout(() => el.remove(), 250);
+}
+
+function agOpenSheet(kind, edit) {
+  document.getElementById('ag-scrim')?.remove();
+  agLoad();
+  const isG = kind === 'group';
+  const cur = {
+    icon: (edit && edit.icon) || OPS_ICONS[0],
+    color: (edit && edit.color) || OPS_COLORS[0],
+    active: edit ? edit.active !== false : true
+  };
+  let sb = JSON.parse(JSON.stringify(agSbOf(edit || {})));
+  const el = document.createElement('div');
+  el.className = 'lib-scrim';
+  el.id = 'ag-scrim';
+  el.innerHTML = `
+    <div class="lib-sheet" role="dialog" aria-label="Create" style="--oc:${esc(opsInk(cur.color))}">
+      <div class="lib-grab"></div>
+      <div class="lib-head">
+        <h3 class="lib-h">${edit ? 'Edit' : 'Create'} ${isG ? 'group' : 'agent'}</h3>
+        <div class="lib-head-act">
+          <button class="icon-btn lib-vis${cur.active ? '' : ' is-off'}" type="button" id="ag-act" aria-pressed="${cur.active ? 'true' : 'false'}" aria-label="${cur.active ? 'Active' : 'Inactive'}">${cur.active ? ICONS.eye : ICONS.eyeOff}</button>
+          <button class="icon-btn" type="button" id="ag-close" aria-label="Close">${ICONS.stClose}</button>
+        </div>
+      </div>
+      <div class="ag-r1">
+        <label class="lib-lab">Name
+          <input class="lib-in" id="ag-name" maxlength="60" autocomplete="off" placeholder="${isG ? 'e.g. Web team' : 'e.g. Code helper'}" value="${esc(edit && edit.name)}">
+        </label>
+        ${isG ? `<button class="ops-cc" type="button" id="ag-cc" aria-label="Next color">${OPS_I.toggle}</button>` : ''}
+      </div>
+      ${isG ? `<div class="lib-lab">Icon
+        <div class="ag-icons">${OPS_ICONS.map((k) => `<button class="ag-ic${k === cur.icon ? ' on' : ''}" type="button" data-ag-icon="${k}" aria-label="Icon">${ICONS[k]}</button>`).join('')}</div>
+      </div>` : `<label class="lib-lab">Group
+        <select class="lib-in" id="ag-group">
+          <option value="">No group</option>
+          ${agData.groups.map((g) => `<option value="${esc(g.id)}"${edit && edit.groupId === g.id ? ' selected' : ''}>${esc(g.name)}</option>`).join('')}
+        </select>
+      </label>`}
+      <div class="lib-lab">${isG ? 'Shared sandbox' : 'Sandbox'}
+        <button class="lib-file" id="ag-sb" type="button">${ICONS.attachFile}<span id="ag-sbn"></span></button>
+      </div>
+      <p class="lib-note">${isG ? 'Every agent in this group can use the shared sandbox. An inactive group dims and disables its agents.' : 'This sandbox belongs to this agent only. It also uses its group\u2019s shared sandbox.'}</p>
+      <button class="lib-save" id="ag-save" type="button">Save</button>
+    </div>`;
+  document.body.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+
+  const sbLabel = () => { el.querySelector('#ag-sbn').textContent = sb.files.length + (sb.files.length === 1 ? ' file' : ' files'); };
+  sbLabel();
+  el.addEventListener('click', (e) => { if (e.target === el) closeAgSheet(); });
+  el.querySelector('#ag-close').addEventListener('click', closeAgSheet);
+  const actBtn = el.querySelector('#ag-act');
+  actBtn.addEventListener('click', () => {
+    cur.active = !cur.active;
+    actBtn.innerHTML = cur.active ? ICONS.eye : ICONS.eyeOff;
+    actBtn.classList.toggle('is-off', !cur.active);
+    actBtn.setAttribute('aria-pressed', cur.active ? 'true' : 'false');
+    actBtn.setAttribute('aria-label', cur.active ? 'Active' : 'Inactive');
+    toast(cur.active ? 'Active.' : 'Inactive.', 'info', 1400);
+  });
+  const cc = el.querySelector('#ag-cc');
+  if (cc) cc.addEventListener('click', () => {
+    cur.color = OPS_COLORS[(OPS_COLORS.indexOf(cur.color) + 1) % OPS_COLORS.length];
+    el.querySelector('.lib-sheet').style.setProperty('--oc', opsInk(cur.color));
+  });
+  el.addEventListener('click', (e) => {
+    const ic = e.target.closest('[data-ag-icon]');
+    if (!ic) return;
+    cur.icon = ic.dataset.agIcon;
+    el.querySelectorAll('[data-ag-icon]').forEach((b) => b.classList.toggle('on', b === ic));
+  });
+  el.querySelector('#ag-sb').addEventListener('click', () => {
+    agOpenSandbox(isG ? 'Shared sandbox' : 'Sandbox', sb, (s) => { sb = s; sbLabel(); });
+  });
+  el.querySelector('#ag-save').addEventListener('click', () => {
+    const name = el.querySelector('#ag-name').value.trim();
+    if (!name) return toast('Add a name. (H10)', 'info', 2000);
+    agLoad();
+    const rec = isG
+      ? { id: edit ? edit.id : uid(), name, icon: cur.icon, color: cur.color, active: cur.active, sandbox: sb, t: edit ? (edit.t || Date.now()) : Date.now() }
+      : { id: edit ? edit.id : uid(), name, groupId: el.querySelector('#ag-group').value, active: cur.active, sandbox: sb, t: edit ? (edit.t || Date.now()) : Date.now() };
+    const key = isG ? 'groups' : 'agents';
+    const prev = agData[key];
+    agData[key] = edit ? prev.map((x) => (x.id === edit.id ? rec : x)) : [...prev, rec];
+    if (!agSave()) { agData[key] = prev; return; }
+    toast(edit ? 'Changes saved.' : (isG ? 'Group created.' : 'Agent created.'), 'success', 1800);
+    closeAgSheet();
+    agRender();
+  });
+}
+
+document.addEventListener('click', (e) => {
+  const m = e.target.closest('[data-ag-mode]');
+  if (m) { agMode = m.dataset.agMode; agRender(); return; }
+  const pick = (attr) => {
+    const b = e.target.closest('[' + attr + ']');
+    if (!b) return null;
+    const [k, id] = b.getAttribute(attr).split(':');
+    const list = k === 'group' ? agData.groups : agData.agents;
+    return { k, id, item: list.find((x) => x.id === id) };
+  };
+  const t = pick('data-ag-toggle');
+  if (t && t.item) { t.item.active = t.item.active === false; agSave(); agRender(); return; }
+  const ed = pick('data-ag-edit');
+  if (ed && ed.item) { agOpenSheet(ed.k, ed.item); return; }
+  const dl = pick('data-ag-del');
+  if (dl) {
+    if (dl.k === 'group') {
+      agData.groups = agData.groups.filter((g) => g.id !== dl.id);
+      agData.agents.forEach((a) => { if (a.groupId === dl.id) a.groupId = ''; });
+    } else {
+      agData.agents = agData.agents.filter((a) => a.id !== dl.id);
+    }
+    agSave();
+    agRender();
+  }
+});
+
 /* ---------- OPERATIONS: storage + project list + popup shell (Patch 1-2) ---------- */
 const OPS_NEW_ICONS = {
   op01: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
@@ -4212,6 +4508,7 @@ function openNavPanel(key) {
   else if (key === 'nav-connectors') connRefresh();
   else if (key === 'nav-automation') autoRefresh();
   else if (key === 'nav-projects') projRefresh();
+  else if (key === 'nav-agent') agRefresh();
 }
 
 function closeNavPanel() {
@@ -13127,6 +13424,7 @@ function initShell() {
       const npLabel = document.getElementById('nav-panel')?.getAttribute('aria-label');
       if (npLabel === 'Libraries') openLibSheet();
       else if (npLabel === 'Projects') projOpenSheet();
+      else if (npLabel === 'Agents') agOpenSheet(agMode);
       else if (npLabel === 'Operations') opsOpenEditor();
       else if (npLabel === 'Connections') connOpenEditor();
       else if (npLabel === 'Automations') autoOpenEditor();
