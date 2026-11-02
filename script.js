@@ -2470,8 +2470,8 @@ function agLoad() {
   };
 }
 const agSave = () => lsSet(AG_LS, agData);
-const agNewSandbox = () => ({ files: [{ id: uid(), name: 'notes.txt', parts: [''] }] });
-const agSbOf = (o) => (o.sandbox && Array.isArray(o.sandbox.files) ? o.sandbox : (o.sandbox = agNewSandbox()));
+const agNewSandbox = (nm) => ({ files: [{ id: uid(), name: nm || 'agent.txt', parts: [''] }] });
+const agSbOf = (o, nm) => (o.sandbox && Array.isArray(o.sandbox.files) ? o.sandbox : (o.sandbox = agNewSandbox(nm)));
 const agGroupOf = (a) => agData.groups.find((g) => g.id === a.groupId);
 
 function agEmptyHtml() {
@@ -2481,13 +2481,12 @@ function agEmptyHtml() {
 function agGroupCard(g) {
   const on = g.active !== false;
   const n = agData.agents.filter((a) => a.groupId === g.id).length;
-  const f = agSbOf(g).files.length;
+  const f = agSbOf(g, 'group.txt').files.length;
   return `
     <div class="lib-card ops-card ag-card${on ? '' : ' ag-off'}" style="--oc:${esc(opsInk(g.color || OPS_COLORS[0]))}">
       <div class="lib-card-top">
-        <h4 class="lib-card-title"><span class="ops-ico">${ICONS[g.icon] || ICONS.opsCode}</span>${esc(g.name)}</h4>
+        <h4 class="lib-card-title"><span class="ops-ico">${ICONS.op06}</span>${esc(g.name)}</h4>
         <div class="lib-card-act">
-          <button class="icon-btn" type="button" data-ag-toggle="group:${esc(g.id)}" aria-pressed="${on ? 'true' : 'false'}" aria-label="${on ? 'Active' : 'Inactive'}">${on ? ICONS.eye : ICONS.eyeOff}</button>
           <button class="icon-btn" type="button" data-ag-edit="group:${esc(g.id)}" aria-label="Edit">${ICONS.pencil}</button>
           <button class="icon-btn" type="button" data-ag-del="group:${esc(g.id)}" aria-label="Delete">${ICONS.trash}</button>
         </div>
@@ -2498,16 +2497,14 @@ function agGroupCard(g) {
 
 function agAgentCard(a) {
   const g = agGroupOf(a);
-  const gOff = !!g && g.active === false;
-  const on = a.active !== false && !gOff;
-  const f = agSbOf(a).files.length;
-  const state = gOff ? 'Group inactive' : (on ? 'Active' : 'Inactive');
+  const on = a.active !== false;
+  const f = agSbOf(a, 'agent.txt').files.length;
+  const state = on ? 'Active' : 'Inactive';
   return `
     <div class="lib-card ops-card ag-card${on ? '' : ' ag-off'}" style="--oc:${esc(opsInk(g ? (g.color || OPS_COLORS[0]) : OPS_COLORS[0]))}">
       <div class="lib-card-top">
-        <h4 class="lib-card-title"><span class="ops-ico">${(g && ICONS[g.icon]) || ICONS.opsCode}</span>${esc(a.name)}</h4>
+        <h4 class="lib-card-title"><span class="ops-ico">${g ? ICONS.op06 : ICONS.opsCode}</span>${esc(a.name)}</h4>
         <div class="lib-card-act">
-          <button class="icon-btn" type="button" data-ag-toggle="agent:${esc(a.id)}"${gOff ? ' disabled' : ''} aria-pressed="${on ? 'true' : 'false'}" aria-label="${on ? 'Active' : 'Inactive'}">${on ? ICONS.eye : ICONS.eyeOff}</button>
           <button class="icon-btn" type="button" data-ag-edit="agent:${esc(a.id)}" aria-label="Edit">${ICONS.pencil}</button>
           <button class="icon-btn" type="button" data-ag-del="agent:${esc(a.id)}" aria-label="Delete">${ICONS.trash}</button>
         </div>
@@ -2543,7 +2540,7 @@ function agRefresh() {
 }
 
 /* sandbox popup: many code files, each file has many parts. Default file is a .txt */
-function agOpenSandbox(title, sb, onSave) {
+function agOpenSandbox(title, sb, onSave, base = 'agent.txt') {
   document.getElementById('ag-sb-scrim')?.remove();
   const work = JSON.parse(JSON.stringify(sb));
   let cur = work.files[0] ? work.files[0].id : null;
@@ -2569,6 +2566,19 @@ function agOpenSandbox(title, sb, onSave) {
   const chips = el.querySelector('#ag-sb-chips');
   const main = el.querySelector('#ag-sb-main');
   const file = () => work.files.find((f) => f.id === cur);
+  const okName = {};
+  work.files.forEach((x) => { okName[x.id] = x.name; });
+  const fixName = (n) => {
+    let s = String(n || '').replace(/[\\/:*?"<>|]/g, '').trim().replace(/[.\s]+$/, '');
+    s = s.replace(/\.[A-Za-z0-9_-]+$/, '').replace(/^\.+/, '').trim();
+    return (s || base.replace(/\.txt$/, '')) + '.txt';
+  };
+  const freeName = () => {
+    const stem = base.replace(/\.txt$/, '');
+    let nm = base, i = 2;
+    while (work.files.some((x) => x.name.toLowerCase() === nm.toLowerCase())) nm = stem + (i++) + '.txt';
+    return nm;
+  };
   const draw = () => {
     chips.innerHTML = work.files.map((f) => `<button class="ag-chip${f.id === cur ? ' on' : ''}" type="button" data-ag-f="${esc(f.id)}">${esc(f.name)}</button>`).join('')
       + `<button class="ag-chip" type="button" data-ag-fadd aria-label="Add file">${ICONS.plus}</button>`;
@@ -2593,7 +2603,8 @@ function agOpenSandbox(title, sb, onSave) {
     const chip = e.target.closest('[data-ag-f]');
     if (chip) { cur = chip.dataset.agF; draw(); return; }
     if (e.target.closest('[data-ag-fadd]')) {
-      const n = { id: uid(), name: 'file' + (work.files.length + 1) + '.txt', parts: [''] };
+      const n = { id: uid(), name: freeName(), parts: [''] };
+      okName[n.id] = n.name;
       work.files.push(n);
       cur = n.id;
       draw();
@@ -2620,9 +2631,29 @@ function agOpenSandbox(title, sb, onSave) {
       f.parts[Number(e.target.dataset.agPart)] = e.target.value;
     }
   });
+  el.addEventListener('change', (e) => {
+    if (!e.target.matches('[data-ag-fname]')) return;
+    const f = file();
+    if (!f) return;
+    const nn = fixName(e.target.value);
+    if (work.files.some((x) => x.id !== f.id && x.name.toLowerCase() === nn.toLowerCase())) {
+      f.name = okName[f.id];
+      toast('That file name already exists.', 'info', 2000);
+    } else {
+      f.name = nn;
+      okName[f.id] = nn;
+    }
+    draw();
+  });
   el.querySelector('#ag-sb-close').addEventListener('click', close);
   el.querySelector('#ag-sb-save').addEventListener('click', () => {
-    work.files.forEach((f) => { f.name = (f.name || '').trim() || 'file.txt'; });
+    work.files.forEach((f) => { f.name = fixName(f.name); });
+    const seen = new Set();
+    for (const f of work.files) {
+      const k = f.name.toLowerCase();
+      if (seen.has(k)) return toast('Duplicate file name: ' + f.name, 'info', 2200);
+      seen.add(k);
+    }
     onSave(work);
     close();
   });
@@ -2641,11 +2672,11 @@ function agOpenSheet(kind, edit) {
   agLoad();
   const isG = kind === 'group';
   const cur = {
-    icon: (edit && edit.icon) || OPS_ICONS[0],
+    icon: 'op06',
     color: (edit && edit.color) || OPS_COLORS[0],
     active: edit ? edit.active !== false : true
   };
-  let sb = JSON.parse(JSON.stringify(agSbOf(edit || {})));
+  let sb = JSON.parse(JSON.stringify(agSbOf(edit || {}, isG ? 'group.txt' : 'agent.txt')));
   const el = document.createElement('div');
   el.className = 'lib-scrim';
   el.id = 'ag-scrim';
@@ -2665,18 +2696,19 @@ function agOpenSheet(kind, edit) {
         </label>
         ${isG ? `<button class="ops-cc" type="button" id="ag-cc" aria-label="Next color">${OPS_I.toggle}</button>` : ''}
       </div>
-      ${isG ? `<div class="lib-lab">Icon
-        <div class="ag-icons">${OPS_ICONS.map((k) => `<button class="ag-ic${k === cur.icon ? ' on' : ''}" type="button" data-ag-icon="${k}" aria-label="Icon">${ICONS[k]}</button>`).join('')}</div>
-      </div>` : `<label class="lib-lab">Group
+      <label class="lib-lab">Instructions
+        <textarea class="lib-in lib-ta" id="ag-ins" rows="5" maxlength="4000">${esc(edit && edit.instructions)}</textarea>
+      </label>
+      ${isG ? '' : `<label class="lib-lab">Group
         <select class="lib-in" id="ag-group">
           <option value="">No group</option>
           ${agData.groups.map((g) => `<option value="${esc(g.id)}"${edit && edit.groupId === g.id ? ' selected' : ''}>${esc(g.name)}</option>`).join('')}
         </select>
       </label>`}
-      <div class="lib-lab">${isG ? 'Shared sandbox' : 'Sandbox'}
+      <div class="lib-lab">Sandbox
         <button class="lib-file" id="ag-sb" type="button">${ICONS.attachFile}<span id="ag-sbn"></span></button>
       </div>
-      <p class="lib-note">${isG ? 'Every agent in this group can use the shared sandbox. An inactive group dims and disables its agents.' : 'This sandbox belongs to this agent only. It also uses its group\u2019s shared sandbox.'}</p>
+      <p class="lib-note">${isG ? 'Every agent in this group can use the shared sandbox. A disabled group only disables its own shared sandbox. Its agents are not affected.' : 'This sandbox belongs to this agent only. It also uses its group\u2019s shared sandbox.'}</p>
       <button class="lib-save" id="ag-save" type="button">Save</button>
     </div>`;
   document.body.appendChild(el);
@@ -2693,29 +2725,24 @@ function agOpenSheet(kind, edit) {
     actBtn.classList.toggle('is-off', !cur.active);
     actBtn.setAttribute('aria-pressed', cur.active ? 'true' : 'false');
     actBtn.setAttribute('aria-label', cur.active ? 'Active' : 'Inactive');
-    toast(cur.active ? 'Active.' : 'Inactive.', 'info', 1400);
+    toast(cur.active ? 'Activated.' : 'Disabled.', 'info', 1400);
   });
   const cc = el.querySelector('#ag-cc');
   if (cc) cc.addEventListener('click', () => {
     cur.color = OPS_COLORS[(OPS_COLORS.indexOf(cur.color) + 1) % OPS_COLORS.length];
     el.querySelector('.lib-sheet').style.setProperty('--oc', opsInk(cur.color));
   });
-  el.addEventListener('click', (e) => {
-    const ic = e.target.closest('[data-ag-icon]');
-    if (!ic) return;
-    cur.icon = ic.dataset.agIcon;
-    el.querySelectorAll('[data-ag-icon]').forEach((b) => b.classList.toggle('on', b === ic));
-  });
+
   el.querySelector('#ag-sb').addEventListener('click', () => {
-    agOpenSandbox(isG ? 'Shared sandbox' : 'Sandbox', sb, (s) => { sb = s; sbLabel(); });
+    agOpenSandbox('Sandbox', sb, (s) => { sb = s; sbLabel(); }, isG ? 'group.txt' : 'agent.txt');
   });
   el.querySelector('#ag-save').addEventListener('click', () => {
     const name = el.querySelector('#ag-name').value.trim();
     if (!name) return toast('Add a name. (H10)', 'info', 2000);
     agLoad();
     const rec = isG
-      ? { id: edit ? edit.id : uid(), name, icon: cur.icon, color: cur.color, active: cur.active, sandbox: sb, t: edit ? (edit.t || Date.now()) : Date.now() }
-      : { id: edit ? edit.id : uid(), name, groupId: el.querySelector('#ag-group').value, active: cur.active, sandbox: sb, t: edit ? (edit.t || Date.now()) : Date.now() };
+      ? { id: edit ? edit.id : uid(), name, instructions: el.querySelector('#ag-ins').value.trim(), icon: cur.icon, color: cur.color, active: cur.active, sandbox: sb, t: edit ? (edit.t || Date.now()) : Date.now() }
+      : { id: edit ? edit.id : uid(), name, instructions: el.querySelector('#ag-ins').value.trim(), groupId: el.querySelector('#ag-group').value, active: cur.active, sandbox: sb, t: edit ? (edit.t || Date.now()) : Date.now() };
     const key = isG ? 'groups' : 'agents';
     const prev = agData[key];
     agData[key] = edit ? prev.map((x) => (x.id === edit.id ? rec : x)) : [...prev, rec];
