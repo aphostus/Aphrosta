@@ -4262,6 +4262,7 @@ mark.ab-mark {
 .wrld-ring { transform-origin: 12px 12px; animation: wrldSpin 6s linear infinite; }
 @keyframes wrldSpin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .wrld-ring { animation: none; } }
+.arch-btn.wrld-btn svg { width: 28px; height: 28px; }
 .arch-list { display: flex; flex-direction: column; gap: 8px; }
 .arch-row { align-items: center; padding: 8px 10px; }
 .arch-row .fd-ic { width: 30px; height: 30px; }

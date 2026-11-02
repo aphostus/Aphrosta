@@ -1036,7 +1036,7 @@ Object.assign(ICONS, {
 
 /* ---------- UNIQUE ICONS (one per spot, no shared copies) ---------- */
 Object.assign(ICONS, {
-  navWorlds:     svg('<circle cx="12" cy="12" r="9"/><circle class="wrld-ring" cx="12" cy="12" r="5.5" pathLength="24" stroke-dasharray="3 3"/><circle cx="12" cy="12" r="2" fill="currentColor"/>', 15),
+  navWorlds:     svg('<circle cx="12" cy="12" r="11"/><circle class="wrld-ring" cx="12" cy="12" r="7" pathLength="24" stroke-dasharray="3 3"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/>', 28),
   navProjects:   svg('<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 7v6M12 7v10M16 7v3"/>'),
   navAgents:     svg('<ellipse cx="12" cy="14" rx="8.5" ry="6.5"/><path d="M9 10.5v7M14.5 10.5v7"/><path d="M10 7.5C9.5 4.5 10.5 3 12.5 3s3 1.5 2 4.5"/><path d="M17.5 9.5L20 6.5M18 13.5h.01"/>'),
   navLibrary:    svg('<path d="M5 18.5A2.5 2.5 0 017.5 16H22"/><path d="M7.5 4H22v18H7.5A2.5 2.5 0 015 19.5v-13A2.5 2.5 0 017.5 4z"/><path d="M9 8h9M9 12h7"/>'),
@@ -1419,7 +1419,7 @@ const Sidebar = (user) => `
         <span class="profile-name">${esc(user.displayName || 'User')}</span>
         <span class="profile-plan">Free plan</span>
       </div>
-      <button class="fd-ic arch-btn" type="button" data-action="nav-worlds" aria-label="Worlds" title="Worlds">${ICONS.navWorlds}</button>
+      <button class="fd-ic arch-btn wrld-btn" type="button" data-action="nav-worlds" aria-label="Worlds" title="Worlds">${ICONS.navWorlds}</button>
       <button class="fd-ic arch-btn" type="button" data-action="archive" aria-label="Archive" title="Archive">${ICONS.archive}</button>
       <button class="pill-btn" type="button" data-action="upgrade">Upgrade</button>
     </div>
@@ -11287,7 +11287,7 @@ function openArchive() {
 }
 
 function openWorlds() {
-  const p = fdOpen('Worlds', '', '');
+  const p = fdOpen('Worlds', 'Communities and Networking', '');
   p.addEventListener('click', (e) => {
     if (e.target.closest('[data-fd="close"]')) fdClose();
   });
