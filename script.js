@@ -2488,19 +2488,23 @@ async function agIntro(a) {
   const adapter = adapterFor(l.provider);
   const messages = [
     { role: 'system', content: 'You are ' + a.name + '.' + (a.instructions ? ' Your instructions: ' + a.instructions : '') },
-    { role: 'user', content: 'Introduce yourself to the user in about 5 short lines, in first person, as plain text with no markdown, no lists and no emojis. Say who you are, what you do best and how you will help. Max 60 words.' }
+    { role: 'user', content: 'Introduce yourself to the user in exactly one sentence of medium length (about 20 to 30 words), in first person, as plain text with no markdown, no lists, no line breaks and no emojis. Say who you are and how you will help.' }
   ];
   const req = adapter.build({ api, key: l.key, variant, messages, wantStream: false, extras: api.adapter === 'anthropic' ? { max_tokens: 1200 } : {} });
   const ctl = new AbortController();
   const to = setTimeout(() => ctl.abort(), 45000);
   try {
     const res = await fetch(req.url, { method: 'POST', signal: ctl.signal, headers: req.headers, body: JSON.stringify(req.body) });
-    if (!res.ok) throw new Error('The model returned an error (' + res.status + '). Close the card and tap again to retry.');
+    if (!res.ok) {
+      const er = new Error('The model returned an error (' + res.status + '). Close the card and tap again to retry.');
+      er.status = res.status;
+      throw er;
+    }
     const j = await res.json();
     let text = adapter.readFull ? adapter.readFull(j).content : (j && j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '';
     text = String(text || '').replace(/<think>[\s\S]*?<\/think>/g, '').replace(/[*`#]/g, '').trim();
     if (!text) throw new Error('The model sent an empty reply. Close the card and tap again to retry.');
-    return text.slice(0, 480);
+    return text.replace(/\s+/g, ' ');
   } catch (e) {
     if (e && e.name === 'AbortError') throw new Error('The model took too long. Close the card and tap again to retry.');
     throw e;
@@ -3440,14 +3444,37 @@ function agOpenSheet(kind, edit) {
       return agData.agents.filter((a) => gid && a.groupId === gid).map((a) => ({ name: a.name, color: opsInk(agAvNorm(a.avatar).bg) }));
     });
   });
-  el.querySelector('#ag-save').addEventListener('click', () => {
+  el.querySelector('#ag-save').addEventListener('click', async () => {
     const name = el.querySelector('#ag-name').value.trim();
     if (!name) return toast('Add a name. (H10)', 'info', 2000);
     if (!isG && !(cur.llm.provider && cur.llm.key.trim() && cur.llm.model)) return toast('Pick an LLM, then add its API key and model.', 'info', 2400);
+    let introNew = null;
+    if (!isG) {
+      const sv = el.querySelector('#ag-save');
+      if (sv.disabled) return;
+      const insTxt = el.querySelector('#ag-ins').value.trim();
+      const lbl = sv.textContent;
+      sv.disabled = true;
+      sv.textContent = 'Testing API\u2026';
+      try {
+        const text = await agIntro({ name, instructions: insTxt, llm: { provider: cur.llm.provider, key: cur.llm.key.trim(), model: cur.llm.model } });
+        introNew = { text, sig: name + '\n' + insTxt };
+      } catch (e) {
+        sv.disabled = false;
+        sv.textContent = lbl;
+        const st = e && e.status;
+        if (st === 401 || st === 403) return toast('API key rejected (' + st + '). Agent not saved.', 'error', 3200);
+        if (st) return toast('The model returned an error (' + st + '). Agent not saved.', 'error', 3200);
+        return toast('Could not reach the model. Agent not saved.', 'error', 3200);
+      }
+      sv.disabled = false;
+      sv.textContent = lbl;
+      if (!document.body.contains(el)) return;
+    }
     agLoad();
     const rec = isG
       ? { id: edit ? edit.id : uid(), name, instructions: el.querySelector('#ag-ins').value.trim(), icon: cur.icon, color: cur.color, banner: agBnNorm(cur.banner), active: cur.active, sandbox: sb, t: edit ? (edit.t || Date.now()) : Date.now() }
-      : { id: edit ? edit.id : uid(), name, instructions: el.querySelector('#ag-ins').value.trim(), llm: { provider: cur.llm.provider, key: cur.llm.key.trim(), model: cur.llm.model }, groupId: el.querySelector('#ag-group').value, avatar: agAvNorm(cur.avatar), intro: edit && edit.intro, active: cur.active, sandbox: sb, t: edit ? (edit.t || Date.now()) : Date.now() };
+      : { id: edit ? edit.id : uid(), name, instructions: el.querySelector('#ag-ins').value.trim(), llm: { provider: cur.llm.provider, key: cur.llm.key.trim(), model: cur.llm.model }, groupId: el.querySelector('#ag-group').value, avatar: agAvNorm(cur.avatar), intro: introNew || (edit && edit.intro), active: cur.active, sandbox: sb, t: edit ? (edit.t || Date.now()) : Date.now() };
     const key = isG ? 'groups' : 'agents';
     const prev = agData[key];
     agData[key] = edit ? prev.map((x) => (x.id === edit.id ? rec : x)) : [...prev, rec];

@@ -4352,8 +4352,7 @@ html[data-motion="reduce"] .sess-pw { animation: none; }
 
 /* ---------- Operations (projects) ---------- */
 .ops-card { border-left: 3px solid var(--oc, var(--fg)); }
-.ag-card { cursor: pointer; transition: margin-left 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), border-left-width 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s; }
-.ag-card.open { margin-left: 12px; border-left-width: 8px; }
+.ag-card { cursor: pointer; transition: opacity 0.2s; }
 .ag-more { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
 .ag-card.open .ag-more { grid-template-rows: 1fr; }
 .ag-more-in { min-height: 0; overflow: hidden; }
