@@ -4475,7 +4475,18 @@ html[data-motion="reduce"] .sess-pw { animation: none; }
 .ag-card.ag-off { opacity: 0.5; }
 .ag-card .icon-btn:disabled { opacity: 0.35; }
 .ag-sw { margin-right: 10px; }
-#ag-group { appearance: none; -webkit-appearance: none; padding-right: 38px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; }
+.ag-llm { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: var(--radius-md); color: var(--gray-light); background: var(--glass-bg); border: 1px solid var(--glass-border); }
+.ag-llm.on { color: var(--fg); border-color: rgba(var(--fg-rgb), 0.3); }
+.ag-llm svg, .ag-llm .provider-logo-img { width: 22px; height: 22px; object-fit: contain; }
+.ag-llm-row { display: flex; gap: 10px; margin-top: 12px; }
+.ag-llm-row[hidden] { display: none; }
+.ag-llm-row > * { flex: 1 1 0; width: 50%; min-width: 0; }
+.ag-provs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 12px; }
+.ag-prov { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 11px 12px; font-size: calc(14px * var(--ts)); color: var(--fg); background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--radius-md); }
+.ag-prov.on { border-color: rgba(var(--fg-rgb), 0.35); }
+.ag-prov-logo { flex: none; display: inline-flex; width: 22px; height: 22px; }
+.ag-prov-logo .provider-logo-img { width: 100%; height: 100%; object-fit: contain; }
+#ag-group, #ag-model { appearance: none; -webkit-appearance: none; padding-right: 38px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; }
 .ag-r1 { display: flex; align-items: flex-end; gap: 10px; }
 .ag-r1 .lib-lab { flex: 1; min-width: 0; }
 

@@ -2667,12 +2667,44 @@ function closeAgSheet() {
   setTimeout(() => el.remove(), 250);
 }
 
+const AG_Q = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 114 2c-.8.6-1.5 1-1.5 2.2M12 17h.01"/></svg>';
+
+function agPickLlm(current, onPick) {
+  document.getElementById('ag-llm-scrim')?.remove();
+  const el = document.createElement('div');
+  el.className = 'lib-scrim';
+  el.id = 'ag-llm-scrim';
+  const list = MODEL_PROVIDERS.filter((p) => PROVIDER_API[p.id]);
+  el.innerHTML = `
+    <div class="lib-sheet" role="dialog" aria-label="Choose LLM">
+      <div class="lib-grab"></div>
+      <div class="lib-head">
+        <h3 class="lib-h">Choose LLM</h3>
+        <div class="lib-head-act">
+          <button class="icon-btn" type="button" id="ag-llm-close" aria-label="Close">${ICONS.stClose}</button>
+        </div>
+      </div>
+      <div class="ag-provs">${list.map((p) => `<button class="ag-prov${p.id === current ? ' on' : ''}" type="button" data-ag-prov="${esc(p.id)}"><span class="ag-prov-logo">${p.logo}</span><span>${esc(p.name)}</span></button>`).join('')}</div>
+    </div>`;
+  document.body.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  const close = () => { el.classList.remove('show'); setTimeout(() => el.remove(), 250); };
+  el.addEventListener('click', (e) => {
+    if (e.target === el || e.target.closest('#ag-llm-close')) { close(); return; }
+    const b = e.target.closest('[data-ag-prov]');
+    if (!b) return;
+    onPick(b.dataset.agProv);
+    close();
+  });
+}
+
 function agOpenSheet(kind, edit) {
   document.getElementById('ag-scrim')?.remove();
   agLoad();
   const isG = kind === 'group';
   const cur = {
     icon: 'op06',
+    llm: (edit && edit.llm && edit.llm.provider) ? { provider: edit.llm.provider, key: edit.llm.key || '', model: edit.llm.model || '' } : { provider: '', key: '', model: '' },
     color: (edit && edit.color) || OPS_COLORS[0],
     active: edit ? edit.active !== false : true
   };
@@ -2694,8 +2726,12 @@ function agOpenSheet(kind, edit) {
         <label class="lib-lab">Name
           <input class="lib-in" id="ag-name" maxlength="60" autocomplete="off" placeholder="${isG ? 'e.g. Web team' : 'e.g. Code helper'}" value="${esc(edit && edit.name)}">
         </label>
-        ${isG ? `<button class="ops-cc" type="button" id="ag-cc" aria-label="Next color">${OPS_I.toggle}</button>` : ''}
+        ${isG ? `<button class="ops-cc" type="button" id="ag-cc" aria-label="Next color">${OPS_I.toggle}</button>` : `<button class="ag-llm" type="button" id="ag-llm" aria-label="Choose LLM" title="Choose LLM"></button>`}
       </div>
+      ${isG ? '' : `<div class="ag-llm-row" id="ag-llm-row" hidden>
+        <input class="lib-in" id="ag-key" type="password" placeholder="API key" aria-label="API key" autocomplete="new-password" autocapitalize="off" spellcheck="false">
+        <select class="lib-in" id="ag-model" aria-label="Model"></select>
+      </div>`}
       <label class="lib-lab">Instructions
         <textarea class="lib-in lib-ta" id="ag-ins" rows="5" maxlength="4000">${esc(edit && edit.instructions)}</textarea>
       </label>
@@ -2729,16 +2765,43 @@ function agOpenSheet(kind, edit) {
     el.querySelector('.lib-sheet').style.setProperty('--oc', opsInk(cur.color));
   });
 
+  const llmBtn = el.querySelector('#ag-llm');
+  if (llmBtn) {
+    const keyIn = el.querySelector('#ag-key');
+    const modelSel = el.querySelector('#ag-model');
+    const llmRow = el.querySelector('#ag-llm-row');
+    const fillModels = () => {
+      const api = PROVIDER_API[cur.llm.provider];
+      const ms = api ? api.models.filter((m) => !m.legacy) : [];
+      modelSel.innerHTML = '<option value="">Model</option>' + ms.map((m) => `<option value="${esc(m.id)}"${m.id === cur.llm.model ? ' selected' : ''}>${esc(m.name)}</option>`).join('');
+    };
+    const paintLlm = () => {
+      const p = MODEL_PROVIDERS.find((x) => x.id === cur.llm.provider);
+      llmBtn.innerHTML = p ? p.logo : AG_Q;
+      llmBtn.classList.toggle('on', !!p);
+      llmBtn.setAttribute('aria-label', p ? 'LLM: ' + p.name : 'Choose LLM');
+      llmRow.hidden = !p;
+      if (p) { keyIn.value = cur.llm.key; fillModels(); }
+    };
+    paintLlm();
+    keyIn.addEventListener('input', () => { cur.llm.key = keyIn.value; });
+    modelSel.addEventListener('change', () => { cur.llm.model = modelSel.value; });
+    llmBtn.addEventListener('click', () => agPickLlm(cur.llm.provider, (pid) => {
+      if (pid !== cur.llm.provider) cur.llm = { provider: pid, key: '', model: '' };
+      paintLlm();
+    }));
+  }
   el.querySelector('#ag-sb').addEventListener('click', () => {
     agOpenSandbox('Sandbox', sb, (s) => { sb = s; sbLabel(); }, isG ? 'group.txt' : 'agent.txt');
   });
   el.querySelector('#ag-save').addEventListener('click', () => {
     const name = el.querySelector('#ag-name').value.trim();
     if (!name) return toast('Add a name. (H10)', 'info', 2000);
+    if (!isG && !(cur.llm.provider && cur.llm.key.trim() && cur.llm.model)) return toast('Pick an LLM, then add its API key and model.', 'info', 2400);
     agLoad();
     const rec = isG
       ? { id: edit ? edit.id : uid(), name, instructions: el.querySelector('#ag-ins').value.trim(), icon: cur.icon, color: cur.color, active: cur.active, sandbox: sb, t: edit ? (edit.t || Date.now()) : Date.now() }
-      : { id: edit ? edit.id : uid(), name, instructions: el.querySelector('#ag-ins').value.trim(), groupId: el.querySelector('#ag-group').value, active: cur.active, sandbox: sb, t: edit ? (edit.t || Date.now()) : Date.now() };
+      : { id: edit ? edit.id : uid(), name, instructions: el.querySelector('#ag-ins').value.trim(), llm: { provider: cur.llm.provider, key: cur.llm.key.trim(), model: cur.llm.model }, groupId: el.querySelector('#ag-group').value, active: cur.active, sandbox: sb, t: edit ? (edit.t || Date.now()) : Date.now() };
     const key = isG ? 'groups' : 'agents';
     const prev = agData[key];
     agData[key] = edit ? prev.map((x) => (x.id === edit.id ? rec : x)) : [...prev, rec];
