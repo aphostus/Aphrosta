@@ -537,6 +537,8 @@ const lsGet = (k, d) => {
   try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (_) { return d; }
 };
 
+let chatBusy = false;
+
 function effectiveStatus() {
   if (settings.status === 'auto') {
     return currentUser || chatBusy ? 'online' : 'offline';
@@ -8768,7 +8770,6 @@ const newDraft = () => ({
 let sessions = loadSessions();
 let currentSession = loadDraft() || newDraft();
 let sessionQuery = '';
-let chatBusy = false;
 let chatAbort = null;
 let chatStick = true;
 let sessionsBound = false;
