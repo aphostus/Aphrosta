@@ -2971,7 +2971,7 @@ function opsRender() {
   if (!opsItems.length) { body.classList.remove('lib-list'); body.innerHTML = opsEmptyHtml(); return; }
   body.classList.add('lib-list');
   body.innerHTML = opsItems.slice().sort((a, b) => b.t - a.t).map((p) => `
-    <div class="lib-card ops-card" style="--oc:${esc(opsInk(p.color || OPS_COLORS[0]))}">
+    <div class="lib-card ops-card ops-proj" style="--oc:${esc(opsInk(p.color || OPS_COLORS[0]))}">
       <div class="lib-card-top">
         <h4 class="lib-card-title"><span class="ops-ico">${ICONS.opsCode}</span>${esc(p.name)}</h4>
         <div class="lib-card-act">
@@ -3633,7 +3633,7 @@ const body = `
     const now = Date.now();
     const rec = {
       id: draftId, name, description: p.querySelector('[data-ops="desc"]').value.trim(), instruction: p.querySelector('[data-ops="instr"]').value.trim(),
-      icon: cur.icon, color: cur.color, files: await opsFiles(draftId).then((l) => l.filter((x) => x.kind === 'file').length).catch(() => 0), created: edit?.created || now, t: now
+      icon: cur.icon, color: cur.color, files: await Promise.race([opsFiles(draftId).then((l) => l.filter((x) => x.kind === 'file').length), new Promise((r) => setTimeout(() => r(0), 1500))]).catch(() => 0), created: edit?.created || now, t: now
     };
     try {
       await opsPutProject(rec);
@@ -3642,7 +3642,7 @@ const body = `
       opsRender();
       toast(edit ? 'Project saved.' : 'Project created.', 'success', 1800);
 
-    } catch (_) { toast('Could not save. Storage may be full. (E06)'); }
+    } catch (err) { toast('Could not save: ' + ((err && err.message) || err || 'unknown') + ' (E06)'); }
   });
   if (canAutoFocus()) p.querySelector('[data-ops="name"]')?.focus();
 }

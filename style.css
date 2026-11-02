@@ -4342,6 +4342,7 @@ html[data-motion="reduce"] .sess-pw { animation: none; }
 
 /* ---------- Operations (projects) ---------- */
 .ops-card { border-left: 3px solid var(--oc, var(--fg)); }
+.ops-card.ops-proj { border-left: 1px solid var(--glass-border); }
 .ops-ico { display: inline-flex; vertical-align: middle; margin-right: 8px; color: var(--oc, var(--fg)); }
 .ops-ico svg { width: 16px; height: 16px; }
 .ops-ed { display: flex; flex-direction: column; gap: 4px; }
