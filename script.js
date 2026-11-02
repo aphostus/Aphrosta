@@ -2201,6 +2201,236 @@ document.addEventListener('click', async (e) => {
   libRender();
 });
 
+/* ---------- PROJECTS: popup + list (same design as Libraries, holds sessions) ---------- */
+const PROJ_LS = 'aphrosta.projects';
+let projItems = [];
+
+function projLoad() {
+  const l = lsGet(PROJ_LS, []);
+  projItems = Array.isArray(l) ? l.filter((p) => p && typeof p.id === 'string') : [];
+}
+
+const projChats = () => (Array.isArray(sessions) ? sessions : [])
+  .filter((s) => s && s.id && !s.draft)
+  .slice()
+  .sort((a, b) => (b.updated || 0) - (a.updated || 0));
+
+const projDate = (s) => {
+  try { return new Date(s.updated || s.created || Date.now()).toLocaleDateString(); } catch (_) { return ''; }
+};
+
+function projEmptyHtml() {
+  return `<div class="np-empty"><span class="np-empty-ico">${ICONS.navProjects}</span><h3 class="np-empty-title">Nothing Placed Yet</h3><p class="np-empty-desc">Your projects will show up here.</p></div>`;
+}
+
+function projRender() {
+  const panel = document.getElementById('nav-panel');
+  const body = panel?.querySelector('.np-body');
+  if (!body || panel.getAttribute('aria-label') !== 'Projects') return;
+  if (!projItems.length) { body.classList.remove('lib-list'); body.innerHTML = projEmptyHtml(); return; }
+  const ids = new Set(projChats().map((s) => s.id));
+  body.classList.add('lib-list');
+  body.innerHTML = projItems.slice().sort((a, b) => b.t - a.t).map((it) => {
+    const n = (it.sessions || []).filter((id) => ids.has(id)).length;
+    return `
+    <div class="lib-card">
+      <div class="lib-card-top">
+        <h4 class="lib-card-title">${esc(it.title)}</h4>
+        <div class="lib-card-act">
+          <span class="lib-card-eye" role="img" aria-label="${it.hidden ? 'Hidden from AI' : 'Visible to AI'}">${it.hidden ? ICONS.eyeOff : ICONS.eye}</span>
+          <button class="icon-btn" type="button" data-proj-edit="${esc(it.id)}" aria-label="Edit">${ICONS.pencil}</button>
+          <button class="icon-btn" type="button" data-proj-del="${esc(it.id)}" aria-label="Delete">${ICONS.trash}</button>
+        </div>
+      </div>
+      <p class="lib-card-meta">${n} ${n === 1 ? 'session' : 'sessions'}</p>
+      <p class="lib-card-instr">${esc(it.instructions)}</p>
+    </div>`;
+  }).join('');
+}
+
+function projRefresh() {
+  projLoad();
+  projRender();
+}
+
+function closeProjPick() {
+  const el = document.getElementById('proj-pick-scrim');
+  if (!el) return;
+  el.classList.remove('show');
+  setTimeout(() => el.remove(), 250);
+}
+
+function closeProjSheet() {
+  closeProjPick();
+  const el = document.getElementById('proj-scrim');
+  if (!el) return;
+  el.classList.remove('show');
+  setTimeout(() => el.remove(), 250);
+}
+
+/* second popup: list of sessions to tick */
+function projOpenPicker(selected, onDone) {
+  document.getElementById('proj-pick-scrim')?.remove();
+  const chats = projChats();
+  const sel = new Set(selected);
+  const el = document.createElement('div');
+  el.className = 'lib-scrim';
+  el.id = 'proj-pick-scrim';
+  el.innerHTML = `
+    <div class="lib-sheet" role="dialog" aria-label="Sessions">
+      <div class="lib-grab"></div>
+      <div class="lib-head">
+        <h3 class="lib-h">Sessions</h3>
+        <div class="lib-head-act">
+          <button class="icon-btn" type="button" id="proj-pick-close" aria-label="Close">${ICONS.stClose}</button>
+        </div>
+      </div>
+      <div class="lib-flist" id="proj-pick-list" style="max-height:50vh;overflow-y:auto"></div>
+      <button class="lib-save" id="proj-pick-done" type="button">Done</button>
+    </div>`;
+  document.body.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+
+  const list = el.querySelector('#proj-pick-list');
+  const draw = () => {
+    if (!chats.length) { list.innerHTML = '<p class="lib-note">No saved sessions yet.</p>'; return; }
+    list.innerHTML = chats.map((s) => {
+      const on = sel.has(s.id);
+      return `<div class="lib-frow" data-proj-pick="${esc(s.id)}" role="button" tabindex="0" aria-pressed="${on ? 'true' : 'false'}" style="cursor:pointer;opacity:${on ? 1 : 0.55}"><span class="lib-fn">${esc(s.title || 'Untitled')}</span><span class="lib-fs">${esc(projDate(s))}</span><span style="width:32px;display:flex;justify-content:center;flex-shrink:0">${on ? ICONS.check : ''}</span></div>`;
+    }).join('');
+  };
+  draw();
+  const toggle = (row) => {
+    if (!row) return;
+    const id = row.dataset.projPick;
+    if (sel.has(id)) sel.delete(id); else sel.add(id);
+    draw();
+  };
+  list.addEventListener('click', (e) => toggle(e.target.closest('[data-proj-pick]')));
+  list.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    toggle(e.target.closest('[data-proj-pick]'));
+  });
+  el.addEventListener('click', (e) => { if (e.target === el) closeProjPick(); });
+  el.querySelector('#proj-pick-close').addEventListener('click', closeProjPick);
+  el.querySelector('#proj-pick-done').addEventListener('click', () => {
+    onDone(chats.filter((s) => sel.has(s.id)).map((s) => s.id));
+    closeProjPick();
+  });
+}
+
+function projOpenSheet(edit) {
+  document.getElementById('proj-scrim')?.remove();
+  const chats = projChats();
+  const byId = new Map(chats.map((s) => [s.id, s]));
+  const picked = (edit?.sessions || []).filter((id) => byId.has(id));
+  const el = document.createElement('div');
+  el.className = 'lib-scrim';
+  el.id = 'proj-scrim';
+  el.innerHTML = `
+    <div class="lib-sheet" role="dialog" aria-label="Create">
+      <div class="lib-grab"></div>
+      <div class="lib-head">
+        <h3 class="lib-h">${edit ? 'Edit' : 'Create'}</h3>
+        <div class="lib-head-act">
+          <button class="icon-btn lib-vis${edit?.hidden ? ' is-off' : ''}" type="button" id="proj-vis" aria-pressed="${edit?.hidden ? 'true' : 'false'}" aria-label="${edit?.hidden ? 'Hidden from AI' : 'Visible to AI'}">${edit?.hidden ? ICONS.eyeOff : ICONS.eye}</button>
+          <button class="icon-btn" type="button" id="proj-close" aria-label="Close">${ICONS.stClose}</button>
+        </div>
+      </div>
+      <label class="lib-lab">Name
+        <input class="lib-in" id="proj-title" maxlength="80" autocomplete="off" placeholder="e.g. Website redesign" value="${esc(edit?.title)}">
+      </label>
+      <label class="lib-lab"><span id="proj-instr-lab">${edit?.hidden ? 'Information' : 'Instructions'}</span>
+        <textarea class="lib-in lib-ta" id="proj-instr" rows="5" maxlength="1500" placeholder="${edit?.hidden ? 'Add details about this project. e.g. Goals, rules, or notes you want to keep.' : 'When and how should the AI use this? e.g. Use these chats as background when I ask about the redesign.'}">${esc(edit?.instructions)}</textarea>
+      </label>
+      <div class="lib-lab">Sessions
+        <div class="lib-flist" id="proj-flist"></div>
+        <button class="lib-file" id="proj-pick" type="button">${ICONS.attachFile}<span id="proj-pname">Add</span></button>
+      </div>
+      <p class="lib-note">Pick the chats that belong to this project. You can change them any time.</p>
+      <button class="lib-save" id="proj-save" type="button">Save</button>
+    </div>`;
+  document.body.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+
+  el.addEventListener('click', (e) => { if (e.target === el) closeProjSheet(); });
+  el.querySelector('#proj-close').addEventListener('click', closeProjSheet);
+  let hid = !!edit?.hidden;
+  const visBtn = el.querySelector('#proj-vis');
+  visBtn.addEventListener('click', () => {
+    hid = !hid;
+    visBtn.innerHTML = hid ? ICONS.eyeOff : ICONS.eye;
+    visBtn.classList.toggle('is-off', hid);
+    visBtn.setAttribute('aria-pressed', hid ? 'true' : 'false');
+    visBtn.setAttribute('aria-label', hid ? 'Hidden from AI' : 'Visible to AI');
+    el.querySelector('#proj-instr-lab').textContent = hid ? 'Information' : 'Instructions';
+    el.querySelector('#proj-instr').placeholder = hid
+      ? 'Add details about this project. e.g. Goals, rules, or notes you want to keep.'
+      : 'When and how should the AI use this? e.g. Use these chats as background when I ask about the redesign.';
+    toast(hid ? 'Hidden: only you can see this.' : 'Visible: the AI can see this.', 'info', 1600);
+  });
+
+  const flist = el.querySelector('#proj-flist');
+  const drawRows = () => {
+    flist.innerHTML = picked.map((id) => {
+      const s = byId.get(id);
+      return `<div class="lib-frow"><span class="lib-fn">${esc(s.title || 'Untitled')}</span><span class="lib-fs">${esc(projDate(s))}</span><button class="icon-btn" type="button" data-proj-rm="${esc(id)}" aria-label="Remove">${ICONS.stClose}</button></div>`;
+    }).join('');
+    el.querySelector('#proj-pname').textContent = picked.length ? 'More' : 'Add';
+  };
+  drawRows();
+  flist.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-proj-rm]');
+    if (!b) return;
+    const i = picked.indexOf(b.dataset.projRm);
+    if (i >= 0) picked.splice(i, 1);
+    drawRows();
+  });
+  el.querySelector('#proj-pick').addEventListener('click', () => {
+    projOpenPicker(picked, (ids) => {
+      picked.length = 0;
+      ids.forEach((id) => picked.push(id));
+      drawRows();
+    });
+  });
+
+  const saveBtn = el.querySelector('#proj-save');
+  saveBtn.addEventListener('click', () => {
+    const title = el.querySelector('#proj-title').value.trim();
+    const instructions = el.querySelector('#proj-instr').value.trim();
+    if (!title) return toast('Add a title. (H10)', 'info', 2000);
+    if (!instructions) return toast('Add instructions for the AI. (H10)', 'info', 2200);
+    projLoad();
+    const rec = {
+      id: edit ? edit.id : uid(), title, instructions, hidden: hid,
+      sessions: picked.slice(), t: edit ? (edit.t || Date.now()) : Date.now()
+    };
+    const next = edit ? projItems.map((p) => (p.id === edit.id ? rec : p)) : [...projItems, rec];
+    const prev = projItems;
+    projItems = next;
+    if (!projSave()) { projItems = prev; return; }
+    toast(edit ? 'Changes saved.' : 'Project created.', 'success', 1800);
+    closeProjSheet();
+    projRender();
+  });
+}
+
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-proj-edit]');
+  if (!b) return;
+  const it = projItems.find((p) => p.id === b.dataset.projEdit);
+  if (it) projOpenSheet(it);
+});
+
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-proj-del]');
+  if (!b) return;
+  projItems = projItems.filter((p) => p.id !== b.dataset.projDel);
+  projSave();
+  projRender();
+});
+
 /* ---------- OPERATIONS: storage + project list + popup shell (Patch 1-2) ---------- */
 const OPS_NEW_ICONS = {
   op01: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
@@ -3981,6 +4211,7 @@ function openNavPanel(key) {
   else if (key === 'nav-operations') opsRefresh();
   else if (key === 'nav-connectors') connRefresh();
   else if (key === 'nav-automation') autoRefresh();
+  else if (key === 'nav-projects') projRefresh();
 }
 
 function closeNavPanel() {
@@ -12895,6 +13126,7 @@ function initShell() {
     else if (action === 'nav-plus') {
       const npLabel = document.getElementById('nav-panel')?.getAttribute('aria-label');
       if (npLabel === 'Libraries') openLibSheet();
+      else if (npLabel === 'Projects') projOpenSheet();
       else if (npLabel === 'Operations') opsOpenEditor();
       else if (npLabel === 'Connections') connOpenEditor();
       else if (npLabel === 'Automations') autoOpenEditor();
