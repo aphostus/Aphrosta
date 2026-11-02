@@ -1036,7 +1036,7 @@ Object.assign(ICONS, {
 
 /* ---------- UNIQUE ICONS (one per spot, no shared copies) ---------- */
 Object.assign(ICONS, {
-  navWorlds:     svg('<circle cx="12" cy="12" r="5"/><ellipse cx="12" cy="12" rx="10" ry="3" transform="rotate(-24 12 12)"/><path d="M19 3v3M17.5 4.5h3"/>'),
+  navWorlds:     svg('<circle cx="12" cy="12" r="9"/><circle class="wrld-ring" cx="12" cy="12" r="5.5" pathLength="24" stroke-dasharray="3 3"/><circle cx="12" cy="12" r="2" fill="currentColor"/>', 15),
   navProjects:   svg('<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 7v6M12 7v10M16 7v3"/>'),
   navAgents:     svg('<ellipse cx="12" cy="14" rx="8.5" ry="6.5"/><path d="M9 10.5v7M14.5 10.5v7"/><path d="M10 7.5C9.5 4.5 10.5 3 12.5 3s3 1.5 2 4.5"/><path d="M17.5 9.5L20 6.5M18 13.5h.01"/>'),
   navLibrary:    svg('<path d="M5 18.5A2.5 2.5 0 017.5 16H22"/><path d="M7.5 4H22v18H7.5A2.5 2.5 0 015 19.5v-13A2.5 2.5 0 017.5 4z"/><path d="M9 8h9M9 12h7"/>'),
@@ -11286,6 +11286,13 @@ function openArchive() {
   renderArchive();
 }
 
+function openWorlds() {
+  const p = fdOpen('Worlds', '', '');
+  p.addEventListener('click', (e) => {
+    if (e.target.closest('[data-fd="close"]')) fdClose();
+  });
+}
+
 async function deleteSession(id) {
   const s = sessions.find((x) => x.id === id);
   if (!s) return;
@@ -12838,6 +12845,7 @@ function initShell() {
     else if (action === 'attach') openAttach();
     else if (action === 'inbox') openInbox();
     else if (action === 'archive') openArchive();
+    else if (action === 'nav-worlds') openWorlds();
     else if (action === 'replay-tour') { closeSettings(); setTimeout(() => startOnboarding(true), 350); }
     else if (action === 'upgrade') toast('Paid plans are coming soon.', 'info', 1800);
     else if (NAV_PANELS[action]) openNavPanel(action);
