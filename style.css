@@ -934,7 +934,8 @@ mark.sb-hit.is-cur {
 .live-root[data-state="thinking"] .live-orbit, .live-root[data-state="searching"] .live-orbit { opacity: 0.85; animation: liveSpin 2.6s linear infinite; }
 .live-root[data-state="searching"] .live-orbit { animation-duration: 1.3s; border: 2px dashed color-mix(in srgb, var(--fg) 35%, transparent); }
 @keyframes liveSpin { to { transform: rotate(360deg); } }
-.live-root[data-state="speaking"] .live-ball { animation: liveVibe 0.1s linear infinite; }
+.live-root[data-state="speaking"] .live-ball { animation: liveVibeSoft 0.36s ease-in-out infinite; }
+@keyframes liveVibeSoft { 0%, 100% { transform: translate(0, 0) rotate(0deg); } 25% { transform: translate(calc(var(--amp, 0) * -1.2px), calc(var(--amp, 0) * 0.8px)) rotate(calc(var(--amp, 0) * -0.4deg)); } 50% { transform: translate(calc(var(--amp, 0) * 1px), calc(var(--amp, 0) * -1px)) rotate(calc(var(--amp, 0) * 0.4deg)); } 75% { transform: translate(calc(var(--amp, 0) * -0.7px), calc(var(--amp, 0) * -0.8px)) rotate(calc(var(--amp, 0) * 0.3deg)); } }
 .live-root[data-state="speaking"] .live-halo { transform: scale(calc(1 + var(--amp, 0) * 0.18)); }
 @keyframes liveVibe { 0%, 100% { transform: translate(0, 0) rotate(0deg); } 25% { transform: translate(calc(var(--amp, 0) * -3.2px), calc(var(--amp, 0) * 2px)) rotate(calc(var(--amp, 0) * -1.1deg)); } 50% { transform: translate(calc(var(--amp, 0) * 2.6px), calc(var(--amp, 0) * -2.4px)) rotate(calc(var(--amp, 0) * 1deg)); } 75% { transform: translate(calc(var(--amp, 0) * -1.8px), calc(var(--amp, 0) * -2px)) rotate(calc(var(--amp, 0) * 0.8deg)); } }
 .live-label { min-height: 1.4em; font-size: calc(14px * var(--ts, 1)); letter-spacing: 0.02em; opacity: 0.6; text-align: center; }

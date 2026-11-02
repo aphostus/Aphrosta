@@ -7594,7 +7594,12 @@ const Live = (() => {
 
   const ampStart = () => {
     clearInterval(ampT);
-    ampT = setInterval(() => { if (root) root.style.setProperty('--amp', (0.25 + Math.random() * 0.75).toFixed(2)); }, 85);
+    let cur = 0.3;
+    ampT = setInterval(() => {
+      if (!root) return;
+      cur += ((0.2 + Math.random() * 0.6) - cur) * 0.35;
+      root.style.setProperty('--amp', cur.toFixed(2));
+    }, 120);
   };
   const ampStop = () => {
     clearInterval(ampT);
@@ -7746,7 +7751,12 @@ const Live = (() => {
       const tooling = !!(last && (last.hidden || (last.role === 'assistant' && callsOf(last))));
       if (chatBusy || tooling) {
         calm = 0;
-        if (root && root.dataset.state !== 'speaking') setState(tooling ? 'searching' : 'thinking', tooling ? 'curious' : root.dataset.emo);
+        if (root && root.dataset.state !== 'speaking') {
+          setState(tooling ? 'searching' : 'thinking', tooling ? 'curious' : root.dataset.emo);
+          const lb = $('.live-label');
+          const al = AI_STATES[aiState] && AI_STATES[aiState].label;
+          if (lb && !tooling && al && aiState !== 'idle') lb.textContent = al;
+        }
       } else if ((calm += 150) >= 900 || (ms.length <= before && Date.now() - t0 > 1800)) break;
       await sleep(150);
     }
@@ -7761,14 +7771,20 @@ const Live = (() => {
 
   const say = async (m, my) => {
     const body = splitPlanParts(m.content).clean || m.content;
-    if (!cleanForSpeech(body) || !window.speechSynthesis) return;
+    if (!cleanForSpeech(body)) return;
     setState('speaking', moodOf(body, said));
-    speakBrowser(body);
-    const g = speakGen, t0 = Date.now();
+    speak(body);
+    const t0 = Date.now();
+    let idle = 0;
     ampStart();
-    while (my === tok && speakGen === g && Date.now() - t0 < 300000) await sleep(120);
+    while (my === tok && Date.now() - t0 < 300000) {
+      await sleep(120);
+      const talking = !!elCtl || !elAudio.paused || !!(window.speechSynthesis && (speechSynthesis.speaking || speechSynthesis.pending));
+      idle = talking ? 0 : idle + 1;
+      if (idle >= 3) break;
+    }
     ampStop();
-    if (my === tok && speakGen === g) stopSpeaking();
+    if (my === tok) stopSpeaking();
   };
 
   const turn = async (text, my) => {
