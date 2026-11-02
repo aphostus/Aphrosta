@@ -3046,65 +3046,127 @@ function agAvBind(el, cur) {
   paint();
 }
 
-const AG_BN_SHAPES = ['flag', 'pennant', 'swallow', 'ribbon', 'scroll', 'tag', 'shield', 'crest', 'badge'];
+const AG_BN_SHAPES = ['flag', 'pennant', 'swallow', 'ribbon', 'scroll', 'tag', 'shield', 'crest', 'badge', 'plaque', 'standard', 'kite', 'medal', 'octagon', 'arch', 'vee', 'ticket', 'wavy', 'pill', 'arrow', 'heater', 'drop'];
 const AG_BN_SHAPE = {
-  flag:    { pole: 1, body: 'M15 8C24 4 30 12 40 8C46 6 52 6 54 8V34C52 32 46 32 40 34C30 38 24 30 15 34Z', c: [35, 21, 0.5] },
-  pennant: { pole: 1, body: 'M15 8L56 21L15 34Z', c: [28, 21, 0.35] },
-  swallow: { pole: 1, body: 'M15 8H54L45 21L54 34H15Z', c: [33, 21, 0.5] },
-  ribbon:  { body: 'M4 16H60L52 30L60 44H4L12 30Z', c: [32, 30, 0.65] },
-  scroll:  { caps: 1, body: 'M10 14H54V46H10Z', c: [32, 30, 0.7] },
-  tag:     { hole: 1, body: 'M8 14H44L58 32L44 50H8Z', c: [27, 32, 0.6] },
-  shield:  { body: 'M12 8H52V30C52 44 42 54 32 58C22 54 12 44 12 30Z', c: [32, 30, 0.9] },
-  crest:   { body: 'M12 8Q22 12 32 6Q42 12 52 8V32Q52 46 32 58Q12 46 12 32Z', c: [32, 32, 0.85] },
-  badge:   { body: 'M32 5L55 18V44L32 59L9 44V18Z', c: [32, 32, 0.85] }
+  flag:     { body: 'M8 12C16 7 24 17 32 12C40 7 48 17 56 12V46C48 51 40 41 32 46C24 51 16 41 8 46Z', c: [32, 29, 0.7] },
+  pennant:  { body: 'M6 14L58 32L6 50Z', c: [22, 32, 0.5] },
+  swallow:  { body: 'M6 14H58L46 32L58 50H6Z', c: [30, 32, 0.75] },
+  ribbon:   { body: 'M4 16H60L52 30L60 44H4L12 30Z', c: [32, 30, 0.8] },
+  scroll:   { caps: 1, body: 'M10 14H54V46H10Z', c: [32, 30, 0.8] },
+  tag:      { hole: 1, body: 'M8 14H44L58 32L44 50H8Z', c: [27, 32, 0.65] },
+  shield:   { body: 'M12 8H52V30C52 44 42 54 32 58C22 54 12 44 12 30Z', c: [32, 30, 1] },
+  crest:    { body: 'M12 8Q22 12 32 6Q42 12 52 8V32Q52 46 32 58Q12 46 12 32Z', c: [32, 32, 0.95] },
+  badge:    { body: 'M32 5L55 18V44L32 59L9 44V18Z', c: [32, 32, 0.95] },
+  plaque:   { body: 'M12 8H52Q56 8 56 12V52Q56 56 52 56H12Q8 56 8 52V12Q8 8 12 8Z', c: [32, 32, 1] },
+  standard: { body: 'M12 6H52V58L32 46L12 58Z', c: [32, 26, 0.8] },
+  kite:     { body: 'M32 4L58 26L32 60L6 26Z', c: [32, 28, 0.8] },
+  medal:    { body: 'M6 32A26 26 0 1 0 58 32A26 26 0 1 0 6 32Z', c: [32, 32, 1] },
+  octagon:  { body: 'M22 6H42L58 22V42L42 58H22L6 42V22Z', c: [32, 32, 1] },
+  arch:     { body: 'M10 58V28A22 22 0 0 1 54 28V58Z', c: [32, 36, 0.95] },
+  vee:      { body: 'M6 10H58L32 58Z', c: [32, 22, 0.6] },
+  ticket:   { body: 'M8 12H56V26A6 6 0 0 0 56 38V52H8V38A6 6 0 0 0 8 26Z', c: [32, 32, 0.9] },
+  wavy:     { body: 'M6 16Q19 8 32 16T58 16V48Q45 56 32 48T6 48Z', c: [32, 32, 0.85] },
+  pill:     { body: 'M18 14H46A18 18 0 0 1 46 50H18A18 18 0 0 1 18 14Z', c: [32, 32, 0.7] },
+  arrow:    { body: 'M6 14H40L58 32L40 50H6Z', c: [24, 32, 0.6] },
+  heater:   { body: 'M8 8H56V28Q56 48 32 60Q8 48 8 28Z', c: [32, 30, 0.95] },
+  drop:     { body: 'M32 4C32 4 54 28 54 40A22 22 0 0 1 10 40C10 28 32 4 32 4Z', c: [32, 40, 0.8] }
 };
+const agBnPts = (n, f) => Array.from({ length: n }, (_, i) => f(i));
 const AG_BN_PAT = {
-  stripes: '<rect x="18" y="0" width="6" height="64"/><rect x="30" y="0" width="6" height="64"/><rect x="42" y="0" width="6" height="64"/>',
-  bands:   '<rect x="0" y="16" width="64" height="6"/><rect x="0" y="28" width="64" height="6"/><rect x="0" y="40" width="64" height="6"/>',
-  dots:    [20, 32, 44].map((x) => [20, 32, 44].map((y) => '<circle cx="' + x + '" cy="' + y + '" r="3"/>').join('')).join(''),
-  checks:  [0, 1, 2, 3, 4].map((i) => [0, 1, 2, 3, 4].map((j) => ((i + j) % 2 ? '' : '<rect x="' + (4 + i * 11) + '" y="' + (4 + j * 11) + '" width="11" height="11"/>')).join('')).join(''),
-  chevron: '<path d="M8 22L32 36L56 22M8 36L32 50L56 36" fill="none" stroke="currentColor" stroke-width="5"/>',
-  diag:    '<path d="M0 20L44 64M0 36L28 64M20 0L64 44M36 0L64 28" fill="none" stroke="currentColor" stroke-width="5"/>'
+  stripes:   '<rect x="18" y="0" width="6" height="64"/><rect x="30" y="0" width="6" height="64"/><rect x="42" y="0" width="6" height="64"/>',
+  bands:     '<rect x="0" y="16" width="64" height="6"/><rect x="0" y="28" width="64" height="6"/><rect x="0" y="40" width="64" height="6"/>',
+  dots:      [20, 32, 44].map((x) => [20, 32, 44].map((y) => '<circle cx="' + x + '" cy="' + y + '" r="3"/>').join('')).join(''),
+  checks:    [0, 1, 2, 3, 4].map((i) => [0, 1, 2, 3, 4].map((j) => ((i + j) % 2 ? '' : '<rect x="' + (4 + i * 11) + '" y="' + (4 + j * 11) + '" width="11" height="11"/>')).join('')).join(''),
+  chevron:   '<path d="M8 22L32 36L56 22M8 36L32 50L56 36" fill="none" stroke="currentColor" stroke-width="5"/>',
+  diag:      '<path d="M0 20L44 64M0 36L28 64M20 0L64 44M36 0L64 28" fill="none" stroke="currentColor" stroke-width="5"/>',
+  cross:     '<rect x="27" y="0" width="10" height="64"/><rect x="0" y="27" width="64" height="10"/>',
+  saltire:   '<path d="M0 0L64 64M64 0L0 64" fill="none" stroke="currentColor" stroke-width="9"/>',
+  rings:     '<g fill="none" stroke="currentColor" stroke-width="4"><circle cx="32" cy="32" r="10"/><circle cx="32" cy="32" r="20"/><circle cx="32" cy="32" r="30"/></g>',
+  waves:     '<path d="M0 14Q8 8 16 14T32 14T48 14T64 14M0 26Q8 20 16 26T32 26T48 26T64 26M0 38Q8 32 16 38T32 38T48 38T64 38M0 50Q8 44 16 50T32 50T48 50T64 50" fill="none" stroke="currentColor" stroke-width="4"/>',
+  grid:      '<path d="M16 0V64M32 0V64M48 0V64M0 16H64M0 32H64M0 48H64" fill="none" stroke="currentColor" stroke-width="3"/>',
+  diamonds:  [[20, 20], [44, 20], [20, 44], [44, 44], [32, 32]].map((p) => '<path d="M' + p[0] + ' ' + (p[1] - 8) + 'L' + (p[0] + 8) + ' ' + p[1] + 'L' + p[0] + ' ' + (p[1] + 8) + 'L' + (p[0] - 8) + ' ' + p[1] + 'Z"/>').join(''),
+  rays:      agBnPts(6, (k) => { const a = k * Math.PI / 3, b = a + Math.PI / 6; return '<path d="M32 32L' + (32 + 70 * Math.cos(a)).toFixed(1) + ' ' + (32 + 70 * Math.sin(a)).toFixed(1) + 'L' + (32 + 70 * Math.cos(b)).toFixed(1) + ' ' + (32 + 70 * Math.sin(b)).toFixed(1) + 'Z"/>'; }).join(''),
+  half:      '<rect x="32" y="0" width="32" height="64"/>',
+  quarters:  '<rect x="32" y="0" width="32" height="32"/><rect x="0" y="32" width="32" height="32"/>',
+  zigzag:    [22, 40].map((y) => '<path d="M' + agBnPts(9, (i) => (i * 8) + ' ' + (y + (i % 2) * 8)).join('L') + '" fill="none" stroke="currentColor" stroke-width="4"/>').join(''),
+  border:    '<path d="{B}" fill="none" stroke="currentColor" stroke-width="8"/>',
+  frame:     '<path d="{B}" fill="none" stroke="currentColor" stroke-width="5"/><path d="{B}" fill="none" stroke="currentColor" stroke-width="1.6" transform="translate(32 32) scale(0.78) translate(-32 -32)"/>',
+  pinstripe: agBnPts(7, (i) => '<rect x="' + (8 + i * 8) + '" y="0" width="2" height="64"/>').join(''),
+  triangles: '<path d="M0 64L16 40L32 64ZM32 64L48 40L64 64ZM16 40L32 16L48 40Z"/>',
+  scales:    '<path d="' + agBnPts(5, (r) => agBnPts(5, (i) => 'M' + ((r % 2 ? -8 : 0) + i * 16) + ' ' + (14 + r * 12) + 'a8 8 0 0 0 16 0').join('')).join('') + '" fill="none" stroke="currentColor" stroke-width="2.5"/>'
 };
 const AG_BN_EMB = {
-  star:  'M32 17L35.5 25.5L44.5 26L37.5 31.8L40 40.5L32 35.6L24 40.5L26.5 31.8L19.5 26L28.5 25.5Z',
-  crown: 'M20 40L18 22L26 30L32 20L38 30L46 22L44 40Z',
-  bolt:  'M35 16L22 33H31L28 46L42 28H33Z',
-  heart: 'M32 42C14 30 20 18 28 20C30 20.5 31.5 22 32 24C32.5 22 34 20.5 36 20C44 18 50 30 32 42Z',
-  moon:  'M38 18A14 14 0 1 0 40 44A11 11 0 0 1 38 18Z',
-  flame: 'M32 16C34 24 42 26 42 36A10 10 0 0 1 22 36C22 30 26 28 27 22C29 25 30 24 32 16Z'
+  star:   '<path d="M32 17L35.5 25.5L44.5 26L37.5 31.8L40 40.5L32 35.6L24 40.5L26.5 31.8L19.5 26L28.5 25.5Z"/>',
+  crown:  '<path d="M20 40L18 22L26 30L32 20L38 30L46 22L44 40Z"/>',
+  bolt:   '<path d="M35 16L22 33H31L28 46L42 28H33Z"/>',
+  heart:  '<path d="M32 42C14 30 20 18 28 20C30 20.5 31.5 22 32 24C32.5 22 34 20.5 36 20C44 18 50 30 32 42Z"/>',
+  moon:   '<path d="M38 18A14 14 0 1 0 40 44A11 11 0 0 1 38 18Z"/>',
+  flame:  '<path d="M32 16C34 24 42 26 42 36A10 10 0 0 1 22 36C22 30 26 28 27 22C29 25 30 24 32 16Z"/>',
+  gem:    '<path d="M22 22H42L50 31L32 50L14 31Z"/>',
+  sun:    '<circle cx="32" cy="31" r="8"/><path d="M32 14V19M32 43V48M15 31H20M44 31H49M20 19L23.5 22.5M40.5 39.5L44 43M44 19L40.5 22.5M23.5 39.5L20 43" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/>',
+  leaf:   '<path d="M20 44C18 28 28 18 46 18C46 36 36 46 20 44Z"/>',
+  anchor: '<g fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="32" cy="19" r="4"/><path d="M32 23V47M24 30H40M17 38C19 46 25 49 32 49C39 49 45 46 47 38"/></g>',
+  sword:  '<path d="M32 12L36 18V38H28V18Z"/><rect x="22" y="38" width="20" height="4" rx="2"/><rect x="30" y="42" width="4" height="8" rx="1"/>',
+  spade:  '<path d="M32 14C32 14 18 26 18 34C18 40 24 42 29 38C28 44 26 47 22 48H42C38 47 36 44 35 38C40 42 46 40 46 34C46 26 32 14 32 14Z"/>',
+  eye:    '<path fill-rule="evenodd" d="M14 31Q32 13 50 31Q32 49 14 31ZM32 25A6 6 0 1 0 32.01 25Z"/>',
+  peak:   '<path d="M14 46L28 22L36 34L40 28L50 46Z"/>',
+  plus:   '<path d="M27 16H37V27H48V37H37V48H27V37H16V27H27Z"/>',
+  target: '<g fill="none" stroke="currentColor" stroke-width="3.6"><circle cx="32" cy="31" r="16"/><circle cx="32" cy="31" r="9"/></g><circle cx="32" cy="31" r="3.6"/>'
 };
-const AG_BN_DETAILS = ['none'].concat(Object.keys(AG_BN_PAT), Object.keys(AG_BN_EMB));
+const AG_BN_EKEYS = Object.keys(AG_BN_EMB);
+const AG_BN_DETAILS = ['none'].concat(Object.keys(AG_BN_PAT));
+const AG_BN_EMBS = ['none'].concat(AG_BN_EKEYS);
+const agBnThemes = () => ['auto'].concat(OPS_COLORS);
 let agBnN = 0;
+
+function agBnMix(hex, to, t) {
+  const p = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const a = p(hex), b = p(to);
+  return '#' + a.map((v, i) => Math.round(v + (b[i] - v) * t).toString(16).padStart(2, '0')).join('');
+}
+const agBnSw = (c) => 'linear-gradient(145deg,' + agBnMix(c, '#ffffff', 0.4) + ',' + c + ' 55%,' + agBnMix(c, '#000000', 0.35) + ')';
 
 function agBnNorm(b) {
   const o = b && typeof b === 'object' ? b : {};
+  let detail = o.detail, emblem = o.emblem;
+  if (AG_BN_EKEYS.includes(detail) && !AG_BN_EKEYS.includes(emblem)) { emblem = detail; detail = 'none'; }
   return {
     shape: AG_BN_SHAPES.includes(o.shape) ? o.shape : 'flag',
     color: OPS_COLORS.includes(o.color) ? o.color : OPS_COLORS[0],
     bg: OPS_COLORS.includes(o.bg) ? o.bg : OPS_COLORS[6],
-    detail: AG_BN_DETAILS.includes(o.detail) ? o.detail : 'none'
+    detail: AG_BN_DETAILS.includes(detail) ? detail : 'none',
+    emblem: AG_BN_EMBS.includes(emblem) ? emblem : 'none',
+    theme: agBnThemes().includes(o.theme) ? o.theme : 'auto'
   };
 }
 
 function agBnSvg(b) {
   const a = agBnNorm(b);
   const s = AG_BN_SHAPE[a.shape];
-  const ink = (a.color === '#ffffff' || a.color === '#ffd60a') ? '#1c1c1e' : '#ffffff';
-  const cid = 'agbn' + (++agBnN);
-  let det = '';
-  if (a.detail !== 'none') {
-    const inner = AG_BN_PAT[a.detail]
-      ? '<g fill="' + ink + '" opacity="0.55" color="' + ink + '">' + AG_BN_PAT[a.detail] + '</g>'
-      : '<g transform="translate(' + s.c[0] + ' ' + s.c[1] + ') scale(' + s.c[2] + ') translate(-32 -30)"><path d="' + AG_BN_EMB[a.detail] + '" fill="' + ink + '"/></g>';
-    det = '<g clip-path="url(#' + cid + ')">' + inner + '</g>';
-  }
-  return '<svg class="ag-av-svg" viewBox="0 0 64 64" aria-hidden="true"><defs><clipPath id="' + cid + '"><path d="' + s.body + '"/></clipPath></defs>'
-    + (s.pole ? '<rect x="12" y="5" width="3.5" height="56" rx="1.75" fill="#8d8d93"/>' : '')
-    + (s.caps ? '<ellipse cx="10" cy="30" rx="5" ry="16" fill="' + a.color + '" stroke="rgba(0,0,0,.25)" stroke-width="1"/><ellipse cx="54" cy="30" rx="5" ry="16" fill="' + a.color + '" stroke="rgba(0,0,0,.25)" stroke-width="1"/>' : '')
-    + '<path d="' + s.body + '" fill="' + a.color + '" stroke="rgba(0,0,0,.25)" stroke-width="1" stroke-linejoin="round"/>'
+  const light = a.color === '#ffffff' || a.color === '#ffd60a';
+  const ink = a.theme === 'auto' ? (light ? '#1c1c1e' : '#ffffff') : a.theme;
+  const id = 'agbn' + (++agBnN);
+  const u = (k) => 'url(#' + id + k + ')';
+  const defs = '<defs><clipPath id="' + id + 'c"><path d="' + s.body + '"/></clipPath>'
+    + '<linearGradient id="' + id + 'f" x1="0" y1="0" x2="0.35" y2="1"><stop offset="0" stop-color="' + agBnMix(a.color, '#ffffff', 0.38) + '"/><stop offset="0.5" stop-color="' + a.color + '"/><stop offset="1" stop-color="' + agBnMix(a.color, '#000000', 0.38) + '"/></linearGradient>'
+    + '<linearGradient id="' + id + 'g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.6"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>'
+    + '<linearGradient id="' + id + 'r" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.85"/><stop offset="1" stop-color="#000" stop-opacity="0.4"/></linearGradient>'
+    + '<linearGradient id="' + id + 'e" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + agBnMix(ink, '#ffffff', 0.35) + '"/><stop offset="1" stop-color="' + agBnMix(ink, '#000000', 0.3) + '"/></linearGradient></defs>';
+  const caps = s.caps ? '<ellipse cx="10" cy="30" rx="5" ry="16" fill="' + u('f') + '" stroke="rgba(0,0,0,.3)" stroke-width="1"/><ellipse cx="54" cy="30" rx="5" ry="16" fill="' + u('f') + '" stroke="rgba(0,0,0,.3)" stroke-width="1"/>' : '';
+  const det = a.detail !== 'none'
+    ? '<g clip-path="' + u('c') + '"><g fill="' + ink + '" color="' + ink + '" opacity="0.5">' + AG_BN_PAT[a.detail].split('{B}').join(s.body) + '</g></g>'
+    : '';
+  const gloss = '<g clip-path="' + u('c') + '"><rect x="0" y="0" width="64" height="34" fill="' + u('g') + '" opacity="0.55"/></g>';
+  const emb = a.emblem !== 'none'
+    ? '<g transform="translate(' + s.c[0] + ' ' + s.c[1] + ') scale(' + s.c[2] + ') translate(-32 -31)"><g transform="translate(0 1.4)" fill="#000" color="#000" opacity="0.32">' + AG_BN_EMB[a.emblem] + '</g><g fill="' + u('e') + '" color="' + ink + '">' + AG_BN_EMB[a.emblem] + '</g></g>'
+    : '';
+  return '<svg class="ag-av-svg" viewBox="0 0 64 64" aria-hidden="true">' + defs
+    + '<path d="' + s.body + '" fill="rgba(0,0,0,.32)" transform="translate(0 2.2)"/>'
+    + caps
+    + '<path d="' + s.body + '" fill="' + u('f') + '"/>'
     + (s.hole ? '<circle cx="16" cy="32" r="3" fill="rgba(0,0,0,.45)"/>' : '')
-    + det + '</svg>';
+    + det + gloss + emb
+    + '<path d="' + s.body + '" fill="none" stroke="' + u('r') + '" stroke-width="1.3" stroke-linejoin="round"/></svg>';
 }
 
 const agBnHtml = () => '<div class="lib-lab">Banner<div class="ag-av"><div class="ag-av-prev" data-ag-bn-prev><button class="ag-av-shuf ag-av-reset" type="button" data-ag-bn-reset aria-label="Reset banner">' + AG_RESET + '</button><button class="ag-av-shuf" type="button" data-ag-bn-shuf aria-label="Randomize banner">' + AG_SHUF + '</button><div class="ag-av-art" data-ag-bn-art></div></div><div class="ag-av-ctl"><div class="ag-chips" data-ag-bn-cats></div><div class="ag-av-opts" data-ag-bn-opts></div></div></div></div>';
@@ -3116,17 +3178,18 @@ function agBnBind(el, cur) {
   const optsEl = el.querySelector('[data-ag-bn-opts]');
   if (!art || !prev || !catsEl || !optsEl) return;
   let cat = 'shape';
-  const CATS = [['shape', 'Shape'], ['color', 'Colors'], ['bg', 'Background'], ['detail', 'Detail']];
-  const ids = (c) => (c === 'shape' ? AG_BN_SHAPES : (c === 'color' || c === 'bg') ? OPS_COLORS : AG_BN_DETAILS);
+  const CATS = [['shape', 'Shape'], ['color', 'Colors'], ['bg', 'Background'], ['detail', 'Detail'], ['emblem', 'Emblem'], ['theme', 'Theme']];
+  const ids = (c) => (c === 'shape' ? AG_BN_SHAPES : (c === 'color' || c === 'bg') ? OPS_COLORS : c === 'theme' ? agBnThemes() : c === 'emblem' ? AG_BN_EMBS : AG_BN_DETAILS);
   const paint = () => {
     prev.style.setProperty('--avbg', cur.banner.bg);
     art.innerHTML = agBnSvg(cur.banner);
     catsEl.innerHTML = CATS.map((c) => '<button class="ag-chip' + (c[0] === cat ? ' on' : '') + '" type="button" data-ag-bn-cat="' + c[0] + '">' + c[1] + '</button>').join('');
     optsEl.innerHTML = ids(cat).map((id) => {
       const on = cur.banner[cat] === id ? ' on' : '';
-      if (cat === 'color' || cat === 'bg') return '<button class="ag-av-opt ag-av-sw' + on + '" type="button" data-ag-bn-pick="' + id + '" aria-label="' + id + '" style="--sw:' + id + '"></button>';
+      if (id === 'auto') return '<button class="ag-av-opt' + on + '" type="button" data-ag-bn-pick="auto" aria-label="Auto" style="font-size:11px;font-weight:600">Auto</button>';
+      if (cat === 'color' || cat === 'bg' || cat === 'theme') return '<button class="ag-av-opt ag-av-sw' + on + '" type="button" data-ag-bn-pick="' + id + '" aria-label="' + id + '" style="--sw:' + id + ';background:' + agBnSw(id) + '"></button>';
       if (id === 'none') return '<button class="ag-av-opt' + on + '" type="button" data-ag-bn-pick="none" aria-label="None">' + ICONS.close + '</button>';
-      const t = cat === 'shape' ? Object.assign({}, cur.banner, { shape: id, detail: 'none' }) : Object.assign({}, cur.banner, { detail: id });
+      const t = Object.assign({}, cur.banner, cat === 'shape' ? { shape: id, detail: 'none', emblem: 'none' } : cat === 'emblem' ? { emblem: id, detail: 'none' } : { detail: id, emblem: 'none' });
       return '<button class="ag-av-opt' + on + '" type="button" data-ag-bn-pick="' + id + '" aria-label="' + id + '">' + agBnSvg(t) + '</button>';
     }).join('');
   };
@@ -3146,7 +3209,7 @@ function agBnBind(el, cur) {
       const bg = rnd(OPS_COLORS);
       let color = rnd(OPS_COLORS);
       if (color === bg) color = OPS_COLORS[(OPS_COLORS.indexOf(bg) + 1) % OPS_COLORS.length];
-      cur.banner = { shape: rnd(AG_BN_SHAPES), color, bg, detail: rnd(AG_BN_DETAILS) };
+      cur.banner = { shape: rnd(AG_BN_SHAPES), color, bg, detail: rnd(AG_BN_DETAILS), emblem: rnd(AG_BN_EMBS), theme: 'auto' };
       paint();
     }
   });
