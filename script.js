@@ -2059,7 +2059,7 @@ function libRender() {
       <div class="lib-card-top">
         <h4 class="lib-card-title">${esc(it.title)}</h4>
         <div class="lib-card-act">
-          <span class="lib-card-eye" role="img" aria-label="${it.hidden ? 'Hidden from AI' : 'Visible to AI'}">${it.hidden ? ICONS.eyeOff : ICONS.eye}</span>
+          <button class="icon-btn lib-card-eye${it.hidden ? ' is-off' : ''}" type="button" data-lib-eye="${esc(it.id)}" aria-pressed="${it.hidden ? 'true' : 'false'}" aria-label="${it.hidden ? 'Hidden from AI' : 'Visible to AI'}">${it.hidden ? ICONS.eyeOff : ICONS.eye}</button>
           <button class="icon-btn" type="button" data-lib-edit="${esc(it.id)}" aria-label="Edit">${ICONS.pencil}</button>
           <button class="icon-btn" type="button" data-lib-del="${esc(it.id)}" aria-label="Delete">${ICONS.trash}</button>
         </div>
@@ -2201,6 +2201,17 @@ document.addEventListener('click', async (e) => {
   libRender();
 });
 
+document.addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-lib-eye]');
+  if (!b) return;
+  const it = libItems.find((i) => i.id === b.dataset.libEye);
+  if (!it) return;
+  const nowHidden = !it.hidden;
+  try { await libUpdate(it.id, it.title, it.instructions, nowHidden); } catch (_) { toast('Could not update. (E07)'); return; }
+  libRender();
+  toast(nowHidden ? 'Hidden: only you can see this.' : 'Visible: the AI can see this.', 'info', 1600);
+});
+
 /* ---------- PROJECTS: popup + list (same design as Libraries, holds sessions) ---------- */
 const PROJ_LS = 'aphrosta.projects';
 let projItems = [];
@@ -2238,7 +2249,7 @@ function projRender() {
       <div class="lib-card-top">
         <h4 class="lib-card-title">${esc(it.title)}</h4>
         <div class="lib-card-act">
-          <span class="lib-card-eye" role="img" aria-label="${it.hidden ? 'Hidden from AI' : 'Visible to AI'}">${it.hidden ? ICONS.eyeOff : ICONS.eye}</span>
+          <button class="icon-btn lib-card-eye${it.hidden ? ' is-off' : ''}" type="button" data-proj-eye="${esc(it.id)}" aria-pressed="${it.hidden ? 'true' : 'false'}" aria-label="${it.hidden ? 'Hidden from AI' : 'Visible to AI'}">${it.hidden ? ICONS.eyeOff : ICONS.eye}</button>
           <button class="icon-btn" type="button" data-proj-edit="${esc(it.id)}" aria-label="Edit">${ICONS.pencil}</button>
           <button class="icon-btn" type="button" data-proj-del="${esc(it.id)}" aria-label="Delete">${ICONS.trash}</button>
         </div>
@@ -2430,6 +2441,20 @@ document.addEventListener('click', (e) => {
   projItems = projItems.filter((p) => p.id !== b.dataset.projDel);
   projSave();
   projRender();
+});
+
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-proj-eye]');
+  if (!b) return;
+  projLoad();
+  const it = projItems.find((p) => p.id === b.dataset.projEye);
+  if (!it) return;
+  const prev = projItems;
+  const nowHidden = !it.hidden;
+  projItems = projItems.map((p) => (p.id === it.id ? { ...p, hidden: nowHidden } : p));
+  if (!projSave()) { projItems = prev; return; }
+  projRender();
+  toast(nowHidden ? 'Hidden: only you can see this.' : 'Visible: the AI can see this.', 'info', 1600);
 });
 
 /* ---------- AGENTS: Group / Agent toggle (same design as Libraries + Projects) ---------- */

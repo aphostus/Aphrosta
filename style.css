@@ -1580,6 +1580,8 @@ mark.sb-hit.is-cur {
 .lib-head-act { display: flex; align-items: center; gap: 2px; }
 .lib-vis.is-off { opacity: 0.55; }
 .lib-card-eye { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; color: rgba(var(--fg-rgb), 0.5); }
+button.lib-card-eye { cursor: pointer; }
+button.lib-card-eye.is-off { opacity: 0.55; }
 .lib-h { font-size: calc(16px * var(--ts)); font-weight: 600; color: var(--fg); }
 .lib-lab {
   display: flex;
