@@ -2505,7 +2505,7 @@ function agAgentCard(a) {
   return `
     <div class="lib-card ops-card ag-card${on ? '' : ' ag-off'}" style="--oc:${esc(opsInk(g ? (g.color || OPS_COLORS[0]) : OPS_COLORS[0]))}">
       <div class="lib-card-top">
-        <h4 class="lib-card-title"><span class="ops-ico">${g ? ICONS.op06 : ICONS.opsCode}</span>${esc(a.name)}</h4>
+        <h4 class="lib-card-title"><span class="ops-ico ag-av-ico">${agAvSvg(a.avatar)}</span>${esc(a.name)}</h4>
         <div class="lib-card-act">
           <button class="icon-btn" type="button" data-ag-edit="agent:${esc(a.id)}" aria-label="Edit">${ICONS.pencil}</button>
           <button class="icon-btn" type="button" data-ag-del="agent:${esc(a.id)}" aria-label="Delete">${ICONS.trash}</button>
@@ -2661,6 +2661,132 @@ function agOpenSandbox(title, sb, onSave, base = 'agent.txt') {
   });
 }
 
+/* ---------- AGENT AVATAR ---------- */
+const AG_SHUF = svg('<path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/>', 16);
+const AG_AV_SHAPES = ['circle', 'square', 'triangle', 'star', 'hexagon', 'heart', 'diamond', 'pentagon', 'cross', 'blob'];
+const AG_AV_BODY = {
+  circle: '<circle cx="32" cy="31" r="16"/>',
+  square: '<rect x="17" y="16" width="30" height="30" rx="6"/>',
+  triangle: '<path d="M32 14L48 45H16Z"/>',
+  star: '<path d="M32 12L37 24.1L50.1 25.1L40.1 33.6L43.2 46.4L32 39.5L20.8 46.4L23.9 33.6L13.9 25.1L27 24.1Z"/>',
+  hexagon: '<path d="M48 31L40 45L24 45L16 31L24 17L40 17Z"/>',
+  heart: '<path d="M32 46C15 34 17 18 27 18.5C30 18.7 32 21 32 23C32 21 34 18.7 37 18.5C47 18 49 34 32 46Z"/>',
+  diamond: '<path d="M32 13L49 31L32 49L15 31Z"/>',
+  pentagon: '<path d="M32 14L48 26L42 45H22L16 26Z"/>',
+  cross: '<path d="M27 15H37V26H48V36H37V47H27V36H16V26H27Z"/>',
+  blob: '<path d="M32 14C42 13 50 21 49 31C48 41 41 48 31 47C22 46 14 40 15 30C16 21 22 14.5 32 14Z"/>'
+};
+const AG_AV_EYE = { triangle: 37, heart: 30, star: 32 };
+const AG_AV_PART = {
+  hat: {
+    cap: '<path d="M20 16Q32 2 44 16Z" fill="#ff453a"/><rect x="40" y="14" width="12" height="3.5" rx="1.7" fill="#c4281f"/>',
+    tophat: '<rect x="22" y="2" width="20" height="12" rx="1.5" fill="#26262a"/><rect x="17" y="13" width="30" height="4" rx="2" fill="#26262a"/><rect x="22" y="9" width="20" height="2.6" fill="#bf5af2"/>',
+    crown: '<path d="M20 16L21.5 5L27 11L32 3L37 11L42.5 5L44 16Z" fill="#ffd60a" stroke="#c79a00" stroke-width="1" stroke-linejoin="round"/>',
+    party: '<path d="M32 1L42 16H22Z" fill="#ff6bb5"/><circle cx="32" cy="2" r="2.2" fill="#ffd60a"/>',
+    beanie: '<path d="M20 17Q20 4 32 4Q44 4 44 17Z" fill="#0a84ff"/><rect x="19" y="14" width="26" height="4.5" rx="2.2" fill="#0866c2"/><circle cx="32" cy="3.5" r="2.6" fill="#fff"/>',
+    wizard: '<path d="M32 0L45 16H19Z" fill="#5e5ce6"/><rect x="14" y="14.5" width="36" height="3.5" rx="1.7" fill="#4644b8"/><circle cx="31" cy="9" r="1.4" fill="#ffd60a"/>',
+    halo: '<ellipse cx="32" cy="7" rx="11" ry="3.2" fill="none" stroke="#ffd60a" stroke-width="2.4"/>'
+  },
+  glasses: {
+    round: '<g fill="none" stroke="#111" stroke-width="1.6"><circle cx="26" cy="31" r="5.2"/><circle cx="38" cy="31" r="5.2"/><path d="M31.2 31h1.6"/></g>',
+    square: '<g fill="none" stroke="#111" stroke-width="1.6"><rect x="20.5" y="26.5" width="11" height="9" rx="2.2"/><rect x="32.5" y="26.5" width="11" height="9" rx="2.2"/><path d="M31.5 30h1"/></g>',
+    shades: '<g fill="#111"><rect x="20" y="27" width="12" height="8" rx="3.5"/><rect x="32" y="27" width="12" height="8" rx="3.5"/><rect x="31" y="29" width="2" height="1.8"/></g>',
+    monocle: '<circle cx="38" cy="31" r="5.4" fill="none" stroke="#ffd60a" stroke-width="1.8"/><path d="M42.5 34Q46 42 44 48" fill="none" stroke="#ffd60a" stroke-width="1"/>'
+  },
+  shoes: {
+    sneakers: '<g fill="#f2f2f2" stroke="#8e8e93" stroke-width="1"><ellipse cx="24" cy="51" rx="7" ry="3.4"/><ellipse cx="40" cy="51" rx="7" ry="3.4"/></g><g stroke="#ff453a" stroke-width="1.6" stroke-linecap="round"><path d="M20 50.5h8M36 50.5h8"/></g>',
+    boots: '<g fill="#8b5a2b"><rect x="18" y="46" width="12" height="6" rx="2.5"/><rect x="34" y="46" width="12" height="6" rx="2.5"/></g><g fill="#5c3a1b"><rect x="18" y="50.5" width="12" height="2"/><rect x="34" y="50.5" width="12" height="2"/></g>',
+    flippers: '<g fill="#40c8e0"><path d="M14 49H28L30 54H12Z"/><path d="M36 49H50L52 54H34Z"/></g>',
+    sandals: '<g fill="#ffd60a"><rect x="18" y="50" width="12" height="2.6" rx="1.3"/><rect x="34" y="50" width="12" height="2.6" rx="1.3"/></g><g stroke="#c79a00" stroke-width="1.2"><path d="M22 50l2-3M26 50l-2-3M38 50l2-3M42 50l-2-3"/></g>'
+  },
+  inhand: {
+    wand: '<rect x="50" y="25" width="2.2" height="23" rx="1.1" fill="#8b5a2b"/><path d="M51 18l1.4 3.4 3.6.3-2.7 2.3.9 3.5L51 25.6l-3.2 1.9.9-3.5-2.7-2.3 3.6-.3z" fill="#ffd60a"/>',
+    sword: '<rect x="50" y="12" width="2.8" height="27" rx="1.2" fill="#d1d1d6"/><rect x="46.5" y="38" width="9.8" height="2.6" rx="1.2" fill="#c79a00"/><rect x="50.3" y="40" width="2.2" height="7" fill="#8b5a2b"/>',
+    flower: '<rect x="50.2" y="30" width="1.8" height="18" fill="#30d158"/><circle cx="51" cy="27" r="4.4" fill="#ff6bb5"/><circle cx="51" cy="27" r="1.8" fill="#ffd60a"/>',
+    balloon: '<path d="M51 41Q56 32 56 22" fill="none" stroke="#8e8e93" stroke-width="1"/><ellipse cx="56" cy="16" rx="5.6" ry="6.6" fill="#ff453a"/>',
+    torch: '<rect x="50" y="34" width="3" height="14" rx="1.2" fill="#8b5a2b"/><path d="M51.5 22Q57 29 51.5 35Q46 29 51.5 22Z" fill="#ff9f0a"/>'
+  },
+  offhand: {
+    shield: '<path d="M5 29H19V39Q19 46 12 50Q5 46 5 39Z" fill="#0a84ff" stroke="#0866c2" stroke-width="1.2" stroke-linejoin="round"/><path d="M12 31V47" stroke="#fff" stroke-width="1.4" opacity=".8"/>',
+    book: '<rect x="4" y="31" width="15" height="12" rx="1.8" fill="#bf5af2"/><rect x="6.5" y="33.5" width="10" height="1.6" rx=".8" fill="#fff" opacity=".85"/><rect x="6.5" y="36.5" width="7" height="1.6" rx=".8" fill="#fff" opacity=".85"/>',
+    lantern: '<path d="M9.5 27Q13 19 16.5 27" fill="none" stroke="#8e8e93" stroke-width="1.2"/><rect x="8" y="27" width="10" height="2.6" rx="1" fill="#555"/><rect x="9" y="29.6" width="8" height="11" rx="2" fill="#ffd60a"/><rect x="8" y="40" width="10" height="2.4" rx="1" fill="#555"/>',
+    cup: '<path d="M6 33H19L17 46H8Z" fill="#f2f2f2" stroke="#8e8e93" stroke-width="1" stroke-linejoin="round"/><path d="M19 35Q24 36 19 42" fill="none" stroke="#8e8e93" stroke-width="1.4"/>',
+    bag: '<path d="M8 36Q13 24 18 36" fill="none" stroke="#5c3a1b" stroke-width="1.6"/><rect x="5" y="35" width="14" height="12" rx="3" fill="#8b5a2b"/><rect x="5" y="39" width="14" height="1.6" fill="#5c3a1b"/>'
+  }
+};
+
+function agAvNorm(a) {
+  const o = a && typeof a === 'object' ? a : {};
+  const has = (k, v) => v === 'none' || Object.prototype.hasOwnProperty.call(AG_AV_PART[k], v);
+  const r = {
+    bg: OPS_COLORS.includes(o.bg) ? o.bg : OPS_COLORS[6],
+    body: OPS_COLORS.includes(o.body) ? o.body : OPS_COLORS[0],
+    shape: AG_AV_SHAPES.includes(o.shape) ? o.shape : 'circle'
+  };
+  ['hat', 'glasses', 'shoes', 'inhand', 'offhand'].forEach((k) => { r[k] = has(k, o[k]) ? o[k] : 'none'; });
+  return r;
+}
+
+function agAvSvg(av, nobg) {
+  const a = agAvNorm(av);
+  const P = AG_AV_PART;
+  const ey = (AG_AV_EYE[a.shape] || 31) - 31;
+  const hand = (x) => '<circle cx="' + x + '" cy="41" r="3.2"/>';
+  return '<svg class="ag-av-svg" viewBox="0 0 64 64" aria-hidden="true">'
+    + (nobg ? '' : '<rect width="64" height="64" rx="14" fill="' + a.bg + '" fill-opacity=".45"/>')
+    + (a.offhand !== 'none' ? P.offhand[a.offhand] : '')
+    + (a.inhand !== 'none' ? P.inhand[a.inhand] : '')
+    + '<g fill="' + a.body + '" stroke="' + a.body + '" stroke-width="3" stroke-linejoin="round">' + hand(13) + hand(51) + AG_AV_BODY[a.shape] + '</g>'
+    + (a.shoes !== 'none' ? P.shoes[a.shoes] : '')
+    + '<g transform="translate(0 ' + ey + ')"><circle cx="26" cy="31" r="2.4" fill="#111"/><circle cx="38" cy="31" r="2.4" fill="#111"/><path d="M29 37Q32 40 35 37" fill="none" stroke="#111" stroke-width="1.4" stroke-linecap="round"/>'
+    + (a.glasses !== 'none' ? P.glasses[a.glasses] : '') + '</g>'
+    + (a.hat !== 'none' ? P.hat[a.hat] : '')
+    + '</svg>';
+}
+
+const agAvHtml = () => '<div class="lib-lab">Avatar<div class="ag-av"><div class="ag-av-prev" data-ag-av-prev><button class="ag-av-shuf" type="button" data-ag-av-shuf aria-label="Randomize avatar">' + AG_SHUF + '</button><div class="ag-av-art" data-ag-av-art></div></div><div class="ag-av-ctl"><div class="ag-chips" data-ag-av-cats></div><div class="ag-av-opts" data-ag-av-opts></div></div></div></div>';
+
+function agAvBind(el, cur) {
+  const art = el.querySelector('[data-ag-av-art]');
+  const prev = el.querySelector('[data-ag-av-prev]');
+  const catsEl = el.querySelector('[data-ag-av-cats]');
+  const optsEl = el.querySelector('[data-ag-av-opts]');
+  if (!art || !prev || !catsEl || !optsEl) return;
+  let cat = 'shape';
+  const CATS = [['shape', 'Shape'], ['body', 'Body'], ['back', 'Back'], ['hat', 'Hat'], ['glasses', 'Glasses'], ['shoes', 'Shoes'], ['inhand', 'In-hand'], ['offhand', 'Off-hand']];
+  const key = (c) => (c === 'back' ? 'bg' : c);
+  const ids = (c) => (c === 'shape' ? AG_AV_SHAPES : (c === 'body' || c === 'back') ? OPS_COLORS : ['none'].concat(Object.keys(AG_AV_PART[c])));
+  const paint = () => {
+    prev.style.setProperty('--avbg', cur.avatar.bg);
+    art.innerHTML = agAvSvg(cur.avatar, true);
+    catsEl.innerHTML = CATS.map((c) => '<button class="ag-chip' + (c[0] === cat ? ' on' : '') + '" type="button" data-ag-av-cat="' + c[0] + '">' + c[1] + '</button>').join('');
+    const k = key(cat);
+    optsEl.innerHTML = ids(cat).map((id) => {
+      const on = cur.avatar[k] === id ? ' on' : '';
+      if (cat === 'body' || cat === 'back') return '<button class="ag-av-opt ag-av-sw' + on + '" type="button" data-ag-av-pick="' + id + '" aria-label="' + id + '" style="--sw:' + id + '"></button>';
+      if (id === 'none') return '<button class="ag-av-opt' + on + '" type="button" data-ag-av-pick="none" aria-label="None">' + ICONS.close + '</button>';
+      const one = {};
+      one[k] = id;
+      return '<button class="ag-av-opt' + on + '" type="button" data-ag-av-pick="' + id + '" aria-label="' + id + '">' + agAvSvg(Object.assign({}, cur.avatar, one), true) + '</button>';
+    }).join('');
+  };
+  const rnd = (list) => list[Math.floor(Math.random() * list.length)];
+  el.addEventListener('click', (e) => {
+    const c = e.target.closest('[data-ag-av-cat]');
+    if (c) { cat = c.dataset.agAvCat; paint(); return; }
+    const p = e.target.closest('[data-ag-av-pick]');
+    if (p) { cur.avatar[key(cat)] = p.dataset.agAvPick; paint(); return; }
+    if (e.target.closest('[data-ag-av-shuf]')) {
+      const bg = rnd(OPS_COLORS);
+      let body = rnd(OPS_COLORS);
+      if (body === bg) body = OPS_COLORS[(OPS_COLORS.indexOf(bg) + 1) % OPS_COLORS.length];
+      cur.avatar = { bg, body, shape: rnd(AG_AV_SHAPES), hat: rnd(ids('hat')), glasses: rnd(ids('glasses')), shoes: rnd(ids('shoes')), inhand: rnd(ids('inhand')), offhand: rnd(ids('offhand')) };
+      paint();
+    }
+  });
+  paint();
+}
+
 function closeAgSheet() {
   document.getElementById('ag-sb-scrim')?.remove();
   const el = document.getElementById('ag-scrim');
@@ -2681,7 +2807,7 @@ function agPickLlm(current, onPick) {
     <div class="lib-sheet" role="dialog" aria-label="Choose LLM">
       <div class="lib-grab"></div>
       <div class="lib-head">
-        <h3 class="lib-h">Choose LLM</h3>
+        <span></span>
         <div class="lib-head-act">
           <button class="icon-btn" type="button" id="ag-llm-close" aria-label="Close">${ICONS.stClose}</button>
         </div>
@@ -2706,6 +2832,7 @@ function agOpenSheet(kind, edit) {
   const isG = kind === 'group';
   const cur = {
     icon: 'op06',
+    avatar: agAvNorm(edit && edit.avatar),
     llm: (edit && edit.llm && edit.llm.provider) ? { provider: edit.llm.provider, key: edit.llm.key || '', model: edit.llm.model || '' } : { provider: '', key: '', model: '' },
     color: (edit && edit.color) || OPS_COLORS[0],
     active: edit ? edit.active !== false : true
@@ -2737,6 +2864,7 @@ function agOpenSheet(kind, edit) {
       <label class="lib-lab">Instructions
         <textarea class="lib-in lib-ta" id="ag-ins" rows="5" maxlength="4000">${esc(edit && edit.instructions)}</textarea>
       </label>
+      ${isG ? '' : agAvHtml()}
       ${isG ? '' : `<label class="lib-lab">Group
         <select class="lib-in" id="ag-group">
           <option value="">No group</option>
@@ -2756,6 +2884,7 @@ function agOpenSheet(kind, edit) {
   sbLabel();
   el.addEventListener('click', (e) => { if (e.target === el) closeAgSheet(); });
   el.querySelector('#ag-close').addEventListener('click', closeAgSheet);
+  if (!isG) agAvBind(el, cur);
   const actBtn = el.querySelector('#ag-act');
   actBtn.addEventListener('change', () => {
     cur.active = actBtn.checked;
@@ -2803,7 +2932,7 @@ function agOpenSheet(kind, edit) {
     agLoad();
     const rec = isG
       ? { id: edit ? edit.id : uid(), name, instructions: el.querySelector('#ag-ins').value.trim(), icon: cur.icon, color: cur.color, active: cur.active, sandbox: sb, t: edit ? (edit.t || Date.now()) : Date.now() }
-      : { id: edit ? edit.id : uid(), name, instructions: el.querySelector('#ag-ins').value.trim(), llm: { provider: cur.llm.provider, key: cur.llm.key.trim(), model: cur.llm.model }, groupId: el.querySelector('#ag-group').value, active: cur.active, sandbox: sb, t: edit ? (edit.t || Date.now()) : Date.now() };
+      : { id: edit ? edit.id : uid(), name, instructions: el.querySelector('#ag-ins').value.trim(), llm: { provider: cur.llm.provider, key: cur.llm.key.trim(), model: cur.llm.model }, groupId: el.querySelector('#ag-group').value, avatar: agAvNorm(cur.avatar), active: cur.active, sandbox: sb, t: edit ? (edit.t || Date.now()) : Date.now() };
     const key = isG ? 'groups' : 'agents';
     const prev = agData[key];
     agData[key] = edit ? prev.map((x) => (x.id === edit.id ? rec : x)) : [...prev, rec];
