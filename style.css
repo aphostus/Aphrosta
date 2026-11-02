@@ -2601,6 +2601,11 @@ html[data-status-mode="auto"][data-status="offline"]
   opacity: 0.55;
 }
 
+.composer[data-voice="waiting"] .wave i {
+  background: var(--gray-mid) !important;
+  opacity: 0.3;
+}
+
 /* ============================================================
    MESSAGES
    ============================================================ */

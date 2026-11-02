@@ -5769,6 +5769,40 @@ const deviceId = (() => {
   return id;
 })();
 
+const TZ_REGIONS = {
+  PH: 'Asia/Manila',
+  US: 'America/New_York America/Chicago America/Denver America/Los_Angeles America/Phoenix America/Anchorage America/Detroit America/Boise America/Indiana/Indianapolis America/Kentucky/Louisville America/Juneau America/Adak Pacific/Honolulu US/Eastern US/Central US/Mountain US/Pacific US/Hawaii US/Alaska',
+  CA: 'America/Toronto America/Vancouver America/Edmonton America/Winnipeg America/Halifax America/St_Johns America/Regina America/Montreal America/Moncton America/Whitehorse',
+  MX: 'America/Mexico_City America/Cancun America/Monterrey America/Tijuana America/Merida America/Chihuahua America/Hermosillo America/Mazatlan',
+  BR: 'America/Sao_Paulo America/Manaus America/Fortaleza America/Recife America/Bahia America/Belem America/Cuiaba America/Campo_Grande America/Rio_Branco',
+  AR: 'America/Argentina/Buenos_Aires America/Buenos_Aires America/Argentina/Cordoba America/Argentina/Mendoza',
+  CL: 'America/Santiago', CO: 'America/Bogota', PE: 'America/Lima', VE: 'America/Caracas', EC: 'America/Guayaquil', BO: 'America/La_Paz', UY: 'America/Montevideo', PY: 'America/Asuncion',
+  CR: 'America/Costa_Rica', PA: 'America/Panama', GT: 'America/Guatemala', DO: 'America/Santo_Domingo', CU: 'America/Havana', JM: 'America/Jamaica', PR: 'America/Puerto_Rico',
+  GB: 'Europe/London', IE: 'Europe/Dublin', FR: 'Europe/Paris', DE: 'Europe/Berlin', ES: 'Europe/Madrid Atlantic/Canary', PT: 'Europe/Lisbon Atlantic/Azores Atlantic/Madeira',
+  IT: 'Europe/Rome', NL: 'Europe/Amsterdam', BE: 'Europe/Brussels', LU: 'Europe/Luxembourg', CH: 'Europe/Zurich', AT: 'Europe/Vienna', SE: 'Europe/Stockholm', NO: 'Europe/Oslo',
+  DK: 'Europe/Copenhagen', FI: 'Europe/Helsinki', IS: 'Atlantic/Reykjavik', PL: 'Europe/Warsaw', CZ: 'Europe/Prague', SK: 'Europe/Bratislava', HU: 'Europe/Budapest',
+  RO: 'Europe/Bucharest', BG: 'Europe/Sofia', GR: 'Europe/Athens', TR: 'Europe/Istanbul Asia/Istanbul', UA: 'Europe/Kyiv Europe/Kiev', BY: 'Europe/Minsk',
+  RU: 'Europe/Moscow Asia/Yekaterinburg Asia/Novosibirsk Asia/Krasnoyarsk Asia/Irkutsk Asia/Yakutsk Asia/Vladivostok Asia/Kamchatka Europe/Samara Europe/Kaliningrad',
+  RS: 'Europe/Belgrade', HR: 'Europe/Zagreb', SI: 'Europe/Ljubljana', BA: 'Europe/Sarajevo', EE: 'Europe/Tallinn', LV: 'Europe/Riga', LT: 'Europe/Vilnius', MT: 'Europe/Malta', CY: 'Asia/Nicosia',
+  IN: 'Asia/Kolkata Asia/Calcutta', PK: 'Asia/Karachi', BD: 'Asia/Dhaka', LK: 'Asia/Colombo', NP: 'Asia/Kathmandu Asia/Katmandu', AF: 'Asia/Kabul',
+  CN: 'Asia/Shanghai Asia/Chongqing Asia/Urumqi', HK: 'Asia/Hong_Kong', MO: 'Asia/Macau', TW: 'Asia/Taipei', JP: 'Asia/Tokyo', KR: 'Asia/Seoul', KP: 'Asia/Pyongyang', MN: 'Asia/Ulaanbaatar',
+  SG: 'Asia/Singapore', MY: 'Asia/Kuala_Lumpur Asia/Kuching', ID: 'Asia/Jakarta Asia/Makassar Asia/Jayapura Asia/Pontianak', TH: 'Asia/Bangkok', VN: 'Asia/Ho_Chi_Minh Asia/Saigon',
+  KH: 'Asia/Phnom_Penh', LA: 'Asia/Vientiane', MM: 'Asia/Yangon Asia/Rangoon', BN: 'Asia/Brunei',
+  AE: 'Asia/Dubai', SA: 'Asia/Riyadh', QA: 'Asia/Qatar', KW: 'Asia/Kuwait', BH: 'Asia/Bahrain', OM: 'Asia/Muscat', IR: 'Asia/Tehran', IQ: 'Asia/Baghdad', IL: 'Asia/Jerusalem Asia/Tel_Aviv',
+  JO: 'Asia/Amman', LB: 'Asia/Beirut', SY: 'Asia/Damascus', YE: 'Asia/Aden', GE: 'Asia/Tbilisi', AM: 'Asia/Yerevan', AZ: 'Asia/Baku',
+  KZ: 'Asia/Almaty Asia/Aqtobe Asia/Qyzylorda', UZ: 'Asia/Tashkent', KG: 'Asia/Bishkek', TJ: 'Asia/Dushanbe', TM: 'Asia/Ashgabat',
+  AU: 'Australia/Sydney Australia/Melbourne Australia/Brisbane Australia/Perth Australia/Adelaide Australia/Darwin Australia/Hobart Australia/Canberra',
+  NZ: 'Pacific/Auckland', FJ: 'Pacific/Fiji', PG: 'Pacific/Port_Moresby', GU: 'Pacific/Guam',
+  EG: 'Africa/Cairo', ZA: 'Africa/Johannesburg', NG: 'Africa/Lagos', KE: 'Africa/Nairobi', ET: 'Africa/Addis_Ababa', GH: 'Africa/Accra', TZ: 'Africa/Dar_es_Salaam', UG: 'Africa/Kampala',
+  MA: 'Africa/Casablanca', DZ: 'Africa/Algiers', TN: 'Africa/Tunis', LY: 'Africa/Tripoli', SN: 'Africa/Dakar', CI: 'Africa/Abidjan', CM: 'Africa/Douala', AO: 'Africa/Luanda',
+  ZW: 'Africa/Harare', ZM: 'Africa/Lusaka', MZ: 'Africa/Maputo', SD: 'Africa/Khartoum', MG: 'Indian/Antananarivo', MU: 'Indian/Mauritius'
+};
+const tzRegion = (tz) => {
+  if (!tz) return '';
+  for (const c in TZ_REGIONS) if (TZ_REGIONS[c].split(' ').includes(tz)) return c;
+  return '';
+};
+
 function deviceInfo() {
   const ua = navigator.userAgent;
   const os = /Android/i.test(ua) ? 'Android' : /iPhone|iPad|iPod/i.test(ua) ? 'iOS' : /Windows/i.test(ua) ? 'Windows'
@@ -5776,7 +5810,7 @@ function deviceInfo() {
   const br = /Edg\//.test(ua) ? 'Edge' : /OPR\//.test(ua) ? 'Opera' : /Firefox\//.test(ua) ? 'Firefox'
     : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : 'Browser';
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
-  const region = (navigator.language || '').split('-')[1] || '';
+  const region = tzRegion(tz) || (navigator.language || '').split('-')[1] || '';
   let country = '';
   try { country = region ? new Intl.DisplayNames(['en'], { type: 'region' }).of(region) : ''; } catch (_) {}
   return { id: deviceId, name: `${br} on ${os}`, tz, country, lang: navigator.language || '', screen: `${screen.width}\u00d7${screen.height}`, last: Date.now() };
@@ -6692,7 +6726,7 @@ function initComposer() {
       return;
     }
     input.placeholder = agentOn ? 'Streaming'
-      : mode === 'speech' ? (voiceState === 'paused' ? 'Paused' : 'Listening\u2026')
+      : mode === 'speech' ? (voiceState === 'paused' ? 'Paused' : voiceState === 'waiting' ? 'Getting ready\u2026' : 'Listening\u2026')
       : `Message...`;
   };
 
@@ -6851,6 +6885,7 @@ function initComposer() {
       } catch (_) { el.an = null; }
       try { elBegin(); } catch (_) { elStopRec(); el.bad = true; toast('Recording is not supported here. (G04)'); return; }
       el.timer = setInterval(elTick, 60);
+      markReady(token);
     }).catch(() => {
       toast('Mic is blocked. Allow it in browser settings. (G05)');
       if (token === voice.token) { stopVoice(); setMode('text'); }
@@ -6858,7 +6893,14 @@ function initComposer() {
     return true;
   };
 
+  const markReady = (token) => {
+    if (token !== voice.token || !voice.on || voice.paused) return;
+    clearTimeout(voice.wait);
+    if (voiceState === 'waiting') setVoiceState('recording');
+  };
+
   const stopRecognition = () => {
+    clearTimeout(voice.wait);
     elStopRec();
     const r = voice.rec;
     voice.rec = null;
@@ -6871,6 +6913,8 @@ function initComposer() {
 
   const startRecognition = (token) => {
     if (!permAllowed('microphone')) { toast('Microphone is turned off in Permissions. (G06)', 'info'); return; }
+    clearTimeout(voice.wait);
+    voice.wait = setTimeout(() => markReady(token), 6000);
     if (elEnabled() && elStartRec(token)) return;
     if (!SpeechRec) return;
     const rec = new SpeechRec();
@@ -6878,8 +6922,10 @@ function initComposer() {
     rec.interimResults = true;
     rec.lang = settings.voiceIn === 'auto' ? (navigator.language || 'en-US') : settings.voiceIn;
 
+    rec.onaudiostart = () => markReady(token);
     rec.onresult = (e) => {
       voice.energy = 1;
+      markReady(token);
       let latestFinal = '';
       let latestInterim = '';
       for (let i = 0; i < e.results.length; i++) {
@@ -6965,7 +7011,7 @@ function initComposer() {
     voice.dead = false;
     const token = ++voice.token;
 
-    setVoiceState('recording');
+    setVoiceState('waiting');
     voice.raf = requestAnimationFrame(meterLoop);
     startRecognition(token);
   };
@@ -6991,7 +7037,7 @@ function initComposer() {
       voice.paused = false;
       voice.base = input.value;
       voice.committed = '';
-      setVoiceState('recording');
+      setVoiceState('waiting');
       startRecognition(voice.token);
     } else {
       voice.paused = true;
