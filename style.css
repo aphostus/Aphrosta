@@ -3736,6 +3736,101 @@ html[data-motion="reduce"] .aph-mark * { animation: none !important; }
 :root[data-motion="reduce"] .tour *,
 :root[data-motion="reduce"] .tour { animation: none !important; transition: none !important; }
 
+/* ---------- tutorial film ---------- */
+.tut { position: fixed; inset: 0; z-index: 9000; display: flex; flex-direction: column; padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px); background: color-mix(in srgb, var(--bg) 94%, transparent); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); color: var(--fg); animation: tourFade 0.3s var(--ease-spring) both; user-select: none; -webkit-user-select: none; }
+.tut.leaving { opacity: 0; transition: opacity 0.25s ease; pointer-events: none; }
+.tut-bars { display: flex; gap: 3px; padding: 10px 12px 0; }
+.tut-bars i { flex: 1; height: 3px; border-radius: 2px; background: rgba(var(--fg-rgb), 0.15); overflow: hidden; }
+.tut-bars b { display: block; height: 100%; width: 0; background: var(--accent, var(--fg)); }
+.tut-top { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px 0; }
+.tut-ch { font-size: 0.78em; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(var(--fg-rgb), 0.55); }
+.tut-x, .tut-ctl button { font: inherit; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--glass-border); background: var(--glass-bg); color: var(--fg); cursor: pointer; padding: 0; }
+.tut-x { border-color: transparent; background: none; }
+.tut button:active { transform: scale(0.94); }
+.tut-stage { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 8px 16px; overflow: hidden; }
+.tut-stage > * { animation: tourUp 0.45s var(--ease-spring) both; }
+.tut-cap { padding: 4px 24px 8px; text-align: center; max-width: 520px; margin: 0 auto; }
+.tut-cap h3 { margin: 0 0 6px; font-size: 1.15em; font-weight: 650; }
+.tut-cap p { margin: 0; font-size: 0.92em; line-height: 1.5; color: rgba(var(--fg-rgb), 0.75); }
+.tut-cap.in h3, .tut-cap.in p { animation: tourUp 0.4s var(--ease-spring) both; }
+.tut-cap.in p { animation-delay: 0.06s; }
+.tut-ctl { display: flex; gap: 14px; justify-content: center; align-items: center; padding: 8px 0 14px; }
+.tut-ctl .tut-pp { width: 48px; height: 48px; background: var(--accent, var(--fg)); color: var(--on-accent, var(--bg)); border-color: transparent; }
+.tut.paused * { animation-play-state: paused !important; }
+
+.tut-hero { display: grid; place-items: center; }
+.tut-hero svg { width: 96px; height: 96px; }
+.tut-phone { position: relative; width: min(92%, 340px); box-sizing: border-box; border-radius: 22px; border: 1px solid var(--glass-border); background: var(--glass-bg); padding: 16px; display: flex; flex-direction: column; gap: 10px; font-size: 0.9em; }
+.tut-pill, .tut-field, .tut-btn, .tut-nav, .tut-r, .tut-menu div, .tut-lbls span { border: 1px solid var(--glass-border); border-radius: 12px; padding: 9px 12px; background: rgba(var(--fg-rgb), 0.04); transition: background 0.25s, color 0.25s, transform 0.25s, border-color 0.25s, opacity 0.25s; }
+.tut .hl, .tut .press { background: var(--accent, var(--fg)); color: var(--on-accent, var(--bg)); border-color: transparent; transform: scale(1.03); }
+.tut-menu { display: grid; gap: 6px; max-height: 0; opacity: 0; overflow: hidden; transition: max-height 0.4s, opacity 0.3s; }
+.tut-menu.on { max-height: 120px; opacity: 1; }
+.tut-field { min-height: 20px; letter-spacing: 0.12em; }
+.tut-btn { text-align: center; }
+.tut-ok { opacity: 0; text-align: center; transition: opacity 0.3s; color: var(--accent, var(--fg)); font-weight: 600; }
+.tut-ok.on { opacity: 1; }
+.tut-track { position: relative; height: 6px; border-radius: 3px; background: rgba(var(--fg-rgb), 0.18); margin: 18px 8px 8px; }
+.tut-track i { position: absolute; top: 50%; left: 0; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; background: var(--accent, var(--fg)); transition: left 0.6s var(--ease-spring); }
+.tut-track.p1 i { left: 50%; }
+.tut-track.p2 i { left: 100%; }
+.tut-lbls { display: flex; justify-content: space-between; gap: 6px; }
+.tut-lbls span { flex: 1; text-align: center; padding: 6px 4px; font-size: 0.85em; }
+.tut-tag { text-align: center; min-height: 1.4em; font-weight: 600; color: var(--accent, var(--fg)); }
+.tut-chat { height: min(54vh, 380px); }
+.tut-demo { align-self: center; font-size: 0.72em; padding: 3px 10px; border-radius: 999px; border: 1px dashed var(--glass-border); color: rgba(var(--fg-rgb), 0.6); }
+.tut-msgs { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; gap: 8px; }
+.tut-u { align-self: flex-end; max-width: 80%; padding: 8px 12px; border-radius: 16px 16px 4px 16px; background: var(--accent, var(--fg)); color: var(--on-accent, var(--bg)); animation: tourUp 0.35s var(--ease-spring) both; }
+.tut-a { align-self: flex-start; max-width: 92%; padding: 8px 12px; border-radius: 16px 16px 16px 4px; background: rgba(var(--fg-rgb), 0.07); animation: tourUp 0.35s var(--ease-spring) both; }
+.tut-think { font-size: 0.8em; opacity: 0.6; animation: tutBlink 1.2s ease-in-out infinite; }
+.tut-file { display: flex; gap: 10px; align-items: center; border: 1px solid var(--glass-border); border-radius: 12px; padding: 8px 10px; margin-top: 8px; animation: tourUp 0.4s var(--ease-spring) both; }
+.tut-file i { width: 28px; height: 34px; border-radius: 6px; background: var(--accent, var(--fg)); opacity: 0.85; }
+.tut-file small { display: block; opacity: 0.6; }
+.tut-cmp, .tut-cmp2 { display: flex; align-items: center; gap: 8px; border: 1px solid var(--glass-border); border-radius: 16px; padding: 8px 10px; min-height: 24px; }
+.tut-cmp span, .tut-cmp2 span { flex: 1; opacity: 0.8; transition: opacity 0.25s; }
+.tut-snd, .tut-cmp2 i { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--glass-border); font-style: normal; transition: background 0.25s, color 0.25s, transform 0.25s; }
+.tut-cmp2 span.hl { padding: 4px 8px; border-radius: 10px; }
+.tut-step { display: flex; align-items: center; gap: 10px; opacity: 0; transform: translateY(6px); transition: opacity 0.35s, transform 0.35s; }
+.tut-step.on { opacity: 1; transform: none; }
+.tut-step u { width: 16px; height: 16px; box-sizing: border-box; border-radius: 50%; border: 2px solid var(--accent, var(--fg)); border-top-color: transparent; animation: tutSpin 0.8s linear infinite; }
+.tut-step.ok u { animation: none; background: var(--accent, var(--fg)); border-color: transparent; }
+.tut-side { gap: 6px; }
+
+.tut-hint { width: min(92%, 340px); display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.tut-badge { font-size: 0.72em; letter-spacing: 0.08em; text-transform: uppercase; padding: 3px 10px; border-radius: 999px; background: var(--accent, var(--fg)); color: var(--on-accent, var(--bg)); }
+.tut-demo2 { position: relative; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 8px; padding: 18px 16px 24px; min-height: 170px; justify-content: center; border-radius: 20px; border: 1px solid var(--glass-border); background: var(--glass-bg); }
+.tut-r { position: relative; }
+.tut-finger { position: absolute; right: 14px; bottom: -12px; width: 26px; height: 26px; border-radius: 50%; background: rgba(var(--fg-rgb), 0.28); border: 2px solid var(--accent, var(--fg)); pointer-events: none; }
+.tut-r.mv { z-index: 2; background: var(--glass-bg); animation: tutDragY 3.4s var(--ease-spring) infinite; }
+.tut-r.mv.dn { animation-name: tutDragDn; }
+.tut-r.mv.ops { animation-name: tutDragSide; }
+.tut-sw { position: relative; }
+.tut-sw span { position: absolute; top: 50%; transform: translateY(-50%); font-size: 0.8em; opacity: 0.7; }
+.tut-sw .l { left: 12px; }
+.tut-sw .r { right: 12px; }
+.tut-r.sw { background: var(--glass-bg); animation: tutSwipe 4s ease-in-out infinite; }
+.tut-zone { text-align: center; font-size: 0.78em; padding: 6px; border: 1px dashed var(--glass-border); border-radius: 10px; opacity: 0.7; }
+.tut-chip { align-self: flex-end; padding: 7px 14px; border-radius: 999px; border: 1px dashed var(--accent, var(--fg)); font-size: 0.85em; }
+.tut-hb { position: relative; align-self: center; padding: 12px 26px; border-radius: 999px; border: 1px solid var(--glass-border); background: rgba(var(--fg-rgb), 0.06); animation: tutGlow 3s ease-in-out infinite; }
+.tut-hb em { position: absolute; inset: -6px; border-radius: 999px; border: 2px solid var(--accent, var(--fg)); animation: tutRing 3s ease-out infinite; }
+.tut-hb .tut-finger { right: 10px; bottom: -14px; }
+.tut-rz { position: relative; align-self: center; width: 80%; height: 90px; display: flex; align-items: flex-end; }
+.tut-rzbox { width: 100%; box-sizing: border-box; border: 1px solid var(--glass-border); border-radius: 14px; padding: 12px; height: 70px; animation: tutRz 3.6s ease-in-out infinite; }
+.tut-grip { position: absolute; right: 8px; top: 0; z-index: 2; width: 34px; height: 6px; border-radius: 3px; background: var(--accent, var(--fg)); animation: tutGrip 3.6s ease-in-out infinite; }
+.tut-grip .tut-finger { right: 2px; bottom: -22px; }
+
+@keyframes tutDragY { 0%, 15% { transform: translateY(0); } 55%, 80% { transform: translateY(56px); } 100% { transform: translateY(0); } }
+@keyframes tutDragDn { 0%, 15% { transform: translateY(0); } 60%, 85% { transform: translateY(58px); } 100% { transform: translateY(0); } }
+@keyframes tutDragSide { 0%, 15% { transform: none; } 60%, 85% { transform: translate(70px, 56px) scale(0.85); } 100% { transform: none; } }
+@keyframes tutSwipe { 0%, 8% { transform: translateX(0); } 22%, 36% { transform: translateX(70px); } 55% { transform: translateX(0); } 70%, 84% { transform: translateX(-70px); } 100% { transform: translateX(0); } }
+@keyframes tutGlow { 0%, 10% { box-shadow: 0 0 0 0 transparent; } 40%, 90% { box-shadow: 0 0 18px 2px var(--accent, #fff); } 100% { box-shadow: 0 0 0 0 transparent; } }
+@keyframes tutRing { 0% { transform: scale(0.9); opacity: 0; } 15% { opacity: 1; } 100% { transform: scale(1.3); opacity: 0; } }
+@keyframes tutRz { 0%, 15% { height: 70px; opacity: 1; } 55%, 80% { height: 20px; opacity: 0.15; } 100% { height: 70px; opacity: 1; } }
+@keyframes tutGrip { 0%, 15% { transform: translateY(0); } 55%, 80% { transform: translateY(50px); } 100% { transform: translateY(0); } }
+@keyframes tutBlink { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.8; } }
+@keyframes tutSpin { to { transform: rotate(360deg); } }
+:root[data-motion="reduce"] .tut *,
+:root[data-motion="reduce"] .tut { animation: none !important; transition: none !important; }
+
 /* ===== Thought: plan & tasks ===== */
 .think-plan {
   flex: 0 0 auto;

@@ -15512,6 +15512,12 @@ function maybeStartOnboarding() {
 }
 
 function startOnboarding(force = false) {
+  if (document.querySelector('.tour, .tut')) return;
+  if (!force) { try { if (localStorage.getItem(tourKey())) return; } catch (_) {} }
+  playTutorial();
+}
+
+function startOnboardingOld(force = false) {
   if (document.querySelector('.tour')) return;
   if (!force) { try { if (localStorage.getItem(tourKey())) return; } catch (_) {} }
   const reduce = document.documentElement.dataset.motion === 'reduce';
@@ -15614,6 +15620,220 @@ function startOnboarding(force = false) {
   document.addEventListener('keydown', onKey, true);
   addEventListener('resize', place);
   show(0, 1);
+}
+
+/* ---------- TUTORIAL FILM (auto-playing, sandboxed demo, nothing saved) ---------- */
+const TUT_HINTS = [
+  { k: 'drag', t: 'Reorder your sessions', x: 'Hold any chat until it lifts, then drag it up or down to reorder.' },
+  { k: 'zone', t: 'Export and import by dragging', x: 'Keep dragging past the list. Bottom downloads a JSON copy, top replaces from a JSON file.' },
+  { k: 'swipe', t: 'Swipe a chat', x: 'Swipe right to see its stats. Swipe left to archive it.' },
+  { k: 'hold', b: 'Make Session', t: 'Hold Make Session', x: 'Hold for half a second until it buzzes, then let go. Pick a JSON file and it imports as a new private session.' },
+  { k: 'hold', b: 'Send', t: 'Hold the send button', x: 'With an empty box, hold it. It glows with a Chat icon at 0.5s and opens a new session at 2.5s.' },
+  { k: 'hold', b: 'Brain', t: 'Hold the brain', x: 'Hold for about 0.6 seconds to open Live mode and talk hands-free.' },
+  { k: 'hold', b: 'Attach', t: 'Hold attach', x: 'Hold for half a second and a trash icon glows. Keep holding to 2.5s and the whole composer is cleared.' },
+  { k: 'resize', t: 'Resize or hide the composer', x: 'Drag the grip to resize the input. Pull it well below its smallest height and the composer slides away. Double-tap the screen to bring it back.' },
+  { k: 'hold', b: 'People', t: 'Hold the people icon', x: 'In the session bar, hold the people icon to pin or unpin the team-share panel.' },
+  { k: 'ops', t: 'Move things in Operations', x: 'Hold an item to select it, then drag it onto a folder or a path chip to move it. Hold the Go button for This, All or Undo.' }
+];
+
+function tutIcon(n) {
+  const p = (d, f) => `<svg viewBox="0 0 24 24" width="18" height="18" ${f ? 'fill="currentColor"' : 'fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"'}><path d="${d}"/></svg>`;
+  return { play: p('M8 5l11 7-11 7z', 1), pause: p('M7 5h4v14H7zM13 5h4v14h-4z', 1), prev: p('M15 5l-7 7 7 7'), next: p('M9 5l7 7-7 7'), x: p('M6 6l12 12M18 6L6 18') }[n];
+}
+
+function tutHintDemo(h) {
+  const f = '<i class="tut-finger"></i>';
+  const row = (t, c = '') => `<div class="tut-r ${c}">${t}${c ? f : ''}</div>`;
+  let inner = '';
+  if (h.k === 'drag') inner = row('Chat one') + row('Chat two', 'mv') + row('Chat three');
+  else if (h.k === 'zone') inner = '<div class="tut-zone">Replace from JSON</div>' + row('Chat one') + row('Chat two', 'mv dn') + '<div class="tut-zone">Download JSON</div>';
+  else if (h.k === 'swipe') inner = `<div class="tut-sw"><span class="l">Stats</span><span class="r">Archive</span><div class="tut-r sw">Chat two${f}</div></div>`;
+  else if (h.k === 'hold') inner = `<div class="tut-hb"><span>${h.b}</span><em></em>${f}</div>`;
+  else if (h.k === 'resize') inner = `<div class="tut-rz"><i class="tut-grip">${f}</i><div class="tut-rzbox">Message</div></div>`;
+  else if (h.k === 'ops') inner = row('Item one') + row('Item two', 'mv ops') + '<div class="tut-chip">Folder</div>';
+  return `<div class="tut-demo2">${inner}</div>`;
+}
+
+function tutScenes() {
+  const SV = (d) => `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+  const Q = (S, k) => S.querySelector(`[data-k="${k}"]`);
+  const typeTo = (at, node, txt, t0, gap) => {
+    for (let n = 0; n < txt.length; n++) at(t0 + n * gap, () => { node.textContent = txt.slice(0, n + 1); });
+  };
+  const cycle = (S, at, sel, list, t0, gap, tag) => list.forEach((v, n) => at(t0 + n * gap, () => {
+    S.querySelectorAll(sel).forEach((e, k) => e.classList.toggle('hl', k === n));
+    if (tag) Q(S, 'tag').textContent = tag[n];
+  }));
+  const hero = (S) => { S.innerHTML = `<div class="tut-hero">${aphMark({ animated: true })}</div>`; };
+
+  const side = [
+    ['Make Session', 'Start a fresh chat'], ['Find Session', 'Search every chat'],
+    ['Projects', 'Group related work'], ['Agents', 'Build and run agents'],
+    ['Libraries', 'Your saved sources'], ['Automations', 'Build flows and routines'],
+    ['Connections', 'Link apps and data'], ['Operations', 'Run tasks and tools']
+  ];
+  const extras = ['Themes and fonts', 'Rich-text options', 'Tailorship', 'Inbox: every notice is kept', 'Help and Support', 'Tutorial: replay this film'];
+
+  const list = [
+    { ch: 'Welcome', ms: 6000, t: `Welcome to ${APP_NAME}`, x: 'A short film of everything the app can do. Sit back, or use the arrows to jump around.', b: hero },
+
+    { ch: 'Getting started', ms: 8000, t: 'Add your API key', x: `Open the model menu, pick a provider, tap Get your API key, paste it and Save. ${APP_NAME} runs on your own key.`, b: (S, at) => {
+      S.innerHTML = `<div class="tut-phone"><div class="tut-pill" data-k="pill">Choose a model</div>
+        <div class="tut-menu" data-k="menu"><div>Pick a provider</div><div data-k="get">Get your API key</div></div>
+        <div class="tut-field"><span data-k="key"></span></div>
+        <div class="tut-btn" data-k="save">Save</div><div class="tut-ok" data-k="ok">Key saved</div></div>`;
+      at(600, () => Q(S, 'pill').classList.add('press'));
+      at(1200, () => Q(S, 'menu').classList.add('on'));
+      at(2600, () => Q(S, 'get').classList.add('hl'));
+      at(3600, () => { Q(S, 'menu').classList.remove('on'); Q(S, 'get').classList.remove('hl'); });
+      typeTo(at, Q(S, 'key'), '................', 3800, 90);
+      at(5600, () => Q(S, 'save').classList.add('press'));
+      at(6200, () => Q(S, 'ok').classList.add('on'));
+    } },
+
+    { ch: 'Getting started', ms: 7000, t: 'Set the effort', x: 'Minima is fastest. Maxima thinks longest and uses more tokens. Medium suits most chats.', b: (S, at) => {
+      S.innerHTML = `<div class="tut-phone"><div class="tut-track" data-k="trk"><i></i></div>
+        <div class="tut-lbls"><span>Minima</span><span>Medium</span><span>Maxima</span></div><div class="tut-tag" data-k="tag"></div></div>`;
+      const set = (p, s) => { const tr = Q(S, 'trk'); tr.className = 'tut-track p' + p; Q(S, 'tag').textContent = s; S.querySelectorAll('.tut-lbls span').forEach((e, k) => e.classList.toggle('hl', k === p)); };
+      at(500, () => set(0, 'Fastest'));
+      at(2200, () => set(1, 'Balanced, suits most chats'));
+      at(4200, () => set(2, 'Thinks longest, uses more tokens'));
+    } },
+
+    { ch: 'Chatting', ms: 10000, t: 'Ask anything', x: 'Type, speak or attach files. Ask for a deck, a document or a spreadsheet and it arrives as a file card. This is a demo, nothing here is saved.', b: (S, at) => {
+      S.innerHTML = `<div class="tut-phone tut-chat"><span class="tut-demo">Demo only. Nothing is saved.</span>
+        <div class="tut-msgs" data-k="msgs"></div><div class="tut-cmp"><span data-k="in"></span><b class="tut-snd">${SV('<path d="M12 19V5M6 11l6-6 6 6"/>')}</b></div></div>`;
+      const msgs = Q(S, 'msgs'), inp = Q(S, 'in');
+      const add = (c, h) => { const d = document.createElement('div'); d.className = c; d.innerHTML = h; msgs.appendChild(d); return d; };
+      typeTo(at, inp, 'Make a 3 slide deck about coffee', 500, 55);
+      let ans = null, think = null;
+      at(2500, () => { inp.textContent = ''; add('tut-u', 'Make a 3 slide deck about coffee'); });
+      at(3000, () => { think = add('tut-a', '<div class="tut-think">Thinking...</div><div class="tut-ans"></div>'); ans = think.querySelector('.tut-ans'); });
+      const words = 'Done. Here is a three-slide deck on coffee: its origins, how it is brewed, and tasting notes.'.split(' ');
+      words.forEach((w, n) => at(3800 + n * 140, () => { think.querySelector('.tut-think')?.remove(); ans.textContent = words.slice(0, n + 1).join(' '); }));
+      at(6800, () => { ans.insertAdjacentHTML('afterend', '<div class="tut-file"><i></i><div><b>Coffee.pptx</b><small>3 slides</small></div></div>'); });
+    } },
+
+    { ch: 'Chatting', ms: 7000, t: 'Watch it think', x: 'Tap the brain to follow the reasoning and the agent steps as they stream in.', b: (S, at) => {
+      const steps = ['Reading your request', 'Planning the structure', 'Writing each section', 'Building the file'];
+      S.innerHTML = `<div class="tut-phone">${steps.map((s, n) => `<div class="tut-step" data-k="s${n}"><u></u><span>${s}</span></div>`).join('')}</div>`;
+      steps.forEach((s, n) => {
+        at(500 + n * 1300, () => Q(S, 's' + n).classList.add('on'));
+        at(1300 + n * 1300, () => Q(S, 's' + n).classList.add('ok'));
+      });
+    } },
+
+    { ch: 'Chatting', ms: 8500, t: 'Everything in the composer', x: 'Attach files, type or speak, follow the thinking with the brain, then send.', b: (S, at) => {
+      S.innerHTML = `<div class="tut-phone"><div class="tut-cmp2"><i data-k="c0">${SV('<path d="M20 11l-8 8a5 5 0 01-7-7l9-9a3.5 3.5 0 015 5l-9 9a2 2 0 01-3-3l8-8"/>')}</i>
+        <span data-k="c1">Ask anything</span><i data-k="c2">${SV('<path d="M9 5a3 3 0 00-3 3 3 3 0 00-1 5 3 3 0 004 3zM15 5a3 3 0 013 3 3 3 0 011 5 3 3 0 01-4 3z"/>')}</i>
+        <i data-k="c3">${SV('<path d="M12 19V5M6 11l6-6 6 6"/>')}</i></div><div class="tut-tag" data-k="tag"></div></div>`;
+      cycle(S, at, '.tut-cmp2 > *', [0, 1, 2, 3], 600, 1700, ['Attach files', 'Type, or speak', 'The brain: follow its thinking', 'Send']);
+    } },
+
+    { ch: 'Around the app', ms: 8500, t: 'Your sidebar', x: 'Sessions, projects, agents, libraries, automations, connections and operations all live here.', b: (S, at) => {
+      S.innerHTML = `<div class="tut-phone tut-side">${side.map(([a]) => `<div class="tut-nav">${a}</div>`).join('')}<div class="tut-tag" data-k="tag"></div></div>`;
+      cycle(S, at, '.tut-nav', side, 500, 750, side.map((s) => s[1]));
+    } },
+
+    { ch: 'Around the app', ms: 7500, t: 'Make it yours', x: 'Themes, fonts, rich-text options and Tailorship. The Inbox keeps every notice, and this film is always one tap away in Settings.', b: (S, at) => {
+      S.innerHTML = `<div class="tut-phone">${extras.map((a) => `<div class="tut-nav">${a}</div>`).join('')}</div>`;
+      cycle(S, at, '.tut-nav', extras, 500, 900);
+    } },
+
+    { ch: 'Hidden tips', ms: 5000, t: 'Now for the hidden stuff', x: 'Press, hold, swipe and drag. Much of the app has a second layer.', b: hero }
+  ];
+
+  TUT_HINTS.forEach((h) => list.push({
+    ch: 'Hidden tips', ms: 7500, t: h.t, x: h.x,
+    b: (S) => { S.innerHTML = `<div class="tut-hint"><span class="tut-badge">Hidden tip</span>${tutHintDemo(h)}</div>`; }
+  }));
+
+  list.push({ ch: 'All set', ms: 6000, t: 'You are all set', x: 'Replay this any time from Settings, then Tutorial.', b: hero });
+  return list;
+}
+
+function playTutorial() {
+  if (document.querySelector('.tut')) return;
+  const reduce = document.documentElement.dataset.motion === 'reduce';
+  const scenes = tutScenes();
+  const root = document.createElement('div');
+  root.className = 'tut';
+  root.setAttribute('role', 'dialog');
+  root.setAttribute('aria-modal', 'true');
+  root.setAttribute('aria-label', 'Tutorial');
+  root.innerHTML = `<div class="tut-bars">${scenes.map(() => '<i><b></b></i>').join('')}</div>
+    <div class="tut-top"><span class="tut-ch"></span><button class="tut-x" type="button" aria-label="Close tutorial">${tutIcon('x')}</button></div>
+    <div class="tut-stage"></div>
+    <div class="tut-cap"><h3></h3><p></p></div>
+    <div class="tut-ctl">
+      <button class="tut-prev" type="button" aria-label="Previous">${tutIcon('prev')}</button>
+      <button class="tut-pp" type="button" aria-label="Pause">${tutIcon('pause')}</button>
+      <button class="tut-nxt" type="button" aria-label="Next">${tutIcon('next')}</button>
+    </div>`;
+  document.body.appendChild(root);
+
+  const $ = (s) => root.querySelector(s);
+  const stage = $('.tut-stage'), cap = $('.tut-cap'), pp = $('.tut-pp');
+  const segs = [...root.querySelectorAll('.tut-bars i')];
+  let idx = -1, el = 0, dur = 1, paused = false, alive = true, queue = [];
+  const at = (ms, fn) => { if (reduce) fn(); else queue.push({ ms, fn, done: false }); };
+
+  const finish = () => {
+    if (!alive) return;
+    alive = false;
+    clearInterval(timer);
+    document.removeEventListener('keydown', onKey, true);
+    root.classList.add('leaving');
+    setTimeout(() => root.remove(), reduce ? 0 : 260);
+    try { localStorage.setItem(tourKey(), '1'); } catch (_) {}
+  };
+
+  const go = (n) => {
+    if (!alive) return;
+    if (n >= scenes.length) return finish();
+    idx = Math.max(0, n);
+    const s = scenes[idx];
+    queue = []; el = 0; dur = reduce ? 9000 : s.ms;
+    stage.innerHTML = '';
+    s.b(stage, at);
+    segs.forEach((g, k) => { g.firstChild.style.width = k < idx ? '100%' : '0%'; });
+    $('.tut-ch').textContent = s.ch;
+    cap.querySelector('h3').textContent = s.t;
+    cap.querySelector('p').textContent = s.x;
+    cap.classList.remove('in');
+    void cap.offsetWidth;
+    cap.classList.add('in');
+  };
+
+  const setPause = (v) => {
+    paused = v;
+    root.classList.toggle('paused', v);
+    pp.innerHTML = tutIcon(v ? 'play' : 'pause');
+    pp.setAttribute('aria-label', v ? 'Play' : 'Pause');
+  };
+
+  const timer = setInterval(() => {
+    if (paused || !alive) return;
+    el += 80;
+    for (const q of queue) if (!q.done && el >= q.ms) { q.done = true; try { q.fn(); } catch (_) {} }
+    segs[idx].firstChild.style.width = Math.min(100, (el / dur) * 100) + '%';
+    if (el >= dur) go(idx + 1);
+  }, 80);
+
+  const onKey = (e) => {
+    if (e.key === 'Escape') { e.stopPropagation(); finish(); }
+    else if (e.key === 'ArrowRight') { e.stopPropagation(); go(idx + 1); }
+    else if (e.key === 'ArrowLeft') { e.stopPropagation(); go(idx - 1); }
+    else if (e.key === ' ') { e.preventDefault(); e.stopPropagation(); setPause(!paused); }
+  };
+
+  $('.tut-x').addEventListener('click', finish);
+  $('.tut-prev').addEventListener('click', () => go(idx - 1));
+  $('.tut-nxt').addEventListener('click', () => go(idx + 1));
+  pp.addEventListener('click', () => setPause(!paused));
+  stage.addEventListener('click', () => setPause(!paused));
+  document.addEventListener('keydown', onKey, true);
+  go(0);
 }
 
 function renderHome(user) {
