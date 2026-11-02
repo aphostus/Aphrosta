@@ -2686,7 +2686,7 @@ function agOpenSheet(kind, edit) {
       <div class="lib-head">
         <h3 class="lib-h">${edit ? 'Edit' : 'Create'} ${isG ? 'group' : 'agent'}</h3>
         <div class="lib-head-act">
-          <button class="icon-btn lib-vis${cur.active ? '' : ' is-off'}" type="button" id="ag-act" aria-pressed="${cur.active ? 'true' : 'false'}" aria-label="${cur.active ? 'Active' : 'Inactive'}">${cur.active ? ICONS.eye : ICONS.eyeOff}</button>
+          <label class="switch ag-sw" aria-label="Activated or disabled"><input type="checkbox" id="ag-act"${cur.active ? ' checked' : ''}><i></i></label>
           <button class="icon-btn" type="button" id="ag-close" aria-label="Close">${ICONS.stClose}</button>
         </div>
       </div>
@@ -2719,12 +2719,8 @@ function agOpenSheet(kind, edit) {
   el.addEventListener('click', (e) => { if (e.target === el) closeAgSheet(); });
   el.querySelector('#ag-close').addEventListener('click', closeAgSheet);
   const actBtn = el.querySelector('#ag-act');
-  actBtn.addEventListener('click', () => {
-    cur.active = !cur.active;
-    actBtn.innerHTML = cur.active ? ICONS.eye : ICONS.eyeOff;
-    actBtn.classList.toggle('is-off', !cur.active);
-    actBtn.setAttribute('aria-pressed', cur.active ? 'true' : 'false');
-    actBtn.setAttribute('aria-label', cur.active ? 'Active' : 'Inactive');
+  actBtn.addEventListener('change', () => {
+    cur.active = actBtn.checked;
     toast(cur.active ? 'Activated.' : 'Disabled.', 'info', 1400);
   });
   const cc = el.querySelector('#ag-cc');
