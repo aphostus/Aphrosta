@@ -10510,9 +10510,9 @@ function sessionItem(s) {
     <span class="chat-under chat-under-stat"></span>
     <span class="chat-under chat-under-arc">${ICONS.archive}<b>Archive</b></span>
     <div class="chat-slide">
-    <button class="chat-open" type="button" title="${esc(sessLocked(s) ? 'Locked session' : s.title)}">
+    <button class="chat-open" type="button" title="${esc(sessLocked(s) ? 'Secured' : s.title)}">
       <span class="chat-act" data-act="rename" aria-label="Rename session" style="margin-right:2px;width:24px;height:24px;vertical-align:middle;">${ICONS.renameChat}</span>
-      <span>${esc(sessLocked(s) ? 'Locked session' : s.title)}</span>
+      <span>${esc(sessLocked(s) ? 'Secured' : s.title)}</span>
     </button>
     <span class="chat-actions">
       <button class="chat-act" type="button" data-act="copy" aria-label="Duplicate session" title="Duplicate session">${ICONS.copy}</button>
@@ -10644,7 +10644,7 @@ function renderSessionList() {
   const chatsBox = q$('[data-list="chats"]');
   if (!pinnedBox || !chatsBox) return;
   const q = sessionQuery.trim().toLowerCase();
-  const match = (s) => !q || (sessLocked(s) ? 'locked session'.includes(q) : (String(s.title || '').toLowerCase().includes(q) || s.messages.some((m) => String(m.content || '').toLowerCase().includes(q))));
+  const match = (s) => !q || (sessLocked(s) ? 'secured'.includes(q) : (String(s.title || '').toLowerCase().includes(q) || s.messages.some((m) => String(m.content || '').toLowerCase().includes(q))));
   const pinned = sessions.filter((s) => !s.archived && s.pinned && match(s)).sort((a, b) => b.pinnedAt - a.pinnedAt);
   const normal = sessions.filter((s) => !s.archived && !s.pinned && match(s)).sort((a, b) => (b.orderAt || b.updated) - (a.orderAt || a.updated));
 
@@ -12608,7 +12608,27 @@ function initSessions() {
         const a = act.dataset.act;
         if (a === 'key') return sessionKey(item.dataset.id);
         if (a === 'pin') return togglePin(item.dataset.id);
-        if (a === 'rename') return renameSession(item.dataset.id);
+        if (a === 'rename') {
+          const rs = sessions.find((x) => x.id === item.dataset.id);
+          if (rs && sessLocked(rs)) {
+            const row = item.querySelector('.chat-slide') || item;
+            try {
+              row.animate([
+                { transform: 'translateX(0)' },
+                { transform: 'translateX(-7px)', offset: 0.15 },
+                { transform: 'translateX(7px)', offset: 0.3 },
+                { transform: 'translateX(-5px)', offset: 0.45 },
+                { transform: 'translateX(5px)', offset: 0.6 },
+                { transform: 'translateX(-2px)', offset: 0.75 },
+                { transform: 'translateX(2px)', offset: 0.9 },
+                { transform: 'translateX(0)' }
+              ], { duration: 450, easing: 'ease-out' });
+            } catch (_) {}
+            try { navigator.vibrate?.(30); } catch (_) {}
+            return;
+          }
+          return renameSession(item.dataset.id);
+        }
         if (a === 'copy') return duplicateSession(item.dataset.id);
         return deleteSession(item.dataset.id);
       }
@@ -12913,7 +12933,7 @@ function initShell() {
     if (isModelMenuOpen() && modelMenu && !e.composedPath().includes(modelMenu)) closeModelMenu();
     if (isEffortMenuOpen() && effortMenu && !e.composedPath().includes(effortMenu)) closeEffortMenu();
     const isDesktop = window.matchMedia('(min-width: 860px)').matches;
-    if (!isDesktop && sb?.classList.contains('open') && !sb.contains(e.target) && !menuBtn) {
+    if (!isDesktop && sb?.classList.contains('open') && !e.composedPath().includes(sb) && !menuBtn) {
       sb.classList.remove('open');
     }
     if (sp?.classList.contains('open') && !sp.contains(e.target) && !settingsBtn) {
