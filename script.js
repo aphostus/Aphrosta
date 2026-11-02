@@ -3009,7 +3009,7 @@ function agAvBind(el, cur) {
   if (!art || !prev || !catsEl || !optsEl) return;
   const origAvatar = JSON.parse(JSON.stringify(cur.avatar));
   let cat = 'shape';
-  const CATS = [['shape', 'Shape'], ['body', 'Body'], ['back', 'Back'], ['hat', 'Hat'], ['glasses', 'Glasses'], ['shoes', 'Shoes'], ['inhand', 'In-hand'], ['offhand', 'Off-hand'], ['face', 'Face'], ['neck', 'Neck'], ['cape', 'Cape'], ['hair', 'Hair'], ['aura', 'Aura'], ['pet', 'Pet'], ['outfit', 'Outfit'], ['expr', 'Mood']];
+  const CATS = [['shape', 'Shape'], ['body', 'Body'], ['back', 'Background'], ['hat', 'Hat'], ['glasses', 'Glasses'], ['shoes', 'Shoes'], ['inhand', 'In-hand'], ['offhand', 'Off-hand'], ['face', 'Face'], ['neck', 'Neck'], ['cape', 'Cape'], ['hair', 'Hair'], ['aura', 'Aura'], ['pet', 'Pet'], ['outfit', 'Outfit'], ['expr', 'Mood']];
   const key = (c) => (c === 'back' ? 'bg' : c);
   const ids = (c) => (c === 'shape' ? AG_AV_SHAPES : (c === 'body' || c === 'back') ? OPS_COLORS : ['none'].concat(Object.keys(AG_AV_PART[c])));
   const paint = () => {
@@ -3031,7 +3031,7 @@ function agAvBind(el, cur) {
     const p = e.target.closest('[data-ag-av-pick]');
     if (p) { cur.avatar[key(cat)] = p.dataset.agAvPick; paint(); return; }
     if (e.target.closest('[data-ag-av-reset]')) {
-      cur.avatar = JSON.parse(JSON.stringify(origAvatar));
+      cur.avatar = agAvNorm({});
       paint();
       return;
     }
@@ -3040,6 +3040,113 @@ function agAvBind(el, cur) {
       let body = rnd(OPS_COLORS);
       if (body === bg) body = OPS_COLORS[(OPS_COLORS.indexOf(bg) + 1) % OPS_COLORS.length];
       cur.avatar = { bg, body, shape: rnd(AG_AV_SHAPES), hat: rnd(ids('hat')), glasses: rnd(ids('glasses')), shoes: rnd(ids('shoes')), inhand: rnd(ids('inhand')), offhand: rnd(ids('offhand')), face: rnd(ids('face')), neck: rnd(ids('neck')), cape: rnd(ids('cape')), hair: rnd(ids('hair')), aura: rnd(ids('aura')), pet: rnd(ids('pet')), outfit: rnd(ids('outfit')), expr: rnd(ids('expr')) };
+      paint();
+    }
+  });
+  paint();
+}
+
+const AG_BN_SHAPES = ['flag', 'pennant', 'swallow', 'ribbon', 'scroll', 'tag', 'shield', 'crest', 'badge'];
+const AG_BN_SHAPE = {
+  flag:    { pole: 1, body: 'M15 8C24 4 30 12 40 8C46 6 52 6 54 8V34C52 32 46 32 40 34C30 38 24 30 15 34Z', c: [35, 21, 0.5] },
+  pennant: { pole: 1, body: 'M15 8L56 21L15 34Z', c: [28, 21, 0.35] },
+  swallow: { pole: 1, body: 'M15 8H54L45 21L54 34H15Z', c: [33, 21, 0.5] },
+  ribbon:  { body: 'M4 16H60L52 30L60 44H4L12 30Z', c: [32, 30, 0.65] },
+  scroll:  { caps: 1, body: 'M10 14H54V46H10Z', c: [32, 30, 0.7] },
+  tag:     { hole: 1, body: 'M8 14H44L58 32L44 50H8Z', c: [27, 32, 0.6] },
+  shield:  { body: 'M12 8H52V30C52 44 42 54 32 58C22 54 12 44 12 30Z', c: [32, 30, 0.9] },
+  crest:   { body: 'M12 8Q22 12 32 6Q42 12 52 8V32Q52 46 32 58Q12 46 12 32Z', c: [32, 32, 0.85] },
+  badge:   { body: 'M32 5L55 18V44L32 59L9 44V18Z', c: [32, 32, 0.85] }
+};
+const AG_BN_PAT = {
+  stripes: '<rect x="18" y="0" width="6" height="64"/><rect x="30" y="0" width="6" height="64"/><rect x="42" y="0" width="6" height="64"/>',
+  bands:   '<rect x="0" y="16" width="64" height="6"/><rect x="0" y="28" width="64" height="6"/><rect x="0" y="40" width="64" height="6"/>',
+  dots:    [20, 32, 44].map((x) => [20, 32, 44].map((y) => '<circle cx="' + x + '" cy="' + y + '" r="3"/>').join('')).join(''),
+  checks:  [0, 1, 2, 3, 4].map((i) => [0, 1, 2, 3, 4].map((j) => ((i + j) % 2 ? '' : '<rect x="' + (4 + i * 11) + '" y="' + (4 + j * 11) + '" width="11" height="11"/>')).join('')).join(''),
+  chevron: '<path d="M8 22L32 36L56 22M8 36L32 50L56 36" fill="none" stroke="currentColor" stroke-width="5"/>',
+  diag:    '<path d="M0 20L44 64M0 36L28 64M20 0L64 44M36 0L64 28" fill="none" stroke="currentColor" stroke-width="5"/>'
+};
+const AG_BN_EMB = {
+  star:  'M32 17L35.5 25.5L44.5 26L37.5 31.8L40 40.5L32 35.6L24 40.5L26.5 31.8L19.5 26L28.5 25.5Z',
+  crown: 'M20 40L18 22L26 30L32 20L38 30L46 22L44 40Z',
+  bolt:  'M35 16L22 33H31L28 46L42 28H33Z',
+  heart: 'M32 42C14 30 20 18 28 20C30 20.5 31.5 22 32 24C32.5 22 34 20.5 36 20C44 18 50 30 32 42Z',
+  moon:  'M38 18A14 14 0 1 0 40 44A11 11 0 0 1 38 18Z',
+  flame: 'M32 16C34 24 42 26 42 36A10 10 0 0 1 22 36C22 30 26 28 27 22C29 25 30 24 32 16Z'
+};
+const AG_BN_DETAILS = ['none'].concat(Object.keys(AG_BN_PAT), Object.keys(AG_BN_EMB));
+let agBnN = 0;
+
+function agBnNorm(b) {
+  const o = b && typeof b === 'object' ? b : {};
+  return {
+    shape: AG_BN_SHAPES.includes(o.shape) ? o.shape : 'flag',
+    color: OPS_COLORS.includes(o.color) ? o.color : OPS_COLORS[0],
+    bg: OPS_COLORS.includes(o.bg) ? o.bg : OPS_COLORS[6],
+    detail: AG_BN_DETAILS.includes(o.detail) ? o.detail : 'none'
+  };
+}
+
+function agBnSvg(b) {
+  const a = agBnNorm(b);
+  const s = AG_BN_SHAPE[a.shape];
+  const ink = (a.color === '#ffffff' || a.color === '#ffd60a') ? '#1c1c1e' : '#ffffff';
+  const cid = 'agbn' + (++agBnN);
+  let det = '';
+  if (a.detail !== 'none') {
+    const inner = AG_BN_PAT[a.detail]
+      ? '<g fill="' + ink + '" opacity="0.55" color="' + ink + '">' + AG_BN_PAT[a.detail] + '</g>'
+      : '<g transform="translate(' + s.c[0] + ' ' + s.c[1] + ') scale(' + s.c[2] + ') translate(-32 -30)"><path d="' + AG_BN_EMB[a.detail] + '" fill="' + ink + '"/></g>';
+    det = '<g clip-path="url(#' + cid + ')">' + inner + '</g>';
+  }
+  return '<svg class="ag-av-svg" viewBox="0 0 64 64" aria-hidden="true"><defs><clipPath id="' + cid + '"><path d="' + s.body + '"/></clipPath></defs>'
+    + (s.pole ? '<rect x="12" y="5" width="3.5" height="56" rx="1.75" fill="#8d8d93"/>' : '')
+    + (s.caps ? '<ellipse cx="10" cy="30" rx="5" ry="16" fill="' + a.color + '" stroke="rgba(0,0,0,.25)" stroke-width="1"/><ellipse cx="54" cy="30" rx="5" ry="16" fill="' + a.color + '" stroke="rgba(0,0,0,.25)" stroke-width="1"/>' : '')
+    + '<path d="' + s.body + '" fill="' + a.color + '" stroke="rgba(0,0,0,.25)" stroke-width="1" stroke-linejoin="round"/>'
+    + (s.hole ? '<circle cx="16" cy="32" r="3" fill="rgba(0,0,0,.45)"/>' : '')
+    + det + '</svg>';
+}
+
+const agBnHtml = () => '<div class="lib-lab">Banner<div class="ag-av"><div class="ag-av-prev" data-ag-bn-prev><button class="ag-av-shuf ag-av-reset" type="button" data-ag-bn-reset aria-label="Reset banner">' + AG_RESET + '</button><button class="ag-av-shuf" type="button" data-ag-bn-shuf aria-label="Randomize banner">' + AG_SHUF + '</button><div class="ag-av-art" data-ag-bn-art></div></div><div class="ag-av-ctl"><div class="ag-chips" data-ag-bn-cats></div><div class="ag-av-opts" data-ag-bn-opts></div></div></div></div>';
+
+function agBnBind(el, cur) {
+  const art = el.querySelector('[data-ag-bn-art]');
+  const prev = el.querySelector('[data-ag-bn-prev]');
+  const catsEl = el.querySelector('[data-ag-bn-cats]');
+  const optsEl = el.querySelector('[data-ag-bn-opts]');
+  if (!art || !prev || !catsEl || !optsEl) return;
+  let cat = 'shape';
+  const CATS = [['shape', 'Shape'], ['color', 'Colors'], ['bg', 'Background'], ['detail', 'Detail']];
+  const ids = (c) => (c === 'shape' ? AG_BN_SHAPES : (c === 'color' || c === 'bg') ? OPS_COLORS : AG_BN_DETAILS);
+  const paint = () => {
+    prev.style.setProperty('--avbg', cur.banner.bg);
+    art.innerHTML = agBnSvg(cur.banner);
+    catsEl.innerHTML = CATS.map((c) => '<button class="ag-chip' + (c[0] === cat ? ' on' : '') + '" type="button" data-ag-bn-cat="' + c[0] + '">' + c[1] + '</button>').join('');
+    optsEl.innerHTML = ids(cat).map((id) => {
+      const on = cur.banner[cat] === id ? ' on' : '';
+      if (cat === 'color' || cat === 'bg') return '<button class="ag-av-opt ag-av-sw' + on + '" type="button" data-ag-bn-pick="' + id + '" aria-label="' + id + '" style="--sw:' + id + '"></button>';
+      if (id === 'none') return '<button class="ag-av-opt' + on + '" type="button" data-ag-bn-pick="none" aria-label="None">' + ICONS.close + '</button>';
+      const t = cat === 'shape' ? Object.assign({}, cur.banner, { shape: id, detail: 'none' }) : Object.assign({}, cur.banner, { detail: id });
+      return '<button class="ag-av-opt' + on + '" type="button" data-ag-bn-pick="' + id + '" aria-label="' + id + '">' + agBnSvg(t) + '</button>';
+    }).join('');
+  };
+  el.__bnPaint = paint;
+  const rnd = (list) => list[Math.floor(Math.random() * list.length)];
+  el.addEventListener('click', (e) => {
+    const c = e.target.closest('[data-ag-bn-cat]');
+    if (c) { cat = c.dataset.agBnCat; paint(); return; }
+    const p = e.target.closest('[data-ag-bn-pick]');
+    if (p) { cur.banner[cat] = p.dataset.agBnPick; paint(); return; }
+    if (e.target.closest('[data-ag-bn-reset]')) {
+      cur.banner = agBnNorm({});
+      paint();
+      return;
+    }
+    if (e.target.closest('[data-ag-bn-shuf]')) {
+      const bg = rnd(OPS_COLORS);
+      let color = rnd(OPS_COLORS);
+      if (color === bg) color = OPS_COLORS[(OPS_COLORS.indexOf(bg) + 1) % OPS_COLORS.length];
+      cur.banner = { shape: rnd(AG_BN_SHAPES), color, bg, detail: rnd(AG_BN_DETAILS) };
       paint();
     }
   });
@@ -3092,6 +3199,7 @@ function agOpenSheet(kind, edit) {
   const cur = {
     icon: 'op06',
     avatar: agAvNorm(edit && edit.avatar),
+    banner: agBnNorm(edit && edit.banner),
     llm: (edit && edit.llm && edit.llm.provider) ? { provider: edit.llm.provider, key: edit.llm.key || '', model: edit.llm.model || '' } : { provider: '', key: '', model: '' },
     color: (edit && edit.color) || OPS_COLORS[0],
     active: edit ? edit.active !== false : true
@@ -3123,7 +3231,7 @@ function agOpenSheet(kind, edit) {
       <label class="lib-lab">Instructions
         <textarea class="lib-in lib-ta" id="ag-ins" rows="5" maxlength="4000">${esc(edit && edit.instructions)}</textarea>
       </label>
-      ${isG ? '' : agAvHtml()}
+      ${isG ? agBnHtml() : agAvHtml()}
       ${isG ? '' : `<label class="lib-lab">Group
         <select class="lib-in" id="ag-group">
           <option value="">No group</option>
@@ -3144,6 +3252,7 @@ function agOpenSheet(kind, edit) {
   el.addEventListener('click', (e) => { if (e.target === el) closeAgSheet(); });
   el.querySelector('#ag-close').addEventListener('click', closeAgSheet);
   if (!isG) agAvBind(el, cur);
+  else agBnBind(el, cur);
   const actBtn = el.querySelector('#ag-act');
   actBtn.addEventListener('change', () => {
     cur.active = actBtn.checked;
@@ -3152,6 +3261,8 @@ function agOpenSheet(kind, edit) {
   const cc = el.querySelector('#ag-cc');
   if (cc) cc.addEventListener('click', () => {
     cur.color = OPS_COLORS[(OPS_COLORS.indexOf(cur.color) + 1) % OPS_COLORS.length];
+    cur.banner.color = cur.color;
+    if (el.__bnPaint) el.__bnPaint();
     el.querySelector('.lib-sheet').style.setProperty('--oc', opsInk(cur.color));
   });
 
@@ -3193,7 +3304,7 @@ function agOpenSheet(kind, edit) {
     if (!isG && !(cur.llm.provider && cur.llm.key.trim() && cur.llm.model)) return toast('Pick an LLM, then add its API key and model.', 'info', 2400);
     agLoad();
     const rec = isG
-      ? { id: edit ? edit.id : uid(), name, instructions: el.querySelector('#ag-ins').value.trim(), icon: cur.icon, color: cur.color, active: cur.active, sandbox: sb, t: edit ? (edit.t || Date.now()) : Date.now() }
+      ? { id: edit ? edit.id : uid(), name, instructions: el.querySelector('#ag-ins').value.trim(), icon: cur.icon, color: cur.color, banner: agBnNorm(cur.banner), active: cur.active, sandbox: sb, t: edit ? (edit.t || Date.now()) : Date.now() }
       : { id: edit ? edit.id : uid(), name, instructions: el.querySelector('#ag-ins').value.trim(), llm: { provider: cur.llm.provider, key: cur.llm.key.trim(), model: cur.llm.model }, groupId: el.querySelector('#ag-group').value, avatar: agAvNorm(cur.avatar), active: cur.active, sandbox: sb, t: edit ? (edit.t || Date.now()) : Date.now() };
     const key = isG ? 'groups' : 'agents';
     const prev = agData[key];
