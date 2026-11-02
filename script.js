@@ -11207,7 +11207,10 @@ function bindSwipe() {
     held();
     el.classList.remove('is-swiping');
     const th = Math.min(80, w * 0.28);
-    if (dx < -th) {
+    if (dx < -th && (() => { const ls = sessions.find((x) => x.id === el.dataset.id); return !!(ls && sessLocked(ls)); })()) {
+      reset(el);
+      lockShake(sl);
+    } else if (dx < -th) {
       sl.style.transform = 'translateX(-100%)';
       haptic(10);
       setTimeout(() => { archiveSession(el.dataset.id); if (el.isConnected) reset(el); }, 200);
