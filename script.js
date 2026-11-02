@@ -2488,7 +2488,7 @@ function agGroupCard(g) {
   return `
     <div class="lib-card ops-card ag-card${on ? '' : ' ag-off'}" style="--oc:${esc(opsInk(g.color || OPS_COLORS[0]))}">
       <div class="lib-card-top">
-        <h4 class="lib-card-title"><span class="ops-ico">${ICONS.op06}</span>${esc(g.name)}</h4>
+        <h4 class="lib-card-title"><span class="ops-ico ag-av-ico">${agBnSvg(g.banner)}</span>${esc(g.name)}</h4>
         <div class="lib-card-act">
           <button class="icon-btn" type="button" data-ag-edit="group:${esc(g.id)}" aria-label="Edit">${ICONS.pencil}</button>
           <button class="icon-btn" type="button" data-ag-del="group:${esc(g.id)}" aria-label="Delete">${ICONS.trash}</button>
