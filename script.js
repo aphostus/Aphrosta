@@ -2638,7 +2638,9 @@ const AG_PAUSE_ICO = '<svg viewBox="0 0 24 24" width="18" height="18" fill="curr
   s.textContent = '@keyframes agShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(7px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}'
     + '.ag-shake{animation:agShake .45s}'
     + '.ag-play.on{color:var(--oc)}'
-    + '.model-pick-btn.ag-lock{opacity:.35;pointer-events:none}'
+    + '.model-btn.ag-lock,.model-pick-btn.ag-lock{opacity:.35;pointer-events:none}'
+    + '.model-btn-logo.ag-pl-ico{width:22px;height:22px}'
+    + ':root .ag-pl-ico svg,:root[data-theme="light"] .ag-pl-ico svg{filter:none!important;opacity:1!important}'
     + '.ag-pl-ico{display:inline-flex;width:22px;height:22px;border-radius:50%;overflow:hidden;flex:none;align-items:center;justify-content:center}'
     + '.ag-pl-ico svg{width:100%;height:100%}'
     + '.ag-use-row{display:flex;align-items:center;gap:10px;cursor:pointer}'
@@ -2780,22 +2782,32 @@ async function agDiscuss(text, atts) {
   syncSessionControls();
   renderSessionUi();
   scrollDown();
-  setAiState('thinking');
+  startStatusRotor();
   const max = list.length > 1 ? (AG_TURNS[activeEffort] || 4) : 1;
   const names = list.map((a) => a.name);
   let lastNorm = '';
+  let ph = null;
+  const dropPh = () => { if (ph) { const ix = session.messages.indexOf(ph); if (ix >= 0) session.messages.splice(ix, 1); ph = null; } };
   try {
     for (let t = 0; t < max; t++) {
       if (myAbort.signal.aborted) break;
       const a = list[t % list.length];
+      ph = { role: 'assistant', content: '', provider: a.llm.provider, model: a.llm.model, effort: activeEffort, t: Date.now(), reasoning: '', thinkWanted: false, thinkStarted: 0, thinkMs: 0, thinkId: uid(), thinkModel: a.llm.provider, thinkVariant: a.llm.model, agent: a.name, agRef: { kind: ap.kind, id: ap.id } };
+      session.messages.push(ph);
+      renderSessionUi();
+      scrollDown();
       let clean = await agSay(a, names, agTranscript(session), myAbort.signal);
       const pre = a.name.toLowerCase() + ':';
       if (clean.toLowerCase().startsWith(pre)) clean = clean.slice(pre.length).trim();
-      if (!clean || /^\W*done\W*$/i.test(clean)) break;
+      if (!clean || /^\W*done\W*$/i.test(clean)) { dropPh(); break; }
       const norm = clean.toLowerCase().replace(/\W+/g, ' ').trim();
-      if (norm === lastNorm) break;
+      if (norm === lastNorm) { dropPh(); break; }
       lastNorm = norm;
-      session.messages.push({ role: 'assistant', content: '**' + a.name + ':** ' + clean, agent: a.name, agText: clean, provider: a.llm.provider, model: a.llm.model, effort: activeEffort, t: Date.now(), status: 'complete' });
+      ph.content = '**' + a.name + ':** ' + clean;
+      ph.agText = clean;
+      ph.status = 'complete';
+      ph.t = Date.now();
+      ph = null;
       session.updated = Date.now();
       persistSessions();
       renderSessionUi();
@@ -2807,6 +2819,7 @@ async function agDiscuss(text, atts) {
       toast((e && e.message) || (st ? 'The model returned an error (' + st + ').' : 'Could not reach the model.'), 'error', 3600);
     }
   } finally {
+    dropPh();
     chatBusy = false;
     setAiState('idle');
     persistSessions();
@@ -11578,7 +11591,16 @@ const msgEffortTag = (m) => {
   const e = m.effort && EFFORT_LEVELS.find((x) => x.id === m.effort);
   return e ? esc(e.name) + ' ' : '';
 };
-const msgProvLogo = (m) => MODEL_PROVIDERS.find((p) => p.id === m.provider)?.logo || '';
+const msgProvLogo = (m) => (m.agRef && agMsgIco(m)) || MODEL_PROVIDERS.find((p) => p.id === m.provider)?.logo || '';
+function agMsgIco(m) {
+  if (!agData.groups.length && !agData.agents.length) agLoad();
+  if (m.agRef.kind === 'group') {
+    const g = agData.groups.find((x) => x.id === m.agRef.id);
+    return g ? '<span class="ag-pl-ico">' + agBnSvg(g.banner) + '</span>' : '';
+  }
+  const a = agData.agents.find((x) => x.id === m.agRef.id);
+  return a ? '<span class="ag-pl-ico" style="background:' + esc(agAvNorm(a.avatar).bg) + '">' + agAvSvg(a.avatar, true) + '</span>' : '';
+}
 const MSG_USER_ICO = svg('<circle cx="12" cy="8" r="3.6"/><path d="M5 20c.8-3.6 3.6-5.4 7-5.4s6.2 1.8 7 5.4"/>', 15);
 const MSG_SYS_ICO = svg('<rect x="6.5" y="6.5" width="11" height="11" rx="2.5"/><path d="M10 10.5h4M10 13.5h4"/><path d="M9.5 3v3.5M14.5 3v3.5M9.5 17.5V21M14.5 17.5V21M3 9.5h3.5M3 14.5h3.5M17.5 9.5H21M17.5 14.5H21"/>', 15);
 const thinkShown = new WeakSet();
@@ -14307,6 +14329,7 @@ function updateModelButton() {
   const name = ap ? ap.item.name : (p ? p.name : 'Models');
   slot.innerHTML = `${logo}<span class="model-name">${esc(name)}</span>${ICONS.chevron}`;
   appEl.querySelector('.model-pick-btn')?.classList.toggle('ag-lock', !!ap && ap.kind === 'agent');
+  appEl.querySelector('[data-action="model-select"]')?.classList.toggle('ag-lock', !!ap && ap.kind === 'agent');
   appEl?.querySelector('.composer')?.__resetThink?.();
 }
 
@@ -14367,6 +14390,9 @@ function isModelMenuOpen() {
 function openModelMenu() {
   const dd = document.getElementById('model-dropdown');
   if (!dd) return;
+  const apm = agPlayInfo();
+  if (apm && apm.kind === 'agent') { toast('An agent is playing. Pause it to change models.', 'info', 2000); return; }
+  if (apm && apm.kind === 'group') { agUsePicker(apm); return; }
   closeEffortMenu();
   renderProviderList();
   dd.hidden = false;
