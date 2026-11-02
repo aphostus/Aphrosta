@@ -1385,7 +1385,7 @@ const Sidebar = (user) => `
       <button class="side-tool" type="button" data-action="nav-connectors">
         <span class="side-tool-ico">${ICONS.navConnectors}</span>
         <span class="side-tool-text">
-          <b>Connectors</b>
+          <b>Connections</b>
           <i>Link apps and data</i>
         </span>
         <span class="side-tool-chev">${ICONS.chevronR}</span>
@@ -3073,7 +3073,7 @@ const body = `
       </div>
       </div>`}
     </div>`;
-  const p = fdOpen(edit ? 'Edit project' : 'New project', edit ? 'Operations' : 'Blank start', body,
+  const p = fdOpen(edit ? 'Edit operation' : 'New operation', 'Operations', body,
     '<button class="fd-pill" type="button" data-fd="ops-save">Save</button>');
   const ed = p.querySelector('.ops-ed');
   const icBox = p.querySelector('.ops-icons');
@@ -3432,7 +3432,7 @@ function connEmptyHtml() {
 function connRender() {
   const panel = document.getElementById('nav-panel');
   const body = panel?.querySelector('.np-body');
-  if (!body || panel.getAttribute('aria-label') !== 'Connectors') return;
+  if (!body || panel.getAttribute('aria-label') !== 'Connections') return;
   if (!connItems.length) {
     body.classList.remove('lib-list');
     body.style.maxHeight = '';
@@ -3935,7 +3935,7 @@ document.addEventListener('visibilitychange', () => {
 
 /* ---------- NAV SIDE PANEL (Alpha placeholder) ---------- */
 const NAV_PANELS = {
-  'nav-connectors': { title: 'Connectors',  icon: 'navConnectors', desc: 'Linked apps and data sources will show up here.' },
+  'nav-connectors': { title: 'Connections',  icon: 'navConnectors', desc: 'Linked apps and data sources will show up here.' },
   'nav-operations': { title: 'Operations',  icon: 'navOperations', desc: 'Running tasks and tools will show up here.' },
   'nav-automation': { title: 'Automations', icon: 'navAutomation', desc: 'Saved flows and routines will show up here.' },
   'nav-worlds':     { title: 'Worlds',      icon: 'navWorlds',     desc: 'Your worlds will show up here.' },
@@ -12782,7 +12782,7 @@ function initShell() {
       const npLabel = document.getElementById('nav-panel')?.getAttribute('aria-label');
       if (npLabel === 'Library') openLibSheet();
       else if (npLabel === 'Operations') opsOpenEditor();
-      else if (npLabel === 'Connectors') connOpenEditor();
+      else if (npLabel === 'Connections') connOpenEditor();
       else if (npLabel === 'Automations') autoOpenEditor();
       else soon();
     }
