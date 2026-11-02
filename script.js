@@ -6757,7 +6757,9 @@ async function elSpeak(text, btn = null) {
   }
   const vo = EL_VOICES.find((x) => x.id === settings.elVoice) || EL_VOICES[0];
   const speed = { slow: 0.85, normal: 1, fast: 1.15 }[settings.voiceOut] || 1;
-  const chunks = chunkForSpeech(clean, 120);
+  const head = chunkForSpeech(clean, 70)[0] || '';
+  const rest = clean.slice(head.length).trim();
+  const chunks = [head, ...(rest ? chunkForSpeech(rest, 120) : [])].filter(Boolean);
   elAudio.defaultPlaybackRate = speed;
   const ctl = new AbortController();
   elCtl = ctl;
@@ -6775,13 +6777,14 @@ async function elSpeak(text, btn = null) {
       const buf = await r.arrayBuffer();
       return { src: URL.createObjectURL(new Blob([buf], { type: 'audio/wav' })), times: elWordTimes(t, elWavDur(buf)) };
     });
-    let next = grab(chunks[0]);
+    const jobs = [];
+    const ahead = (k) => { if (k < chunks.length && !jobs[k]) { jobs[k] = grab(chunks[k]); jobs[k].catch(() => {}); } };
+    ahead(0); ahead(1);
     for (let i = 0; i < chunks.length; i++) {
-      const got = await next;
+      const got = await jobs[i];
       const src = got.src;
       if (gen !== speakGen) { URL.revokeObjectURL(src); return; }
-      next = i + 1 < chunks.length ? grab(chunks[i + 1]) : null;
-      if (next) next.catch(() => {});
+      ahead(i + 1); ahead(i + 2);
       await new Promise((res, rej) => {
         elResolve = res;
         elAudio.onended = elAudio.onerror = () => { elResolve = null; res(); };
