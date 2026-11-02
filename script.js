@@ -2480,6 +2480,14 @@ const agGroupOf = (a) => agData.groups.find((g) => g.id === a.groupId);
 
 const AG_AI_NOTE = ' You are an AI assistant, not a person. Keep your name and your role, but do not roleplay or play a character. Never pretend to have a body, a physical presence or a daily life: you cannot shop, cook, meet people, visit places or do anything outside this chat. Your only goal is to help the user with accurate, practical answers.';
 
+const AG_DIRECT = ' Start directly with the answer itself: no name, no label, no greeting, no lead-in sentence announcing the answer, and no sign-off.';
+
+function agGone(m) {
+  if (!m || !m.agRef) return false;
+  if (!agData.groups.length && !agData.agents.length) agLoad();
+  return !(m.agRef.kind === 'group' ? agData.groups : agData.agents).some((x) => x.id === m.agRef.id);
+}
+
 const agIntroBusy = {};
 
 async function agIntro(a) {
@@ -2734,11 +2742,11 @@ async function agSay(a, names, transcript, signal, mode) {
   const others = names.filter((n) => n !== a.name);
   const sys = 'You are ' + a.name + '.' + (a.instructions ? ' Your instructions: ' + a.instructions : '') + AG_AI_NOTE
     + (others.length
-      ? ' You are in a shared chat with the user and these other AI assistants: ' + others.join(', ') + '. They are AI too, not people. Coordinate as AIs: split the work by saying who will research, who will draft and who will check, and say what you will do inside this chat. Write only your own next message, in first person, plain text, under 80 words, without starting with your name. If the work is already split clearly or you have nothing new to add, reply with exactly [DONE].'
+      ? ' You are in a shared chat with the user and these other AI assistants: ' + others.join(', ') + '. They are AI too, not people. Coordinate as AIs: split the answer into parts by saying which part each of you will write and which part each of you will double-check for mistakes. You cannot browse, run tools or act outside this chat, so never claim to have researched, looked up or done anything beyond writing text. Write only your own next message, in first person, plain text, under 80 words, without starting with your name. If the work is already split clearly or you have nothing new to add, reply with exactly [DONE].'
       : ' Reply to the user in first person, plain text.');
   const messages = [
     { role: 'system', content: mode === 'final' ? agFinalSys(a, others) : sys },
-    { role: 'user', content: 'Chat so far:\n' + transcript + '\n\n' + (mode === 'final' ? 'Now write ' + a.name + '\u2019s final reply to the user, using the team planning notes above.' : 'Write ' + a.name + '\u2019s next short message in the AI team\u2019s work split for the user\u2019s request. Say which part you will take (researching, drafting or checking), build on what the other AI assistants already said without repeating it, and agree on who does what.') }
+    { role: 'user', content: 'Chat so far:\n' + transcript + '\n\n' + (mode === 'final' ? 'Now write ' + a.name + '\u2019s final reply to the user, using the team planning notes above.' : 'Write ' + a.name + '\u2019s next short message in the AI team\u2019s work split for the user\u2019s request. Say which part of the answer you will write or double-check, build on what the other AI assistants already said without repeating it, and agree on who does what.') }
   ];
   const req = adapter.build({ api, key: l.key, variant, messages, wantStream: false, extras: api.adapter === 'anthropic' ? { max_tokens: 1200 } : {} });
   const ctl = new AbortController();
@@ -2777,8 +2785,8 @@ function agCtx(session, log) {
 function agFinalSys(a, others) {
   return 'You are ' + a.name + '.' + (a.instructions ? ' Your instructions: ' + a.instructions : '') + AG_AI_NOTE
     + (others.length
-      ? ' You and the other AI assistants (' + others.join(', ') + ') split up the user\u2019s request between you. Now write the one final reply to the user as one combined team answer, using the work split you agreed on. Do the task fully and give the real answer; never say you cannot share anything. Do not mention the discussion, do not start with your name, and do not write [DONE].'
-      : ' Reply to the user in first person.');
+      ? ' You and the other AI assistants (' + others.join(', ') + ') split up the user\u2019s request between you. Now write the one final reply to the user as one combined team answer, using the work split you agreed on. Do the task fully and give the real answer; never say you cannot share anything. Do not mention the discussion, do not start with your name, and do not write [DONE].' + AG_DIRECT
+      : ' Reply to the user in first person.' + AG_DIRECT);
 }
 
 async function agDiscuss(text, atts) {
@@ -2842,7 +2850,7 @@ async function agDiscuss(text, atts) {
         try {
           const out = strip(fin, await agSay(fin, names, agCtx(session, log), myAbort.signal, 'final'));
           if (!out) throw new Error(fin.name + ': empty reply from the model.');
-          ph.content = '**' + fin.name + ':** ' + out;
+          ph.content = out;
           ph.agText = out;
           ph.status = 'complete';
           ph.t = Date.now();
@@ -7622,7 +7630,7 @@ function initComposer() {
 
     const p = MODEL_PROVIDERS.find((x) => x.id === ai.provider);
     const model = PROVIDER_API[ai.provider]?.models.find((m) => m.id === ai.model);
-    const label = p ? `${p.name} · ${model?.name || ai.model}` : ai.model;
+    const label = agGone(ai) ? 'Unknown' : (p ? `${p.name} · ${model?.name || ai.model}` : ai.model);
     if (thinkModelEl.textContent !== label) thinkModelEl.textContent = label;
 
     const hasText = full.length > 0 || !!lastPlanMd;
@@ -11703,6 +11711,7 @@ const msgStamp = (t) => {
 };
 const msgModelName = (m) => {
   if (m.role !== 'assistant') return '';
+  if (agGone(m)) return 'Unknown';
   const v = PROVIDER_API[m.provider]?.models?.find((x) => x.id === m.model);
   return v ? v.name : (m.model || '');
 };
@@ -11715,10 +11724,10 @@ function agMsgIco(m) {
   if (!agData.groups.length && !agData.agents.length) agLoad();
   if (m.agRef.kind === 'group') {
     const g = agData.groups.find((x) => x.id === m.agRef.id);
-    return g ? '<span class="ag-pl-ico">' + agBnSvg(g.banner) + '</span>' : '';
+    return g ? '<span class="ag-pl-ico">' + agBnSvg(g.banner) + '</span>' : '<span class="ag-pl-ico" style="background:rgba(127,127,127,.25);font-weight:700;font-size:14px">\u00bf</span>';
   }
   const a = agData.agents.find((x) => x.id === m.agRef.id);
-  return a ? '<span class="ag-pl-ico" style="background:' + esc(agAvNorm(a.avatar).bg) + '">' + agAvSvg(a.avatar, true) + '</span>' : '';
+  return a ? '<span class="ag-pl-ico" style="background:' + esc(agAvNorm(a.avatar).bg) + '">' + agAvSvg(a.avatar, true) + '</span>' : '<span class="ag-pl-ico" style="background:rgba(127,127,127,.25);font-weight:700;font-size:14px">?</span>';
 }
 const MSG_USER_ICO = svg('<circle cx="12" cy="8" r="3.6"/><path d="M5 20c.8-3.6 3.6-5.4 7-5.4s6.2 1.8 7 5.4"/>', 15);
 const MSG_SYS_ICO = svg('<rect x="6.5" y="6.5" width="11" height="11" rx="2.5"/><path d="M10 10.5h4M10 13.5h4"/><path d="M9.5 3v3.5M14.5 3v3.5M9.5 17.5V21M14.5 17.5V21M3 9.5h3.5M3 14.5h3.5M17.5 9.5H21M17.5 14.5H21"/>', 15);
