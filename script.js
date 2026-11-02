@@ -3775,8 +3775,8 @@ function autoOpenEditor(edit) {
   if (!autoApiOk()) { autoApiToast(); return; }
   const cur = { color: edit?.color || OPS_COLORS[0] };
   const draftId = edit?.id || uid();
-  const ta = (k, label, ph) => `<label class="lib-lab">${label}
-        <textarea class="lib-in lib-ta" data-auto="${k}" maxlength="1000" placeholder="${esc(ph)}" style="height:76px;min-height:0;resize:none;padding:9px 10px;font-size:calc(14px * var(--ts))">${esc(edit?.[k] || '')}</textarea>
+  const ta = (k, label, ph) => `<label class="lib-lab" style="flex:1 1 0;min-height:0;margin-top:0">${label}
+        <textarea class="lib-in lib-ta" data-auto="${k}" maxlength="1000" placeholder="${esc(ph)}" style="flex:1 1 0;min-height:0;height:auto;resize:none;padding:9px 10px;font-size:calc(14px * var(--ts))">${esc(edit?.[k] || '')}</textarea>
       </label>`;
   const body = `
     <div class="ops-ed" style="--oc:${esc(opsInk(cur.color))}">
@@ -3794,9 +3794,13 @@ function autoOpenEditor(edit) {
           <textarea class="lib-in lib-ta" data-auto="instr" maxlength="300" placeholder="Rules">${esc(edit?.instruction || '')}</textarea>
         </label>
       </div>
-      ${ta('input', 'Input', 'The trigger and data. e.g. At 10:30am, use the Weather connector.')}
-      ${ta('core', 'Core', 'How the AI should think and what steps to follow.')}
-      ${ta('output', 'Output', 'What to deliver. e.g. A brief summary.')}
+      <div class="lib-lab">
+        <div class="conn-list auto-io" style="flex:1 1 auto;min-height:228px;max-height:none">
+          ${ta('input', 'Input', 'The trigger and data. e.g. At 10:30am, use the Weather connector.')}
+          ${ta('core', 'Core', 'How the AI should think and what steps to follow.')}
+          ${ta('output', 'Output', 'What to deliver. e.g. A brief summary.')}
+        </div>
+      </div>
     </div>`;
   const p = fdOpen(edit ? 'Edit automation' : 'New automation', 'Automations', body,
     '<button class="fd-pill" type="button" data-fd="auto-save">Save</button>');
