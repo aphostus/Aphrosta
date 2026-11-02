@@ -7561,6 +7561,351 @@ function openAttach() {
   q$('.attach-input')?.click();
 }
 
+/* ---------- LIVE MODE (long press the brain on the composer) ---------- */
+const Live = (() => {
+  let root = null, active = false, tok = 0;
+  let stream = null, ctx = null, an = null, buf = null, timer = 0, rec = null, seg = null;
+  let quiet = 0, armed = false, lvl = 0, said = '', lastAct = 0, ampT = 0, glanceT = 0, vvFit = null;
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const $ = (s) => (root ? root.querySelector(s) : null);
+  const LABEL = { listening: 'Listening\u2026', hearing: 'Listening\u2026', thinking: 'Thinking\u2026', searching: 'Searching the web\u2026', speaking: '', idle: '' };
+
+  const setState = (s, emo) => {
+    if (!root) return;
+    root.dataset.state = s;
+    const lab = $('.live-label');
+    if (lab) lab.textContent = LABEL[s] || '';
+    if (emo && root.dataset.emo !== emo) {
+      root.dataset.emo = emo;
+      const pop = $('.live-pop');
+      if (pop) { pop.classList.remove('pop'); void pop.offsetWidth; pop.classList.add('pop'); }
+      if (emo === 'happy' || emo === 'surprised') haptic(8);
+    }
+  };
+
+  const moodOf = (reply, asked) => {
+    const r = String(reply).toLowerCase();
+    if (/\b(sorry|unfortunately|can'?t|cannot|unable|apolog|sad)/.test(r)) return 'sad';
+    if (/\b(wow|whoa|incredible|amazing|surprising)\b/.test(r)) return 'surprised';
+    if (/!|\b(great|glad|love|awesome|nice|haha|congrat|happy|yay)\b/.test(r)) return 'happy';
+    if (/\?/.test(r) || /\?/.test(asked)) return 'curious';
+    return 'neutral';
+  };
+
+  const ampStart = () => {
+    clearInterval(ampT);
+    ampT = setInterval(() => { if (root) root.style.setProperty('--amp', (0.25 + Math.random() * 0.75).toFixed(2)); }, 85);
+  };
+  const ampStop = () => {
+    clearInterval(ampT);
+    ampT = 0;
+    if (root) root.style.setProperty('--amp', '0');
+  };
+
+  const glance = () => {
+    if (!root) return;
+    const calm = root.dataset.state === 'listening';
+    root.style.setProperty('--gx', calm ? (Math.random() * 16 - 8).toFixed(1) + 'px' : '0px');
+    root.style.setProperty('--gy', calm ? (Math.random() * 10 - 5).toFixed(1) + 'px' : '0px');
+    if (calm && root.dataset.emo !== 'sleepy' && Date.now() - lastAct > 25000) setState('listening', 'sleepy');
+  };
+
+  /* ---- microphone: hands-free, cuts a segment after a pause ---- */
+  const micOpen = async () => {
+    if (stream) return true;
+    let s;
+    try {
+      s = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+    } catch (_) {
+      toast('Mic is blocked. Allow it in browser settings. (L01)');
+      return false;
+    }
+    if (!active) { s.getTracks().forEach((t) => t.stop()); return false; }
+    stream = s;
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      ctx = new AC();
+      const src = ctx.createMediaStreamSource(stream);
+      an = ctx.createAnalyser();
+      an.fftSize = 1024;
+      buf = new Uint8Array(an.fftSize);
+      src.connect(an);
+    } catch (_) { an = null; }
+    if (!an) { toast('Live mode is not supported here. (L05)'); return false; }
+    timer = setInterval(tick, 60);
+    return true;
+  };
+
+  const micClose = () => {
+    clearInterval(timer);
+    timer = 0;
+    if (stream) { stream.getTracks().forEach((t) => t.stop()); stream = null; }
+    if (ctx) { try { ctx.close(); } catch (_) {} ctx = null; }
+    an = null;
+  };
+
+  const begin = () => {
+    if (!stream) return;
+    const mt = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus']
+      .find((m) => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || '';
+    const mr = mt ? new MediaRecorder(stream, { mimeType: mt }) : new MediaRecorder(stream);
+    const parts = [], mine = { heard: false, drop: false };
+    mr.ondataavailable = (e) => { if (e.data && e.data.size) parts.push(e.data); };
+    mr.onstop = () => {
+      if (mine.drop || !mine.heard) return;
+      const blob = new Blob(parts, { type: mr.mimeType || mt || 'audio/webm' });
+      if (blob.size > 1500) transcribe(blob);
+    };
+    mr.start();
+    rec = mr;
+    seg = mine;
+    quiet = 0;
+  };
+
+  const endRec = (drop) => {
+    const mr = rec;
+    if (seg) seg.drop = !!drop;
+    rec = null;
+    seg = null;
+    if (mr && mr.state !== 'inactive') { try { mr.stop(); } catch (_) {} }
+  };
+
+  const arm = () => {
+    if (!active || !root || armed || !stream) return;
+    armed = true;
+    lastAct = Date.now();
+    try { begin(); } catch (_) { armed = false; toast('Recording is not supported here. (L06)'); close(); return; }
+    setState('listening', 'neutral');
+  };
+  const disarm = () => { armed = false; endRec(true); };
+
+  const tick = () => {
+    if (!an) return;
+    an.getByteTimeDomainData(buf);
+    let s = 0;
+    for (let i = 0; i < buf.length; i++) { const d = (buf[i] - 128) / 128; s += d * d; }
+    const lv = Math.sqrt(s / buf.length);
+    lvl = lvl * 0.6 + Math.min(1, lv * 7) * 0.4;
+    if (root) root.style.setProperty('--lvl', lvl.toFixed(3));
+    if (!armed || !seg) return;
+    if (lv > 0.03) {
+      quiet = 0;
+      lastAct = Date.now();
+      if (!seg.heard) {
+        seg.heard = true;
+        setState('hearing', root && root.dataset.emo === 'sleepy' ? 'surprised' : 'neutral');
+      }
+    } else if (seg.heard && (quiet += 60) >= 1200) {
+      armed = false;
+      endRec(false);
+    }
+  };
+
+  /* ---- Groq speech to text ---- */
+  const transcribe = async (blob) => {
+    const my = tok;
+    setState('thinking', 'neutral');
+    try {
+      const key = groqKeyGet() || (await groqPrompt());
+      if (!key) throw new Error('no Groq key');
+      const send = (model) => {
+        const fd = new FormData();
+        fd.append('model', model);
+        fd.append('response_format', 'json');
+        fd.append('temperature', '0');
+        fd.append('file', blob, 'speech.' + (/mp4/.test(blob.type) ? 'm4a' : /ogg/.test(blob.type) ? 'ogg' : 'webm'));
+        return fetch('https://api.groq.com/openai/v1/audio/transcriptions', { method: 'POST', headers: { Authorization: 'Bearer ' + key }, body: fd });
+      };
+      let r = await send(GROQ_STT);
+      if (r.status === 429) r = await send(GROQ_STT_ALT);
+      if (r.status === 401) groqBad();
+      if (!r.ok) throw new Error(r.status === 401 ? 'bad Groq key' : r.status === 429 ? 'Groq limit reached' : 'HTTP ' + r.status);
+      const j = await r.json();
+      const t = String(j.text || '').trim();
+      if (my !== tok) return;
+      if (t.replace(/[^\p{L}\p{N}]/gu, '').length < 2) { arm(); return; }
+      await turn(t, my);
+    } catch (e) {
+      if (my !== tok) return;
+      if (e && e.message === 'no Groq key') { close(); return; }
+      toast('Live voice failed (' + ((e && e.message) || 'error') + '). (L02)', 'info', 2800);
+      arm();
+    }
+  };
+
+  /* ---- one conversation turn: send through the normal chat, wait, speak ---- */
+  const callsOf = (m) => { try { return parseToolCalls(m.content || '').length; } catch (_) { return 0; } };
+
+  const waitReply = async (my, before) => {
+    const t0 = Date.now();
+    let calm = 0;
+    await sleep(300);
+    while (my === tok && Date.now() - t0 < 240000) {
+      const ms = currentSession.messages;
+      const last = ms[ms.length - 1];
+      const tooling = !!(last && (last.hidden || (last.role === 'assistant' && callsOf(last))));
+      if (chatBusy || tooling) {
+        calm = 0;
+        if (root && root.dataset.state !== 'speaking') setState(tooling ? 'searching' : 'thinking', tooling ? 'curious' : root.dataset.emo);
+      } else if ((calm += 150) >= 900 || (ms.length <= before && Date.now() - t0 > 1800)) break;
+      await sleep(150);
+    }
+    if (my !== tok) return null;
+    const ms = currentSession.messages;
+    for (let i = ms.length - 1; i >= before; i--) {
+      const m = ms[i];
+      if (m.role === 'assistant' && !m.hidden && m.content && !m.__empty && !m.__failed && !callsOf(m)) return m;
+    }
+    return null;
+  };
+
+  const say = async (m, my) => {
+    const body = splitPlanParts(m.content).clean || m.content;
+    if (!cleanForSpeech(body) || !window.speechSynthesis) return;
+    setState('speaking', moodOf(body, said));
+    speakBrowser(body);
+    const g = speakGen, t0 = Date.now();
+    ampStart();
+    while (my === tok && speakGen === g && Date.now() - t0 < 300000) await sleep(120);
+    ampStop();
+    if (my === tok && speakGen === g) stopSpeaking();
+  };
+
+  const turn = async (text, my) => {
+    said = text;
+    setState('thinking', /\?/.test(text) ? 'curious' : 'neutral');
+    const before = currentSession.messages.length;
+    Promise.resolve(sendChatMessage(text)).catch(() => {});
+    const m = await waitReply(my, before);
+    if (my !== tok) return;
+    if (m) await say(m, my);
+    if (my !== tok) return;
+    arm();
+  };
+
+  const submitText = async (t) => {
+    t = String(t || '').trim();
+    if (!t || !active) return;
+    stopSpeaking();
+    disarm();
+    const my = ++tok;
+    if (chatBusy) {
+      stopGeneration();
+      for (let i = 0; i < 30 && chatBusy; i++) await sleep(100);
+    }
+    if (my !== tok) return;
+    await turn(t, my);
+  };
+
+  /* ---- screen ---- */
+  const onKey = (e) => { if (e.key === 'Escape') close(); };
+
+  const build = () => {
+    root = document.createElement('div');
+    root.className = 'live-root';
+    root.setAttribute('role', 'dialog');
+    root.setAttribute('aria-label', 'Live mode');
+    root.dataset.state = 'idle';
+    root.dataset.emo = 'neutral';
+    root.innerHTML = `
+      <div class="live-stage">
+        <div class="live-float">
+          <div class="live-halo"></div>
+          <div class="live-orbit"><b style="--a:0deg"></b><b style="--a:120deg"></b><b style="--a:240deg"></b></div>
+          <div class="live-ball" data-live="ball">
+            <div class="live-pop">
+              <svg class="live-svg" viewBox="0 0 200 200" aria-hidden="true">
+                <defs><radialGradient id="lvBody" cx="36%" cy="30%" r="78%"><stop offset="0" style="stop-color:var(--live-hi)"/><stop offset="1" style="stop-color:var(--live-lo)"/></radialGradient></defs>
+                <circle cx="100" cy="100" r="88" fill="url(#lvBody)"/>
+                <g class="lv-look">
+                  <path class="lv-brow lv-brow-l" d="M56 70H84"/><path class="lv-brow lv-brow-r" d="M116 70H144"/>
+                  <g class="lv-eyes">
+                    <g class="lv-eye lv-eye-l"><ellipse cx="70" cy="100" rx="12" ry="17"/><circle class="lv-glint" cx="74" cy="93" r="4"/></g>
+                    <g class="lv-eye lv-eye-r"><ellipse cx="130" cy="100" rx="12" ry="17"/><circle class="lv-glint" cx="134" cy="93" r="4"/></g>
+                  </g>
+                  <g class="lv-arcs"><path d="M56 106Q70 86 84 106"/><path d="M116 106Q130 86 144 106"/></g>
+                  <path class="lv-tear" d="M60 120q-6 10 0 14q6-4 0-14z"/>
+                </g>
+              </svg>
+            </div>
+          </div>
+        </div>
+        <div class="live-label" aria-live="polite"></div>
+      </div>
+      <div class="live-bar">
+        <div class="live-pill">
+          <input class="live-input" type="text" placeholder="Type to talk..." aria-label="Type a message" enterkeyhint="send" autocomplete="off" autocapitalize="sentences">
+          <button class="live-send" type="button" aria-label="Send" hidden>${ICONS.rocket}</button>
+        </div>
+        <button class="live-x" type="button" aria-label="Stop live mode">${ICONS.close}</button>
+      </div>`;
+    document.body.appendChild(root);
+
+    const input = $('.live-input'), sendB = $('.live-send');
+    input.addEventListener('input', () => { sendB.hidden = !input.value.trim(); });
+    const go = () => { const t = input.value; input.value = ''; sendB.hidden = true; submitText(t); };
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); go(); } });
+    sendB.addEventListener('click', go);
+    $('.live-x').addEventListener('click', close);
+    $('.live-ball').addEventListener('click', () => {
+      if (root && root.dataset.state === 'speaking') { haptic(10); stopSpeaking(); }
+    });
+    document.addEventListener('keydown', onKey);
+    const vv = window.visualViewport;
+    if (vv) {
+      vvFit = () => { if (!root) return; root.style.height = vv.height + 'px'; root.style.top = vv.offsetTop + 'px'; };
+      vv.addEventListener('resize', vvFit);
+      vv.addEventListener('scroll', vvFit);
+      vvFit();
+    }
+    clearInterval(glanceT);
+    glanceT = setInterval(glance, 2600);
+  };
+
+  const open = async () => {
+    if (active) return;
+    if (!accountActive) { toast('Your account is deactivated. Activate it in Account settings to chat. (D01)', 'info', 3200); return; }
+    if (chatBusy) { toast('Wait for the current reply to finish. (L03)', 'info'); return; }
+    if (!chatReady()) return;
+    if (!permAllowed('microphone')) { toast('Microphone is turned off in Permissions. (L04)', 'info'); return; }
+    if (!window.MediaRecorder || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { toast('Live mode is not supported here. (L05)'); return; }
+    if (!groqKeyGet()) { const k = await groqPrompt(); if (!k) return; }
+    if (active) return;
+    active = true;
+    tok++;
+    build();
+    haptic([10, 40, 16]);
+    if (!(await micOpen())) { close(); return; }
+    arm();
+  };
+
+  const close = () => {
+    if (!root) return;
+    const r = root;
+    active = false;
+    tok++;
+    stopSpeaking();
+    ampStop();
+    disarm();
+    micClose();
+    clearInterval(glanceT);
+    glanceT = 0;
+    document.removeEventListener('keydown', onKey);
+    if (vvFit && window.visualViewport) {
+      window.visualViewport.removeEventListener('resize', vvFit);
+      window.visualViewport.removeEventListener('scroll', vvFit);
+    }
+    vvFit = null;
+    if (chatBusy) stopGeneration();
+    root = null;
+    r.classList.add('is-out');
+    setTimeout(() => r.remove(), 300);
+    haptic(12);
+  };
+
+  return { open, close, isOn: () => active };
+})();
+
 /* ---------- COMPOSER BEHAVIOUR ---------- */
 function initComposer() {
   const wrap = appEl.querySelector('.composer-wrap');
@@ -8258,7 +8603,31 @@ function initComposer() {
     animateHeight(from, target);
   };
 
-  agentBtn.addEventListener('click', () => {
+  /* long press the brain (0.6s): live mode */
+  let liveT = 0, liveFired = false;
+  const liveClear = () => { clearTimeout(liveT); liveT = 0; agentBtn.classList.remove('lp-live'); };
+  agentBtn.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    if (mode !== 'text' || agentOn) return;
+    liveClear();
+    liveFired = false;
+    agentBtn.classList.add('lp-live');
+    liveT = setTimeout(() => {
+      liveT = 0;
+      liveFired = true;
+      agentBtn.classList.remove('lp-live');
+      haptic(25);
+      Live.open();
+    }, 600);
+  });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach((ev) => agentBtn.addEventListener(ev, () => {
+    liveClear();
+    if (liveFired) setTimeout(() => { liveFired = false; }, 350);
+  }));
+  agentBtn.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  agentBtn.addEventListener('click', (e) => {
+    if (liveFired) { liveFired = false; e.stopImmediatePropagation(); return; }
     const ai = currentThinkAi();
     const hasPlan = ai && settings.agentPlan && splitPlanParts(ai.content || '').plan;
     const hasThink = sameThinkModel(ai) && ((ai.reasoning && ai.reasoning.length > 0) || hasPlan);
@@ -14131,7 +14500,7 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
 
     if (last && last.role === 'assistant' && last.content && !last.__empty && !last.__failed) haptic([12, 50, 18]);
 
-    if (settings.autoRead && last?.role === 'assistant' && last.content && !last.__empty && !last.__failed) {
+    if (settings.autoRead && !Live.isOn() && last?.role === 'assistant' && last.content && !last.__empty && !last.__failed) {
       const speakingId = session.id;
       setTimeout(() => {
         if (currentSession.id !== speakingId) return;
