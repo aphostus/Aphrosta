@@ -3612,6 +3612,323 @@ document.addEventListener('click', async (e) => {
   connRender();
 });
 
+/* ---------- AUTOMATIONS ---------- */
+ICONS.autoCode = svg('<path d="M8 7l-5 5 5 5"/><path d="M16 7l5 5-5 5"/><path d="M10 4l4 16"/>', 16);
+const autoLs = () => (keyScope ? 'aphrosta.autos.' + keyScope : 'aphrosta.autos');
+const AUTO_MIN_MINS = 15;
+const AUTO_DAY_N = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const AUTO_DAY_IDX = { sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6 };
+let autoItems = [];
+let autoScope = null;
+const autoOpenSeen = new Set();
+
+function autoLoad() {
+  autoScope = keyScope;
+  try {
+    const a = JSON.parse(localStorage.getItem(autoLs()) || '[]');
+    autoItems = Array.isArray(a) ? a.filter((x) => x && x.id && x.sc) : [];
+  } catch (_) { autoItems = []; }
+}
+
+function autoSave() {
+  localStorage.setItem(autoLs(), JSON.stringify(autoItems));
+}
+
+function autoApiOk() {
+  const prov = MODEL_PROVIDERS.find((p) => p.id === activeModel);
+  if (!prov || !apiKeys[activeModel] || !PROVIDER_API[activeModel]) return false;
+  const v = currentVariant(activeModel);
+  return !!(v && v.id && !badModels[badKey(activeModel, v.id)]);
+}
+
+const autoApiToast = () => toast('Add a working API key and pick a model before making automations. (D03)', 'info', 3200);
+
+/* Reads the trigger out of the Input text. Returns null when no trigger is found. */
+function autoParse(text) {
+  const s = String(text || '').toLowerCase().replace(/\b([ap])\.m\.?/g, '$1m');
+  const once = /\b(once|one[- ]time|just one|single time)\b/.test(s);
+  const rep = !once && /\b(every|each|daily|nightly|weekly|hourly|weekdays|weekends|mondays|tuesdays|wednesdays|thursdays|fridays|saturdays|sundays)\b/.test(s);
+  let m = s.match(/\bevery\s+(\d+(?:\.\d+)?)\s*(minutes?|mins?|hours?|hrs?)\b/);
+  if (m) return { kind: 'every', mins: Math.round(parseFloat(m[1]) * (/^h/.test(m[2]) ? 60 : 1)), repeat: true };
+  if (/\bevery\s+hour\b|\bhourly\b/.test(s)) return { kind: 'every', mins: 60, repeat: true };
+  if (/\bevery\s+minute\b/.test(s)) return { kind: 'every', mins: 1, repeat: true };
+  let h = -1;
+  let mi = 0;
+  m = s.match(/\b(\d{1,2})(?::([0-5]\d))?\s*(am|pm)\b/);
+  if (m) {
+    h = parseInt(m[1], 10);
+    mi = m[2] ? parseInt(m[2], 10) : 0;
+    h = (h < 1 || h > 12) ? -1 : (h % 12) + (m[3] === 'pm' ? 12 : 0);
+  } else if ((m = s.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/))) {
+    h = parseInt(m[1], 10);
+    mi = parseInt(m[2], 10);
+  } else if (/\bnoon\b/.test(s)) {
+    h = 12;
+  } else if (/\bmidnight\b/.test(s)) {
+    h = 0;
+  }
+  if (h >= 0) {
+    let days = [];
+    if (/\bweekdays?\b/.test(s)) days = [1, 2, 3, 4, 5];
+    else if (/\bweekends?\b/.test(s)) days = [0, 6];
+    else {
+      const re = /\b(sunday|monday|tuesday|wednesday|thursday|friday|saturday)s?\b/g;
+      let d;
+      while ((d = re.exec(s))) if (!days.includes(AUTO_DAY_IDX[d[1]])) days.push(AUTO_DAY_IDX[d[1]]);
+      days.sort((a, b) => a - b);
+    }
+    return { kind: 'time', h, m: mi, days: days.length ? days : null, repeat: rep };
+  }
+  if (/\b(?:on|at|when|whenever|after|each time|every time)\s+(?:the\s+)?(?:app\s+|aphrosta\s+)?(?:open|opens|opened|launch|launches|start|starts|startup|start-up|load|loads)\b/.test(s)
+    || /\b(?:app|aphrosta)\s+(?:open|opens|opened|launch|launches|starts?)\b/.test(s)
+    || /\bi\s+(?:open|launch|start)\s+(?:the\s+)?(?:app|aphrosta)\b/.test(s)) {
+    return { kind: 'open', repeat: !once };
+  }
+  return null;
+}
+
+function autoNextAt(sc, from) {
+  if (!sc) return null;
+  if (sc.kind === 'every') return from + sc.mins * 60000;
+  if (sc.kind === 'open') return 0;
+  const d = new Date(from);
+  for (let i = 0; i < 9; i++) {
+    const c = new Date(d.getFullYear(), d.getMonth(), d.getDate() + i, sc.h, sc.m, 0, 0);
+    if (c.getTime() > from && (!sc.days || sc.days.includes(c.getDay()))) return c.getTime();
+  }
+  return null;
+}
+
+function autoWhen(sc) {
+  if (sc.kind === 'open') return sc.repeat ? 'Every time the app opens' : 'Next time the app opens';
+  if (sc.kind === 'every') return 'Every ' + (sc.mins % 60 === 0 ? (sc.mins / 60) + ' h' : sc.mins + ' min');
+  const t = new Date(2000, 0, 1, sc.h, sc.m).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  const wk = sc.days && sc.days.length === 5 && !sc.days.includes(0) && !sc.days.includes(6);
+  const dt = sc.days ? (wk ? 'weekday' : sc.days.map((x) => AUTO_DAY_N[x]).join(', ')) : 'day';
+  if (sc.repeat) return 'Every ' + dt + ' at ' + t;
+  return 'Once at ' + t + (sc.days ? ' on ' + sc.days.map((x) => AUTO_DAY_N[x]).join(', ') : '');
+}
+
+function autoSummary(a) {
+  const w = autoWhen(a.sc);
+  if (a.done) return w + ' \u00b7 finished';
+  if (a.sc.kind === 'open' || !a.next) return w;
+  return w + ' \u00b7 next ' + new Date(a.next).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
+function autoPrompt(a) {
+  return 'Automation: ' + a.name
+    + '\nThis automation is running now in its own session, so your reply is the output. Follow Core, use Input for what to fetch or use, and deliver what Output asks for.'
+    + '\n\nInput:\n' + a.input
+    + '\n\nCore:\n' + a.core
+    + '\n\nOutput:\n' + a.output
+    + (a.instruction ? '\n\nRules:\n' + a.instruction : '');
+}
+
+function autoEmptyHtml() {
+  return `<div class="np-empty"><span class="np-empty-ico">${ICONS.navAutomation}</span><h3 class="np-empty-title">Nothing Placed Yet</h3><p class="np-empty-desc">Saved flows and routines will show up here.</p></div>`;
+}
+
+function autoRender() {
+  const panel = document.getElementById('nav-panel');
+  const body = panel?.querySelector('.np-body');
+  if (!body || panel.getAttribute('aria-label') !== 'Automations') return;
+  if (!autoItems.length) {
+    body.classList.remove('lib-list');
+    body.style.maxHeight = '';
+    body.style.overflowY = '';
+    body.innerHTML = autoEmptyHtml();
+    return;
+  }
+  body.classList.add('lib-list');
+  body.innerHTML = autoItems.slice().sort((a, b) => b.t - a.t).map((a) => {
+    const ink = String(a.color || '').toLowerCase() === '#ffffff';
+    return `
+    <div class="lib-card ops-card conn-card auto-card" style="--oc:${esc(opsInk(a.color || OPS_COLORS[0]))};--pc:${esc(ink ? 'var(--fg)' : (a.color || OPS_COLORS[0]))}">
+      <div class="lib-card-top">
+        <h4 class="lib-card-title"><span class="ops-ico">${ICONS.autoCode}</span>${esc(a.name)}</h4>
+        <div class="lib-card-act">
+          <button class="icon-btn" type="button" data-auto-open="${esc(a.id)}" aria-label="Edit">${ICONS.pencil}</button>
+          <button class="icon-btn" type="button" data-auto-del="${esc(a.id)}" aria-label="Delete">${ICONS.trash}</button>
+        </div>
+      </div>
+      ${a.description ? `<p class="lib-card-instr">${esc(a.description)}</p>` : ''}
+      <p class="lib-card-instr">${esc(autoSummary(a))}</p>
+    </div>`;
+  }).join('');
+  const fitCards = () => {
+    const cs = body.querySelectorAll('.auto-card');
+    if (cs.length <= 9) { body.style.maxHeight = ''; body.style.overflowY = ''; return; }
+    const h = cs[8].offsetTop + cs[8].offsetHeight - cs[0].offsetTop;
+    if (h > 0) { body.style.maxHeight = (h + 8) + 'px'; body.style.overflowY = 'auto'; }
+  };
+  fitCards();
+  requestAnimationFrame(fitCards);
+}
+
+function autoRefresh() {
+  autoLoad();
+  autoRender();
+}
+
+function autoOpenEditor(edit) {
+  if (!autoApiOk()) { autoApiToast(); return; }
+  const cur = { color: edit?.color || OPS_COLORS[0] };
+  const draftId = edit?.id || uid();
+  const ta = (k, label, ph) => `<label class="lib-lab">${label}
+        <textarea class="lib-in lib-ta" data-auto="${k}" maxlength="1000" placeholder="${esc(ph)}" style="height:76px;min-height:0;resize:none;padding:9px 10px;font-size:calc(14px * var(--ts))">${esc(edit?.[k] || '')}</textarea>
+      </label>`;
+  const body = `
+    <div class="ops-ed" style="--oc:${esc(opsInk(cur.color))}">
+      <div class="ops-r1">
+        <label class="lib-lab">Name
+          <input class="lib-in" data-auto="name" maxlength="60" autocomplete="off" placeholder="e.g. Morning weather" value="${esc(edit?.name || '')}">
+        </label>
+        <button class="ops-cc" type="button" data-auto-cc aria-label="Next color">${OPS_I.toggle}</button>
+      </div>
+      <div class="ops-r2">
+        <label class="lib-lab">Description
+          <textarea class="lib-in lib-ta" data-auto="desc" maxlength="300" placeholder="One line about this automation">${esc(edit?.description || '')}</textarea>
+        </label>
+        <label class="lib-lab">Instruction
+          <textarea class="lib-in lib-ta" data-auto="instr" maxlength="300" placeholder="Rules">${esc(edit?.instruction || '')}</textarea>
+        </label>
+      </div>
+      ${ta('input', 'Input', 'The trigger and data. e.g. At 10:30am, use the Weather connector.')}
+      ${ta('core', 'Core', 'How the AI should think and what steps to follow.')}
+      ${ta('output', 'Output', 'What to deliver. e.g. A brief summary.')}
+    </div>`;
+  const p = fdOpen(edit ? 'Edit automation' : 'New automation', 'Automations', body,
+    '<button class="fd-pill" type="button" data-fd="auto-save">Save</button>');
+  const ed = p.querySelector('.ops-ed');
+  const nameIn = p.querySelector('[data-auto="name"]');
+  const val = (k) => (p.querySelector('[data-auto="' + k + '"]')?.value || '').trim();
+  p.addEventListener('click', (e) => {
+    if (e.target.closest('[data-auto-cc]')) {
+      cur.color = OPS_COLORS[(OPS_COLORS.indexOf(cur.color) + 1) % OPS_COLORS.length];
+      ed.style.setProperty('--oc', opsInk(cur.color));
+      return;
+    }
+    const b = e.target.closest('[data-fd]');
+    if (!b) return;
+    if (b.dataset.fd === 'close') { fdClose(); return; }
+    if (b.dataset.fd !== 'auto-save') return;
+    const name = val('name');
+    if (!name) { toast('Add an automation name.', 'info', 2000); return; }
+    if (!autoApiOk()) { autoApiToast(); return; }
+    const input = val('input');
+    const core = val('core');
+    const output = val('output');
+    if (!input || !core || !output) { toast('Input, Core and Output are all required.', 'info', 2400); return; }
+    const sc = autoParse(input);
+    if (!sc) { toast('Input needs a trigger, like \u201cat 10:30am\u201d, \u201cevery day at 8am\u201d, \u201cevery 2 hours\u201d or \u201cwhen the app opens\u201d.', 'info', 4200); return; }
+    if (sc.kind === 'every' && sc.mins < AUTO_MIN_MINS) { toast('Repeats must be at least ' + AUTO_MIN_MINS + ' minutes apart.', 'info', 3000); return; }
+    const now = Date.now();
+    const rec = {
+      id: draftId, name, description: val('desc'), instruction: val('instr'),
+      input, core, output, sc, next: autoNextAt(sc, now), done: false,
+      last: edit?.last || 0, runs: edit?.runs || 0,
+      color: cur.color, created: edit?.created || now, t: now
+    };
+    if (sc.kind === 'open') autoOpenSeen.add(draftId);
+    const prev = autoItems.slice();
+    const i = autoItems.findIndex((x) => x.id === draftId);
+    if (i >= 0) autoItems[i] = rec; else autoItems.push(rec);
+    try {
+      autoSave();
+      fdClose();
+      autoRender();
+      toast(edit ? 'Automation saved.' : 'Automation created.', 'success', 1800);
+    } catch (_) {
+      autoItems = prev;
+      toast('Could not save. Storage may be full.');
+    }
+  });
+  if (canAutoFocus()) nameIn.focus();
+}
+
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-auto-open]');
+  if (!b) return;
+  const it = autoItems.find((x) => x.id === b.dataset.autoOpen);
+  if (it) autoOpenEditor(it);
+});
+
+document.addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-auto-del]');
+  if (!b) return;
+  const it = autoItems.find((x) => x.id === b.dataset.autoDel);
+  if (!it) return;
+  const yes = await confirmDialog({ title: 'Delete automation?', message: `\u201c${it.name}\u201d will be removed from this device.`, confirmLabel: 'Delete', danger: true });
+  if (!yes) return;
+  autoItems = autoItems.filter((x) => x.id !== it.id);
+  try { autoSave(); } catch (_) { toast('Could not delete.'); }
+  autoRender();
+});
+
+function autoMark(a) {
+  const now = Date.now();
+  a.last = now;
+  a.runs = (a.runs || 0) + 1;
+  if (a.sc.kind === 'open') {
+    autoOpenSeen.add(a.id);
+    if (!a.sc.repeat) a.done = true;
+  } else if (a.sc.repeat) {
+    a.next = autoNextAt(a.sc, now);
+  } else {
+    a.done = true;
+    a.next = null;
+  }
+}
+
+function autoRun(a) {
+  autoNextMsg = a.name;
+  try {
+    autoMark(a);
+    try { autoSave(); } catch (_) {}
+    autoRender();
+    if (!(currentSession.draft && currentSession.messages.length === 0)) {
+      currentSession = newDraft();
+      chatStick = true;
+      clearDraft();
+      resetNewSessionUi();
+      renderSessionUi();
+      closeSidebarMobile();
+    }
+    Promise.resolve(sendChatMessage(autoPrompt(a))).catch(() => {});
+    toast('Automation \u201c' + a.name + '\u201d started.', 'info', 2400);
+  } finally {
+    autoNextMsg = null;
+  }
+}
+
+function autoCanRun() {
+  if (accountStatusOffline || !accountActive) return false;
+  const lim = dayLimit();
+  if (lim && LimitWindow.used() >= lim) return false;
+  return autoApiOk();
+}
+
+function autoTick() {
+  try {
+    if (!keyScope || chatBusy || document.getElementById('fd-panel')) return;
+    if (autoScope !== keyScope) autoLoad();
+    if (!autoItems.length || !autoCanRun()) return;
+    const inp = q$('.composer-input');
+    if (!inp || String(inp.value || '').trim()) return;
+    const now = Date.now();
+    const due = autoItems
+      .filter((a) => !a.done && (a.sc.kind === 'open' ? !autoOpenSeen.has(a.id) : (a.next && a.next <= now)))
+      .sort((a, b) => (a.next || 0) - (b.next || 0))[0];
+    if (due) autoRun(due);
+  } catch (err) { console.warn('[automations] tick failed', err); }
+}
+setInterval(autoTick, 20000);
+setTimeout(autoTick, 5000);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') setTimeout(autoTick, 800);
+});
+
 /* ---------- NAV SIDE PANEL (Alpha placeholder) ---------- */
 const NAV_PANELS = {
   'nav-connectors': { title: 'Connectors',  icon: 'navConnectors', desc: 'Linked apps and data sources will show up here.' },
@@ -3657,6 +3974,7 @@ function openNavPanel(key) {
   if (key === 'nav-data') libRefresh();
   else if (key === 'nav-operations') opsRefresh();
   else if (key === 'nav-connectors') connRefresh();
+  else if (key === 'nav-automation') autoRefresh();
 }
 
 function closeNavPanel() {
@@ -9701,6 +10019,7 @@ const msgEffortTag = (m) => {
 };
 const msgProvLogo = (m) => MODEL_PROVIDERS.find((p) => p.id === m.provider)?.logo || '';
 const MSG_USER_ICO = svg('<circle cx="12" cy="8" r="3.6"/><path d="M5 20c.8-3.6 3.6-5.4 7-5.4s6.2 1.8 7 5.4"/>', 15);
+const MSG_SYS_ICO = svg('<rect x="6.5" y="6.5" width="11" height="11" rx="2.5"/><path d="M10 10.5h4M10 13.5h4"/><path d="M9.5 3v3.5M14.5 3v3.5M9.5 17.5V21M14.5 17.5V21M3 9.5h3.5M3 14.5h3.5M17.5 9.5H21M17.5 14.5H21"/>', 15);
 const thinkShown = new WeakSet();
 function foldSync(card, text) {
   if (!card) return;
@@ -9721,7 +10040,7 @@ function msgUserSecFrom(uel) {
   const acts = uel.querySelector(':scope > .msg-actions');
   const sec = document.createElement('div');
   sec.className = 'msg-sec msg-sec-user';
-  sec.innerHTML = `<span class="msg-ico msg-user-ico" aria-hidden="true">${MSG_USER_ICO}</span><div class="msg-user-col"></div>`;
+  sec.innerHTML = `<span class="msg-ico msg-user-ico" aria-hidden="true">${uel.dataset.auto ? MSG_SYS_ICO : MSG_USER_ICO}</span><div class="msg-user-col"></div>`;
   const col = sec.querySelector('.msg-user-col');
   [...uel.children].forEach((c) => { if (c !== acts) col.appendChild(c); });
   return { sec, acts };
@@ -10075,6 +10394,7 @@ function msgElRaw(m, i) {
   const el = document.createElement('div');
   el.className = 'msg ' + (m.role === 'user' ? 'msg-user' : 'msg-ai');
   el.dataset.i = i;
+  if (m.auto) el.dataset.auto = '1';
 
   if (m.role === 'user') {
     if (m.attachments?.length) {
@@ -11409,6 +11729,7 @@ function stripUnsupportedParams(body, errText) {
 
 /* ---------- Agent engine ---------- */
 let agentNextHidden = false;
+let autoNextMsg = null;
 const AGENT_MAX_STEPS = 4;
 const SEARCH_ENDPOINT = ''; // Set to 'https://YOUR-SEARX-HOST/search' to use SearXNG instead of Wikipedia
 
@@ -11683,6 +12004,8 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
     const atts = (attachmentsOverride || []).map((a) => ({ ...a }));
     const hiddenMsg = agentNextHidden;
     agentNextHidden = false;
+    const autoName = autoNextMsg;
+    autoNextMsg = null;
     const shieldTxt = hiddenMsg || !text ? null : Shield.scan(text).code;
     const shieldFile = hiddenMsg ? false : atts.some((a) => a.kind === 'text' && Shield.scan(a.text).hit);
     const shieldCode = shieldTxt || (shieldFile ? 'I02' : null);
@@ -11692,6 +12015,7 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
       t: Date.now(),
       attachments: atts.length ? atts : undefined,
       hidden: hiddenMsg || undefined,
+      auto: autoName ? 1 : undefined,
       shield: shieldCode || undefined
     });
     if (shieldCode) Shield.notify(shieldCode);
@@ -11699,7 +12023,7 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
     if (session.draft) {
       session.draft = false;
       const seed = text || (atts[0]?.name ?? 'Attachment');
-      session.title = makeTitle(seed);
+      session.title = autoName ? String(autoName).slice(0, 80) : makeTitle(seed);
       sessions.push(session);
       clearDraft();
     }
@@ -12455,6 +12779,7 @@ function initShell() {
       if (npLabel === 'Library') openLibSheet();
       else if (npLabel === 'Operations') opsOpenEditor();
       else if (npLabel === 'Connectors') connOpenEditor();
+      else if (npLabel === 'Automations') autoOpenEditor();
       else soon();
     }
   });
