@@ -152,33 +152,89 @@ function persistVariants() {
 /* ---------- SETTINGS STATE ---------- */
 /* ---------- ELEVENLABS (voice) ---------- */
 const EL_VOICES = [
-  { id: 'george', name: 'George', g: 'm', v: 'JBFqnCBsd6RMkjVDRZzb' },
-  { id: 'brian', name: 'Brian', g: 'm', v: 'nPczCjzI2devNBz1zQrb' },
-  { id: 'daniel', name: 'Daniel', g: 'm', v: 'onwK4e9ZLuTAKqWW03F9' },
-  { id: 'roger', name: 'Roger', g: 'm', v: 'CwhRBWXzGAHq8TQ4Fs17' },
-  { id: 'will', name: 'Will', g: 'm', v: 'bIHbv24MWmeRgasZH58o' },
-  { id: 'sarah', name: 'Sarah', g: 'f', v: 'EXAVITQu4vr4xnSDxMaL' },
-  { id: 'alice', name: 'Alice', g: 'f', v: 'Xb7hH8MSUJpSbSDYk0k2' },
-  { id: 'jessica', name: 'Jessica', g: 'f', v: 'cgSgspJ2msm6clMCkdW9' },
-  { id: 'lily', name: 'Lily', g: 'f', v: 'pFZP5JQG7iQjIQuC4Bku' },
-  { id: 'matilda', name: 'Matilda', g: 'f', v: 'XrExE9yKIg1WjnnlVkGX' }
+  { id: 'troy', name: 'Troy', g: 'm', v: 'troy' },
+  { id: 'austin', name: 'Austin', g: 'm', v: 'austin' },
+  { id: 'daniel', name: 'Daniel', g: 'm', v: 'daniel' },
+  { id: 'autumn', name: 'Autumn', g: 'f', v: 'autumn' },
+  { id: 'diana', name: 'Diana', g: 'f', v: 'diana' },
+  { id: 'hannah', name: 'Hannah', g: 'f', v: 'hannah' }
 ];
 
 /* EL-SEAL-BEGIN */
 const EL_SEAL = { p: ["R9h8BHPVU6qp","2IZh0x7iJZoA","ZJ9CqxIZtXOX","UyolL3Sv9iUG"], o: [0,3,1,2], s: 'mYa/ns6UyrHDuhgeGZ5WLg==', i: 'L8ghdfRmn0xr4fI4', c: ["PLszFY6Bf0drAc","Yzq9pS7RqbN164X","qe5L5lubgkJahDfjN87rKqmXnG4cQaTlB08FhdlPDcZpUMKSysmjqqjlry0ag=="] };
 /* EL-SEAL-END */
 
-let elKeyCache = '';
+/* ---------- GROQ voice (user's own key) ---------- */
+const GROQ_KEY_LS = 'aphrosta.groqKey';
+const GROQ_TTS = 'canopylabs/orpheus-v1-english';
+const GROQ_STT = 'whisper-large-v3';
+const GROQ_STT_ALT = 'whisper-large-v3-turbo';
+let groqAsk = null, groqNoAt = 0;
+function groqKeyGet() { try { return (localStorage.getItem(GROQ_KEY_LS) || '').trim(); } catch (_) { return ''; } }
+function groqBad() { try { localStorage.removeItem(GROQ_KEY_LS); } catch (_) {} }
+function groqPrompt() {
+  if (groqAsk) return groqAsk;
+  if (Date.now() - groqNoAt < 60000) return Promise.resolve('');
+  groqAsk = new Promise((resolve) => {
+    const scrim = document.createElement('div');
+    scrim.className = 'dialog-scrim';
+    scrim.innerHTML = `<div class="dialog" role="dialog" aria-modal="true" aria-label="Groq API key">
+      <div class="dialog-title">Groq API key needed</div>
+      <div class="dialog-msg">Voice uses Groq to speak and to listen. Paste your free Groq API key. It is saved only on this device.</div>
+      <a class="dialog-btn" href="https://console.groq.com/keys" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;text-decoration:none">Get a free key</a>
+      <input class="dialog-input" type="password" placeholder="gsk_..." autocomplete="off" autocapitalize="off" spellcheck="false">
+      <div class="dialog-actions"><button class="dialog-btn" type="button" data-r="cancel">Cancel</button><button class="dialog-btn ok" type="button" data-r="save" disabled>Save</button></div>
+    </div>`;
+    const input = scrim.querySelector('.dialog-input');
+    const save = scrim.querySelector('[data-r="save"]');
+    const valid = () => /^gsk_[A-Za-z0-9_-]{20,}$/.test(input.value.trim());
+    const done = (key) => {
+      scrim.remove();
+      groqAsk = null;
+      if (key) { try { localStorage.setItem(GROQ_KEY_LS, key); } catch (_) {} } else groqNoAt = Date.now();
+      resolve(key || '');
+    };
+    input.addEventListener('input', () => { save.disabled = !valid(); });
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && valid()) done(input.value.trim()); });
+    save.addEventListener('click', () => { if (valid()) done(input.value.trim()); });
+    scrim.querySelector('[data-r="cancel"]').addEventListener('click', () => done(''));
+    scrim.addEventListener('click', (e) => { if (e.target === scrim) done(''); });
+    document.body.appendChild(scrim);
+    setTimeout(() => input.focus(), 50);
+  });
+  return groqAsk;
+}
 async function elKey() {
-  if (elKeyCache) return elKeyCache;
-  if (!window.crypto || !crypto.subtle) throw new Error('needs https or localhost');
-  const u8 = (b) => Uint8Array.from(atob(b), (c) => c.charCodeAt(0));
-  const pass = EL_SEAL.o.map((i) => EL_SEAL.p[i]).join('');
-  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
-  const k = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt: u8(EL_SEAL.s), iterations: 120000, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
-  const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: u8(EL_SEAL.i) }, k, u8(EL_SEAL.c.join('')));
-  elKeyCache = new TextDecoder().decode(pt);
-  return elKeyCache;
+  const k = groqKeyGet();
+  if (k) return k;
+  const got = await groqPrompt();
+  if (got) return got;
+  throw new Error('no Groq key');
+}
+/* Groq returns no word timestamps: estimate them from the WAV length */
+function elWavDur(buf) {
+  try {
+    const v = new DataView(buf);
+    let p = 12, rate = 0;
+    while (p + 8 <= v.byteLength) {
+      const id = String.fromCharCode(v.getUint8(p), v.getUint8(p + 1), v.getUint8(p + 2), v.getUint8(p + 3));
+      let len = v.getUint32(p + 4, true);
+      if (id === 'fmt ') rate = v.getUint32(p + 16, true);
+      if (id === 'data') {
+        if (len === 0xFFFFFFFF || p + 8 + len > v.byteLength) len = v.byteLength - p - 8;
+        return rate ? len / rate : 0;
+      }
+      p += 8 + len + (len & 1);
+    }
+  } catch (_) {}
+  return 0;
+}
+function elWordTimes(txt, dur) {
+  const ws = String(txt).match(/\S+/g) || [];
+  if (!(dur > 0) || !ws.length) return [];
+  let tot = 0;
+  const starts = ws.map((w) => { const s = tot; tot += w.length + 1 + (/[.,;:!?]$/.test(w) ? 4 : 0); return s; });
+  return starts.map((s) => (s / tot) * dur);
 }
 const elEnabled = () => settings.elOn !== false;
 
@@ -377,7 +433,7 @@ const SETTINGS_DEFAULTS = {
   username: '', phone: '', privUsage: true, privTrain: false, keyAuto: true,
   phoneCc: '+63', avatar: '',
   voiceName: '', voicePitch: 'normal', autoRead: false,
-  elOn: true, elVoice: 'george',
+  elOn: true, elVoice: 'troy',
   persRole: '', persInterests: '', persEmoji: 'auto', persFormat: 'auto',
   ctxLimit: 'all', reduceMotion: false, haptics: false, privMask: false,
   perms: {},
@@ -723,8 +779,8 @@ const ERR_CODES = {
   E09: ['Import file too large', 'Import files can be up to 25 MB.'],
   E10: ['Import file is not valid', 'Use a file exported from Aphrosta.'],
   F01: ['Feedback could not be sent', 'The reason is shown after the code. Check your connection and try again.'],
-  G01: ['ElevenLabs voice unavailable', 'The device voice is used instead.'],
-  G02: ['ElevenLabs microphone failed', 'Device transcription is used instead.'],
+  G01: ['Groq voice unavailable', 'The device voice is used instead.'],
+  G02: ['Groq microphone failed', 'Device transcription is used instead.'],
   G03: ['Read aloud not supported', 'This browser has no speech output.'],
   G04: ['Recording not supported', 'Use a browser that supports microphone recording.'],
   G05: ['Microphone blocked', 'Allow the microphone in your browser site settings.'],
@@ -6701,24 +6757,23 @@ async function elSpeak(text, btn = null) {
   }
   const vo = EL_VOICES.find((x) => x.id === settings.elVoice) || EL_VOICES[0];
   const speed = { slow: 0.85, normal: 1, fast: 1.15 }[settings.voiceOut] || 1;
-  const chunks = chunkForSpeech(clean, 450);
+  const chunks = chunkForSpeech(clean, 120);
+  elAudio.defaultPlaybackRate = speed;
   const ctl = new AbortController();
   elCtl = ctl;
   let played = 0, wBase = 0;
   try {
     const key = await elKey();
-    const grab = (t) => fetch('https://api.elevenlabs.io/v1/text-to-speech/' + vo.v + '/with-timestamps?output_format=mp3_44100_64', {
+    const grab = (t) => fetch('https://api.groq.com/openai/v1/audio/speech', {
       method: 'POST',
       signal: ctl.signal,
-      headers: { 'xi-api-key': key, 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ text: t, model_id: 'eleven_flash_v2_5', voice_settings: { stability: 0.5, similarity_boost: 0.75, speed } })
+      headers: { Authorization: 'Bearer ' + key, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: GROQ_TTS, voice: vo.v, input: t.replace(/[\[\]]/g, ''), response_format: 'wav' })
     }).then(async (r) => {
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      const j = await r.json();
-      const bin = atob(j.audio_base64 || '');
-      const u8 = new Uint8Array(bin.length);
-      for (let q = 0; q < bin.length; q++) u8[q] = bin.charCodeAt(q);
-      return { src: URL.createObjectURL(new Blob([u8], { type: 'audio/mpeg' })), times: SpkFollow.wordTimes(j.alignment) };
+      if (r.status === 401) groqBad();
+      if (!r.ok) throw new Error(r.status === 401 ? 'bad Groq key' : r.status === 429 ? 'Groq limit reached' : 'HTTP ' + r.status);
+      const buf = await r.arrayBuffer();
+      return { src: URL.createObjectURL(new Blob([buf], { type: 'audio/wav' })), times: elWordTimes(t, elWavDur(buf)) };
     });
     let next = grab(chunks[0]);
     for (let i = 0; i < chunks.length; i++) {
@@ -6745,7 +6800,7 @@ async function elSpeak(text, btn = null) {
     if (gen !== speakGen || (e && e.name === 'AbortError')) return;
     stopSpeaking();
     if (!played) {
-      toast('ElevenLabs unavailable (' + ((e && e.message) || 'error') + '). Using the device voice. (G01)', 'info', 2600);
+      toast('Groq voice unavailable (' + ((e && e.message) || 'error') + '). Using the device voice. (G01)', 'info', 2600);
       speakBrowser(text, btn);
     }
   }
@@ -7804,11 +7859,18 @@ function initComposer() {
     el.busy++;
     try {
       const key = await elKey();
-      const fd = new FormData();
-      fd.append('model_id', 'scribe_v1');
-      fd.append('file', blob, 'speech.' + (/mp4/.test(blob.type) ? 'm4a' : /ogg/.test(blob.type) ? 'ogg' : 'webm'));
-      const r = await fetch('https://api.elevenlabs.io/v1/speech-to-text', { method: 'POST', headers: { 'xi-api-key': key }, body: fd });
-      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const send = (model) => {
+        const fd = new FormData();
+        fd.append('model', model);
+        fd.append('response_format', 'json');
+        fd.append('temperature', '0');
+        fd.append('file', blob, 'speech.' + (/mp4/.test(blob.type) ? 'm4a' : /ogg/.test(blob.type) ? 'ogg' : 'webm'));
+        return fetch('https://api.groq.com/openai/v1/audio/transcriptions', { method: 'POST', headers: { Authorization: 'Bearer ' + key }, body: fd });
+      };
+      let r = await send(GROQ_STT);
+      if (r.status === 429) r = await send(GROQ_STT_ALT);
+      if (r.status === 401) groqBad();
+      if (!r.ok) throw new Error(r.status === 401 ? 'bad Groq key' : r.status === 429 ? 'Groq limit reached' : 'HTTP ' + r.status);
       const j = await r.json();
       const t = String(j.text || '').trim();
       if (t) {
@@ -7822,7 +7884,7 @@ function initComposer() {
       }
     } catch (e) {
       el.bad = true;
-      toast('ElevenLabs mic failed (' + ((e && e.message) || 'error') + '). Switching to device transcription. (G02)', 'info', 2800);
+      toast('Groq mic failed (' + ((e && e.message) || 'error') + '). Switching to device transcription. (G02)', 'info', 2800);
     } finally {
       el.busy--;
     }
@@ -7881,6 +7943,7 @@ function initComposer() {
 
   const elStartRec = (token) => {
     if (el.bad || !window.MediaRecorder || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return false;
+    if (!groqKeyGet()) groqPrompt();
     navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }).then((stream) => {
       if (el.stream || token !== voice.token || !voice.on || voice.paused) { stream.getTracks().forEach((t) => t.stop()); return; }
       el.stream = stream;
