@@ -2772,6 +2772,7 @@ async function opsTreeInit(panel, project) {
     if (name == null) return;
     const nm = name.trim().replace(/[\\/]+/g, '_');
     if (!nm) return;
+    if (kind === 'file' && !/\.[A-Za-z0-9][A-Za-z0-9_+-]*$/.test(nm)) { toast('File names need an extension, like notes.txt or app.py.', 'info', 2600); return; }
     if (kids(sel).some((x) => x.name.toLowerCase() === nm.toLowerCase())) { toast('That name already exists here.', 'info', 2000); return; }
     const rec = { id: uid(), project: project.id, parent: sel, kind, name: nm, lang: kind === 'file' ? langOf(nm) : '', hidden: false, text: '', t: Date.now() };
     try {
