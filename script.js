@@ -16210,6 +16210,33 @@ function kbSessionOp(fn) {
   fn(currentSession.id);
 }
 
+function kbOpenAbout(key) {
+  openSettings();
+  openAboutPage(key);
+}
+
+function kbEdgeSession(first) {
+  const list = kbOrder();
+  if (!list.length) return;
+  const to = first ? list[0] : list[list.length - 1];
+  if (to.id !== currentSession.id) openSession(to.id);
+}
+
+function kbClearBox() {
+  const i = kbInput();
+  if (!i || !i.value) return;
+  i.value = '';
+  i.dispatchEvent(new Event('input', { bubbles: true }));
+  i.focus();
+}
+
+async function kbCopyMine() {
+  const r = kbLastMsg('user');
+  if (!r) { toast('No message of yours to copy yet.', 'info', 1600); return; }
+  if (await copyText(r.m.content)) toast('Your last message copied.', 'success', 1600);
+  else toast('Couldn\u2019t copy. (D09)');
+}
+
 const KB_SHORTCUTS = [
   { g: 'Chat', t: 'New session', k: 'mod+shift+KeyO', run: () => newSession() },
   { g: 'Chat', t: 'Focus the message box', k: 'shift+Escape', any: true, run: () => kbInput()?.focus() },
@@ -16228,6 +16255,8 @@ const KB_SHORTCUTS = [
   { g: 'Chat', t: 'Attach files', k: 'mod+KeyU', run: () => openAttach() },
   { g: 'Chat', t: 'Switch voice and text input', k: 'alt+KeyV', run: kbVoice },
   { g: 'Chat', t: 'Open or close the thinking view', k: 'alt+KeyT', run: () => kbClickSel('[data-action="agent"]') },
+  { g: 'Chat', t: 'Copy your last message', k: 'alt+shift+KeyC', run: kbCopyMine },
+  { g: 'Chat', t: 'Clear the message box', k: 'alt+KeyL', run: kbClearBox },
 
   { g: 'Navigate', t: 'Search sessions', k: 'mod+KeyK', run: kbSearch },
   { g: 'Navigate', t: 'Show or hide the sidebar', k: 'mod+shift+KeyS', run: () => toggleSidebar() },
@@ -16236,6 +16265,12 @@ const KB_SHORTCUTS = [
   { g: 'Navigate', t: 'Open Worlds', k: 'alt+Digit1', run: () => openWorlds() },
   { g: 'Navigate', t: 'Open Agents', k: 'alt+Digit2', run: () => kbClickSel('[data-action="nav-agent"]') },
   { g: 'Navigate', t: 'Open Library', k: 'alt+Digit3', run: () => kbClickSel('[data-action="nav-data"]') },
+  { g: 'Navigate', t: 'Open Projects', k: 'alt+Digit4', run: () => kbClickSel('[data-action="nav-projects"]') },
+  { g: 'Navigate', t: 'Open Automations', k: 'alt+Digit5', run: () => kbClickSel('[data-action="nav-automation"]') },
+  { g: 'Navigate', t: 'Open Connectors', k: 'alt+Digit6', run: () => kbClickSel('[data-action="nav-connectors"]') },
+  { g: 'Navigate', t: 'Open Operations', k: 'alt+Digit7', run: () => kbClickSel('[data-action="nav-operations"]') },
+  { g: 'Navigate', t: 'Go to the newest session', k: 'alt+shift+ArrowUp', run: () => kbEdgeSession(true) },
+  { g: 'Navigate', t: 'Go to the oldest session', k: 'alt+shift+ArrowDown', run: () => kbEdgeSession(false) },
   { g: 'Navigate', t: 'Jump to the top of the chat', k: 'mod+Home', when: (e) => !kbTyping(e.target), run: () => kbScroll(true) },
   { g: 'Navigate', t: 'Jump to the latest message', k: 'mod+End', when: (e) => !kbTyping(e.target), run: () => kbScroll(false) },
 
@@ -16250,22 +16285,46 @@ const KB_SHORTCUTS = [
   { g: 'App', t: 'Open or close Settings', k: 'mod+Comma', run: kbToggleSettings },
   { g: 'App', t: 'Show this shortcut list', k: 'mod+Slash', run: kbToggleShortcuts },
   { g: 'App', t: 'Show this shortcut list (not typing)', k: 'shift+Slash', lbl: '?', run: kbToggleShortcuts },
+  { g: 'App', t: 'Open Help and Support', k: 'alt+shift+KeyH', run: () => kbOpenAbout('help') },
+  { g: 'App', t: 'Send feedback', k: 'alt+shift+KeyF', run: () => openFeedback() },
   { g: 'App', t: 'Close menus and stop speech', k: 'Escape', lbl: 'Esc', info: true, run: () => {} }
 ];
 
 function kbClickSel(sel) { q$(sel)?.click(); }
 
+const KB_TOP = ['mod+KeyK', 'mod+shift+KeyO', 'alt+KeyM', 'alt+KeyR', 'mod+shift+KeyC', 'mod+Slash'];
+
+/* conflict check: warns in the console about one key used twice, or a key the browser keeps for itself */
+const KB_RESERVED = ['mod+KeyT', 'mod+KeyW', 'mod+KeyN', 'mod+KeyR', 'mod+KeyL', 'mod+KeyP', 'mod+KeyF', 'mod+KeyD', 'mod+KeyS', 'mod+KeyO', 'mod+KeyH', 'mod+KeyJ', 'mod+KeyQ', 'mod+shift+KeyT', 'mod+shift+KeyN', 'mod+shift+KeyW', 'alt+ArrowLeft', 'alt+ArrowRight', 'F5', 'F11', 'F12'];
+const kbKey = (s) => { const k = kbParse(s); return [k.mod && 'mod', k.alt && 'alt', k.shift && 'shift', k.code].filter(Boolean).join('+'); };
+(function kbConflictCheck() {
+  const seen = new Map();
+  KB_SHORTCUTS.forEach((s) => {
+    const id = kbKey(s.k);
+    if (seen.has(id) && !(s.when && seen.get(id).when)) console.warn('[kb] Same key on two shortcuts: ' + s.t + ' / ' + seen.get(id).t);
+    else seen.set(id, s);
+    if (KB_RESERVED.includes(id)) console.warn('[kb] The browser may keep this key for itself: ' + s.t + ' (' + id + ')');
+  });
+})();
+
 const KB_GROUPS = ['Chat', 'Navigate', 'Models', 'Sessions', 'App'];
 const kbCards = () => [
   { t: 'About shortcuts', st: 1, kw: 'keyboard shortcuts keys hotkeys desktop mac ctrl command option',
     b: `<p>Shortcuts work on computers with a keyboard and mouse. ${KB_MAC ? '\u2318 is Command, \u2325 is Option and \u21e7 is Shift.' : 'On a Mac, Ctrl becomes \u2318 and Alt becomes \u2325.'} They pause while a popup is open. Keys without Ctrl or Alt only work when you are not typing.</p>` },
+  { t: 'Most used', st: 1, kw: 'most used popular favourites quick start top',
+    b: `<h4>Most used</h4>` + KB_SHORTCUTS.filter((s) => KB_TOP.includes(s.k)).map((s) => `<div class="ab-kv"><span>${esc(s.t)}</span><b>${esc(s.lbl || kbLabel(s.k))}</b></div>`).join('') },
   ...KB_GROUPS.map((g) => {
     const rows = KB_SHORTCUTS.filter((s) => s.g === g);
     return {
-      t: g, st: 1, kw: `${g} ` + rows.map((s) => s.t).join(' '),
+      t: g, st: 1, kw: `${g} ` + rows.map((s) => s.t + ' ' + (s.lbl || kbLabel(s.k))).join(' '),
       b: `<h4>${esc(g)}</h4>` + rows.map((s) => `<div class="ab-kv"><span>${esc(s.t)}</span><b>${esc(s.lbl || kbLabel(s.k))}</b></div>`).join('')
     };
-  })
+  }),
+  { t: 'Tips and conflicts', st: 1, kw: 'tips conflicts browser not working extension typing help feedback',
+    b: `<h4>Open this list</h4><p>Press ${esc(kbLabel('mod+Slash'))} anywhere, or ? when you are not typing.</p>
+    <h4>When a key does nothing</h4><p>Some browsers keep keys like Ctrl + T, Ctrl + W and Ctrl + N for themselves, so Aphrosta avoids them. If a shortcut still does nothing, another app or a browser extension may be using the same keys.</p>
+    <h4>Typing safely</h4><p>Plain keys such as / and ? only work when no text box is focused, so they never get in the way of what you type.</p>
+    <h4>Need more help?</h4><p>Press ${esc(kbLabel('alt+shift+KeyH'))} for Help and Support, or ${esc(kbLabel('alt+shift+KeyF'))} to send feedback.</p>` }
 ];
 
 document.addEventListener('keydown', (e) => {
@@ -16380,7 +16439,7 @@ const AB_PAGES = {
       b: `<p>Aphrosta is split into modules. Each module below has its own license so that the parts you reuse stay easy to comply with.</p>
       <h4>MIT</h4><p>The whole app — interface, layout, styles, settings, the assistant engine, the memory systems, the agent tools, the billing screens and the onboarding tour. MIT lets you reuse, modify and ship this code freely as long as you keep the copyright and permission notice.</p>
       <h4>Apache 2.0</h4><p>The parts that depend on third-party services or fonts whose licenses require a patent grant or trademark notice: the ElevenLabs voice integration, the bundled Google Fonts fallbacks, and the file export helpers.</p>
-      <p>If you are unsure, treat the file as MIT. The three Apache 2.0 pieces are called out by name below.</p>` },
+      <p>If you are unsure, treat the file as MIT. The Apache 2.0 pieces of Aphrosta itself are called out by name below. Third-party libraries keep the license their authors chose and are listed under Third-Party Libraries.</p>` },
 
     { t: 'App Shell and Layout', st: 1, kw: 'layout sidebar topbar composer stage license MIT',
       b: `${abLic('app shell', 'MIT', 'The sidebar, top bar, stage, and responsive CSS grid/flex rules that arrange every screen. Reuse it as a starting point for your own app.')}
@@ -16422,7 +16481,23 @@ const AB_PAGES = {
       ${abLic('sound effects and music', 'MIT', 'The small synthesised tap, send, done and error sounds, plus the background music scheduler that plays from the bundled audio folder.')}
       ${abLic('onboarding tour', 'MIT', 'The step-by-step spotlight tour with keyboard support and reduced-motion handling.')}` },
 
-    abTextCard("Third-Party Libraries", "What we build on", "Aphrosta imports Firebase for authentication and Firestore for sync. Everything else is hand-written. The bundled icons, provider logos and brand marks are used under the terms of their own projects.", "Names and trademarks", "Google, Gemini, Groq, DeepSeek, Grok, Claude, ChatGPT, Kimi, Perplexity and their logos are trademarks of their owners. Aphrosta is not affiliated with or endorsed by any of them. Their marks are shown so you can recognise which provider you are using."),
+    { t: 'Third-Party Libraries', st: 1, kw: 'third party libraries firebase mermaid icons lobehub simple icons apache mit cc0 open source credits',
+      b: `<p>Aphrosta loads these libraries at run time. They are not copied into the app code, and each one keeps the license its authors chose. Everything else in Aphrosta is hand-written.</p>
+      ${abLic('Firebase JS SDK 10.12.0', 'Apache 2.0', 'Authentication and Firestore sync. The app, auth and firestore modules load from the Google static host.')}
+      ${abLic('Mermaid 11.4.1', 'MIT', 'Draws the flowcharts, sequence diagrams and class diagrams that appear in replies. It loads from the jsDelivr host.')}
+      ${abLic('Lobe Icons (static SVG)', 'MIT', 'The Groq, Grok, Kimi and Perplexity provider logos in the model picker. They load from the unpkg host.')}
+      ${abLic('Icons static SVG by bentwnghk', 'Own license', 'The OpenAI provider logo. It loads from the unpkg host and follows the license shown on its package page.')}
+      ${abLic('Simple Icons', 'CC0 1.0', 'The DeepSeek and Claude logos and the logos shown for connections. The icon set is public domain, but the brands themselves stay trademarks of their owners.')}` },
+
+    { t: 'Third-Party Services', st: 1, kw: 'third party services providers firebase elevenlabs npm jina allorigins corsproxy gemini groq terms',
+      b: `<p>These are online services Aphrosta talks to. They are not part of the app code, and their own terms and privacy policies apply to anything you send them.</p>
+      ${abLic('Model providers you connect', 'Service terms', 'Google Gemini, Groq, DeepSeek, Grok, Claude, ChatGPT, Kimi, Perplexity and the others in the model picker. Your messages go to the provider you pick, using your own API key.')}
+      ${abLic('Firebase Authentication and Firestore', 'Service terms', 'Google sign-in and cloud sync for signed-in accounts.')}
+      ${abLic('ElevenLabs', 'Service terms', 'Voice output and transcription when you add an ElevenLabs key.')}
+      ${abLic('npm registry', 'Service terms', 'Package details and weekly download counts for the package info connection. No key needed.')}
+      ${abLic('Web reader proxies', 'Service terms', 'Jina Reader, AllOrigins and corsproxy.io help the page reader fetch web pages that a browser would otherwise block.')}` },
+
+    abTextCard("Trademarks and Brand Marks", "Whose marks you see", "The bundled icons, provider logos and brand marks are used under the terms of their own projects.", "Names and trademarks", "Google, Gemini, Groq, DeepSeek, Grok, Claude, ChatGPT, Kimi, Perplexity and their logos are trademarks of their owners. Aphrosta is not affiliated with or endorsed by any of them. Their marks are shown so you can recognise which provider you are using."),
     abTextCard("Reusing Aphrosta Code", "How to stay compliant", "If you copy an MIT part, keep the original copyright notice and the MIT permission text somewhere in your project. If you copy an Apache 2.0 part, keep the notice file and state what you changed.", "No warranty", "All code is provided as it is, without warranty of any kind. The authors are not liable for any loss that comes from using or reusing it. This page is a plain summary, not legal advice; the official license texts on the project pages are the ones that apply.")
   ] },
 
@@ -16481,7 +16556,24 @@ const AB_PAGES = {
     { t: 'Contact and Feedback', st: 1, kw: 'contact feedback bug',
       b: `<p>If something is not working as expected, send us feedback from the app so our team can look into it. Feedback is limited to once per hour to keep the inbox tidy.</p>
       <h4>What to include</h4><p>Include a short description of what you were doing and what happened. Leave device info on so we can match your report to the browser and screen size.</p>
-      <h4>Error Codes</h4><p>If you see an error message with a code, include it in your feedback. It helps us find the exact issue faster.</p>` }
+      <h4>Error Codes</h4><p>If you see an error message with a code, include it in your feedback. It helps us find the exact issue faster.</p>` },
+    { t: 'Troubleshooting', st: 1, kw: 'troubleshoot troubleshooting problem fix not working blank slow stuck reload no reply microphone key rejected',
+      b: `<p>Most problems have a quick fix. Work down this list before sending feedback.</p>
+      <h4>No reply, or the reply stops</h4><p>Check that the API key is pasted without extra spaces, that the provider has billing set up, and that it has access to the model you picked. Lowering Effort or Length also helps when a reply cuts off.</p>
+      <h4>Voice does not work</h4><p>Check Settings → Permissions, then allow the microphone in your browser's site settings. If another app is using the microphone, close it first.</p>
+      <h4>Something looks stuck</h4><p>Reload the page. Your settings and chats are saved on this device, so a reload does not lose them.</p>
+      <h4>Still stuck</h4><p>Send feedback and include the error code from the popup, for example (A01). It tells us the area and the problem right away.</p>` },
+    { t: 'Keyboard Shortcuts', st: 1, kw: 'keyboard shortcuts keys hotkeys desktop mac ctrl command option',
+      b: () => `<p>On a computer with a keyboard and mouse you can drive most of Aphrosta without touching the mouse.</p>
+      <h4>Open the full list</h4><p>Press ${kbLabel('mod+Slash')} anywhere, or press ? when you are not typing. You can also open Settings → About → Keyboard Shortcuts. The list only appears on devices with a mouse or trackpad.</p>
+      <h4>Find a shortcut fast</h4><p>The search bar on the shortcut page matches names and keys, so typing a word like copy or sidebar finds it.</p>
+      <h4>Phones and tablets</h4><p>Touch screens do not use shortcuts, and the Keyboard Shortcuts row stays hidden.</p>` },
+    { t: 'Getting Better Answers', st: 1, kw: 'tips better answers prompts quality effort length memory library files',
+      b: `<p>A few habits make replies better without any extra setup.</p>
+      <h4>Say what you want back</h4><p>Name the result you want, such as a table, a short summary or a deck. Say who it is for if that matters.</p>
+      <h4>Give it something to work with</h4><p>Attach the file or paste the text instead of describing it. For things you use again and again, save them in the Library.</p>
+      <h4>Match effort to the job</h4><p>Use a lower Effort for quick questions and a higher one for hard problems. Raise Length only when you need a longer answer.</p>
+      <h4>Let it remember</h4><p>Keep Memory on if you want the assistant to remember your preferences between chats. You can clear it any time in Settings.</p>` }
   ] }
 };
 
