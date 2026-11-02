@@ -2204,6 +2204,7 @@ document.addEventListener('click', async (e) => {
 /* ---------- PROJECTS: popup + list (same design as Libraries, holds sessions) ---------- */
 const PROJ_LS = 'aphrosta.projects';
 let projItems = [];
+const projSave = () => lsSet(PROJ_LS, projItems);
 
 function projLoad() {
   const l = lsGet(PROJ_LS, []);
