@@ -1036,7 +1036,8 @@ Object.assign(ICONS, {
 
 /* ---------- UNIQUE ICONS (one per spot, no shared copies) ---------- */
 Object.assign(ICONS, {
-  navWorlds:     svg('<circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18"/>'),
+  navWorlds:     svg('<circle cx="12" cy="12" r="5"/><ellipse cx="12" cy="12" rx="10" ry="3" transform="rotate(-24 12 12)"/><path d="M19 3v3M17.5 4.5h3"/>'),
+  navProjects:   svg('<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 7v6M12 7v10M16 7v3"/>'),
   navAgents:     svg('<ellipse cx="12" cy="14" rx="8.5" ry="6.5"/><path d="M9 10.5v7M14.5 10.5v7"/><path d="M10 7.5C9.5 4.5 10.5 3 12.5 3s3 1.5 2 4.5"/><path d="M17.5 9.5L20 6.5M18 13.5h.01"/>'),
   navLibrary:    svg('<path d="M5 18.5A2.5 2.5 0 017.5 16H22"/><path d="M7.5 4H22v18H7.5A2.5 2.5 0 015 19.5v-13A2.5 2.5 0 017.5 4z"/><path d="M9 8h9M9 12h7"/>'),
   navAutomation: svg('<rect x="3" y="3" width="6" height="6" rx="1.5"/><rect x="15" y="15" width="6" height="6" rx="1.5"/><path d="M9 6h3a3 3 0 013 3v6"/>', 16),
@@ -1367,9 +1368,9 @@ const Sidebar = (user) => `
     </div>
 
     <nav class="side-nav" aria-label="Workspace">
-      <button class="side-btn" type="button" data-action="nav-worlds">${ICONS.navWorlds}<span>Worlds</span></button>
+      <button class="side-btn" type="button" data-action="nav-projects">${ICONS.navProjects}<span>Projects</span></button>
       <button class="side-btn" type="button" data-action="nav-agent">${ICONS.navAgents}<span>Agents</span></button>
-      <button class="side-btn" type="button" data-action="nav-data">${ICONS.navLibrary}<span>Library</span></button>
+      <button class="side-btn" type="button" data-action="nav-data">${ICONS.navLibrary}<span>Libraries</span></button>
     </nav>
 
     <div class="side-tools" aria-label="Workspace tools">
@@ -1418,6 +1419,7 @@ const Sidebar = (user) => `
         <span class="profile-name">${esc(user.displayName || 'User')}</span>
         <span class="profile-plan">Free plan</span>
       </div>
+      <button class="fd-ic arch-btn" type="button" data-action="nav-worlds" aria-label="Worlds" title="Worlds">${ICONS.navWorlds}</button>
       <button class="fd-ic arch-btn" type="button" data-action="archive" aria-label="Archive" title="Archive">${ICONS.archive}</button>
       <button class="pill-btn" type="button" data-action="upgrade">Upgrade</button>
     </div>
@@ -2050,7 +2052,7 @@ function libEmptyHtml() {
 function libRender() {
   const panel = document.getElementById('nav-panel');
   const body = panel?.querySelector('.np-body');
-  if (!body || panel.getAttribute('aria-label') !== 'Library') return;
+  if (!body || panel.getAttribute('aria-label') !== 'Libraries') return;
   if (!libItems.length) { body.classList.remove('lib-list'); body.innerHTML = libEmptyHtml(); return; }
   body.classList.add('lib-list');
   body.innerHTML = libItems.slice().sort((a, b) => b.t - a.t).map((it) => `
@@ -3939,8 +3941,9 @@ const NAV_PANELS = {
   'nav-operations': { title: 'Operations',  icon: 'navOperations', desc: 'Running tasks and tools will show up here.' },
   'nav-automation': { title: 'Automations', icon: 'navAutomation', desc: 'Saved flows and routines will show up here.' },
   'nav-worlds':     { title: 'Worlds',      icon: 'navWorlds',     desc: 'Your worlds will show up here.' },
+  'nav-projects':   { title: 'Projects',    icon: 'navProjects',   desc: 'Your projects will show up here.' },
   'nav-agent':      { title: 'Agents',      icon: 'navAgents',     desc: 'Your agents will show up here.' },
-  'nav-data':       { title: 'Library',      icon: 'navLibrary',    desc: 'Your library items will show up here.' }
+  'nav-data':       { title: 'Libraries',    icon: 'navLibrary',    desc: 'Your library items will show up here.' }
 };
 
 function navPanelHtml(def) {
@@ -12841,7 +12844,7 @@ function initShell() {
     else if (action === 'nav-close') closeNavPanel();
     else if (action === 'nav-plus') {
       const npLabel = document.getElementById('nav-panel')?.getAttribute('aria-label');
-      if (npLabel === 'Library') openLibSheet();
+      if (npLabel === 'Libraries') openLibSheet();
       else if (npLabel === 'Operations') opsOpenEditor();
       else if (npLabel === 'Connections') connOpenEditor();
       else if (npLabel === 'Automations') autoOpenEditor();
