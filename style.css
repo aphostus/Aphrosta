@@ -4352,6 +4352,18 @@ html[data-motion="reduce"] .sess-pw { animation: none; }
 
 /* ---------- Operations (projects) ---------- */
 .ops-card { border-left: 3px solid var(--oc, var(--fg)); }
+.ag-card { cursor: pointer; transition: margin-left 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), border-left-width 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s; }
+.ag-card.open { margin-left: 12px; border-left-width: 8px; }
+.ag-more { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.ag-card.open .ag-more { grid-template-rows: 1fr; }
+.ag-more-in { min-height: 0; overflow: hidden; }
+.ag-mems { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; padding-top: 12px; }
+.ag-mem { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; padding: 5px; border-radius: 50%; overflow: hidden; background: linear-gradient(160deg, color-mix(in srgb, var(--mb, #0a84ff) 62%, transparent), color-mix(in srgb, var(--mb, #0a84ff) 20%, #000 32%)); border: 1px solid color-mix(in srgb, var(--mb, #0a84ff) 55%, #fff 25%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3); }
+.ag-mem svg { display: block; width: 100%; height: 100%; }
+.ag-mem.ag-mem-more { padding: 0; font-size: calc(13px * var(--ts)); font-weight: 600; color: var(--fg); background: var(--glass-bg-hover); border: 1px solid var(--glass-border); box-shadow: none; }
+.ag-intro { margin: 10px 0 2px; padding-top: 10px; border-top: 1px solid var(--glass-border); font-size: calc(13px * var(--ts)); line-height: 1.5; color: var(--fg); white-space: pre-wrap; overflow-wrap: anywhere; }
+.ag-intro.ag-load { color: var(--gray-mid); animation: agPulse 1.2s ease-in-out infinite; }
+@keyframes agPulse { 50% { opacity: 0.45; } }
 .ops-card.ops-proj { border-left: 1px solid var(--glass-border); }
 .ops-ico { display: inline-flex; vertical-align: middle; margin-right: 8px; color: var(--oc, var(--fg)); }
 .ops-ico svg { width: 16px; height: 16px; }

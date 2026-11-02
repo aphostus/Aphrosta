@@ -2464,6 +2464,7 @@ document.addEventListener('click', (e) => {
 const AG_LS = 'aphrosta.agents';
 let agData = { groups: [], agents: [] };
 let agMode = 'group';
+let agOpen = '';
 
 function agLoad() {
   const d = lsGet(AG_LS, null);
@@ -2477,6 +2478,81 @@ const agNewSandbox = (nm) => ({ files: [{ id: uid(), name: nm || 'agent.txt', pa
 const agSbOf = (o, nm) => (o.sandbox && Array.isArray(o.sandbox.files) ? o.sandbox : (o.sandbox = agNewSandbox(nm)));
 const agGroupOf = (a) => agData.groups.find((g) => g.id === a.groupId);
 
+const agIntroBusy = {};
+
+async function agIntro(a) {
+  const l = a.llm || {};
+  const api = PROVIDER_API[l.provider];
+  if (!api || !l.key || !l.model) throw new Error('Add an LLM, API key and model to this agent to get an intro.');
+  const variant = (api.models || []).find((m) => m.id === l.model) || { id: l.model, name: l.model };
+  const adapter = adapterFor(l.provider);
+  const messages = [
+    { role: 'system', content: 'You are ' + a.name + '.' + (a.instructions ? ' Your instructions: ' + a.instructions : '') },
+    { role: 'user', content: 'Introduce yourself to the user in about 5 short lines, in first person, as plain text with no markdown, no lists and no emojis. Say who you are, what you do best and how you will help. Max 60 words.' }
+  ];
+  const req = adapter.build({ api, key: l.key, variant, messages, wantStream: false, extras: api.adapter === 'anthropic' ? { max_tokens: 1200 } : {} });
+  const ctl = new AbortController();
+  const to = setTimeout(() => ctl.abort(), 45000);
+  try {
+    const res = await fetch(req.url, { method: 'POST', signal: ctl.signal, headers: req.headers, body: JSON.stringify(req.body) });
+    if (!res.ok) throw new Error('The model returned an error (' + res.status + '). Close the card and tap again to retry.');
+    const j = await res.json();
+    let text = adapter.readFull ? adapter.readFull(j).content : (j && j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '';
+    text = String(text || '').replace(/<think>[\s\S]*?<\/think>/g, '').replace(/[*`#]/g, '').trim();
+    if (!text) throw new Error('The model sent an empty reply. Close the card and tap again to retry.');
+    return text.slice(0, 480);
+  } catch (e) {
+    if (e && e.name === 'AbortError') throw new Error('The model took too long. Close the card and tap again to retry.');
+    throw e;
+  } finally { clearTimeout(to); }
+}
+
+function agFillCard(card) {
+  const parts = (card.dataset.agCard || '').split(':');
+  const k = parts[0], id = parts[1];
+  const box = card.querySelector('[data-ag-more]');
+  if (!box) return;
+  if (k === 'group') {
+    const ms = agData.agents.filter((a) => a.groupId === id);
+    if (!ms.length) { box.innerHTML = '<p class="ag-intro">No agents in this group yet.</p>'; return; }
+    const shown = ms.length > 25 ? ms.slice(0, 24) : ms;
+    const circ = (a) => '<span class="ag-mem" title="' + esc(a.name) + '" style="--mb:' + esc(agAvNorm(a.avatar).bg) + '">' + agAvSvg(a.avatar, true) + '</span>';
+    box.innerHTML = '<div class="ag-mems">' + shown.map(circ).join('') + (ms.length > 25 ? '<span class="ag-mem ag-mem-more">+' + (ms.length - 24) + '</span>' : '') + '</div>';
+    return;
+  }
+  const a = agData.agents.find((x) => x.id === id);
+  if (!a) return;
+  const sig = (a.name || '') + '\n' + (a.instructions || '');
+  if (a.intro && a.intro.sig === sig) { box.innerHTML = '<p class="ag-intro">' + esc(a.intro.text) + '</p>'; return; }
+  box.innerHTML = '<p class="ag-intro ag-load">Writing intro\u2026</p>';
+  if (agIntroBusy[id]) return;
+  agIntroBusy[id] = 1;
+  const show = (html) => {
+    const c = Array.from(document.querySelectorAll('[data-ag-card]')).find((x) => x.dataset.agCard === 'agent:' + id);
+    const b = c && c.querySelector('[data-ag-more]');
+    if (b) b.innerHTML = html;
+  };
+  agIntro(a).then((text) => {
+    const now = agData.agents.find((x) => x.id === id);
+    if (now) { now.intro = { text, sig }; agSave(); }
+    show('<p class="ag-intro">' + esc(text) + '</p>');
+  }).catch((e) => {
+    show('<p class="ag-intro">' + esc((e && e.message) || 'Couldn\u2019t write an intro. Close the card and tap again to retry.') + '</p>');
+  }).finally(() => { delete agIntroBusy[id]; });
+}
+
+function agFillOpen(root) {
+  const c = root.querySelector('.ag-card.open');
+  if (c) agFillCard(c);
+}
+
+function agToggleCard(card) {
+  const was = card.classList.contains('open');
+  document.querySelectorAll('.ag-card.open').forEach((c) => c.classList.remove('open'));
+  agOpen = was ? '' : (card.dataset.agCard || '');
+  if (!was) { card.classList.add('open'); agFillCard(card); }
+}
+
 function agEmptyHtml() {
   return `<div class="np-empty"><span class="np-empty-ico">${ICONS.navAgents}</span><h3 class="np-empty-title">Nothing Placed Yet</h3><p class="np-empty-desc">Your ${agMode === 'group' ? 'groups' : 'agents'} will show up here.</p></div>`;
 }
@@ -2486,7 +2562,7 @@ function agGroupCard(g) {
   const n = agData.agents.filter((a) => a.groupId === g.id).length;
   const f = agSbOf(g, 'group.txt').files.length;
   return `
-    <div class="lib-card ops-card ag-card${on ? '' : ' ag-off'}" style="--oc:${esc(opsInk(g.color || OPS_COLORS[0]))}">
+    <div class="lib-card ops-card ag-card${on ? '' : ' ag-off'}${agOpen === 'group:' + g.id ? ' open' : ''}" data-ag-card="group:${esc(g.id)}" style="--oc:${esc(opsInk(g.color || OPS_COLORS[0]))}">
       <div class="lib-card-top">
         <h4 class="lib-card-title"><span class="ops-ico ag-av-ico">${agBnSvg(g.banner)}</span>${esc(g.name)}</h4>
         <div class="lib-card-act">
@@ -2495,6 +2571,7 @@ function agGroupCard(g) {
         </div>
       </div>
       <p class="lib-card-meta">${on ? 'Active' : 'Inactive'} \u00b7 ${n} ${n === 1 ? 'agent' : 'agents'} \u00b7 ${f} shared ${f === 1 ? 'file' : 'files'}</p>
+      <div class="ag-more"><div class="ag-more-in" data-ag-more></div></div>
     </div>`;
 }
 
@@ -2504,7 +2581,7 @@ function agAgentCard(a) {
   const f = agSbOf(a, 'agent.txt').files.length;
   const state = on ? 'Active' : 'Inactive';
   return `
-    <div class="lib-card ops-card ag-card${on ? '' : ' ag-off'}" style="--oc:${esc(opsInk(agAvNorm(a.avatar).bg))}">
+    <div class="lib-card ops-card ag-card${on ? '' : ' ag-off'}${agOpen === 'agent:' + a.id ? ' open' : ''}" data-ag-card="agent:${esc(a.id)}" style="--oc:${esc(opsInk(agAvNorm(a.avatar).bg))}">
       <div class="lib-card-top">
         <h4 class="lib-card-title"><span class="ops-ico ag-av-ico">${agAvSvg(a.avatar, true)}</span>${esc(a.name)}</h4>
         <div class="lib-card-act">
@@ -2513,6 +2590,7 @@ function agAgentCard(a) {
         </div>
       </div>
       <p class="lib-card-meta">${state} \u00b7 ${g ? esc(g.name) : 'No group'} \u00b7 ${f} ${f === 1 ? 'file' : 'files'}</p>
+      <div class="ag-more"><div class="ag-more-in" data-ag-more></div></div>
     </div>`;
 }
 
@@ -2535,6 +2613,7 @@ function agRender() {
   if (!list.length) { body.classList.remove('lib-list'); body.innerHTML = agEmptyHtml(); return; }
   body.classList.add('lib-list');
   body.innerHTML = list.slice().sort((a, b) => (b.t || 0) - (a.t || 0)).map(agMode === 'group' ? agGroupCard : agAgentCard).join('');
+  agFillOpen(body);
 }
 
 function agRefresh() {
@@ -3368,7 +3447,7 @@ function agOpenSheet(kind, edit) {
     agLoad();
     const rec = isG
       ? { id: edit ? edit.id : uid(), name, instructions: el.querySelector('#ag-ins').value.trim(), icon: cur.icon, color: cur.color, banner: agBnNorm(cur.banner), active: cur.active, sandbox: sb, t: edit ? (edit.t || Date.now()) : Date.now() }
-      : { id: edit ? edit.id : uid(), name, instructions: el.querySelector('#ag-ins').value.trim(), llm: { provider: cur.llm.provider, key: cur.llm.key.trim(), model: cur.llm.model }, groupId: el.querySelector('#ag-group').value, avatar: agAvNorm(cur.avatar), active: cur.active, sandbox: sb, t: edit ? (edit.t || Date.now()) : Date.now() };
+      : { id: edit ? edit.id : uid(), name, instructions: el.querySelector('#ag-ins').value.trim(), llm: { provider: cur.llm.provider, key: cur.llm.key.trim(), model: cur.llm.model }, groupId: el.querySelector('#ag-group').value, avatar: agAvNorm(cur.avatar), intro: edit && edit.intro, active: cur.active, sandbox: sb, t: edit ? (edit.t || Date.now()) : Date.now() };
     const key = isG ? 'groups' : 'agents';
     const prev = agData[key];
     agData[key] = edit ? prev.map((x) => (x.id === edit.id ? rec : x)) : [...prev, rec];
@@ -3389,6 +3468,8 @@ document.addEventListener('click', (e) => {
     const list = k === 'group' ? agData.groups : agData.agents;
     return { k, id, item: list.find((x) => x.id === id) };
   };
+  const card = e.target.closest('[data-ag-card]');
+  if (card && !e.target.closest('button, a, input, label, select, textarea')) { agToggleCard(card); return; }
   const t = pick('data-ag-toggle');
   if (t && t.item) { t.item.active = t.item.active === false; agSave(); agRender(); return; }
   const ed = pick('data-ag-edit');
