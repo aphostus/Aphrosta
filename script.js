@@ -2639,6 +2639,7 @@ const AG_PAUSE_ICO = '<svg viewBox="0 0 24 24" width="18" height="18" fill="curr
     + '.ag-shake{animation:agShake .45s}'
     + '.ag-play.on{color:var(--oc)}'
     + '.model-btn.ag-lock,.model-pick-btn.ag-lock{pointer-events:none}'
+    + '.model-pick-btn.ag-lock{opacity:.35}'
     + '.model-btn-logo.ag-pl-ico{width:22px;height:22px}'
     + ':root .ag-pl-ico svg,:root[data-theme="light"] .ag-pl-ico svg{filter:none!important;opacity:1!important}'
     + '.ag-pl-ico{display:inline-flex;width:22px;height:22px;border-radius:50%;overflow:hidden;flex:none;align-items:center;justify-content:center}'
@@ -2735,7 +2736,7 @@ async function agSay(a, names, transcript, signal, mode) {
       : ' Reply to the user in first person, plain text.');
   const messages = [
     { role: 'system', content: mode === 'final' ? agFinalSys(a, others) : sys },
-    { role: 'user', content: 'Chat so far:\n' + transcript + '\n\n' + (mode === 'final' ? 'Now write ' + a.name + '\u2019s final reply to the user.' : 'Write ' + a.name + '\u2019s next message in the team\u2019s private discussion about how to answer the user.') }
+    { role: 'user', content: 'Chat so far:\n' + transcript + '\n\n' + (mode === 'final' ? 'Now write ' + a.name + '\u2019s final reply to the user, using the private team discussion above.' : 'Write ' + a.name + '\u2019s next message in the team\u2019s private discussion about how to answer the user. Build on what teammates already said, do not repeat it, and add something new or agree on the plan.') }
   ];
   const req = adapter.build({ api, key: l.key, variant, messages, wantStream: false, extras: api.adapter === 'anthropic' ? { max_tokens: 1200 } : {} });
   const ctl = new AbortController();
@@ -2743,19 +2744,32 @@ async function agSay(a, names, transcript, signal, mode) {
   const onAbort = () => ctl.abort();
   if (signal) signal.addEventListener('abort', onAbort);
   try {
-    const res = await fetch(req.url, { method: 'POST', signal: ctl.signal, headers: req.headers, body: JSON.stringify(req.body) });
+    let res = await fetch(req.url, { method: 'POST', signal: ctl.signal, headers: req.headers, body: JSON.stringify(req.body) });
+    for (let tries = 0; !res.ok && [429, 500, 502, 503, 504].includes(res.status) && tries < 2; tries++) {
+      await new Promise((r) => setTimeout(r, 1500 * (tries + 1)));
+      if (ctl.signal.aborted) break;
+      res = await fetch(req.url, { method: 'POST', signal: ctl.signal, headers: req.headers, body: JSON.stringify(req.body) });
+    }
     if (!res.ok) {
-      const er = new Error(a.name + ': the model returned an error (' + res.status + ').');
+      let eb = '';
+      try { eb = (await res.text()).replace(/\s+/g, ' ').slice(0, 140); } catch (_) {}
+      const er = new Error(a.name + ' (' + l.provider + '): error ' + res.status + (eb ? ' ' + eb : ''));
       er.status = res.status;
       throw er;
     }
     const j = await res.json();
     const text = adapter.readFull ? adapter.readFull(j).content : (j && j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '';
-    return String(text || '').replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+    const outText = String(text || '').replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+    if (!outText) throw new Error(a.name + ' (' + l.provider + '): empty reply from the model.');
+    return outText;
   } finally {
     clearTimeout(to);
     if (signal) signal.removeEventListener('abort', onAbort);
   }
+}
+
+function agCtx(session, log) {
+  return agTranscript(session) + (log ? '\n\n[Private team discussion so far]\n' + log.trim() : '');
 }
 
 function agFinalSys(a, others) {
@@ -2804,7 +2818,9 @@ async function agDiscuss(text, atts) {
       if (myAbort.signal.aborted) break;
       const a = list[n % list.length];
       ph.provider = a.llm.provider; ph.model = a.llm.model; ph.agent = a.name;
-      const clean = strip(a, await agSay(a, names, agTranscript(session) + log, myAbort.signal, 'think'));
+      let raw = '';
+      try { raw = await agSay(a, names, agCtx(session, log), myAbort.signal, 'think'); } catch (e) { if (e && e.name === 'AbortError') throw e; break; }
+      const clean = strip(a, raw);
       if (!clean || /^\W*done\W*$/i.test(clean)) break;
       const norm = clean.toLowerCase().replace(/\W+/g, ' ').trim();
       if (norm === lastNorm) break;
@@ -2817,15 +2833,24 @@ async function agDiscuss(text, atts) {
       persistSessions();
     }
     if (!myAbort.signal.aborted) {
-      const fin = list[n % list.length];
-      ph.provider = fin.llm.provider; ph.model = fin.llm.model; ph.agent = fin.name;
-      const out = strip(fin, await agSay(fin, names, agTranscript(session) + log, myAbort.signal, 'final'));
-      if (out) {
-        ph.content = '**' + fin.name + ':** ' + out;
-        ph.agText = out;
-        ph.status = 'complete';
-        ph.t = Date.now();
+      let lastErr = null;
+      for (let k = 0; k < list.length && !ph.content; k++) {
+        const fin = list[(n + k) % list.length];
+        ph.provider = fin.llm.provider; ph.model = fin.llm.model; ph.agent = fin.name;
+        try {
+          const out = strip(fin, await agSay(fin, names, agCtx(session, log), myAbort.signal, 'final'));
+          if (!out) throw new Error(fin.name + ': empty reply from the model.');
+          ph.content = '**' + fin.name + ':** ' + out;
+          ph.agText = out;
+          ph.status = 'complete';
+          ph.t = Date.now();
+        } catch (e) {
+          if (e && e.name === 'AbortError') throw e;
+          lastErr = e;
+        }
       }
+      if (lastErr && ph.content) toast(lastErr.message, 'info', 5000);
+      if (lastErr && !ph.content) throw lastErr;
     }
   } catch (e) {
     if (!(e && e.name === 'AbortError')) {
