@@ -2478,6 +2478,8 @@ const agNewSandbox = (nm) => ({ files: [{ id: uid(), name: nm || 'agent.txt', pa
 const agSbOf = (o, nm) => (o.sandbox && Array.isArray(o.sandbox.files) ? o.sandbox : (o.sandbox = agNewSandbox(nm)));
 const agGroupOf = (a) => agData.groups.find((g) => g.id === a.groupId);
 
+const AG_AI_NOTE = ' You are an AI assistant, not a person. Keep your name and your role, but do not roleplay or play a character. Never pretend to have a body, a physical presence or a daily life: you cannot shop, cook, meet people, visit places or do anything outside this chat. Your only goal is to help the user with accurate, practical answers.';
+
 const agIntroBusy = {};
 
 async function agIntro(a) {
@@ -2487,8 +2489,8 @@ async function agIntro(a) {
   const variant = (api.models || []).find((m) => m.id === l.model) || { id: l.model, name: l.model };
   const adapter = adapterFor(l.provider);
   const messages = [
-    { role: 'system', content: 'You are ' + a.name + '.' + (a.instructions ? ' Your instructions: ' + a.instructions : '') },
-    { role: 'user', content: 'Introduce yourself to the user in exactly one sentence of medium length (about 20 to 30 words), in first person, as plain text with no markdown, no lists, no line breaks and no emojis. Say who you are and how you will help.' }
+    { role: 'system', content: 'You are ' + a.name + '.' + (a.instructions ? ' Your instructions: ' + a.instructions : '') + AG_AI_NOTE },
+    { role: 'user', content: 'Introduce yourself to the user in exactly one sentence of medium length (about 20 to 30 words), in first person, as plain text with no markdown, no lists, no line breaks and no emojis. Say who you are, state briefly that you are an AI assistant, and say how you will help.' }
   ];
   const req = adapter.build({ api, key: l.key, variant, messages, wantStream: false, extras: api.adapter === 'anthropic' ? { max_tokens: 1200 } : {} });
   const ctl = new AbortController();
@@ -2730,13 +2732,13 @@ async function agSay(a, names, transcript, signal, mode) {
   const variant = (api.models || []).find((m) => m.id === l.model) || { id: l.model, name: l.model };
   const adapter = adapterFor(l.provider);
   const others = names.filter((n) => n !== a.name);
-  const sys = 'You are ' + a.name + '.' + (a.instructions ? ' Your instructions: ' + a.instructions : '')
+  const sys = 'You are ' + a.name + '.' + (a.instructions ? ' Your instructions: ' + a.instructions : '') + AG_AI_NOTE
     + (others.length
-      ? ' You are in a shared chat with the user and ' + others.join(', ') + '. Plan together and take turns. Write only your own next message, in first person, plain text, under 80 words, without starting with your name. If the plan is settled or you have nothing new to add, reply with exactly [DONE].'
+      ? ' You are in a shared chat with the user and these other AI assistants: ' + others.join(', ') + '. They are AI too, not people. Coordinate as AIs: split the work by saying who will research, who will draft and who will check, and say what you will do inside this chat. Write only your own next message, in first person, plain text, under 80 words, without starting with your name. If the work is already split clearly or you have nothing new to add, reply with exactly [DONE].'
       : ' Reply to the user in first person, plain text.');
   const messages = [
     { role: 'system', content: mode === 'final' ? agFinalSys(a, others) : sys },
-    { role: 'user', content: 'Chat so far:\n' + transcript + '\n\n' + (mode === 'final' ? 'Now write ' + a.name + '\u2019s final reply to the user, using the team planning notes above.' : 'Write ' + a.name + '\u2019s next short message in the team\u2019s planning meeting about the user\u2019s request. This is normal teamwork planning, so just write it. Build on what teammates already said, do not repeat it, and add something new or agree on the plan.') }
+    { role: 'user', content: 'Chat so far:\n' + transcript + '\n\n' + (mode === 'final' ? 'Now write ' + a.name + '\u2019s final reply to the user, using the team planning notes above.' : 'Write ' + a.name + '\u2019s next short message in the AI team\u2019s work split for the user\u2019s request. Say which part you will take (researching, drafting or checking), build on what the other AI assistants already said without repeating it, and agree on who does what.') }
   ];
   const req = adapter.build({ api, key: l.key, variant, messages, wantStream: false, extras: api.adapter === 'anthropic' ? { max_tokens: 1200 } : {} });
   const ctl = new AbortController();
@@ -2773,9 +2775,9 @@ function agCtx(session, log) {
 }
 
 function agFinalSys(a, others) {
-  return 'You are ' + a.name + '.' + (a.instructions ? ' Your instructions: ' + a.instructions : '')
+  return 'You are ' + a.name + '.' + (a.instructions ? ' Your instructions: ' + a.instructions : '') + AG_AI_NOTE
     + (others.length
-      ? ' You and ' + others.join(', ') + ' just held a planning meeting about the user\u2019s request. Now write the one final reply to the user, as the team, using the plan you agreed on. Do the task fully and give the real answer; never say you cannot share anything. Do not mention the discussion, do not start with your name, and do not write [DONE].'
+      ? ' You and the other AI assistants (' + others.join(', ') + ') split up the user\u2019s request between you. Now write the one final reply to the user as one combined team answer, using the work split you agreed on. Do the task fully and give the real answer; never say you cannot share anything. Do not mention the discussion, do not start with your name, and do not write [DONE].'
       : ' Reply to the user in first person.');
 }
 
