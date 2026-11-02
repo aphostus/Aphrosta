@@ -274,6 +274,9 @@ html.has-vv #app-shell { height: var(--app-h); }
 .fd-empty-ico { display: inline-flex; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: 20px; background: var(--glass-bg); border: 1px solid var(--glass-border); color: var(--gray-light); }
 .fd-empty h3 { margin: 6px 0 0; font-size: calc(16px * var(--ts)); font-weight: 600; color: var(--fg); }
 .fd-empty p { max-width: 280px; margin: 0; font-size: calc(13px * var(--ts)); line-height: 1.5; }
+.fd-soon { flex: 1; justify-content: center; padding: 0 20px 56px; }
+.fd-soon h3 { margin: 0; font-size: calc(24px * var(--ts)); font-weight: 700; }
+.fd-soon p { color: var(--gray-mid); }
 @media (prefers-reduced-motion: reduce) {
   .fd-panel, .fd-sheet { animation: none !important; }
 }
@@ -4525,4 +4528,7 @@ html[data-motion="reduce"] .sess-pw { animation: none; }
 .ag-part-h { display: flex; align-items: center; justify-content: space-between; }
 #ag-sb-main .lib-file { margin-top: 8px; }
 .ag-code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: calc(12.5px * var(--ts)); white-space: pre; overflow-x: auto; }
+.ag-hlwrap { position: relative; }
+.ag-hlwrap > .ag-code { display: block; }
+.ag-hl { position: absolute; z-index: 2; margin: 0; overflow: hidden; pointer-events: none; white-space: pre; color: transparent; border-style: solid; border-color: transparent; box-sizing: border-box; }
 

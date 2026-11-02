@@ -279,6 +279,7 @@ const LANGUAGES = [
   { id: 'pl', name: 'Polski' },
   { id: 'tr', name: 'T\u00fcrk\u00e7e' },
   { id: 'id', name: 'Indonesia' },
+  { id: 'tl', name: 'Tagalog' },
   { id: 'ru', name: '\u0420\u0443\u0441\u0441\u043a\u0438\u0439' },
   { id: 'uk', name: '\u0423\u043a\u0440\u0430\u0457\u043d\u0441\u044c\u043a\u0430' }
 ];
@@ -2541,8 +2542,69 @@ function agRefresh() {
   agRender();
 }
 
+/* ---------- @AGENT MENTIONS (sandbox text) ---------- */
+const agNameRe = (list) => list.map((m) => m.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+
+function agMentionList(getList) {
+  let list = [];
+  try { list = (getList && getList()) || []; } catch (_) { list = []; }
+  return list.filter((m) => m && m.name).sort((a, b) => b.name.length - a.name.length);
+}
+
+function agMentionHtml(text, list) {
+  let out = '', last = 0, m;
+  if (list.length) {
+    const re = new RegExp('(?<![\\p{L}\\p{N}_])@(' + agNameRe(list) + ')(?![\\p{L}\\p{N}_])', 'giu');
+    while ((m = re.exec(text))) {
+      const hit = list.find((x) => x.name.toLowerCase() === m[1].toLowerCase());
+      out += esc(text.slice(last, m.index)) + '<span style="color:' + esc(hit.color) + '">' + esc(m[0]) + '</span>';
+      last = m.index + m[0].length;
+    }
+  }
+  return out + esc(text.slice(last)) + '\u200b';
+}
+
+/* a line that is one mention becomes (@Name: instruction) */
+function agMentionFmt(text, list) {
+  if (!list.length || !text) return text;
+  const one = new RegExp('^([ \\t]*)(\\()?@(' + agNameRe(list) + ')(?![\\p{L}\\p{N}_])[ \\t]*:?[ \\t]*(.*)$', 'iu');
+  return text.split('\n').map((ln) => {
+    const m = one.exec(ln);
+    if (!m || m[4].indexOf('@') > -1) return ln;
+    const nm = list.find((x) => x.name.toLowerCase() === m[3].toLowerCase()).name;
+    let rest = m[4].replace(/[ \t]+$/, '');
+    if (m[2] && rest.slice(-1) === ')') rest = rest.slice(0, -1).replace(/[ \t]+$/, '');
+    return m[1] + '(@' + nm + ': ' + rest + ')';
+  }).join('\n');
+}
+
+function agHlSync(ta, hl) {
+  const c = getComputedStyle(ta);
+  ['fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'letterSpacing', 'tabSize', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft', 'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth'].forEach((k) => { hl.style[k] = c[k]; });
+  hl.style.top = ta.offsetTop + 'px';
+  hl.style.left = ta.offsetLeft + 'px';
+  hl.style.width = ta.offsetWidth + 'px';
+  hl.style.height = ta.offsetHeight + 'px';
+  hl.scrollTop = ta.scrollTop;
+  hl.scrollLeft = ta.scrollLeft;
+}
+
+function agHlPaint(ta, getList) {
+  const hl = ta.previousElementSibling;
+  if (!hl || !hl.classList.contains('ag-hl')) return;
+  hl.innerHTML = agMentionHtml(ta.value, agMentionList(getList));
+  agHlSync(ta, hl);
+}
+
+function agHlAll(root, getList) {
+  root.querySelectorAll('.ag-hlwrap > .ag-code').forEach((ta) => {
+    agHlPaint(ta, getList);
+    if (window.ResizeObserver) new ResizeObserver(() => agHlPaint(ta, getList)).observe(ta);
+  });
+}
+
 /* sandbox popup: many code files, each file has many parts. Default file is a .txt */
-function agOpenSandbox(title, sb, onSave, base = 'agent.txt') {
+function agOpenSandbox(title, sb, onSave, base = 'agent.txt', mentions = () => []) {
   document.getElementById('ag-sb-scrim')?.remove();
   const work = JSON.parse(JSON.stringify(sb));
   let cur = work.files[0] ? work.files[0].id : null;
@@ -2593,10 +2655,11 @@ function agOpenSandbox(title, sb, onSave, base = 'agent.txt') {
       ${f.parts.map((p, i) => `
       <div class="lib-lab">
         <span class="ag-part-h">Part ${i + 1}${f.parts.length > 1 ? `<button class="icon-btn" type="button" data-ag-prm="${i}" aria-label="Remove part">${ICONS.trash}</button>` : ''}</span>
-        <textarea class="lib-in lib-ta ag-code" data-ag-part="${i}" rows="5" spellcheck="false" autocapitalize="off" autocorrect="off">${esc(p)}</textarea>
+        <div class="ag-hlwrap"><div class="ag-hl" aria-hidden="true"></div><textarea class="lib-in lib-ta ag-code" data-ag-part="${i}" data-ag-fid="${esc(f.id)}" rows="5" spellcheck="false" autocapitalize="off" autocorrect="off">${esc(p)}</textarea></div>
       </div>`).join('')}
       <button class="lib-file" type="button" data-ag-padd>${ICONS.plus}<span>Add part</span></button>
       <button class="lib-file" type="button" data-ag-fdel>${ICONS.trash}<span>Delete file</span></button>`;
+    agHlAll(main, mentions);
   };
   draw();
   el.addEventListener('click', (e) => {
@@ -2631,6 +2694,7 @@ function agOpenSandbox(title, sb, onSave, base = 'agent.txt') {
       if (c) c.textContent = f.name || 'untitled';
     } else if (e.target.matches('[data-ag-part]')) {
       f.parts[Number(e.target.dataset.agPart)] = e.target.value;
+      agHlPaint(e.target, mentions);
     }
   });
   el.addEventListener('change', (e) => {
@@ -2647,9 +2711,26 @@ function agOpenSandbox(title, sb, onSave, base = 'agent.txt') {
     }
     draw();
   });
+  el.addEventListener('scroll', (e) => {
+    const t = e.target;
+    const hl = t && t.matches && t.matches('.ag-code') ? t.previousElementSibling : null;
+    if (hl && hl.classList.contains('ag-hl')) { hl.scrollTop = t.scrollTop; hl.scrollLeft = t.scrollLeft; }
+  }, true);
+  el.addEventListener('focusout', (e) => {
+    const t = e.target;
+    if (!t || !t.matches || !t.matches('[data-ag-part]')) return;
+    const f = work.files.find((x) => x.id === t.dataset.agFid);
+    if (!f) return;
+    const fixed = agMentionFmt(t.value, agMentionList(mentions));
+    if (fixed !== t.value) { t.value = fixed; f.parts[Number(t.dataset.agPart)] = fixed; }
+    agHlPaint(t, mentions);
+  });
   el.querySelector('#ag-sb-close').addEventListener('click', close);
   el.querySelector('#ag-sb-save').addEventListener('click', () => {
-    work.files.forEach((f) => { f.name = fixName(f.name); });
+    work.files.forEach((f) => {
+      f.name = fixName(f.name);
+      f.parts = f.parts.map((p) => agMentionFmt(p, agMentionList(mentions)));
+    });
     const seen = new Set();
     for (const f of work.files) {
       const k = f.name.toLowerCase();
@@ -3101,7 +3182,10 @@ function agOpenSheet(kind, edit) {
     }));
   }
   el.querySelector('#ag-sb').addEventListener('click', () => {
-    agOpenSandbox('Sandbox', sb, (s) => { sb = s; sbLabel(); }, isG ? 'group.txt' : 'agent.txt');
+    agOpenSandbox('Sandbox', sb, (s) => { sb = s; sbLabel(); }, isG ? 'group.txt' : 'agent.txt', () => {
+      const gid = isG ? (edit && edit.id) : (el.querySelector('#ag-group') || {}).value;
+      return agData.agents.filter((a) => gid && a.groupId === gid).map((a) => ({ name: a.name, color: opsInk(agAvNorm(a.avatar).bg) }));
+    });
   });
   el.querySelector('#ag-save').addEventListener('click', () => {
     const name = el.querySelector('#ag-name').value.trim();
@@ -5915,7 +5999,7 @@ function stopSpeaking() {
 }
 function pickVoice(s) {
   const vs = s.getVoices(), base = (settings.langOut || 'en').toLowerCase().split('-')[0];
-  const lang = (v) => v.lang.toLowerCase().replace('_', '-');
+  const lang = (v) => v.lang.toLowerCase().replace('_', '-').replace(/^fil(?=-|$)/, 'tl');
   const named = vs.find((v) => v.name === settings.voiceName);
   if (named && lang(named).startsWith(base)) return named;
   return vs.find((v) => lang(v) === (settings.langOut || '').toLowerCase()) || vs.find((v) => lang(v).startsWith(base)) || null;
@@ -5964,7 +6048,7 @@ const speakBrowser = function (text, btn = null) {
       est.stop();
       SpkFollow.at(base + SpkFollow.count(chunkTxt.slice(0, ev.charIndex)));
     };
-    u.lang = v?.lang || settings.langOut || 'en';
+    u.lang = v?.lang || (settings.langOut === 'tl' ? 'fil-PH' : settings.langOut) || 'en';
     if (v) u.voice = v;
     u.rate = rate; u.pitch = pitch;
     u.onend = () => { est.end(); next(); };
@@ -7229,7 +7313,7 @@ function initComposer() {
     const rec = new SpeechRec();
     rec.continuous = true;
     rec.interimResults = true;
-    rec.lang = settings.voiceIn === 'auto' ? (navigator.language || 'en-US') : settings.voiceIn;
+    rec.lang = settings.voiceIn === 'auto' ? (navigator.language || 'en-US') : (settings.voiceIn === 'tl' ? 'fil-PH' : settings.voiceIn);
 
     rec.onaudiostart = () => markReady(token);
     rec.onresult = (e) => {
@@ -12283,7 +12367,7 @@ function openArchive() {
 }
 
 function openWorlds() {
-  const p = fdOpen('Worlds', 'Communities and Networking', '');
+  const p = fdOpen('Worlds', 'Communities and Networking', '<div class="fd-empty fd-soon"><h3>Coming Soon!</h3><p>Arrival in V1.5, stay tuned!</p></div>');
   p.addEventListener('click', (e) => {
     if (e.target.closest('[data-fd="close"]')) fdClose();
   });
