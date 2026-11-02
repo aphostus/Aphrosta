@@ -2503,9 +2503,9 @@ function agAgentCard(a) {
   const f = agSbOf(a, 'agent.txt').files.length;
   const state = on ? 'Active' : 'Inactive';
   return `
-    <div class="lib-card ops-card ag-card${on ? '' : ' ag-off'}" style="--oc:${esc(opsInk(g ? (g.color || OPS_COLORS[0]) : OPS_COLORS[0]))}">
+    <div class="lib-card ops-card ag-card${on ? '' : ' ag-off'}" style="--oc:${esc(opsInk(agAvNorm(a.avatar).bg))}">
       <div class="lib-card-top">
-        <h4 class="lib-card-title"><span class="ops-ico ag-av-ico">${agAvSvg(a.avatar)}</span>${esc(a.name)}</h4>
+        <h4 class="lib-card-title"><span class="ops-ico ag-av-ico">${agAvSvg(a.avatar, true)}</span>${esc(a.name)}</h4>
         <div class="lib-card-act">
           <button class="icon-btn" type="button" data-ag-edit="agent:${esc(a.id)}" aria-label="Edit">${ICONS.pencil}</button>
           <button class="icon-btn" type="button" data-ag-del="agent:${esc(a.id)}" aria-label="Delete">${ICONS.trash}</button>
@@ -2744,6 +2744,15 @@ function agAvSvg(av, nobg) {
     + '</svg>';
 }
 
+const AG_AV_VB = { hat: '12 0 40 20', glasses: '16 22 32 18', shoes: '10 44 44 12', inhand: '40 8 24 44', offhand: '0 20 26 34' };
+function agAvPartSvg(cat, id, av) {
+  const a = agAvNorm(av);
+  const inner = cat === 'shape'
+    ? '<g fill="' + a.body + '" stroke="' + a.body + '" stroke-width="3" stroke-linejoin="round">' + AG_AV_BODY[id] + '</g>'
+    : AG_AV_PART[cat][id];
+  return '<svg class="ag-av-svg" viewBox="' + (AG_AV_VB[cat] || '8 8 48 44') + '" aria-hidden="true">' + inner + '</svg>';
+}
+
 const agAvHtml = () => '<div class="lib-lab">Avatar<div class="ag-av"><div class="ag-av-prev" data-ag-av-prev><button class="ag-av-shuf" type="button" data-ag-av-shuf aria-label="Randomize avatar">' + AG_SHUF + '</button><div class="ag-av-art" data-ag-av-art></div></div><div class="ag-av-ctl"><div class="ag-chips" data-ag-av-cats></div><div class="ag-av-opts" data-ag-av-opts></div></div></div></div>';
 
 function agAvBind(el, cur) {
@@ -2765,9 +2774,7 @@ function agAvBind(el, cur) {
       const on = cur.avatar[k] === id ? ' on' : '';
       if (cat === 'body' || cat === 'back') return '<button class="ag-av-opt ag-av-sw' + on + '" type="button" data-ag-av-pick="' + id + '" aria-label="' + id + '" style="--sw:' + id + '"></button>';
       if (id === 'none') return '<button class="ag-av-opt' + on + '" type="button" data-ag-av-pick="none" aria-label="None">' + ICONS.close + '</button>';
-      const one = {};
-      one[k] = id;
-      return '<button class="ag-av-opt' + on + '" type="button" data-ag-av-pick="' + id + '" aria-label="' + id + '">' + agAvSvg(Object.assign({}, cur.avatar, one), true) + '</button>';
+      return '<button class="ag-av-opt' + (cat === 'glasses' ? ' lite' : '') + on + '" type="button" data-ag-av-pick="' + id + '" aria-label="' + id + '">' + agAvPartSvg(cat, id, cur.avatar) + '</button>';
     }).join('');
   };
   const rnd = (list) => list[Math.floor(Math.random() * list.length)];

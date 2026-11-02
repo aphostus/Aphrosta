@@ -4511,6 +4511,7 @@ html[data-motion="reduce"] .sess-pw { animation: none; }
 .ag-av-opt.on { color: var(--fg); background: var(--glass-bg-hover); border-color: rgba(var(--fg-rgb), 0.45); }
 .ag-av-opt:active { transform: scale(0.94); }
 .ag-av-opt .ag-av-svg { width: 100%; height: 100%; }
+.ag-av-opt.lite { background: #e9e9ee; }
 .ag-av-opt.ag-av-sw { background: var(--sw); border-radius: 50%; }
 .ag-av-opt.ag-av-sw.on { outline: 2px solid var(--fg); outline-offset: 2px; }
 .ops-ico.ag-av-ico svg.ag-av-svg { width: 24px; height: 24px; }
