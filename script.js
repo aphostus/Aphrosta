@@ -17358,7 +17358,7 @@ const Acard = (() => {
 
       + '<div class="ac-seg"><button type="button" data-ac-c="white">White</button><button type="button" data-ac-c="black">Black</button></div>'
       + '<button class="ac-dl" type="button" data-ac-dl>Download</button>'
-      + '<p class="ac-note">This card holds your login and encryption key. Anyone with it can open your account. Never share it online.</p></div>';
+      + '<p class="ac-note">This card holds your login and encryption key. Anyone with it can open your account. Never share it to anyone.</p></div>';
     ov = d;
     document.body.appendChild(ov);
     ov.addEventListener('click', onClick);
