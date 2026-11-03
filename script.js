@@ -16567,6 +16567,7 @@ function introMarkup() {
       <div class="live-bar">
         <div class="live-pill">
           <input class="live-input" type="text" placeholder="Type to talk..." aria-label="Type a message" enterkeyhint="send" autocomplete="off" autocapitalize="sentences" maxlength="200">
+          <div class="live-dead-msg" aria-live="polite">Your daily trial is over, sign in or sign up to get access to more features.</div>
           <button class="live-send" type="button" aria-label="Send" hidden>${ICONS.rocket}</button>
         </div>
       </div>
@@ -16585,7 +16586,51 @@ function introStart() {
   const LABEL = { listening: 'Listening', hearing: 'Listening', thinking: 'Thinking\u2026', speaking: '' };
   let paused = false, started = false, tok = 0, ampT = 0, glanceT = 0, watchT = 0, lastAct = Date.now(), pend = null, flashT = 0, cardH = 150, asked = '';
 
+  /* ---- daily trial limit: 10 non-Aphrosta + 50 Aphrosta messages per day (device, local midnight) ---- */
+  const QK = 'aphrosta.introQuota', LIM_A = 50, LIM_O = 10;
+  const dayKey = () => { const n = new Date(); return n.getFullYear() + '-' + (n.getMonth() + 1) + '-' + n.getDate(); };
+  const quota = () => {
+    let q = null;
+    try { q = JSON.parse(localStorage.getItem(QK) || 'null'); } catch (_) {}
+    if (!q || q.d !== dayKey()) q = { d: dayKey(), a: 0, o: 0 };
+    return q;
+  };
+  const quotaSave = (q) => { try { localStorage.setItem(QK, JSON.stringify(q)); } catch (_) {} };
+  const ON_TOPIC = /\b(aphrosta|app|apps|api|key|keys|model|models|effort|memory|library|libraries|agent|agents|project|projects|operations?|automations?|connections?|connectors?|settings?|sessions?|chat|chats|sign ?in|sign ?up|account|features?|plans?|pricing|price|voice|live mode|theme|token|tokens|provider|groq|gemini|claude|chatgpt|deepseek|grok|kimi|perplexity|upgrade|free)\b/i;
+  const isOn = (t) => ON_TOPIC.test(t);
+  const spent = () => { const q = quota(); return q.a >= LIM_A && q.o >= LIM_O; };
+  const setDead = () => {
+    halt();
+    started = true; paused = false;
+    root.classList.add('is-dead');
+    root.dataset.state = 'dead';
+    root.dataset.emo = 'dead';
+    root.dataset.paused = '0';
+    label.textContent = '';
+    input.value = '';
+    input.disabled = true;
+    sendB.hidden = true;
+    const look = root.querySelector('.lv-look');
+    if (look && !look.querySelector('.lv-x')) {
+      const x = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      x.setAttribute('class', 'lv-x');
+      x.setAttribute('d', 'M58 86L82 114M82 86L58 114M118 86L142 114M142 86L118 114');
+      look.appendChild(x);
+    }
+  };
+  const redirect = async (on) => {
+    halt();
+    const my = tok;
+    started = true; paused = false; lastAct = Date.now();
+    setState('thinking', 'neutral');
+    try {
+      await speak(on ? 'That is all my Aphrosta chat for today. Ask me something else!' : 'I have used up my other-topic chats today. Ask me about Aphrosta!', my);
+    } catch (_) {}
+    if (my === tok) idle('neutral');
+  };
+
   const setState = (s, emo) => {
+    if (root.classList.contains('is-dead')) return;
     root.dataset.state = s;
     root.dataset.paused = paused ? '1' : '0';
     label.textContent = paused ? 'Paused' : ((micDenied && (s === 'listening' || s === 'hearing')) ? '' : (LABEL[s] || ''));
@@ -16625,7 +16670,7 @@ function introStart() {
     rec = null; listening = false;
   };
   const listen = () => {
-    if (!SR || micDenied || listening || !started || paused || !root.isConnected) return;
+    if (!SR || micDenied || listening || !started || paused || !root.isConnected || root.classList.contains('is-dead')) return;
     if (root.dataset.state !== 'listening' && root.dataset.state !== 'hearing') return;
     let r;
     try { r = new SR(); } catch (_) { micDenied = true; return; }
@@ -16726,6 +16771,11 @@ function introStart() {
   const send = async (raw) => {
     const t = String(raw || '').replace(/\s+/g, ' ').trim().slice(0, 200);
     if (!t) return;
+    if (spent()) { setDead(); return; }
+    const on = isOn(t), q = quota();
+    if ((on && q.a >= LIM_A) || (!on && q.o >= LIM_O)) { redirect(on); return; }
+    if (on) q.a++; else q.o++;
+    quotaSave(q);
     halt();
     const my = tok;
     started = true; paused = false; asked = t; lastAct = Date.now();
@@ -16737,7 +16787,7 @@ function introStart() {
       const j = await r.json();
       if (my !== tok) return;
       await speak(String(j.reply || 'Let us talk about Aphrosta!'), my);
-      if (my === tok) idle();
+      if (my === tok) { if (spent()) setDead(); else idle(); }
     } catch (e) {
       if (my !== tok) return;
       setState('listening', 'sad');
@@ -16804,7 +16854,8 @@ function introStart() {
 
   asleep();
   fit();
-  setTimeout(() => { if (root.isConnected && !started) greet(); }, 500);
+  if (spent()) setDead();
+  else setTimeout(() => { if (root.isConnected && !started) greet(); }, 500);
 }
 
 function showSignInButton() {

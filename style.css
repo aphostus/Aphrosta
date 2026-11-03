@@ -4890,3 +4890,16 @@ html[data-motion="reduce"] .sess-pw { animation: none; }
 .ag-hlwrap > .ag-code { display: block; }
 .ag-hl { position: absolute; z-index: 2; margin: 0; overflow: hidden; pointer-events: none; white-space: pre; color: transparent; border-style: solid; border-color: transparent; box-sizing: border-box; }
 
+/* ---------- Intro avatar: daily trial over (dead face) ---------- */
+.live-dead-msg { display: none; flex: 1; min-width: 0; font-size: 13px; line-height: 1.4; text-align: left; color: var(--gray-mid); opacity: 0.85; user-select: none; }
+.live-root.is-dead .live-dead-msg { display: block; }
+.live-root.is-dead .live-input, .live-root.is-dead .live-send { display: none !important; }
+.live-root.is-dead .live-pill { height: auto; min-height: 52px; padding: 8px 16px; border-radius: 22px; }
+.live-root.is-dead .live-ball { pointer-events: none; cursor: default; }
+.live-root.is-dead .live-float { animation: none; transform: translateY(8px) rotate(-4deg); }
+.live-root.is-dead .live-svg { animation: none; filter: grayscale(1) opacity(0.55); }
+.live-root.is-dead .live-halo, .live-root.is-dead .live-orbit, .live-root.is-dead .live-zzz { opacity: 0; }
+.live-root.is-dead .lv-eyes { opacity: 0; animation: none; }
+.live-root.is-dead .lv-look { transform: none; }
+.lv-x { fill: none; stroke: var(--bg); stroke-width: 7; stroke-linecap: round; }
+
