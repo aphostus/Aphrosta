@@ -16957,12 +16957,12 @@ async function acDraw(color, id, text) {
   const x = c.getContext('2d');
   const g = x.createLinearGradient(0, 0, W, H);
   if (dark) { g.addColorStop(0, '#26262a'); g.addColorStop(0.55, '#0c0c0e'); g.addColorStop(1, '#020203'); }
-  else { g.addColorStop(0, '#ffffff'); g.addColorStop(0.6, '#f4f4f6'); g.addColorStop(1, '#e4e4e8'); }
+  else { g.addColorStop(0, '#fbfbfc'); g.addColorStop(0.5, '#e7e7ea'); g.addColorStop(1, '#c4c4ca'); }
   x.fillStyle = g;
   acRound(x, 0, 0, W, H, 56); x.fill();
   x.save(); acRound(x, 0, 0, W, H, 56); x.clip();
   const sh = x.createRadialGradient(W * 0.88, -60, 20, W * 0.88, -60, 760);
-  sh.addColorStop(0, dark ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.9)');
+  sh.addColorStop(0, dark ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.5)');
   sh.addColorStop(1, 'rgba(255,255,255,0)');
   x.fillStyle = sh; x.fillRect(0, 0, W, H); x.restore();
   const eg = x.createLinearGradient(0, 0, W, H);
@@ -17050,7 +17050,7 @@ const Acard = (() => {
     color = settings.acardColor === 'white' ? 'white' : 'black';
     const d = document.createElement('div');
     d.className = 'ac-ov';
-    d.innerHTML = '<div class="ac-box"><div class="ac-head"><b>Acard</b><button class="ac-x" type="button" data-ac-x aria-label="Close">\u00d7</button></div>'
+    d.innerHTML = '<div class="ac-box"><div class="ac-head"><span></span><button class="ac-x" type="button" data-ac-x aria-label="Close">\u00d7</button></div>'
       + '<div class="ac-slot" data-ac-slot><p class="ac-note">Making your card\u2026</p></div>'
 
       + '<div class="ac-seg"><button type="button" data-ac-c="white">White</button><button type="button" data-ac-c="black">Black</button></div>'
