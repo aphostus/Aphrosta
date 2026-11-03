@@ -6,10 +6,8 @@
    TOKENS
    ============================================================ */
 :root {
-  --black: #000000;
   --gray-mid: #9a9a9a;
   --gray-light: #cccccc;
-  --white: #ffffff;
 
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, sans-serif;
 

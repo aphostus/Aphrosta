@@ -7,7 +7,6 @@ import {
   getAuth,
   GoogleAuthProvider,
   signInWithPopup,
-  signInWithRedirect,
   getRedirectResult,
   onAuthStateChanged,
   signOut,
@@ -161,7 +160,6 @@ const EL_VOICES = [
 ];
 
 /* EL-SEAL-BEGIN */
-const EL_SEAL = { p: ["R9h8BHPVU6qp","2IZh0x7iJZoA","ZJ9CqxIZtXOX","UyolL3Sv9iUG"], o: [0,3,1,2], s: 'mYa/ns6UyrHDuhgeGZ5WLg==', i: 'L8ghdfRmn0xr4fI4', c: ["PLszFY6Bf0drAc","Yzq9pS7RqbN164X","qe5L5lubgkJahDfjN87rKqmXnG4cQaTlB08FhdlPDcZpUMKSysmjqqjlry0ag=="] };
 /* EL-SEAL-END */
 
 /* ---------- GROQ voice (user's own key) ---------- */
@@ -678,12 +676,6 @@ function ensureToastHost() {
   }
   return host;
 }
-
-const TOAST_ICON = {
-  error:   () => ICONS.alert,
-  success: () => ICONS.okc,
-  info:    () => ICONS.infoSm
-};
 
 const INBOX_LS = 'aphrosta.inbox';
 let inboxItems = (() => { const l = lsGet(INBOX_LS, []); return Array.isArray(l) ? l : []; })();
@@ -1458,9 +1450,6 @@ const priceTag = (pid, mid) => {
   return `<span class="price-tag ${free ? 'is-free' : 'is-paid'}">${free ? 'Free' : 'Paid'}</span>`;
 };
 const providerPriceLabel = (pid) => (FREE_TIER[pid] === true ? 'Free' : FREE_TIER[pid] ? 'Free + Paid' : 'Paid');
-
-const DEFAULT_QUOTA = { limit: Infinity, reset: 'daily' };
-const quotaFor = () => ({ ...DEFAULT_QUOTA });
 
 const BAD_MODELS_LS = 'aphrosta.badModels';
 let badModels = {};
@@ -3059,79 +3048,6 @@ async function agDiscuss(text, atts) {
   }
 }
 
-async function agDiscussLegacy(text, atts) {
-  const ap = agPlayInfo();
-  if (!ap || chatBusy) return;
-  const list = ap.kind === 'group' ? agData.agents.filter((a) => a.groupId === ap.id && a.use !== false && agReady(a)) : [ap.item];
-  if (!list.length || !agReady(list[0])) { toast('No ready agents. Check each agent\u2019s LLM, key and model.', 'info', 2600); return; }
-  chatBusy = true;
-  const session = currentSession;
-  const myAbort = new AbortController();
-  chatAbort = myAbort;
-  const files = (atts || []).map((x) => ({ ...x }));
-  session.messages.push({ role: 'user', content: text, t: Date.now(), attachments: files.length ? files : undefined });
-  if (session.draft) {
-    session.draft = false;
-    session.title = makeTitle(text);
-    sessions.push(session);
-    clearDraft();
-  }
-  haptic(12); sfx('send');
-  session.updated = Date.now();
-  persistSessions();
-  chatStick = true;
-  syncSessionControls();
-  renderSessionUi();
-  scrollDown();
-  startStatusRotor();
-  const max = list.length > 1 ? (AG_TURNS[activeEffort] || 4) : 1;
-  const names = list.map((a) => a.name);
-  let lastNorm = '';
-  let ph = null;
-  const dropPh = () => { if (ph) { const ix = session.messages.indexOf(ph); if (ix >= 0) session.messages.splice(ix, 1); ph = null; } };
-  try {
-    for (let t = 0; t < max; t++) {
-      if (myAbort.signal.aborted) break;
-      const a = list[t % list.length];
-      ph = { role: 'assistant', content: '', provider: a.llm.provider, model: a.llm.model, effort: activeEffort, t: Date.now(), reasoning: '', thinkWanted: false, thinkStarted: 0, thinkMs: 0, thinkId: uid(), thinkModel: a.llm.provider, thinkVariant: a.llm.model, agent: a.name, agRef: { kind: ap.kind, id: ap.id } };
-      session.messages.push(ph);
-      renderSessionUi();
-      scrollDown();
-      let clean = await agSay(a, names, agTranscript(session), myAbort.signal);
-      const pre = a.name.toLowerCase() + ':';
-      if (clean.toLowerCase().startsWith(pre)) clean = clean.slice(pre.length).trim();
-      if (!clean || /^\W*done\W*$/i.test(clean)) { dropPh(); break; }
-      const norm = clean.toLowerCase().replace(/\W+/g, ' ').trim();
-      if (norm === lastNorm) { dropPh(); break; }
-      lastNorm = norm;
-      ph.content = '**' + a.name + ':** ' + clean;
-      ph.agText = clean;
-      ph.status = 'complete';
-      ph.t = Date.now();
-      ph = null;
-      session.updated = Date.now();
-      persistSessions();
-      renderSessionUi();
-      scrollDown();
-    }
-  } catch (e) {
-    if (!(e && e.name === 'AbortError')) {
-      const st = e && e.status;
-      toast((e && e.message) || (st ? 'The model returned an error (' + st + ').' : 'Could not reach the model.'), 'error', 3600);
-    }
-  } finally {
-    dropPh();
-    chatBusy = false;
-    setAiState('idle');
-    persistSessions();
-    Cloud.flush();
-    syncSessionControls();
-    renderSessionUi();
-    scrollDown(true);
-    sfx('done');
-  }
-}
-
 /* ---------- @AGENT MENTIONS (sandbox text) ---------- */
 const agNameRe = (list) => list.map((m) => m.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
 
@@ -3597,7 +3513,6 @@ function agAvBind(el, cur) {
   const catsEl = el.querySelector('[data-ag-av-cats]');
   const optsEl = el.querySelector('[data-ag-av-opts]');
   if (!art || !prev || !catsEl || !optsEl) return;
-  const origAvatar = JSON.parse(JSON.stringify(cur.avatar));
   let cat = 'shape';
   const CATS = [['shape', 'Shape'], ['body', 'Body'], ['back', 'Background'], ['hat', 'Hat'], ['glasses', 'Glasses'], ['shoes', 'Shoes'], ['inhand', 'In-hand'], ['offhand', 'Off-hand'], ['face', 'Face'], ['neck', 'Neck'], ['cape', 'Cape'], ['hair', 'Hair'], ['aura', 'Aura'], ['pet', 'Pet'], ['outfit', 'Outfit'], ['expr', 'Mood']];
   const key = (c) => (c === 'back' ? 'bg' : c);
@@ -4298,7 +4213,6 @@ const opsOpenDirs = new Set();
 
 async function opsTreeInit(panel, project) {
   const box = panel.querySelector('[data-ops-tree]');
-  const where = panel.querySelector('[data-ops-where]');
   if (!box) return;
   let list = [];
   try { list = await opsFiles(project.id); } catch (_) { toast('Could not read files. (E08)'); }
@@ -4312,7 +4226,6 @@ async function opsTreeInit(panel, project) {
     const m = { js: 'js', mjs: 'js', html: 'html', htm: 'html', css: 'css', json: 'json', py: 'py', md: 'md', txt: 'txt' };
     return m[e] || 'txt';
   };
-  const langName = (id) => (OPS_LANGS.find((l) => l.id === id) || OPS_LANGS[6]).name;
 
   const tokOf = (n) => (n.kind === 'file'
     ? estTokens(n.text || '')
@@ -7687,7 +7600,6 @@ const ATTACH_TEXT_EXT = /\.(txt|md|markdown|json|csv|tsv|log|xml|yml|yaml|toml|i
 const ATTACH_TEXT_MAX_BYTES = 150 * 1024;
 const ATTACH_TEXT_CAP = 12000;
 const ATTACH_IMG_MAX_BYTES = 12 * 1024 * 1024;
-const imageStore = new Map();
 let pendingFiles = [];
 const PENDING_SS = 'aphrosta.pending';
 function persistPending() {
@@ -8021,34 +7933,6 @@ const Live = (() => {
 
   /* ---- one conversation turn: send through the normal chat, wait, speak ---- */
   const callsOf = (m) => { try { return parseToolCalls(m.content || '').length; } catch (_) { return 0; } };
-
-  const waitReply = async (my, before) => {
-    const t0 = Date.now();
-    let calm = 0;
-    await sleep(300);
-    while (my === tok && Date.now() - t0 < 240000) {
-      const ms = currentSession.messages;
-      const last = ms[ms.length - 1];
-      const tooling = searchBusy > 0 || !!(last && (last.hidden || (last.role === 'assistant' && callsOf(last))));
-      if (chatBusy || tooling) {
-        calm = 0;
-        if (root && root.dataset.state !== 'speaking') {
-          setState(tooling ? 'searching' : 'thinking', tooling ? 'curious' : root.dataset.emo);
-          const lb = $('.live-label');
-          const al = AI_STATES[aiState] && AI_STATES[aiState].label;
-          if (lb && !tooling && al && aiState !== 'idle') lb.textContent = al;
-        }
-      } else if ((calm += 150) >= 900 || (ms.length <= before && Date.now() - t0 > 1800)) break;
-      await sleep(150);
-    }
-    if (my !== tok) return null;
-    const ms = currentSession.messages;
-    for (let i = ms.length - 1; i >= before; i--) {
-      const m = ms[i];
-      if (m.role === 'assistant' && !m.hidden && m.content && !m.__empty && !m.__failed && !callsOf(m)) return m;
-    }
-    return null;
-  };
 
   const say = async (m, my) => {
     const body = splitPlanParts(m.content).clean || m.content;
@@ -13293,23 +13177,6 @@ async function renameSession(id) {
 }
 
 /* Copy a whole session exactly as it is displayed (hidden context and failed replies left out) */
-async function copySession(id) {
-  const s = sessions.find((x) => x.id === id) || (currentSession.id === id ? currentSession : null);
-  if (!s) return;
-  const parts = [];
-  s.messages.forEach((m) => {
-    if (m.hidden || m.__failed || m.__empty || (m.role !== 'user' && m.role !== 'assistant')) return;
-    let t = m.pw && !pwOpen.has(m) ? '[Locked message]' : stripToolLines(pwBody(m));
-    if (m.role === 'assistant' && settings.agentPlan) t = splitPlanParts(t).clean;
-    const files = (m.attachments || []).map((a) => '[Attached: ' + a.name + ']').join('\n');
-    t = [files, t].filter(Boolean).join('\n').trim();
-    if (!t) return;
-    parts.push((m.role === 'user' ? 'You' : 'Assistant') + ':\n' + t);
-  });
-  if (!parts.length) { toast('Nothing to copy in that session.', 'info', 1800); return; }
-  const ok = await copyText(parts.join('\n\n'));
-  toast(ok ? 'Session copied.' : 'Couldn\u2019t copy. (D09)', ok ? 'success' : 'error', 1800);
-}
 
 /* Long press any chat, then drag to reorder. Drag past the list: bottom = download JSON, top = replace from JSON. */
 function bindPinDrag() {
@@ -14038,11 +13905,6 @@ function chatReady() {
     return false;
   }
   return true;
-}
-
-function setChatBusy(on) {
-  chatBusy = on;
-  syncSessionControls();
 }
 
 function stopGeneration() {
@@ -15045,8 +14907,6 @@ function sfx(name) {
   } catch (_) {}
 }
 
-function blip(f = 660, d = 0.09) { SFX._blip = [{ f, d }]; sfx('_blip'); }
-
 function playRandomTrack() {
   if (!settings.soundMusic || !permAllowed('audio')) return;
   clearTimeout(musicTimer);
@@ -15693,111 +15553,6 @@ function startOnboarding(force = false) {
   playTutorial();
 }
 
-function startOnboardingOld(force = false) {
-  if (document.querySelector('.tour')) return;
-  if (!force) { try { if (localStorage.getItem(tourKey())) return; } catch (_) {} }
-  const reduce = document.documentElement.dataset.motion === 'reduce';
-  const root = document.createElement('div');
-  root.className = 'tour';
-  root.innerHTML = `<div class="tour-spot"></div>
-    <div class="tour-card" role="dialog" aria-modal="true" aria-live="polite">
-      <div class="tour-art"></div>
-      <h3 class="tour-title"></h3>
-      <p class="tour-text"></p>
-      <div class="tour-dots">${TOUR_STEPS.map(() => '<i></i>').join('')}</div>
-      <div class="tour-actions">
-        <button class="tour-skip" type="button">Skip</button>
-        <span class="tour-spacer"></span>
-        <button class="tour-back" type="button">Back</button>
-        <button class="tour-next" type="button">Next</button>
-      </div>
-    </div>`;
-  document.body.appendChild(root);
-
-  const spot = root.querySelector('.tour-spot');
-  const card = root.querySelector('.tour-card');
-  const art = root.querySelector('.tour-art');
-  const sidebarEl = document.getElementById('sidebar');
-  const sidebarWasOpen = !!sidebarEl?.classList.contains('open');
-  let idx = 0, alive = true;
-
-  const visible = (el) => {
-    if (!el) return false;
-    const r = el.getBoundingClientRect();
-    return r.width > 0 && r.height > 0 && r.right > 0 && r.left < innerWidth && r.bottom > 0 && r.top < innerHeight;
-  };
-
-  const place = () => {
-    const s = TOUR_STEPS[idx];
-    const el = s.sel ? document.querySelector(s.sel) : null;
-    if (el && visible(el)) {
-      const r = el.getBoundingClientRect();
-      const pad = 8;
-      spot.style.cssText = `top:${r.top - pad}px;left:${r.left - pad}px;width:${r.width + pad * 2}px;height:${r.height + pad * 2}px;`;
-      const cw = card.offsetWidth, ch = card.offsetHeight;
-      const below = r.bottom + pad + 14 + ch < innerHeight;
-      const top = below ? r.bottom + pad + 14 : Math.max(12, r.top - pad - 14 - ch);
-      const left = Math.min(Math.max(12, r.left + r.width / 2 - cw / 2), innerWidth - cw - 12);
-      card.style.cssText = `top:${top}px;left:${left}px;transform:none;`;
-    } else {
-      spot.style.cssText = '';
-      card.style.cssText = 'top:50%;left:50%;transform:translate(-50%,-50%);';
-    }
-  };
-
-  const finish = () => {
-    if (!alive) return;
-    alive = false;
-    document.removeEventListener('keydown', onKey, true);
-    removeEventListener('resize', place);
-    if (!sidebarWasOpen && !matchMedia('(min-width: 860px)').matches) sidebarEl?.classList.remove('open');
-    root.classList.add('leaving');
-    setTimeout(() => root.remove(), reduce ? 0 : 260);
-    try { localStorage.setItem(tourKey(), '1'); } catch (_) {}
-  };
-
-  const show = async (n, dir = 1) => {
-    while (n >= 0 && n < TOUR_STEPS.length) {
-      const s = TOUR_STEPS[n];
-      if (!s.sel) break;
-      if (s.sidebar && sidebarEl && !sidebarEl.classList.contains('open')) {
-        sidebarEl.classList.add('open');
-        await new Promise((r) => setTimeout(r, reduce ? 0 : 380));
-      }
-      if (visible(document.querySelector(s.sel))) break;
-      n += dir;
-    }
-    if (!alive) return;
-    if (n >= TOUR_STEPS.length) return finish();
-    idx = Math.max(0, n);
-    const s = TOUR_STEPS[idx];
-    root.querySelector('.tour-title').textContent = s.title;
-    root.querySelector('.tour-text').textContent = s.text;
-    art.innerHTML = idx === 0 ? aphMark({ animated: true }) : '';
-    art.hidden = idx !== 0;
-    root.querySelectorAll('.tour-dots i').forEach((d, k) => d.classList.toggle('on', k === idx));
-    root.querySelector('.tour-back').hidden = idx === 0;
-    root.querySelector('.tour-next').textContent = idx === TOUR_STEPS.length - 1 ? 'Done' : 'Next';
-    card.classList.remove('in');
-    void card.offsetWidth;
-    card.classList.add('in');
-    place();
-  };
-
-  const onKey = (e) => {
-    if (e.key === 'Escape') { e.stopPropagation(); finish(); }
-    else if (e.key === 'ArrowRight' || e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); idx === TOUR_STEPS.length - 1 ? finish() : show(idx + 1, 1); }
-    else if (e.key === 'ArrowLeft') { e.stopPropagation(); show(idx - 1, -1); }
-  };
-
-  root.querySelector('.tour-skip').addEventListener('click', finish);
-  root.querySelector('.tour-back').addEventListener('click', () => show(idx - 1, -1));
-  root.querySelector('.tour-next').addEventListener('click', () => (idx === TOUR_STEPS.length - 1 ? finish() : show(idx + 1, 1)));
-  document.addEventListener('keydown', onKey, true);
-  addEventListener('resize', place);
-  show(0, 1);
-}
-
 /* ---------- TUTORIAL FILM (auto-playing, sandboxed demo, nothing saved) ---------- */
 const TUT_HINTS = [
   { k: 'drag', t: 'Reorder your sessions', x: 'Hold any chat until it lifts, then drag it up or down to reorder.' },
@@ -15838,7 +15593,6 @@ function tutHintDemo(h) {
 }
 
 function tutScenes() {
-  const SV = (d) => `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
   const Q = (S, k) => S.querySelector(`[data-k="${k}"]`);
   const typeTo = (at, node, txt, t0, gap) => {
     for (let n = 0; n < txt.length; n++) at(t0 + n * gap, () => { node.textContent = txt.slice(0, n + 1); });
@@ -16347,188 +16101,9 @@ function renderSigningIn() {
   }, 8000);
 }
 
-let signArtTimer = null;
-function startSignArt() {
-  const el = document.getElementById('signin-art');
-  if (!el) return;
-  clearInterval(signArtTimer);
-  const RAMP = " .,:;-~=+*oxO#%@";
-  const N = RAMP.length - 1;
-  let cols = 0, rows = 0, asp = 1.8, buf = null, ov = null, starH = null;
-  let cx = 0, cy = 0, R = 1, t = 0;
-  const t0 = performance.now();
-  const hash = (x, y) => {
-    let h = (Math.imul(x, 374761393) + Math.imul(y, 668265263)) | 0;
-    h = Math.imul(h ^ (h >>> 13), 1274126177);
-    return ((h ^ (h >>> 16)) >>> 0) / 4294967295;
-  };
-  const fit = () => {
-    el.textContent = '';
-    const probe = document.createElement('span');
-    probe.textContent = 'M'.repeat(20);
-    el.appendChild(probe);
-    const cw = probe.getBoundingClientRect().width / 20 || 4.2;
-    const ch = parseFloat(getComputedStyle(el).lineHeight) || 7;
-    asp = ch / cw;
-    cols = Math.ceil(window.innerWidth / cw) + 1;
-    rows = Math.ceil(window.innerHeight / ch) + 1;
-    buf = new Float32Array(cols * rows);
-    ov = new Uint8Array(cols * rows);
-    starH = new Float32Array(cols * rows);
-    for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) starH[y * cols + x] = hash(x, y);
-    cx = cols * 0.5;
-    cy = rows * 0.36;
-    R = cols * 0.09;
-    el.textContent = '';
-  };
-  // brightness write that never paints inside the black hole
-  const put = (x, y, v) => {
-    const xi = Math.round(x), yi = Math.round(y);
-    if (xi < 0 || yi < 0 || xi >= cols || yi >= rows) return;
-    const ddx = xi - cx, ddy = (yi - cy) * asp;
-    if (ddx * ddx + ddy * ddy < R * R) return;
-    const i = yi * cols + xi;
-    if (v > buf[i]) { buf[i] = v; ov[i] = 0; }
-  };
-  const starChar = (h, tw) => {
-    if (h < 0.004) return tw > 0.45 ? 42 : 43;
-    if (h < 0.015) return tw > 0.7 ? 43 : (tw > 0.3 ? 46 : 0);
-    return tw > 0.4 ? 46 : 0;
-  };
-  const frame = () => {
-    t = (performance.now() - t0) / 1000;
-    buf.fill(0);
-    const total = cols * rows;
-
-    // stars: positions are precomputed, only the twinkle is live
-    for (let i = 0; i < total; i++) {
-      const h = starH[i];
-      ov[i] = h < 0.035 ? starChar(h, 0.5 + 0.5 * Math.sin(t * (1.2 + h * 55) + h * 300)) : 0;
-    }
-
-    // ringed planet, lit from the upper left
-    const px = cols * 0.17, py = rows * 0.13, pr = cols * 0.075;
-    const pyr = Math.ceil(pr / asp);
-    for (let y = Math.max(0, Math.floor(py - pyr * 1.4)); y < Math.min(rows, py + pyr * 1.4); y++) {
-      for (let x = Math.max(0, Math.floor(px - pr * 2)); x < Math.min(cols, px + pr * 2); x++) {
-        const i = y * cols + x;
-        const pdx = x - px, pdy = (y - py) * asp;
-        const prr = Math.sqrt(pdx * pdx + pdy * pdy);
-        if (prr < pr) {
-          const nx = pdx / pr, ny = pdy / pr, nz = Math.sqrt(Math.max(0, 1 - nx * nx - ny * ny));
-          const lum = Math.max(0, nx * -0.55 + ny * -0.45 + nz * 0.7);
-          buf[i] = 0.06 + lum * (0.8 + 0.2 * Math.sin(ny * 9 + nx * 1.5));
-          ov[i] = 0;
-        }
-        const qy = pdy + pdx * 0.35;
-        const q = Math.sqrt((pdx / (pr * 1.9)) ** 2 + (qy / (pr * 0.5)) ** 2);
-        if (Math.abs(q - 1) < 0.08 && !(prr < pr && qy < 0)) { buf[i] = Math.max(buf[i], 0.6); ov[i] = 0; }
-      }
-    }
-
-    // black hole: lensed stars, photon ring, lensed arch, accretion disk
-    const ca = Math.cos(-0.32), sa = Math.sin(-0.32);
-    const hy = Math.ceil((R * 5) / asp);
-    for (let y = Math.max(0, Math.floor(cy - hy)); y < Math.min(rows, cy + hy); y++) {
-      for (let x = Math.max(0, Math.floor(cx - R * 5)); x < Math.min(cols, cx + R * 5); x++) {
-        const i = y * cols + x;
-        const dx = x - cx, dy = (y - cy) * asp;
-        const r2 = dx * dx + dy * dy;
-        const r = Math.sqrt(r2);
-        if (r < R) { buf[i] = 0; ov[i] = 0; }
-        else if (r < R * 5) {
-          const k = Math.min(0.9, (R * R * 2.2) / r2);
-          const sx = Math.round(cx + dx * (1 - k)), sy = Math.round(cy + (dy * (1 - k)) / asp);
-          const h = (sx >= 0 && sy >= 0 && sx < cols && sy < rows) ? starH[sy * cols + sx] : 1;
-          ov[i] = h < 0.035 ? starChar(h, 0.5 + 0.5 * Math.sin(t * (1.2 + h * 55) + h * 300)) : 0;
-        }
-        if (r >= R * 4) continue;
-        const ex = dx * ca + dy * sa;
-        const ey = -dx * sa + dy * ca;
-        const ax = Math.abs(ex);
-        let b = buf[i];
-        if (r >= R && r < R * 1.16) {
-          b = 1; ov[i] = 0;
-        } else if (r >= R * 1.16 && r < R * 1.9 && ey < 0 && ax < R * 1.6) {
-          const sw = 0.5 + 0.5 * Math.sin(Math.atan2(dy, dx) * 5 - t * 3 + r * 0.4);
-          b = Math.max(b, 0.3 + 0.55 * sw * (1 - (r - R * 1.16) / (R * 0.74)));
-          ov[i] = 0;
-        }
-        const th = R * 0.2 * (1 - 0.55 * ax / (R * 3.8));
-        if (ax < R * 3.8 && Math.abs(ey) < th) {
-          const fall = 1 - ax / (R * 3.8);
-          const sw = 0.5 + 0.5 * Math.sin(ax * 0.9 - t * 4 + (ex < 0 ? 3.1 : 0));
-          b = Math.max(b, Math.min(1, (0.25 + 0.75 * fall) * (0.6 + 0.4 * sw) * (ex > 0 ? 1 : 0.72) * 1.15));
-          ov[i] = 0;
-        }
-        buf[i] = b;
-      }
-    }
-
-    // shooting stars
-    for (let m = 0; m < 4; m++) {
-      const P = 6 + m * 2.3, off = m * 3.1;
-      const k = Math.floor((t + off) / P);
-      const u = ((t + off) % P) / 2.0;
-      if (u >= 1) continue;
-      const dir = hash(k, m * 7 + 3) > 0.5 ? 1 : -1;
-      const sx0 = dir > 0 ? hash(k, m * 7 + 1) * cols * 0.6 : cols - hash(k, m * 7 + 1) * cols * 0.6;
-      const sy0 = hash(k, m * 7 + 2) * rows * 0.5;
-      const run = cols * 0.7 * u;
-      const hx = sx0 + dir * run, hy = sy0 + run * 0.42;
-      for (let j = 0; j < 18; j += 0.5) {
-        put(hx - dir * j, hy - j * 0.42, j === 0 ? 1 : 0.95 - j / 20);
-      }
-      put(hx + dir, hy, 0.7); put(hx, hy - 1, 0.5); put(hx, hy + 1, 0.5);
-    }
-
-    // supernova shockwave every 20s
-    const EP = 20, ek = Math.floor(t / EP), eph = t % EP;
-    if (eph < 5) {
-      const ecx = hash(ek, 901) * cols, ecy = hash(ek, 902) * rows * 0.6;
-      const rad = eph * cols * 0.2, fade = 1 - eph / 5;
-      const steps = Math.max(24, Math.floor(rad * 7));
-      for (let s = 0; s < steps; s++) {
-        const a = (s / steps) * Math.PI * 2;
-        put(ecx + Math.cos(a) * rad, ecy + Math.sin(a) * rad / asp, 0.95 * fade);
-        put(ecx + Math.cos(a) * (rad - 1.2), ecy + Math.sin(a) * (rad - 1.2) / asp, 0.5 * fade);
-      }
-      if (eph < 0.3) {
-        for (let yy = -3; yy <= 3; yy++) for (let xx = -6; xx <= 6; xx++) put(ecx + xx, ecy + yy, 1 - eph * 2);
-      }
-    }
-
-    let out = '';
-    for (let y = 0; y < rows; y++) {
-      let row = '';
-      for (let x = 0; x < cols; x++) {
-        const i = y * cols + x, v = buf[i];
-        row += (ov[i] && v < 0.35) ? String.fromCharCode(ov[i]) : RAMP[Math.min(N, (v * N + 0.5) | 0)];
-      }
-      out += row + (y < rows - 1 ? '\n' : '');
-    }
-    return out;
-  };
-  const onResize = () => {
-    if (!el.isConnected) { window.removeEventListener('resize', onResize); return; }
-    fit();
-    el.textContent = frame();
-  };
-  fit();
-  el.textContent = frame();
-  window.addEventListener('resize', onResize);
-  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  signArtTimer = setInterval(() => {
-    if (!el.isConnected) { clearInterval(signArtTimer); return; }
-    el.textContent = frame();
-  }, 90);
-}
-
 /* ---------- INTRO AVATAR (sign-in screen) ---------- */
 const INTRO_WORKER = 'https://hidden-thunder-9380.aphostus-org.workers.dev';
 const INTRO_GREET = 'Hi there, welcome to Aphrosta! Let us talk about it. Ready?';
-const INTRO_GREET_FILE = 'intro-greeting.wav';
-const INTRO_GUIDE = 'Guide for your reply: you are the friendly Aphrosta guide on its sign-in screen. Answer the question below in 1-3 short spoken sentences, no markdown or lists. Aphrosta is a mobile-first AI chat app where you bring your own API key (Groq, Gemini, Claude, ChatGPT, DeepSeek, Grok, Kimi, Perplexity). It has chat sessions, memory, a library of files, agents, projects, automations, connections, operations, voice and Live mode, themes, and encrypted cloud sync. Answer questions about Aphrosta directly and helpfully. For unrelated topics, answer briefly and kindly, then steer back to Aphrosta. Mention signing in or signing up for more features when it fits. Question: ';
 
 function introMarkup() {
   return `<div class="live-root intro-live" data-state="listening" data-emo="sleepy" data-paused="1">
