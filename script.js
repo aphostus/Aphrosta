@@ -3900,7 +3900,7 @@ function agOpenSheet(kind, edit) {
       const insTxt = el.querySelector('#ag-ins').value.trim();
       const lbl = sv.textContent;
       sv.disabled = true;
-      sv.textContent = 'Scanning\u2026';
+      sv.textContent = 'Scanning';
       try {
         const text = await agIntro({ name, instructions: insTxt, llm: { provider: cur.llm.provider, key: cur.llm.key.trim(), model: cur.llm.model } });
         introNew = { text, sig: name + '\n' + insTxt };
@@ -15014,6 +15014,7 @@ function openModelPicker() {
           <span class="fd-sub" data-role="picker-sub">Pick a model variation</span>
         </div>
         <span class="fd-bar-actions">
+          ${usable.length ? '<button class="fd-pill" type="button" data-r="save">Save</button>' : '<button class="fd-pill" type="button" data-r="open">Providers</button>'}
           <button class="fd-pill" type="button" data-r="reset">Refresh</button>
           <button class="fd-ic" type="button" data-r="close" aria-label="Close">${ICONS.close}</button>
         </span>
@@ -15023,7 +15024,6 @@ function openModelPicker() {
           ${ICONS.searchModels}
           <input type="search" placeholder="Search models" aria-label="Search models" autocomplete="off" data-role="picker-search">
         </label>
-        ${usable.length ? '' : '<button class="fd-pill mv-open" type="button" data-r="open">Open providers</button>'}
       </div>
       <div class="mv-slot"></div>
       <div class="picker-empty fd-empty" hidden><h3>No models match</h3><p>Try a different search.</p></div>
@@ -15032,6 +15032,7 @@ function openModelPicker() {
   scrim.querySelector('.mv-slot').replaceWith(body);
   const searchInput = scrim.querySelector('[data-role="picker-search"]');
   const emptyEl = scrim.querySelector('.picker-empty');
+  let picked = null;
 
   function paint(query = '') {
     const q = query.trim().toLowerCase();
@@ -15052,7 +15053,7 @@ function openModelPicker() {
       const seriesHtml = [...bySeries.entries()].map(([series, models]) => `
         <div class="picker-series">${esc(series)}</div>
         ${models.map((m) => {
-          const on = activeModel === p.id && currentVariant(p.id).id === m.id;
+          const on = picked ? (picked.pid === p.id && picked.mid === m.id) : (activeModel === p.id && currentVariant(p.id).id === m.id);
           const bad = !!badModels[badKey(p.id, m.id)];
           return `<button class="effort-option${on ? ' is-active' : ''}${bad ? ' is-bad' : ''}" type="button" data-p="${p.id}" data-m="${esc(m.id)}" ${bad ? 'title="This API key doesn\u2019t have access"' : ''}>
             <span class="effort-option-name">${esc(m.name)}${bad ? ' <span class="effort-option-note">(Unsupported)</span>' : ''}</span>${priceTag(p.id, m.id)}${on ? `<span class="provider-check">${ICONS.check}</span>` : ''}
@@ -15096,6 +15097,7 @@ function openModelPicker() {
         paint(searchInput?.value || '');
         return;
       }
+      if (rv === 'save') return commitPick();
       done();
       if (rv === 'open') openModelMenu();
       return;
@@ -15108,6 +15110,18 @@ function openModelPicker() {
       toast(`${currentVariantName(pid, mid)} isn\u2019t supported with this API key.`, 'info', 2400);
       return;
     }
+    picked = { pid, mid };
+    body.querySelectorAll('.effort-option.is-active').forEach((b) => {
+      b.classList.remove('is-active');
+      b.querySelector('.provider-check')?.remove();
+    });
+    opt.classList.add('is-active');
+    opt.insertAdjacentHTML('beforeend', `<span class="provider-check">${ICONS.check}</span>`);
+  });
+
+  function commitPick() {
+    if (!picked) return done();
+    const { pid, mid } = picked;
     const resend = pendingResend;
     pendingResend = null;
     activeModel = pid;
@@ -15139,7 +15153,7 @@ function openModelPicker() {
         }
       }, 220);
     }
-  });
+  }
 
   const onSearch = (e) => {
     if (e.target.matches('[data-role="picker-search"]')) paint(e.target.value);
@@ -15147,9 +15161,7 @@ function openModelPicker() {
   scrim.addEventListener('input', onSearch);
   scrim.addEventListener('search', onSearch);
 
-  if (!usable.length) {
-    body.innerHTML = `<p class="dialog-msg">Add an API key to a provider first, then pick its models here.</p>`;
-  } else {
+  if (usable.length) {
     paint();
   }
 
