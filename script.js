@@ -726,7 +726,37 @@ function openCodeGuide(code) {
   }, 80);
 }
 
+const inboxUtcStart = () => { const d = new Date(); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()); };
+
+function inboxPurge() {
+  const start = inboxUtcStart();
+  const before = inboxItems.length;
+  inboxItems = inboxItems.filter((it) => it && Number(it.t) >= start);
+  if (inboxItems.length === before) return false;
+  lsSet(INBOX_LS, inboxItems);
+  return true;
+}
+
+function inboxSchedulePurge() {
+  clearTimeout(inboxSchedulePurge.t);
+  inboxSchedulePurge.t = setTimeout(() => {
+    inboxPurge();
+    try { if (document.querySelector('[data-fd-inbox-list]')) renderInbox(); } catch (_) {}
+    inboxSchedulePurge();
+  }, Math.max(1000, inboxUtcStart() + 864e5 - Date.now() + 500));
+}
+
+inboxPurge();
+inboxSchedulePurge();
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') return;
+  inboxPurge();
+  inboxSchedulePurge();
+  try { if (document.querySelector('[data-fd-inbox-list]')) renderInbox(); } catch (_) {}
+});
+
 function inboxPush(message, type) {
+  inboxPurge();
   const now = Date.now();
   const last = inboxItems[0];
   if (last && last.m === message && now - last.t < 5000) return;
@@ -5756,6 +5786,7 @@ function fdOpen(title, sub, bodyHtml, actionsHtml = '') {
 function renderInbox() {
   const box = document.querySelector('[data-fd-inbox-list]');
   if (!box) return;
+  inboxPurge();
   const sub = document.querySelector('[data-fd-sub]');
   if (sub) sub.textContent = inboxItems.length ? `${inboxItems.length} saved` : 'Activity and errors';
   const clr = document.querySelector('[data-fd="inbox-clear"]');
@@ -5765,9 +5796,9 @@ function renderInbox() {
     return;
   }
   const ico = { error: FD_I.err, success: FD_I.ok };
-  const dayKey = (t) => new Date(t).toDateString();
-  const todayKey = new Date().toDateString();
-  const yestKey = new Date(Date.now() - 864e5).toDateString();
+  const dayKey = (t) => new Date(t).toISOString().slice(0, 10);
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const yestKey = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
   const dayLabel = (t) => {
     const k = dayKey(t);
     return k === todayKey ? 'Today' : k === yestKey ? 'Yesterday' : new Date(t).toLocaleDateString([], { month: 'short', day: 'numeric' });
@@ -14975,7 +15006,7 @@ function openModelPicker() {
   const usable = MODEL_PROVIDERS.filter((p) => apiKeys[p.id] && PROVIDER_API[p.id]);
   const shown = usable.some((p) => p.id === activeModel) ? usable.filter((p) => p.id === activeModel) : usable;
   const scrim = document.createElement('div');
-  scrim.className = 'dialog-scrim picker-scrim';
+  scrim.className = 'dialog-scrim picker-scrim fd-panel mv-panel';
 
   const body = document.createElement('div');
   body.className = 'picker-groups';
@@ -14984,21 +15015,29 @@ function openModelPicker() {
   const activeProviderName = MODEL_PROVIDERS.find((p) => p.id === activeModel)?.name || 'Select';
 
   scrim.innerHTML = `
-    <div class="dialog model-picker" role="dialog" aria-modal="true" aria-label="Select model">
-      <h3 class="dialog-title">${esc(activeProviderName)} models</h3>
-      <label class="picker-search">
-        ${ICONS.searchModels}
-        <input type="search" placeholder="Search models" aria-label="Search models" autocomplete="off" data-role="picker-search">
-      </label>
-      <div class="picker-empty dialog-msg" hidden>No models match.</div>
-      <div class="dialog-actions">
-        <button class="dialog-btn" type="button" data-r="reset">Refresh</button>
-        ${usable.length ? '' : '<button class="dialog-btn" type="button" data-r="open">Open providers</button>'}
-        <button class="dialog-btn ok" type="button" data-r="close">Done</button>
+    <div class="fd-sheet mv-sheet" role="dialog" aria-modal="true" aria-label="Select model">
+      <div class="fd-bar">
+        <div class="fd-heading">
+          <h2 class="fd-title">${esc(activeProviderName)} models</h2>
+          <span class="fd-sub" data-role="picker-sub">Pick a model variation</span>
+        </div>
+        <span class="fd-bar-actions">
+          <button class="fd-pill" type="button" data-r="reset">Refresh</button>
+          <button class="fd-ic" type="button" data-r="close" aria-label="Close">${ICONS.close}</button>
+        </span>
       </div>
+      <div class="mv-top">
+        <label class="picker-search">
+          ${ICONS.searchModels}
+          <input type="search" placeholder="Search models" aria-label="Search models" autocomplete="off" data-role="picker-search">
+        </label>
+        ${usable.length ? '' : '<button class="fd-pill mv-open" type="button" data-r="open">Open providers</button>'}
+      </div>
+      <div class="mv-slot"></div>
+      <div class="picker-empty fd-empty" hidden><h3>No models match</h3><p>Try a different search.</p></div>
     </div>`;
 
-  scrim.querySelector('.dialog').insertBefore(body, scrim.querySelector('.dialog-actions'));
+  scrim.querySelector('.mv-slot').replaceWith(body);
   const searchInput = scrim.querySelector('[data-role="picker-search"]');
   const emptyEl = scrim.querySelector('.picker-empty');
 
@@ -15040,6 +15079,11 @@ function openModelPicker() {
 
     body.innerHTML = html;
     emptyEl.hidden = !!html;
+    const subEl = scrim.querySelector('[data-role="picker-sub"]');
+    if (subEl) {
+      const n = body.querySelectorAll('[data-m]').length;
+      subEl.textContent = n ? `${n} ${n === 1 ? 'model' : 'models'}` : 'Pick a model variation';
+    }
   }
 
   const done = () => {

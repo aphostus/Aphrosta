@@ -4904,3 +4904,26 @@ html[data-motion="reduce"] .sess-pw { animation: none; }
 .intro-live .live-trials { margin-top: 0; }
 .intro-live .live-label { max-width: 300px; margin: 0 auto; padding: 0 12px; line-height: 1.4; }
 
+/* ---------- Model Variations popup (same size and look as the Worlds popup) ---------- */
+.mv-panel { padding: max(12px, env(safe-area-inset-top, 0px)) 12px max(12px, env(safe-area-inset-bottom, 0px)); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); animation: fdFadeIn 0.22s ease both; }
+.mv-sheet { min-height: 0; }
+.mv-top { display: flex; flex-direction: column; gap: 8px; flex: 0 0 auto; padding: 12px 16px 0; }
+.mv-sheet .picker-search { height: 42px; margin: 0; padding: 0 14px; background: var(--glass-bg); border-color: var(--glass-border); }
+.mv-sheet .picker-search:focus-within { border-color: rgba(var(--accent-rgb), 0.5); }
+.mv-open { align-self: flex-start; }
+.mv-sheet .picker-groups { gap: 18px; padding: 14px 16px 18px; }
+.mv-sheet .picker-group { gap: 8px; }
+.mv-sheet .picker-label { gap: 8px; padding: 0 2px; font-size: calc(11px * var(--ts)); }
+.mv-sheet .picker-label .provider-logo-img-wrap { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 8px; background: rgba(var(--fg-rgb), 0.06); }
+.mv-sheet .picker-series { padding: 4px 2px 0; font-size: calc(10.5px * var(--ts)); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--gray-mid); }
+.mv-sheet .effort-option { gap: 10px; padding: 12px 14px; font-size: calc(13.5px * var(--ts)); font-weight: 500; color: var(--fg); background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 14px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12); transition: background 0.2s var(--ease-smooth), border-color 0.2s var(--ease-smooth), transform 0.2s var(--ease-bounce); }
+.mv-sheet .effort-option:hover { background: var(--glass-bg-hover); color: var(--fg); }
+.mv-sheet .effort-option:active { transform: scale(0.985); }
+.mv-sheet .effort-option.is-active { background: rgba(var(--accent-rgb), 0.08); border-color: rgba(var(--accent-rgb), 0.45); color: var(--fg); font-weight: 600; }
+.mv-sheet .effort-option .provider-check { align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: rgba(var(--accent-rgb), 0.14); color: var(--accent); }
+.mv-sheet .effort-option .provider-check svg { width: 14px; height: 14px; }
+.mv-sheet .picker-legacy { cursor: not-allowed; }
+.mv-sheet .picker-legacy:hover { background: var(--glass-bg); }
+.mv-sheet .picker-empty { padding: 40px 20px; }
+@media (prefers-reduced-motion: reduce) { .mv-panel { animation: none !important; } }
+
