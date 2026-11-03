@@ -17026,7 +17026,7 @@ async function acSignIn(file) {
     x.drawImage(bmp, 0, 0);
     const d = x.getImageData(0, 0, c.width, c.height);
     const r = window.jsQR(d.data, d.width, d.height);
-    if (!r || !String(r.data).startsWith('APH1.')) { hideLoader(); return; }
+    if (!r || !String(r.data).startsWith('APH1.')) { hideLoader(); acShake(); return; }
     const p = acDec(r.data);
     if (!p.e || !p.p || !p.u || !p.k) throw new Error('bad card');
     await Vault.importKey(p.u, p.k);
@@ -17036,7 +17036,19 @@ async function acSignIn(file) {
   } catch (err) {
     console.error('[ACARD] sign-in failed:', err?.code || err?.message);
     hideLoader();
+    acShake();
   }
+}
+function acShake() {
+  setTimeout(() => {
+    const b = document.querySelector('[data-acard-in]');
+    if (!b) return;
+    b.classList.remove('ac-shake');
+    void b.offsetWidth;
+    b.classList.add('ac-shake');
+    try { navigator.vibrate && navigator.vibrate([40, 30, 40]); } catch (_) {}
+    setTimeout(() => b.classList.remove('ac-shake'), 600);
+  }, 350);
 }
 const Acard = (() => {
   let ov = null, pack = null, color = 'black';
