@@ -16791,10 +16791,11 @@ function introStart() {
     clearTimeout(flashT);
     setState('thinking', /\?/.test(t) ? 'curious' : 'neutral');
     try {
-      const r = await fetch(INTRO_WORKER + '/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: INTRO_GUIDE + t, guide: INTRO_GUIDE, question: t }) });
+      const r = await fetch(INTRO_WORKER + '/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: (root.__h || '') + t }) });
       if (!r.ok) throw new Error('chat ' + r.status);
       const j = await r.json();
       if (my !== tok) return;
+      root.__h = 'Earlier Q: ' + t.slice(0, 35) + ' A: ' + String(j.reply || '').slice(0, 35) + ' | Now: ';
       await speak(String(j.reply || 'Let us talk about Aphrosta!'), my);
       if (my === tok) { if (spent()) setDead(); else idle(); }
     } catch (e) {
