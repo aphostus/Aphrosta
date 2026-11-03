@@ -16565,13 +16565,7 @@ function introMarkup() {
         </div>
         <div class="live-label" aria-live="polite"></div>
       </div>
-      <div class="live-bar">
-        <div class="live-pill">
-          <input class="live-input" type="text" placeholder="Type to talk..." aria-label="Type a message" enterkeyhint="send" autocomplete="off" autocapitalize="sentences" maxlength="200">
-          <div class="live-dead-msg" aria-live="polite">Your daily trial is over, sign in or sign up to get access to more features.</div>
-          <button class="live-send" type="button" aria-label="Send" hidden>${ICONS.rocket}</button>
-        </div>
-      </div>
+
     </div>`;
 }
 
@@ -16579,6 +16573,51 @@ function introStart() {
   const root = document.querySelector('.intro-live');
   if (!root || root.dataset.on) return;
   root.dataset.on = '1';
+  /* avatar-only mode: random state every 1s, no input, no voice */
+  {
+    const scr0 = root.closest('.signin-screen');
+    const card0 = scr0.querySelector('.signin-card');
+    const lab0 = root.querySelector('.live-label');
+    const pop0 = root.querySelector('.live-pop');
+    const look0 = root.querySelector('.lv-look');
+    const ST0 = ['listening', 'hearing', 'thinking', 'speaking', 'searching', 'dead'];
+    const EM0 = ['neutral', 'happy', 'sad', 'surprised', 'curious', 'sleepy'];
+    const LAB0 = { listening: 'Listening', hearing: 'Listening', thinking: 'Thinking\u2026', speaking: '', searching: '', dead: '' };
+    const fit0 = () => { root.style.bottom = (card0.offsetHeight || 150) + 'px'; };
+    let last0 = '', tm0 = 0;
+    const tick0 = () => {
+      if (!root.isConnected) { clearInterval(tm0); window.removeEventListener('resize', fit0); return; }
+      let s0, e0, k0;
+      do {
+        s0 = ST0[Math.floor(Math.random() * ST0.length)];
+        e0 = s0 === 'dead' ? 'dead' : EM0[Math.floor(Math.random() * EM0.length)];
+        k0 = s0 + e0;
+      } while (k0 === last0);
+      last0 = k0;
+      const dead0 = s0 === 'dead';
+      root.classList.toggle('is-dead', dead0);
+      const x0 = look0 && look0.querySelector('.lv-x');
+      if (dead0 && look0 && !x0) {
+        const x = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        x.setAttribute('class', 'lv-x');
+        x.setAttribute('d', 'M58 86L82 114M82 86L58 114M118 86L142 114M142 86L118 114');
+        look0.appendChild(x);
+      } else if (!dead0 && x0) x0.remove();
+      root.dataset.state = s0;
+      root.dataset.emo = e0;
+      root.dataset.paused = (e0 === 'sleepy' && !dead0) ? '1' : '0';
+      lab0.textContent = LAB0[s0];
+      root.style.setProperty('--amp', s0 === 'speaking' ? (0.2 + Math.random() * 0.6).toFixed(2) : '0');
+      root.style.setProperty('--gx', (dead0 ? 0 : Math.random() * 16 - 8).toFixed(1) + 'px');
+      root.style.setProperty('--gy', (dead0 ? 0 : Math.random() * 10 - 5).toFixed(1) + 'px');
+      pop0.classList.remove('pop'); void pop0.offsetWidth; pop0.classList.add('pop');
+    };
+    fit0();
+    window.addEventListener('resize', fit0);
+    tick0();
+    tm0 = setInterval(tick0, 1000);
+    return;
+  }
   const screen = root.closest('.signin-screen');
   const card = screen.querySelector('.signin-card');
   const $ = (s) => root.querySelector(s);
