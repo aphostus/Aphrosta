@@ -10740,7 +10740,7 @@ function sbProbeSoon() {
     try {
       const snap = await getDoc(doc(db, 'shared', code));
       const d = snap.exists() ? snap.data() : null;
-      pw = !!(d && d.access && d.access.pw && d.access.pw.h && d.owner !== currentUser.uid);
+      pw = !!(d && d.access && d.access.pw && d.access.pw.h);
     } catch (_) { pw = false; }
     if (seq !== sbProbeSeq) return;
     sbProbed = { code, pw, t: Date.now() };
@@ -10943,7 +10943,7 @@ async function sbLoad() {
     if (!snap.exists()) { toast('No public chat found with that ID.', 'info'); return; }
     const d = snap.data();
     if (!(await sbGate(d, code, sbPwVal()))) return;
-    if (d.access && d.access.max && d.owner !== currentUser.uid) {
+    if (d.access && d.access.max) {
       setDoc(doc(db, 'shared', code), { access: { used: increment(1) } }, { merge: true }).catch((e) => console.warn('[share] count failed', e?.code));
     }
     const now = Date.now();
@@ -11095,7 +11095,7 @@ async function sbInitiate() {
 
 async function sbGate(d, code, pwIn) {
   const a = d.access;
-  if (!a || (d.owner && currentUser && d.owner === currentUser.uid)) return true;
+  if (!a) return true;
   if (a.exp && Date.now() > a.exp) { toast('This shared chat has expired.', 'info', 3000); return false; }
   const em = a.emails || [], ph = a.phones || [];
   if (em.length || ph.length) {
