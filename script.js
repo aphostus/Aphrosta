@@ -16599,6 +16599,12 @@ function introStart() {
   const ON_TOPIC = /\b(aphrosta|app|apps|api|key|keys|model|models|effort|memory|library|libraries|agent|agents|project|projects|operations?|automations?|connections?|connectors?|settings?|sessions?|chat|chats|sign ?in|sign ?up|account|features?|plans?|pricing|price|voice|live mode|theme|token|tokens|provider|groq|gemini|claude|chatgpt|deepseek|grok|kimi|perplexity|upgrade|free)\b/i;
   const isOn = (t) => ON_TOPIC.test(t);
   const spent = () => { const q = quota(); return q.a >= LIM_A && q.o >= LIM_O; };
+  const trialsEl = document.createElement('div');
+  trialsEl.className = 'live-trials';
+  const trialsLeft = () => { const q = quota(); return Math.max(0, LIM_A - q.a) + Math.max(0, LIM_O - q.o); };
+  const trialsPaint = () => { trialsEl.textContent = 'Trials: ' + trialsLeft(); };
+  label.after(trialsEl);
+  trialsPaint();
   const setDead = () => {
     halt();
     started = true; paused = false;
@@ -16756,7 +16762,7 @@ function introStart() {
   const asleep = () => {
     started = false; paused = false;
     root.dataset.state = 'listening'; root.dataset.emo = 'sleepy'; root.dataset.paused = '1';
-    label.textContent = 'Tap to start';
+    label.textContent = '';
   };
 
   const greet = async () => {
@@ -16776,6 +16782,7 @@ function introStart() {
     if ((on && q.a >= LIM_A) || (!on && q.o >= LIM_O)) { redirect(on); return; }
     if (on) q.a++; else q.o++;
     quotaSave(q);
+    trialsPaint();
     halt();
     const my = tok;
     started = true; paused = false; asked = t; lastAct = Date.now();
@@ -16855,7 +16862,12 @@ function introStart() {
   asleep();
   fit();
   if (spent()) setDead();
-  else setTimeout(() => { if (root.isConnected && !started) greet(); }, 500);
+  else {
+    setTimeout(() => { if (root.isConnected && !started) greet(); }, 500);
+    /* browsers may block autoplay audio: the first touch/key anywhere starts the greeting */
+    const wake = () => { if (root.isConnected && !started && !spent()) greet(); };
+    ['pointerdown', 'keydown', 'touchend'].forEach((ev) => document.addEventListener(ev, wake, { once: true, passive: true }));
+  }
 }
 
 function showSignInButton() {

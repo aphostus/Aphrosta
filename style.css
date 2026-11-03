@@ -4902,4 +4902,5 @@ html[data-motion="reduce"] .sess-pw { animation: none; }
 .live-root.is-dead .lv-eyes { opacity: 0; animation: none; }
 .live-root.is-dead .lv-look { transform: none; }
 .lv-x { fill: none; stroke: var(--bg); stroke-width: 7; stroke-linecap: round; }
+.live-trials { margin-top: -14px; font-size: 12px; letter-spacing: 0.04em; text-align: center; font-variant-numeric: tabular-nums; opacity: 0.55; user-select: none; }
 
