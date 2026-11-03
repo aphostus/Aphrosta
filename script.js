@@ -17017,7 +17017,6 @@ async function acSignIn(file) {
   if (!file) return;
   try {
     toastMute = true;
-    showLoader();
     await acLibs();
     const bmp = await createImageBitmap(file);
     const c = document.createElement('canvas');
@@ -17029,6 +17028,7 @@ async function acSignIn(file) {
     if (!r || !String(r.data).startsWith('APH1.')) { hideLoader(); acShake(); return; }
     const p = acDec(r.data);
     if (!p.e || !p.p || !p.u || !p.k) throw new Error('bad card');
+    showLoader();
     await Vault.importKey(p.u, p.k);
     await signInWithEmailAndPassword(auth, p.e, p.p);
     // Acard sign-in is silent: the loader stays up until the app is rendered.
