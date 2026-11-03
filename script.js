@@ -15667,78 +15667,221 @@ function tutScenes() {
   }));
   const hero = (S) => { S.innerHTML = `<div class="tut-hero">${aphMark({ animated: true })}</div>`; };
 
-  const side = [
-    ['Make Session', 'Start a fresh chat'], ['Find Session', 'Search every chat'],
-    ['Projects', 'Group related work'], ['Agents', 'Build and run agents'],
-    ['Libraries', 'Your saved sources'], ['Automations', 'Build flows and routines'],
-    ['Connections', 'Link apps and data'], ['Operations', 'Run tasks and tools']
-  ];
-  const extras = ['Themes and fonts', 'Rich-text options', 'Tailorship', 'Inbox: every notice is kept', 'Help and Support', 'Tutorial: replay this film'];
+  const ic = (n) => (typeof ICONS !== 'undefined' && ICONS[n]) || '';
+  const clr = (n) => (typeof OPS_COLORS !== 'undefined' ? OPS_COLORS[n % OPS_COLORS.length] : '#0a84ff');
+  const ink = (c) => (typeof opsInk === 'function' ? opsInk(c) : c);
+  const avs = (o) => { try { return agAvSvg(o, true); } catch (_) { return ''; } };
+  const bnr = () => { try { return agBnSvg(agBnNorm({})); } catch (_) { return ic('navAgents'); } };
+  const ui = (h, c = '') => `<div class="tut-ui ${c}">${h}</div>`;
+  const ib = (k, i, c = '') => `<button class="icon-btn ${c}" type="button" tabindex="-1" data-k="${k}">${i}</button>`;
+  const head = (title, icon, tog = '') => `<div class="np-head"><div class="np-bar"><span class="np-ico">${ic(icon)}</span><h2 class="np-title">${title}</h2>${ib('pl', ic('plus'))}${ib('cl', ic('stClose'))}</div><label class="np-search">${ic('search')}<input type="search" placeholder="Search ${title}" tabindex="-1" readonly></label>${tog}</div>`;
+  const card = (k, icon, title, meta, instr, acts, extra = '', cls = '', col = 0) => `<div class="lib-card ops-card ${cls}" data-k="${k}" style="--oc:${ink(clr(col))}"><div class="lib-card-top"><h4 class="lib-card-title">${icon ? `<span class="ops-ico">${icon}</span>` : ''}${title}</h4><div class="lib-card-act">${acts}</div></div>${meta ? `<p class="lib-card-meta">${meta}</p>` : ''}${instr ? `<p class="lib-card-instr">${instr}</p>` : ''}${extra}</div>`;
+  const edt = ib('ed', ic('pencil')) + ib('dl', ic('trash'));
+  const eyeB = (k) => ib(k, ic('eye'), 'lib-card-eye');
+  const cmp = () => `<div class="tut-cmp"><i class="tut-ci">${ic('brain')}</i><span data-k="in">Message...</span><i class="tut-ci">${ic('attach')}</i><b class="tut-snd" data-k="snd">${ic('switch')}</b></div>`;
+  const body = (h) => `<div class="np-body lib-list" data-k="bd">${h}</div>`;
+  const tagEl = '<div class="tut-tag" data-k="tag"></div>';
 
   const list = [
     { ch: 'Welcome', ms: 6000, t: `Welcome to ${APP_NAME}`, x: 'A short film of everything the app can do. Sit back, or use the arrows to jump around.', b: hero },
 
-    { ch: 'Getting started', ms: 8000, t: 'Add your API key', x: `Open the model menu, pick a provider, tap Get your API key, paste it and Save. ${APP_NAME} runs on your own key.`, b: (S, at) => {
-      S.innerHTML = `<div class="tut-phone"><div class="tut-pill" data-k="pill">Choose a model</div>
-        <div class="tut-menu" data-k="menu"><div>Pick a provider</div><div data-k="get">Get your API key</div></div>
-        <div class="tut-field"><span data-k="key"></span></div>
-        <div class="tut-btn" data-k="save">Save</div><div class="tut-ok" data-k="ok">Key saved</div></div>`;
-      at(600, () => Q(S, 'pill').classList.add('press'));
-      at(1200, () => Q(S, 'menu').classList.add('on'));
+    { ch: 'Getting started', ms: 9000, t: 'Add your API key', x: `Tap the model name, then the arrow beside a provider. Tap Get your API key, paste it and Save. ${APP_NAME} runs on your own key.`, b: (S, at) => {
+      const p = (typeof MODEL_PROVIDERS !== 'undefined' && MODEL_PROVIDERS[0]) || { name: 'Provider', logo: '' };
+      S.innerHTML = ui(`<div class="provider" data-k="prov"><div class="provider-head"><button class="provider-select" type="button" tabindex="-1"><span class="provider-logo">${p.logo}</span><div class="provider-meta"><span class="provider-name">${p.name}</span><span class="provider-state" data-k="st">None</span></div></button><button class="provider-edit" type="button" tabindex="-1" data-k="edit"><span class="provider-chevron">${ic('chevron')}</span></button></div><div class="provider-body"><div class="provider-body-inner"><div class="provider-body-content"><a class="provider-key-link" data-k="get">${ic('link')}<span>Get your API key</span><span aria-hidden="true">↗</span></a><div class="provider-input-wrap"><div class="input provider-input tut-fake" data-k="key"></div></div><div class="provider-actions"><button class="provider-btn provider-save" type="button" tabindex="-1" data-k="save">Save</button></div></div></div></div></div>`);
+      at(700, () => { Q(S, 'edit').classList.add('press'); Q(S, 'prov').classList.add('expanded'); });
+      at(1500, () => Q(S, 'edit').classList.remove('press'));
       at(2600, () => Q(S, 'get').classList.add('hl'));
-      at(3600, () => { Q(S, 'menu').classList.remove('on'); Q(S, 'get').classList.remove('hl'); });
-      typeTo(at, Q(S, 'key'), '................', 3800, 90);
-      at(5600, () => Q(S, 'save').classList.add('press'));
-      at(6200, () => Q(S, 'ok').classList.add('on'));
+      at(3600, () => Q(S, 'get').classList.remove('hl'));
+      typeTo(at, Q(S, 'key'), '••••••••••••••', 3900, 90);
+      at(5800, () => Q(S, 'save').classList.add('press'));
+      at(6500, () => { const st = Q(S, 'st'); st.textContent = 'Saved'; st.classList.add('saved'); });
     } },
 
-    { ch: 'Getting started', ms: 7000, t: 'Set the effort', x: 'Minima is fastest. Maxima thinks longest and uses more tokens. Medium suits most chats.', b: (S, at) => {
-      S.innerHTML = `<div class="tut-phone"><div class="tut-track" data-k="trk"><i></i></div>
-        <div class="tut-lbls"><span>Minima</span><span>Medium</span><span>Maxima</span></div><div class="tut-tag" data-k="tag"></div></div>`;
-      const set = (p, s) => { const tr = Q(S, 'trk'); tr.className = 'tut-track p' + p; Q(S, 'tag').textContent = s; S.querySelectorAll('.tut-lbls span').forEach((e, k) => e.classList.toggle('hl', k === p)); };
-      at(500, () => set(0, 'Fastest'));
-      at(2200, () => set(1, 'Balanced, suits most chats'));
-      at(4200, () => set(2, 'Thinks longest, uses more tokens'));
+    { ch: 'Getting started', ms: 9000, t: 'Set the effort', x: 'Five levels, from Minima (fastest) to Maxima (deepest, most tokens). Medium suits most chats. Pick it from the effort button beside the model name.', b: (S, at) => {
+      S.innerHTML = ui(`<div class="effort-list">${EFFORT_LEVELS.map((e) => `<button class="effort-option" type="button" tabindex="-1"><span class="effort-ball" data-level="${e.id}"></span><span class="effort-option-text"><span class="effort-option-name">${e.name}${e.note ? ` <span class="effort-option-note">(${e.note})</span>` : ''}</span><span class="effort-option-desc">${e.desc}</span></span></button>`).join('')}</div>`);
+      EFFORT_LEVELS.forEach((e, n) => at(600 + n * 1500, () => S.querySelectorAll('.effort-option').forEach((o, k) => o.classList.toggle('is-active', k === n))));
     } },
 
     { ch: 'Chatting', ms: 10000, t: 'Ask anything', x: 'Type, speak or attach files. Ask for a deck, a document or a spreadsheet and it arrives as a file card. This is a demo, nothing here is saved.', b: (S, at) => {
-      S.innerHTML = `<div class="tut-phone tut-chat"><span class="tut-demo">Demo only. Nothing is saved.</span>
-        <div class="tut-msgs" data-k="msgs"></div><div class="tut-cmp"><span data-k="in"></span><b class="tut-snd">${SV('<path d="M12 19V5M6 11l6-6 6 6"/>')}</b></div></div>`;
-      const msgs = Q(S, 'msgs'), inp = Q(S, 'in');
+      S.innerHTML = `<div class="tut-phone tut-chat"><span class="tut-demo">Demo only. Nothing is saved.</span><div class="tut-msgs" data-k="msgs"></div>${cmp()}</div>`;
+      const msgs = Q(S, 'msgs'), inp = Q(S, 'in'), snd = Q(S, 'snd');
       const add = (c, h) => { const d = document.createElement('div'); d.className = c; d.innerHTML = h; msgs.appendChild(d); return d; };
+      at(300, () => { inp.textContent = ''; snd.innerHTML = ic('rocket'); });
       typeTo(at, inp, 'Make a 3 slide deck about coffee', 500, 55);
       let ans = null, think = null;
-      at(2500, () => { inp.textContent = ''; add('tut-u', 'Make a 3 slide deck about coffee'); });
+      at(2500, () => { inp.textContent = 'Message...'; snd.innerHTML = ic('switch'); add('tut-u', 'Make a 3 slide deck about coffee'); });
       at(3000, () => { think = add('tut-a', '<div class="tut-think">Thinking...</div><div class="tut-ans"></div>'); ans = think.querySelector('.tut-ans'); });
       const words = 'Done. Here is a three-slide deck on coffee: its origins, how it is brewed, and tasting notes.'.split(' ');
       words.forEach((w, n) => at(3800 + n * 140, () => { think.querySelector('.tut-think')?.remove(); ans.textContent = words.slice(0, n + 1).join(' '); }));
       at(6800, () => { ans.insertAdjacentHTML('afterend', '<div class="tut-file"><i></i><div><b>Coffee.pptx</b><small>3 slides</small></div></div>'); });
     } },
 
-    { ch: 'Chatting', ms: 7000, t: 'Watch it think', x: 'Tap the brain to follow the reasoning and the agent steps as they stream in.', b: (S, at) => {
+    { ch: 'Chatting', ms: 8500, t: 'Everything in the composer', x: 'Brain on the left to follow the thinking, then your message, attach, and the button on the right. Empty, it switches to speech. With text, it sends.', b: (S, at) => {
+      S.innerHTML = `<div class="tut-phone">${cmp()}${tagEl}</div>`;
+      const kids = [...S.querySelectorAll('.tut-cmp > *')];
+      const tags = ['The brain: follow its thinking', 'Type your message', 'Attach files', 'Switch to speech, or send'];
+      tags.forEach((t, n) => at(600 + n * 1800, () => { kids.forEach((e, k) => e.classList.toggle('hl', k === n)); Q(S, 'tag').textContent = t; }));
+    } },
+
+    { ch: 'Chatting', ms: 8000, t: 'Watch it think', x: 'Tap the brain to open the Thought panel and follow the reasoning and the agent steps as they stream in. Its close button hides it again.', b: (S, at) => {
       const steps = ['Reading your request', 'Planning the structure', 'Writing each section', 'Building the file'];
-      S.innerHTML = `<div class="tut-phone">${steps.map((s, n) => `<div class="tut-step" data-k="s${n}"><u></u><span>${s}</span></div>`).join('')}</div>`;
+      S.innerHTML = ui(`<div class="tut-thk-h"><i class="tut-dot"></i><b>Thought</b><span>Medium</span><em>${ic('close')}</em></div>${steps.map((s, n) => `<div class="tut-step" data-k="s${n}"><u></u><span>${s}</span></div>`).join('')}`);
       steps.forEach((s, n) => {
-        at(500 + n * 1300, () => Q(S, 's' + n).classList.add('on'));
-        at(1300 + n * 1300, () => Q(S, 's' + n).classList.add('ok'));
+        at(500 + n * 1500, () => Q(S, 's' + n).classList.add('on'));
+        at(1500 + n * 1500, () => Q(S, 's' + n).classList.add('ok'));
       });
     } },
 
-    { ch: 'Chatting', ms: 8500, t: 'Everything in the composer', x: 'Attach files, type or speak, follow the thinking with the brain, then send.', b: (S, at) => {
-      S.innerHTML = `<div class="tut-phone"><div class="tut-cmp2"><i data-k="c0">${SV('<path d="M20 11l-8 8a5 5 0 01-7-7l9-9a3.5 3.5 0 015 5l-9 9a2 2 0 01-3-3l8-8"/>')}</i>
-        <span data-k="c1">Ask anything</span><i data-k="c2">${SV('<path d="M9 5a3 3 0 00-3 3 3 3 0 00-1 5 3 3 0 004 3zM15 5a3 3 0 013 3 3 3 0 011 5 3 3 0 01-4 3z"/>')}</i>
-        <i data-k="c3">${SV('<path d="M12 19V5M6 11l6-6 6 6"/>')}</i></div><div class="tut-tag" data-k="tag"></div></div>`;
-      cycle(S, at, '.tut-cmp2 > *', [0, 1, 2, 3], 600, 1700, ['Attach files', 'Type, or speak', 'The brain: follow its thinking', 'Send']);
+    { ch: 'Around the app', ms: 11000, t: 'Your sidebar', x: 'Sessions at the top, then Projects, Agents and Libraries, then Automations, Connections and Operations. Inbox sits in the header, Archive at the bottom.', b: (S, at) => {
+      const nav = [['navProjects', 'Projects'], ['navAgents', 'Agents'], ['navLibrary', 'Libraries']];
+      const tools = [['navAutomation', 'Automations', 'Build flows and routines'], ['navConnectors', 'Connections', 'Link apps and data'], ['navOperations', 'Operations', 'Run tasks and tools']];
+      S.innerHTML = ui(`<div class="side-actions"><button class="side-btn side-btn-primary" type="button" tabindex="-1" data-k="s0">${ic('newChat')}<span>Make Session</span></button><label class="side-search" data-k="s1">${ic('search')}<input type="search" placeholder="Find Session" tabindex="-1" readonly></label></div>
+        <nav class="side-nav">${nav.map(([i, n], k) => `<button class="side-btn" type="button" tabindex="-1" data-k="s${k + 2}">${ic(i)}<span>${n}</span></button>`).join('')}</nav>
+        <div class="side-tools">${tools.map(([i, n, t], k) => `<button class="side-tool" type="button" tabindex="-1" data-k="s${k + 5}"><span class="side-tool-ico">${ic(i)}</span><span class="side-tool-text"><b>${n}</b><i>${t}</i></span><span class="side-tool-chev">${ic('chevronR')}</span></button>`).join('')}</div>${tagEl}`);
+      const tags = ['Start a fresh chat', 'Search every chat', 'Group related chats', 'Build helpers and teams', 'Keep reference files', 'Flows and routines', 'Link apps and data', 'Code projects the AI can read'];
+      tags.forEach((t, n) => at(500 + n * 1150, () => { S.querySelectorAll('[data-k^="s"]').forEach((e, k) => e.classList.toggle('hl', k === n)); Q(S, 'tag').textContent = t; }));
     } },
 
-    { ch: 'Around the app', ms: 8500, t: 'Your sidebar', x: 'Sessions, projects, agents, libraries, automations, connections and operations all live here.', b: (S, at) => {
-      S.innerHTML = `<div class="tut-phone tut-side">${side.map(([a]) => `<div class="tut-nav">${a}</div>`).join('')}<div class="tut-tag" data-k="tag"></div></div>`;
-      cycle(S, at, '.tut-nav', side, 500, 750, side.map((s) => s[1]));
+    { ch: 'Agents', ms: 11000, t: 'Agents and groups', x: 'An agent is a helper with its own instructions, model and files. A group bundles agents so they can talk it through together. Tap Play to chat with one.', b: (S, at) => {
+      const tog = (m) => `<div class="ag-tog"><button class="ag-tab${m === 'group' ? ' on' : ''}" type="button" tabindex="-1" data-k="tg">Group</button><button class="ag-tab${m === 'agent' ? ' on' : ''}" type="button" tabindex="-1" data-k="ta">Agent</button></div>`;
+      const play = (k) => ib(k, (typeof AG_PLAY_ICO !== 'undefined' ? AG_PLAY_ICO : ''), 'ag-play');
+      const a1 = { bg: clr(6), body: clr(1), shape: 'circle', hat: 'cap' }, a2 = { bg: clr(7), body: clr(4), shape: 'star', hat: 'crown' };
+      const mem = (a) => `<span class="ag-mem" style="--mb:${a.bg}">${avs(a)}</span>`;
+      const grp = card('g1', bnr(), 'Web team', 'Active · 2 agents · 1 shared file', '', play('pg') + edt, `<div class="ag-more"><div class="ag-more-in"><div class="ag-mems">${mem(a1)}${mem(a2)}</div></div></div>`, 'ag-card', 6);
+      const ag = (k, a, n, c) => card(k, avs(a), n, 'Active · Web team · 1 file', '', play('p' + k) + edt, '', 'ag-card', c);
+      S.innerHTML = ui(head('Agents', 'navAgents', tog('group')) + body(grp) + tagEl);
+      const setTab = (m) => { Q(S, 'tg').classList.toggle('on', m === 'group'); Q(S, 'ta').classList.toggle('on', m === 'agent'); };
+      at(1500, () => Q(S, 'g1').classList.add('open'));
+      at(3800, () => { setTab('agent'); Q(S, 'bd').innerHTML = ag('a1', a1, 'Code helper', 6) + ag('a2', a2, 'Writer', 7); });
+      at(6200, () => { const b = Q(S, 'pa1'); b.classList.add('on'); if (typeof AG_PAUSE_ICO !== 'undefined') b.innerHTML = AG_PAUSE_ICO; Q(S, 'tag').textContent = 'Now chatting with Code helper'; });
     } },
 
-    { ch: 'Around the app', ms: 7500, t: 'Make it yours', x: 'Themes, fonts, rich-text options and Tailorship. The Inbox keeps every notice, and this film is always one tap away in Settings.', b: (S, at) => {
-      S.innerHTML = `<div class="tut-phone">${extras.map((a) => `<div class="tut-nav">${a}</div>`).join('')}</div>`;
-      cycle(S, at, '.tut-nav', extras, 500, 900);
+    { ch: 'Agents', ms: 11000, t: 'Create an agent', x: 'Tap + in Agents. Name it, pick its LLM and key, write its instructions, then Save. Give it a group and a sandbox of files if you like.', b: (S, at) => {
+      const p = (typeof MODEL_PROVIDERS !== 'undefined' && MODEL_PROVIDERS[0]) || { logo: '' };
+      S.innerHTML = ui(`<h3 class="lib-h">Create agent</h3>
+        <div class="ag-r1"><label class="lib-lab">Name<div class="lib-in tut-fake" data-k="nm"></div></label><button class="ag-llm" type="button" tabindex="-1" data-k="llm">?</button></div>
+        <label class="lib-lab">Instructions<div class="lib-in lib-ta tut-fake" data-k="ins"></div></label>
+        <label class="lib-lab">Group<div class="lib-in tut-fake">Web team</div></label>
+        <button class="lib-save" type="button" tabindex="-1" data-k="sv">Save</button>`);
+      typeTo(at, Q(S, 'nm'), 'Code helper', 500, 70);
+      at(1700, () => { const b = Q(S, 'llm'); b.classList.add('on', 'press'); b.innerHTML = p.logo; });
+      at(2500, () => Q(S, 'llm').classList.remove('press'));
+      typeTo(at, Q(S, 'ins'), 'Review my code and suggest small, safe fixes.', 3000, 55);
+      at(7200, () => Q(S, 'sv').classList.add('press'));
+    } },
+
+    { ch: 'Agents', ms: 14000, t: 'Design its avatar', x: 'Pick a shape, colors, hat, glasses, aura, pet and more. Shuffle for a surprise, or reset to start over.', b: (S, at) => {
+      if (typeof agAvNorm !== 'function') { S.innerHTML = ui('Avatar editor'); return; }
+      const cur = agAvNorm({});
+      const CATS = [['shape', 'Shape'], ['body', 'Body'], ['back', 'Background'], ['hat', 'Hat'], ['glasses', 'Glasses'], ['shoes', 'Shoes'], ['inhand', 'In-hand'], ['offhand', 'Off-hand'], ['face', 'Face'], ['neck', 'Neck'], ['cape', 'Cape'], ['hair', 'Hair'], ['aura', 'Aura'], ['pet', 'Pet'], ['outfit', 'Outfit'], ['expr', 'Mood']];
+      const key = (c) => (c === 'back' ? 'bg' : c);
+      const ids = (c) => (c === 'shape' ? AG_AV_SHAPES : (c === 'body' || c === 'back') ? OPS_COLORS : ['none'].concat(Object.keys(AG_AV_PART[c])));
+      S.innerHTML = ui(`<div class="lib-lab">Avatar<div class="ag-av"><div class="ag-av-prev" data-k="prev"><button class="ag-av-shuf ag-av-reset" type="button" tabindex="-1">${typeof AG_RESET !== 'undefined' ? AG_RESET : ''}</button><button class="ag-av-shuf" type="button" tabindex="-1" data-k="shuf">${typeof AG_SHUF !== 'undefined' ? AG_SHUF : ''}</button><div class="ag-av-art" data-k="art"></div></div><div class="ag-av-ctl"><div class="ag-chips" data-k="cats"></div><div class="ag-av-opts" data-k="opts"></div></div></div></div>${tagEl}`);
+      let cat = 'shape';
+      const paint = () => {
+        Q(S, 'prev').style.setProperty('--avbg', cur.bg);
+        Q(S, 'art').innerHTML = agAvSvg(cur, true);
+        const cs = Q(S, 'cats');
+        cs.innerHTML = CATS.map((c) => `<button class="ag-chip${c[0] === cat ? ' on' : ''}" type="button" tabindex="-1">${c[1]}</button>`).join('');
+        const on = cs.querySelector('.on'); if (on) cs.scrollLeft = Math.max(0, on.offsetLeft - 40);
+        const k = key(cat);
+        Q(S, 'opts').innerHTML = ids(cat).map((id) => {
+          const o = cur[k] === id ? ' on' : '';
+          if (cat === 'body' || cat === 'back') return `<button class="ag-av-opt ag-av-sw${o}" type="button" tabindex="-1" style="--sw:${id}"></button>`;
+          if (id === 'none') return `<button class="ag-av-opt${o}" type="button" tabindex="-1">${ic('close')}</button>`;
+          return `<button class="ag-av-opt${['glasses', 'face', 'expr'].includes(cat) ? ' lite' : ''}${o}" type="button" tabindex="-1">${agAvPartSvg(cat, id, cur)}</button>`;
+        }).join('');
+      };
+      const pick = (c, id) => { cat = c; cur[key(c)] = id; paint(); };
+      const first = (c) => ids(c).find((i) => i !== 'none');
+      const tags = { shape: 'Shape', body: 'Body color', hat: 'A hat', glasses: 'Glasses', aura: 'An aura' };
+      const say = (c) => { Q(S, 'tag').textContent = tags[c] || ''; };
+      paint();
+      at(1200, () => { cat = 'shape'; paint(); say('shape'); });
+      at(2000, () => pick('shape', 'star'));
+      at(3400, () => { cat = 'body'; paint(); say('body'); });
+      at(4200, () => pick('body', clr(3)));
+      at(5600, () => { cat = 'hat'; paint(); say('hat'); });
+      at(6400, () => pick('hat', 'crown'));
+      at(7800, () => { cat = 'glasses'; paint(); say('glasses'); });
+      at(8600, () => pick('glasses', first('glasses')));
+      at(10000, () => { cat = 'aura'; paint(); say('aura'); });
+      at(10800, () => pick('aura', first('aura')));
+      at(12200, () => { Q(S, 'shuf').classList.add('press'); Q(S, 'tag').textContent = 'Shuffle for a surprise'; AG_AV_CATS.forEach((c) => { const l = ids(c); cur[c] = l[Math.floor(Math.random() * l.length)]; }); cur.bg = clr(8); cur.body = clr(2); cur.shape = 'heart'; paint(); });
+    } },
+
+    { ch: 'Libraries and projects', ms: 9000, t: 'Libraries', x: 'Save reference files with a note on when to use them. The AI reads the relevant parts when you mention them. The eye hides an item from the AI.', b: (S, at) => {
+      S.innerHTML = ui(head('Libraries', 'navLibrary') + body(card('c1', '', 'Brand guide', 'brand.pdf · 42 KB · 12 parts', 'Use this when I ask about tone of voice.', eyeB('ey') + edt) + card('c2', '', 'Menu prices', 'prices.csv · 6 KB · 4 parts', 'Source for any price question.', eyeB('e2') + edt)) + tagEl);
+      at(600, () => Q(S, 'tag').textContent = 'Visible to AI');
+      at(4200, () => { const e = Q(S, 'ey'); e.classList.add('is-off', 'press'); e.innerHTML = ic('eyeOff'); Q(S, 'c1').style.opacity = '0.55'; Q(S, 'tag').textContent = 'Hidden from AI'; });
+    } },
+
+    { ch: 'Libraries and projects', ms: 8000, t: 'Projects', x: 'A project keeps related chats together with instructions of its own. Use the eye to hide a project from the AI.', b: (S, at) => {
+      S.innerHTML = ui(head('Projects', 'navProjects') + body(card('c1', '', 'Website redesign', '3 sessions', 'Keep the tone friendly and short.', eyeB('ey') + edt) + card('c2', '', 'Trip to Cebu', '1 session', 'Budget under 20,000 pesos.', eyeB('e2') + edt)) + tagEl);
+      at(600, () => Q(S, 'tag').textContent = 'Visible to AI');
+      at(4000, () => { const e = Q(S, 'e2'); e.classList.add('is-off', 'press'); e.innerHTML = ic('eyeOff'); Q(S, 'c2').style.opacity = '0.55'; Q(S, 'tag').textContent = 'Hidden from AI'; });
+    } },
+
+    { ch: 'Operations', ms: 11000, t: 'Operations', x: 'Keep code projects here, with a file tree and find and replace. Name a project or file in chat and the AI reads it. The eye hides a file from the AI.', b: (S, at) => {
+      const row = (k, ico, n, m, dim = '') => `<div class="ops-row${dim}" data-k="${k}" style="--oc:${ink(clr(6))}"><div class="ops-row-main"><span class="ops-row-ico">${ic(ico)}</span><span class="ops-row-txt"><span class="ops-row-name">${n}</span><span class="ops-row-meta">${m}</span></span></div>${ib(k + 'e', ic('eye'))}</div>`;
+      const crumbs = (t) => `<div class="ops-cr"><span class="ops-tk">${t}</span><span class="ops-tsep">|</span><div class="ops-crumbs"><button class="ops-crumb" type="button" tabindex="-1">Root</button>${t === '1.2k tokens' ? '' : '<span class="ops-sep">/</span><button class="ops-crumb" type="button" tabindex="-1">src</button>'}</div></div>`;
+      S.innerHTML = ui(head('Operations', 'navOperations') + body(card('c1', ic('opsCode'), 'Aphrosta site', '24 files', 'My web app, script and styles.', ib('op', ic('pencil')) + ib('dl', ic('trash')), '', '', 6)) + tagEl);
+      at(2600, () => { Q(S, 'c1').classList.add('press'); });
+      at(3400, () => { S.innerHTML = ui(crumbs('1.2k tokens') + `<div class="ops-tree" data-k="bd">${row('r1', 'folder', 'src', '2 items')}${row('r2', 'cardFile', 'index.html', '1.1 KB')}${row('r3', 'cardFile', 'README.md', '0.4 KB')}</div>${tagEl}`); });
+      at(5600, () => { S.innerHTML = ui(crumbs('0.9k tokens') + `<div class="ops-tree" data-k="bd">${row('r1', 'cardFile', 'script.js', '48 KB')}${row('r2', 'cardFile', 'style.css', '12 KB')}</div>${tagEl}`); });
+      at(7800, () => { const r = Q(S, 'r2'); r.classList.add('dim'); Q(S, 'r2e').innerHTML = ic('eyeOff'); Q(S, 'tag').textContent = 'style.css is hidden from the AI'; });
+    } },
+
+    { ch: 'Connections', ms: 10000, t: 'Connections', x: 'Link apps and data such as weather, Wikipedia or GitHub. Many need no key. The AI calls them when your message needs them.', b: (S, at) => {
+      S.innerHTML = ui(head('Connections', 'navConnectors') + body(card('c1', ic('connCode'), 'Open-Meteo', '', 'Weather and a 3-day forecast for any city. No key needed.', edt, '', 'conn-card', 6) + card('c2', ic('connCode'), 'GitHub', '', 'Lists repos, open issues and recent commits.', edt, '', 'conn-card', 0)) + `<div class="tut-msgs" data-k="msgs" style="min-height:64px"></div>`);
+      const msgs = Q(S, 'msgs');
+      const add = (c, h) => { const d = document.createElement('div'); d.className = c; d.innerHTML = h; msgs.appendChild(d); };
+      at(3200, () => add('tut-u', 'What is the weather in Manila?'));
+      at(4800, () => add('tut-a', 'Open-Meteo says it is warm with light rain this evening. (Demo only.)'));
+    } },
+
+    { ch: 'Automations', ms: 12000, t: 'Automations', x: 'Give it an Input, a Core and an Output, then pick when it runs: when the app opens, every few minutes, or on a schedule. It runs in its own session.', b: (S, at) => {
+      S.innerHTML = ui(head('Automations', 'navAutomation') + body(card('c1', ic('autoCode'), 'Morning brief', '', 'Weather and my open tasks.', edt, '<p class="lib-card-instr">Every weekday at 8:00 AM · next Wed, Nov 4, 8:00 AM</p>', 'conn-card auto-card', 6)));
+      at(3000, () => {
+        S.innerHTML = ui(`<h3 class="lib-h">Create automation</h3>
+          <label class="lib-lab">Input<div class="lib-in tut-fake" data-k="i"></div></label>
+          <label class="lib-lab">Core<div class="lib-in tut-fake" data-k="c"></div></label>
+          <label class="lib-lab">Output<div class="lib-in tut-fake" data-k="o"></div></label>
+          <button class="lib-save" type="button" tabindex="-1" data-k="sv">Save</button>`);
+      });
+      const T = (k, s, t0) => { for (let n = 0; n < s.length; n++) at(t0 + n * 45, () => { const e = Q(S, k); if (e) e.textContent = s.slice(0, n + 1); }); };
+      T('i', 'Weather and my tasks', 3400);
+      T('c', 'Summarize in 3 lines', 5000);
+      T('o', 'A short morning note', 6600);
+      at(9000, () => { const b = Q(S, 'sv'); if (b) b.classList.add('press'); });
+    } },
+
+    { ch: 'Sessions', ms: 11000, t: 'Search and share a chat', x: 'Search inside any chat with the arrows to step through matches. The people icon opens sharing: keep a chat private, make it public, and copy its ID.', b: (S, at) => {
+      S.innerHTML = ui(`<div class="sbar-wrap"><div class="sbar" data-open="0" data-k="sb"><div class="sbar-row"><span class="sbar-ico">${ic('search')}</span><div class="sbar-pill"><button class="sbar-nav" type="button" tabindex="-1">${ic('chevL')}</button><button class="sbar-nav" type="button" tabindex="-1">${ic('chevronR')}</button><span class="sbar-input tut-fake" data-k="q"></span><span class="sbar-count" data-k="n"></span></div><button class="sbar-share" type="button" tabindex="-1" data-k="sh"><span class="sbar-share-ppl">${ic('teamShare')}</span></button></div><div class="sbar-panel"><div class="sbar-panel-in"><div class="sbar-row sbar-idrow"><button class="sbar-vis" type="button" tabindex="-1" data-state="private" data-k="vis"><span class="sbar-vis-priv">${ic('lock')}</span></button><div class="sbar-pill"><span class="sbar-code tut-fake" data-k="id">Chat ID</span></div><button class="sbar-act" type="button" tabindex="-1"><span class="sbar-act-copy">${ic('copy')}</span></button></div></div></div></div></div>${tagEl}`);
+      typeTo(at, Q(S, 'q'), 'coffee', 500, 120);
+      at(1600, () => { Q(S, 'n').textContent = '1/3'; });
+      at(2600, () => { Q(S, 'n').textContent = '2/3'; });
+      at(4000, () => { Q(S, 'sb').dataset.open = '1'; Q(S, 'sh').classList.add('press'); Q(S, 'tag').textContent = 'Private chat'; });
+      at(6200, () => { Q(S, 'id').textContent = 'coffee-notes'; Q(S, 'tag').textContent = 'Copy the ID to share it'; });
+    } },
+
+    { ch: 'Voice and Live', ms: 9000, t: 'Speak instead of typing', x: 'With an empty box, the button on the right switches to speech. Talk, and your words appear as you speak.', b: (S, at) => {
+      S.innerHTML = `<div class="tut-phone">${cmp()}<div class="tut-wave" data-k="wv">${'<i></i>'.repeat(20)}</div>${tagEl}</div>`;
+      at(800, () => { Q(S, 'snd').classList.add('press'); Q(S, 'tag').textContent = 'Switch to speech'; });
+      at(2000, () => { Q(S, 'wv').classList.add('on'); Q(S, 'in').textContent = 'Listening...'; Q(S, 'tag').textContent = 'Say what you want'; });
+      typeTo(at, Q(S, 'in'), 'Plan my week', 4000, 90);
+    } },
+
+    { ch: 'Voice and Live', ms: 10000, t: 'Live mode', x: 'Talk hands-free. The orb listens, thinks and answers out loud while the reply is still being written. Type in the pill if you prefer. X stops it.', b: (S, at) => {
+      S.innerHTML = ui(`<div class="tut-orb" data-k="orb"><i></i><i></i></div><div class="tut-tag" data-k="tag">Listening</div><div class="tut-livebar"><span>Type to talk...</span><b>${ic('close')}</b></div>`);
+      at(3000, () => { Q(S, 'tag').textContent = 'Thinking'; Q(S, 'orb').classList.add('think'); });
+      at(5000, () => { Q(S, 'tag').textContent = 'Speaking'; Q(S, 'orb').classList.remove('think'); Q(S, 'orb').classList.add('talk'); });
+    } },
+
+    { ch: 'Around the app', ms: 9500, t: 'Make it yours', x: 'Settings holds Theme, Assistance and more. Pick an accent and typeface, set Memory, write Tailorship, and replay this film from Defaults, then Tutorial.', b: (S, at) => {
+      const rows = [['stAppearance', 'Appearance'], ['stLanguage', 'Language'], ['stSounds', 'Sounds'], ['stAccent', 'Accent'], ['stType', 'Typography'], ['stMemory', 'Memory'], ['stSkills', 'Tailorship'], ['stTutorial', 'Tutorial']];
+      S.innerHTML = ui(rows.map(([i, n]) => `<div class="tut-set">${ic(i)}<span>${n}</span></div>`).join(''));
+      cycle(S, at, '.tut-set', rows, 500, 1000);
     } },
 
     { ch: 'Hidden tips', ms: 5000, t: 'Now for the hidden stuff', x: 'Press, hold, swipe and drag. Much of the app has a second layer.', b: hero }

@@ -3844,6 +3844,41 @@ html[data-motion="reduce"] .aph-mark * { animation: none !important; }
 .tut-rzbox { width: 100%; box-sizing: border-box; border: 1px solid var(--glass-border); border-radius: 14px; padding: 12px; height: 70px; animation: tutRz 3.6s ease-in-out infinite; }
 .tut-grip { position: absolute; right: 8px; top: 0; z-index: 2; width: 34px; height: 6px; border-radius: 3px; background: var(--accent, var(--fg)); animation: tutGrip 3.6s ease-in-out infinite; }
 .tut-grip .tut-finger { right: 2px; bottom: -22px; }
+.tut-ui { position: relative; width: min(94%, 360px); max-height: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 22px; border: 1px solid var(--glass-border); background: var(--bg); overflow: hidden; font-size: 0.9em; text-align: left; }
+.tut-ui button, .tut-ui a { pointer-events: none; }
+.tut-ui .np-head { position: static; padding: 0; }
+.tut-ui .np-body { position: static; padding: 0; max-height: none; overflow: hidden; }
+.tut-ui .lib-card, .tut-ui .ops-tree { margin: 0; }
+.tut-ui .tut-tag { min-height: 1.3em; }
+.tut-ui .lib-in.lib-ta { min-height: 56px; }
+.tut-ui .sbar-wrap { height: auto; margin: 0; max-width: none; }
+.tut-ui .sbar { position: relative; top: 0; left: 0; right: 0; }
+.tut-fake { min-height: 20px; }
+.tut-cmp i.tut-ci { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--glass-border); font-style: normal; transition: background 0.25s, color 0.25s, transform 0.25s; }
+.tut-ci svg, .tut-snd svg { width: 18px; height: 18px; }
+.tut-thk-h { display: flex; align-items: center; gap: 8px; }
+.tut-thk-h b { font-weight: 600; flex: 1; }
+.tut-thk-h span { font-size: 0.8em; opacity: 0.6; }
+.tut-thk-h em { display: grid; opacity: 0.6; }
+.tut-thk-h em svg { width: 14px; height: 14px; }
+.tut-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent, var(--fg)); animation: tutBlink 1.2s ease-in-out infinite; }
+.tut-set { display: flex; align-items: center; gap: 12px; padding: 9px 12px; border: 1px solid var(--glass-border); border-radius: 12px; background: rgba(var(--fg-rgb), 0.04); transition: background 0.25s, color 0.25s, transform 0.25s, border-color 0.25s; }
+.tut-set svg { width: 18px; height: 18px; flex: none; }
+.tut-wave { display: flex; align-items: center; justify-content: center; gap: 3px; height: 36px; opacity: 0; transition: opacity 0.3s; }
+.tut-wave.on { opacity: 1; }
+.tut-wave i { width: 3px; height: 10px; border-radius: 2px; background: var(--accent, var(--fg)); animation: tutWv 0.9s ease-in-out infinite; }
+.tut-wave i:nth-child(3n) { animation-delay: -0.3s; }
+.tut-wave i:nth-child(3n + 1) { animation-delay: -0.6s; }
+.tut-orb { align-self: center; width: 120px; height: 120px; margin: 14px 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; gap: 22px; background: radial-gradient(circle at 34% 28%, color-mix(in srgb, var(--accent, #0a84ff) 65%, #fff), var(--accent, #0a84ff) 60%, color-mix(in srgb, var(--accent, #0a84ff) 60%, #000)); animation: tutBob 3s ease-in-out infinite; }
+.tut-orb i { width: 12px; height: 18px; border-radius: 50%; background: #111; }
+.tut-orb.think i { animation: tutBlink 1s ease-in-out infinite; }
+.tut-orb.talk { animation: tutTalk 0.5s ease-in-out infinite alternate; }
+.tut-livebar { display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--glass-border); border-radius: 999px; padding: 6px 8px 6px 14px; opacity: 0.85; }
+.tut-livebar b { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--glass-border); }
+.tut-livebar svg { width: 14px; height: 14px; }
+@keyframes tutWv { 0%, 100% { height: 8px; } 50% { height: 30px; } }
+@keyframes tutBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes tutTalk { from { transform: scale(1); } to { transform: scale(1.1); } }
 
 @keyframes tutDragY { 0%, 15% { transform: translateY(0); } 55%, 80% { transform: translateY(56px); } 100% { transform: translateY(0); } }
 @keyframes tutDragDn { 0%, 15% { transform: translateY(0); } 60%, 85% { transform: translateY(58px); } 100% { transform: translateY(0); } }
