@@ -15723,13 +15723,13 @@ function tutScenes() {
     return t;
   };
   const clearIn = (S) => { Q(S, 'in').value = ''; Q(S, 'cp').classList.add('is-idle'); Q(S, 'snd').classList.remove('has-text'); Q(S, 'wb').innerHTML = ''; };
-  const msgCard = (userTxt, hideEnd) => {
+  const msgCard = (userTxt, hideEnd, older) => {
     const pv = (typeof MODEL_PROVIDERS !== 'undefined' && MODEL_PROVIDERS[0]) || { logo: '' };
     const stamp = typeof msgStamp === 'function' ? msgStamp(Date.now() - 86400000) : '';
     const uico = typeof MSG_USER_ICO !== 'undefined' ? MSG_USER_ICO : '';
     const ab = (k, i) => `<button class="msg-act" type="button" tabindex="-1" data-k="${k}">${ic(i)}</button>`;
     const hd = hideEnd ? ' style="display:none"' : '';
-    return `<div class="msg msg-ai"><div class="msg-card"><div class="msg-sec msg-sec-user"><span class="msg-ico msg-user-ico">${uico}</span><div class="msg-user-col"><div class="msg-bubble">${userTxt}</div></div></div><div class="msg-sec msg-sec-main"><div class="msg-body" data-k="ans"></div></div><div class="msg-actions msg-sec msg-sec-act" data-k="acts"${hd}>${ab('m-copy', 'copy')}${ab('m-voice', 'volume')}${ab('m-branch', 'branchTree')}${ab('m-like', 'thumbUp')}${ab('m-dislike', 'thumbDown')}${ab('m-regen', 'regen')}${ab('m-edit', 'pencil')}<span class="msg-ico msg-prov">${pv.logo}</span></div><div class="msg-sec msg-sec-foot" data-k="ft"${hd}><span class="msg-meta"><span class="msg-time" data-k="f-time">${stamp}</span><span class="msg-model" data-k="f-model">GPT-OSS 120B</span></span><span class="msg-tok" data-k="f-tok">Minima ~8T</span></div></div></div>`;
+    return `<div class="msg msg-ai"><div class="msg-card"><div class="msg-sec msg-sec-user"><span class="msg-ico msg-user-ico">${uico}</span><div class="msg-user-col"><div class="msg-bubble">${userTxt}</div></div></div><div class="msg-sec msg-sec-main"><div class="msg-body" data-k="ans"></div></div><div class="msg-actions msg-sec msg-sec-act" data-k="acts"${hd}>${ab('m-copy', 'copy')}${ab('m-voice', 'volume')}${ab('m-branch', 'branchTree')}${ab('m-like', 'thumbUp')}${ab('m-dislike', 'thumbDown')}${older ? ab('m-think', 'book') : ab('m-regen', 'regen')}${ab('m-edit', 'pencil')}<span class="msg-ico msg-prov">${pv.logo}</span></div><div class="msg-sec msg-sec-foot" data-k="ft"${hd}><span class="msg-meta"><span class="msg-time" data-k="f-time">${stamp}</span><span class="msg-model" data-k="f-model">GPT-OSS 120B</span></span><span class="msg-tok" data-k="f-tok">Minima ~8T</span></div></div></div>`;
   };
   const body = (h) => `<div class="np-body lib-list" data-k="bd">${h}</div>`;
   const tagEl = '<div class="tut-tag" data-k="tag"></div>';
@@ -15775,6 +15775,24 @@ function tutScenes() {
       Q(S, 'ans').textContent = 'Hey! How can I help you today?';
       const steps = [['m-copy', 'Copy the reply'], ['m-voice', 'Read it aloud'], ['m-branch', 'Branch from here'], ['m-like', 'Good response'], ['m-dislike', 'Bad response'], ['m-regen', 'Regenerate the reply'], ['m-edit', 'Edit your message'], ['f-time', 'When it was sent'], ['f-model', 'Which model answered'], ['f-tok', 'Effort level and tokens']];
       steps.forEach(([k, t], n) => at(600 + n * 1100, () => { steps.forEach(([j]) => Q(S, j).classList.toggle('hl', j === k)); Q(S, 'tag').textContent = t; }));
+    } },
+
+    { ch: 'Chatting', ms: 10500, t: 'Show thoughts on older replies', x: 'On any reply except the latest, a book icon appears when it was written with thinking. Tap it to flip the reply to its reasoning, and tap again to flip back.', b: (S, at) => {
+      S.innerHTML = `<div class="tut-phone">${msgCard('Yo', false, true)}${tagEl}</div>`;
+      const body = Q(S, 'ans'), bk = Q(S, 'm-think'), tag = Q(S, 'tag');
+      const reply = 'Hey! How can I help you today?';
+      body.textContent = reply;
+      const flip = (on) => {
+        bk.classList.remove('hl', 'press'); bk.classList.toggle('on', on);
+        body.classList.toggle('msg-thoughts', on); body.classList.add('swap-glaze');
+        body.textContent = on ? 'User just says "Yo". Greeting, 1-2 sentences.' : reply;
+        setTimeout(() => body.classList.remove('swap-glaze'), 700);
+      };
+      at(700, () => { bk.classList.add('hl'); tag.textContent = 'Older replies get a book icon'; });
+      at(2600, () => { bk.classList.remove('hl'); bk.classList.add('press'); });
+      at(3000, () => { flip(true); tag.textContent = 'Show thoughts'; });
+      at(6600, () => { bk.classList.add('press'); });
+      at(7000, () => { flip(false); tag.textContent = 'Show reply'; });
     } },
 
     { ch: 'Chatting', ms: 11000, t: 'Everything in the composer', x: 'Drag the grip to resize. The brain on the left follows the thinking. The pill shows tokens used today, then attach, and the button on the right. Empty, it switches to speech. With text, it sends.', b: (S, at) => {
@@ -15927,14 +15945,18 @@ function tutScenes() {
       at(6200, () => { Q(S, 'id').textContent = 'coffee-notes'; Q(S, 'tag').textContent = 'Copy the ID to share it'; });
     } },
 
-    { ch: 'Voice and Live', ms: 10000, t: 'Speak instead of typing', x: 'With an empty box, the button on the right switches to speech. Talk, and your words appear as you speak.', b: (S, at) => {
+    { ch: 'Voice and Live', ms: 10500, t: 'Speak instead of typing', x: 'With an empty box, the button on the right switches to speech. The brain turns into Pause and Play. Talk, and your words appear as you speak.', b: (S, at) => {
       S.innerHTML = `<div class="tut-phone">${cmp()}${tagEl}</div>`;
-      const cp = Q(S, 'cp'), bars = [...S.querySelectorAll('.wave i')];
+      const cp = Q(S, 'cp'), br = Q(S, 'br'), bars = [...S.querySelectorAll('.wave i')];
       at(800, () => { Q(S, 'snd').classList.add('press'); Q(S, 'tag').textContent = 'Switch to speech'; });
-      at(1400, () => { Q(S, 'snd').classList.remove('press'); cp.dataset.mode = 'speech'; cp.classList.remove('is-idle'); Q(S, 'in').placeholder = 'Listening...'; Q(S, 'tag').textContent = 'Say what you want'; });
-      for (let n = 0; n < 32; n++) at(1500 + n * 110, () => bars.forEach((b) => { const v = Math.random(); b.style.transform = `scaleY(${(0.2 + v * 0.8).toFixed(2)})`; b.dataset.lv = v > 0.66 ? '2' : v > 0.33 ? '1' : '0'; }));
-      typeIn(S, at, 'Plan my week', 3000, 90);
-      at(5200, () => { bars.forEach((b) => { b.style.transform = ''; }); cp.dataset.mode = 'text'; Q(S, 'tag').textContent = 'Then send it'; });
+      at(1400, () => { Q(S, 'snd').classList.remove('press'); cp.dataset.mode = 'speech'; cp.dataset.voice = 'recording'; cp.classList.remove('is-idle'); Q(S, 'in').placeholder = 'Listening...'; Q(S, 'tag').textContent = 'The brain becomes Pause'; });
+      for (let n = 0; n < 60; n++) at(1500 + n * 110, () => { if (cp.dataset.voice === 'paused') return; bars.forEach((b) => { const v = Math.random(); b.style.transform = `scaleY(${(0.2 + v * 0.8).toFixed(2)})`; b.dataset.lv = v > 0.66 ? '2' : v > 0.33 ? '1' : '0'; }); });
+      typeIn(S, at, 'Plan my week', 2300, 90);
+      at(4700, () => { br.classList.add('press'); });
+      at(5100, () => { br.classList.remove('press'); cp.dataset.voice = 'paused'; Q(S, 'tag').textContent = 'Pause stops listening'; });
+      at(6700, () => { br.classList.add('press'); });
+      at(7100, () => { br.classList.remove('press'); cp.dataset.voice = 'recording'; Q(S, 'tag').textContent = 'Play continues'; });
+      at(8600, () => { bars.forEach((b) => { b.style.transform = ''; }); cp.dataset.mode = 'text'; delete cp.dataset.voice; Q(S, 'tag').textContent = 'Then send it'; });
     } },
 
     { ch: 'Voice and Live', ms: 10000, t: 'Live mode', x: 'Talk hands-free. The orb listens, thinks and answers out loud while the reply is still being written. Type in the pill if you prefer. X stops it.', b: (S, at) => {
