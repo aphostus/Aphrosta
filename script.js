@@ -782,7 +782,13 @@ function inboxPush(message, type) {
   try { if (document.querySelector('[data-fd-inbox-list]')) renderInbox(); } catch (_) {}
 }
 
+var toastHold = false, toastMute = false, toastQueue = [];
 function toast(message, type = 'error', duration = 5000, undo = null) {
+  if (toastMute) return;
+  if (toastHold) {
+    if (!toastQueue.some((q) => q[0] === message)) toastQueue.push([message, type, duration, undo]);
+    return;
+  }
   if (!settings.notifications) return;
   inboxPush(message, type);
   const host = ensureToastHost();
@@ -16438,10 +16444,21 @@ function getOrCreateLoader() {
   }
   return loaderEl;
 }
-function showLoader() { getOrCreateLoader().classList.remove('hidden'); }
+let loaderTimer = null;
+function showLoader() {
+  clearTimeout(loaderTimer);
+  toastHold = true;
+  getOrCreateLoader().classList.remove('hidden');
+}
 function hideLoader() {
   const el = document.getElementById('loader');
   if (el) el.classList.add('hidden');
+  clearTimeout(loaderTimer);
+  loaderTimer = setTimeout(() => {
+    toastHold = false;
+    toastMute = false;
+    toastQueue.splice(0).forEach((a) => toast(...a));
+  }, 650);
 }
 
 let authBusy = false;
@@ -16999,7 +17016,8 @@ async function acDraw(color, id, text) {
 async function acSignIn(file) {
   if (!file) return;
   try {
-    toast('Reading card\u2026', 'info', 1800);
+    toastMute = true;
+    showLoader();
     await acLibs();
     const bmp = await createImageBitmap(file);
     const c = document.createElement('canvas');
@@ -17008,16 +17026,16 @@ async function acSignIn(file) {
     x.drawImage(bmp, 0, 0);
     const d = x.getImageData(0, 0, c.width, c.height);
     const r = window.jsQR(d.data, d.width, d.height);
-    if (!r || !String(r.data).startsWith('APH1.')) return toast('No Acard found in that image.', 'error', 3200);
+    if (!r || !String(r.data).startsWith('APH1.')) { hideLoader(); return; }
     const p = acDec(r.data);
     if (!p.e || !p.p || !p.u || !p.k) throw new Error('bad card');
     await Vault.importKey(p.u, p.k);
     await signInWithEmailAndPassword(auth, p.e, p.p);
-    toast('Signed in with Acard.', 'success', 2200);
+    // Acard sign-in is silent: the loader stays up until the app is rendered.
     setTimeout(() => { try { setSetting('acardColor', p.c === 'white' ? 'white' : 'black'); } catch (_) {} }, 3500);
   } catch (err) {
     console.error('[ACARD] sign-in failed:', err?.code || err?.message);
-    toast('That card could not sign you in.', 'error', 3600);
+    hideLoader();
   }
 }
 const Acard = (() => {
@@ -17258,7 +17276,8 @@ async function boot() {
     authResolved = true;
     clearTimeout(signInFallback);
     if (user) {
-      hideLoader();
+      showLoader();
+      const loaderSafety = setTimeout(hideLoader, 12000);
       bindAccountKeys(user.uid);
       let blocked = null;
       accountStatusOffline = false;
@@ -17288,6 +17307,8 @@ async function boot() {
       if (!blocked && emailKey) blocked = readLocalLocks()[emailKey] || null;
       if (blocked) {
         authBlocked = true;
+        clearTimeout(loaderSafety);
+        hideLoader();
         showBlockedScreen(blocked);
         await signOut(auth);
         return;
@@ -17301,6 +17322,9 @@ async function boot() {
       refreshStorage();
       updateAccountBanner();
       maybeStartOnboarding();
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      clearTimeout(loaderSafety);
+      hideLoader();
     } else {
       if (authBlocked) return;
       renderSigningIn();
