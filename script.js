@@ -7936,6 +7936,7 @@ const Live = (() => {
         fd.append('model', model);
         fd.append('response_format', 'json');
         fd.append('temperature', '0');
+        if (paused) { fd.append('language', 'en'); fd.append('prompt', 'Continue.'); }
         fd.append('file', blob, 'speech.' + (/mp4/.test(blob.type) ? 'm4a' : /ogg/.test(blob.type) ? 'ogg' : 'webm'));
         return fetch('https://api.groq.com/openai/v1/audio/transcriptions', { method: 'POST', headers: { Authorization: 'Bearer ' + key }, body: fd });
       };
@@ -7947,8 +7948,9 @@ const Live = (() => {
       const t = String(j.text || '').trim();
       if (my !== tok) return;
       if (t.replace(/[^\p{L}\p{N}]/gu, '').length < 2) { arm(); return; }
-      const cw = t.toLowerCase().replace(/[^a-z ]/g, ' ').split(/\s+/).filter((w) => w && !/^(?:ok|okay|hey|please|now|it|just)$/.test(w));
-      const saidCmd = (w) => cw.length === 1 && (cw[0] === w || cw[0] === w + 'd');
+      const cw = t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z ]/g, ' ').split(/\s+/).filter((w) => w && !/^(?:ok|okay|hey|please|now|it|just)$/.test(w));
+      const CMDS = { continue: ['continue', 'continued', 'continuo', 'continua', 'continuar'], pause: ['pause', 'paused', 'paws', 'pausa', 'pausar'] };
+      const saidCmd = (w) => cw.length === 1 && CMDS[w].includes(cw[0]);
       if (paused) {
         if (saidCmd('continue')) {
           paused = false;
@@ -7971,7 +7973,7 @@ const Live = (() => {
         arm();
         return;
       }
-      if (saidCmd('pause') || (cw.length === 1 && cw[0] === 'paws')) { paused = true; haptic(8); arm(); return; }
+      if (saidCmd('pause')) { paused = true; haptic(8); arm(); return; }
       await turn(t, my);
     } catch (e) {
       if (my !== tok) return;
@@ -14362,6 +14364,24 @@ function readerRace(target, signal) {
   }));
 }
 
+function newsFeed(enc, signal) {
+  const target = 'https://news.google.com/rss/search?hl=en-US&gl=US&ceid=US:en&q=' + enc;
+  return Promise.any([
+    'https://api.allorigins.win/raw?url=' + encodeURIComponent(target),
+    'https://corsproxy.io/?url=' + encodeURIComponent(target)
+  ].map(async (u) => {
+    const r = await fetch(u, { signal });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const x = new DOMParser().parseFromString(await r.text(), 'text/xml');
+    const items = [...x.querySelectorAll('item')].slice(0, 8).map((it, n) => {
+      const g = (k) => (it.querySelector(k) ? it.querySelector(k).textContent.trim() : '');
+      return (n + 1) + '. ' + g('title') + ' (' + g('pubDate').slice(0, 22) + ') ' + g('link');
+    });
+    if (!items.length) throw new Error('no news');
+    return items.join(' ');
+  }));
+}
+
 async function fastWebSearch(q, outer) {
   const key = q.toLowerCase();
   const hit = searchCache.get(key);
@@ -14369,13 +14389,18 @@ async function fastWebSearch(q, outer) {
   const ctl = new AbortController();
   const stop = () => ctl.abort();
   if (outer) outer.addEventListener('abort', stop);
-  const timer = setTimeout(stop, 7000);
+  const timer = setTimeout(stop, 12000);
   try {
     const enc = encodeURIComponent(q);
-    const t = await Promise.any([
+    const racers = [
       readerRace('https://html.duckduckgo.com/html/?q=' + enc, ctl.signal),
       readerRace('https://www.bing.com/search?q=' + enc, ctl.signal)
-    ]);
+    ];
+    if (/news|headline|today|latest|breaking|score|election|happening|update/i.test(q)) {
+      const nq = q.replace(/\b(can|could|you|check|any|please|for|the|tell|me|what|whats|is|are|there)\b/gi, ' ').replace(/[?!.]/g, ' ').replace(/\s+/g, ' ').trim() || q;
+      racers.push(newsFeed(encodeURIComponent(nq), ctl.signal));
+    }
+    const t = await Promise.any(racers);
     ctl.abort();
     const v = ('Web results for: ' + q + '\n' + tidyHits(t)).slice(0, 3000);
     searchCache.set(key, { t: Date.now(), v });
@@ -14548,7 +14573,8 @@ async function agentAfterReply(ai, session) {
   if (agentDepthOf(session) >= AGENT_MAX_STEPS) { toast('Agent step limit reached. (D08)', 'info', 2000); return; }
   const results = [];
   for (const c of calls) {
-    const fn = enabledAgentTools().includes(c.name) ? AGENT_TOOLS[c.name] : null;
+    const webTool = (c.name === 'web_search' || c.name === 'fetch_url') && settings.agentTools && settings.skillWeb;
+    const fn = (webTool || enabledAgentTools().includes(c.name)) ? AGENT_TOOLS[c.name] : null;
     let r;
     try { r = fn ? await fn(c.args) : `Error: unknown or disabled tool "${c.name}".`; }
     catch (e) { r = 'Error: ' + (e.message || 'tool failed'); }
