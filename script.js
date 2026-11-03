@@ -409,7 +409,7 @@ const RICH_FORMAT_PROMPT = [
 const PLAN_PROMPT = 'PLANNING: for tasks that need three or more steps, open the reply with a plan block: a line ":::plan Plan", up to 6 lines like "- [ ] step", then ":::" alone on a line. When you post an updated plan, mark finished steps "- [x]" and the current step "- [~]". Skip the plan for simple questions.';
 
 const SETTINGS_DEFAULTS = {
-  appearance: 'auto',
+  appearance: 'dark',
   accent: 'mono',
   font: 'system',
   size: 'default',
@@ -454,7 +454,7 @@ function loadSettings() {
   const s = { ...SETTINGS_DEFAULTS, ...raw };
   delete s.sections;
   const valid = (list, id, fb) => (list.some((x) => x.id === id) ? id : fb);
-  s.appearance = valid(APPEARANCES, s.appearance, 'auto');
+  s.appearance = valid(APPEARANCES, s.appearance, 'dark');
   s.accent     = valid(ACCENTS, s.accent, 'mono');
   s.font       = valid(FONTS, s.font, 'system');
   s.size       = valid(TEXT_SIZES, s.size, 'default');
@@ -618,6 +618,7 @@ function applySettings() {
       ? autoTheme()
       : settings.appearance;
   root.dataset.theme = theme;
+  document.querySelector('.signin-screen')?.classList.toggle('is-light', theme === 'light');
   document.querySelector('meta[name="theme-color"]')
     ?.setAttribute('content', theme === 'light' ? '#ffffff' : '#000000');
   updateFavicon();
@@ -663,7 +664,6 @@ systemLight?.addEventListener?.('change', () => {
 /* Auto mode: switch at 6am / 6pm without a reload; also keeps the sign-in page in step */
 setInterval(() => {
   const t = autoTheme();
-  document.querySelector('.signin-screen')?.classList.toggle('is-light', t === 'light');
   if (settings.appearance === 'auto' && document.documentElement.dataset.theme !== t) applySettings();
 }, 30000);
 applySettings();
@@ -16527,30 +16527,30 @@ function startSignArt() {
 function showSignInButton() {
   const existingBtn = document.getElementById('signin-btn');
   if (existingBtn) {
-    existingBtn.disabled = !document.getElementById('signin-agree').checked;
+    existingBtn.disabled = false;
     return;
   }
   appEl.innerHTML = `
-    <div class="signin-screen${autoTheme() === 'light' ? ' is-light' : ''}">
-      <pre class="signin-art" id="signin-art" aria-hidden="true"></pre>
+    <div class="signin-screen${document.documentElement.dataset.theme === 'light' ? ' is-light' : ''}">
       <div class="signin-card">
-        <button id="signin-btn" class="signin-btn" disabled>
+        <div class="signin-row">
+        <button id="signin-btn" class="signin-btn">
           <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.5 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.2 5.5-4.7 7.2l7.6 5.9c4.4-4.1 6.9-10.1 6.9-17.6z"/><path fill="#FBBC05" d="M10.5 28.7a14.5 14.5 0 0 1 0-9.4l-7.9-6.1a24 24 0 0 0 0 21.6l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.9 2.3-8.3 2.3-6.3 0-11.6-4-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>
           <span>Sign-in/Sign-up</span>
         </button>
-        <label class="signin-agree">
-          <input type="checkbox" id="signin-agree">
-          <span>I agree to the About &amp; License, Terms &amp; Conditions, and Rules &amp; Policies.</span>
-        </label>
+        <button id="signin-theme" class="signin-theme" type="button" aria-label="Switch theme"></button>
+        </div>
+        <p class="signin-agree">By continuing, you agree to the About &amp; License, Terms &amp; Conditions, and Rules &amp; Policies.</p>
       </div>
     </div>`;
-  startSignArt();
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', autoTheme() === 'light' ? '#ffffff' : '#000000');
-  const cb = document.getElementById('signin-agree');
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', document.documentElement.dataset.theme === 'light' ? '#ffffff' : '#000000');
   const btn = document.getElementById('signin-btn');
-  cb.onchange = () => { btn.disabled = !cb.checked; };
+  document.getElementById('signin-theme').onclick = () => {
+    settings.appearance = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+    saveSettings();
+    applySettings();
+  };
   btn.onclick = () => {
-    if (!cb.checked) return;
     signInConsent = true;
     authBusy = false;
     autoSignIn();

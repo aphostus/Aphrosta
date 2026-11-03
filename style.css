@@ -4428,9 +4428,11 @@ mark.ab-mark {
 .signin-card { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; box-sizing: border-box; padding: 26px 24px calc(24px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; justify-content: center; gap: 18px; background: rgba(8, 8, 8, 0.58); -webkit-backdrop-filter: blur(22px) saturate(160%); backdrop-filter: blur(22px) saturate(160%); border: 0; border-top: 2px solid #fff; border-radius: 30px 30px 0 0; box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.6); }
 .signin-btn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; max-width: 480px; margin: 0 auto; padding: 16px 18px; font-size: 16px; font-weight: 600; color: #fff; background: rgba(255, 255, 255, 0.08); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border: 1px solid rgba(255, 255, 255, 0.55); border-radius: 999px; cursor: pointer; transition: opacity 0.2s, background 0.2s; }
 .signin-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.signin-row { display: flex; align-items: center; gap: 12px; width: 100%; max-width: 480px; margin: 0 auto; }
+.signin-row .signin-btn { flex: 1; min-width: 0; max-width: none; margin: 0; padding-left: 12px; padding-right: 12px; }
+.signin-theme { flex: none; width: 54px; height: 54px; padding: 0; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.55); background: linear-gradient(90deg, #fff 50%, #000 50%); cursor: pointer; }
 .signin-btn:not(:disabled):active { background: rgba(255, 255, 255, 0.18); }
-.signin-agree { display: flex; align-items: flex-start; gap: 10px; width: 100%; max-width: 480px; margin: 0 auto; font-size: 13px; line-height: 1.45; color: rgba(255, 255, 255, 0.78); cursor: pointer; }
-.signin-agree input { flex: none; width: 18px; height: 18px; margin: 1px 0 0; accent-color: #fff; }
+.signin-agree { width: 100%; max-width: 480px; margin: 0 auto; text-align: center; font-size: 13px; line-height: 1.45; color: rgba(255, 255, 255, 0.78); }
 
 /* sign-in page, light version (always follows Auto: 6am-6pm) */
 .signin-screen.is-light { background: #fff; color: #000; }
@@ -4439,7 +4441,7 @@ mark.ab-mark {
 .signin-screen.is-light .signin-btn { color: #000; background: rgba(0, 0, 0, 0.05); border-color: rgba(0, 0, 0, 0.55); }
 .signin-screen.is-light .signin-btn:not(:disabled):active { background: rgba(0, 0, 0, 0.14); }
 .signin-screen.is-light .signin-agree { color: rgba(0, 0, 0, 0.75); }
-.signin-screen.is-light .signin-agree input { accent-color: #000; }
+.signin-screen.is-light .signin-theme { border-color: rgba(0, 0, 0, 0.55); }
 
 /* ---------- Merged message card (user section on top of AI) ---------- */
 .msg-sec-user { position: relative; display: flex; flex-direction: column; align-items: stretch; gap: 4px; padding: 12px 14px; min-width: 0; }
