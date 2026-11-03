@@ -5016,4 +5016,19 @@ html[data-motion="reduce"] .sess-pw { animation: none; }
 }
 .sbx-go:active { transform: scale(0.98); }
 .sbx-go.is-dim { opacity: 0.4; }
+.sbar-regen {
+  flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; margin-left: -6px; color: var(--gray-light); border-radius: 9px;
+  transition: background 0.2s var(--ease-smooth), color 0.2s var(--ease-smooth), transform 0.2s var(--ease-bounce);
+}
+.sbar-regen:hover { background: var(--glass-bg-hover); color: var(--fg); }
+.sbar-regen:active { transform: scale(0.92); }
+.sbx-pill { position: relative; }
+.sbx-ph {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  pointer-events: none; font-size: calc(10px * var(--ts)); color: var(--gray-mid);
+}
+.sbx-in:not([data-empty="1"]) ~ .sbx-ph { display: none; }
+.sbx-in[data-empty="1"]::-webkit-datetime-edit { opacity: 0; }
+.sbx-in[data-empty="1"]::-webkit-calendar-picker-indicator { opacity: 0; }
 

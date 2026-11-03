@@ -794,7 +794,7 @@ function toast(message, type = 'error', duration = 5000, undo = null) {
   inboxPush(message, type);
   const host = ensureToastHost();
   if ([...host.children].some((el) => el.dataset.msg === message)) return;
-  while (host.children.length >= 3) host.firstElementChild.remove();
+  [...host.children].forEach((x) => x.remove());
 
   const el = document.createElement('div');
   el.className = `toast tk ${type}`;
@@ -6434,8 +6434,8 @@ const SearchBar = () => `
         <div class="sbar-panel-in">
           <div class="sbx">
             <div class="sbx-grid">
-              <textarea class="sbx-box is-off" data-sbx="emails" placeholder="Emails, comma separated" aria-label="Emails that can access" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
-              <textarea class="sbx-box is-off" data-sbx="phones" placeholder="[phone], [phone]" aria-label="Phones that can access" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
+              <textarea class="sbx-box is-off" data-sbx="emails" placeholder="Emails, e.g. ana@mail.com, ben@mail.com" aria-label="Emails that can access" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
+              <textarea class="sbx-box is-off" data-sbx="phones" placeholder="Phones, e.g. [9171234567], [9181234567]" aria-label="Phones that can access" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
               <button class="sbar-vis sbx-vis" type="button" data-action="sb-vis" data-state="private" aria-label="Private. Tap to make public">
                 <span class="sbar-vis-priv">${ICONS.lock}</span>
                 <span class="sbar-vis-pub">${ICONS.unlock}</span>
@@ -6443,6 +6443,7 @@ const SearchBar = () => `
             </div>
           </div>
           <div class="sbar-row sbar-idrow">
+            <button class="sbar-regen" type="button" data-action="sb-regen" aria-label="Make a new chat ID" title="New chat ID">${ICONS.regen}</button>
             <div class="sbar-pill">
               <input class="sbar-code" type="text" maxlength="30" aria-label="Chat ID" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" value="">
             </div>
@@ -6453,9 +6454,9 @@ const SearchBar = () => `
           </div>
           <div class="sbx">
             <div class="sbx-three">
-              <label class="sbar-pill sbx-pill"><input class="sbx-in" type="datetime-local" data-sbx="exp" aria-label="Expires at"></label>
-              <label class="sbar-pill sbx-pill"><input class="sbx-in" type="password" maxlength="5" data-sbx="pw" placeholder="Pass (5)" aria-label="Password, 5 characters" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false"></label>
-              <label class="sbar-pill sbx-pill"><input class="sbx-in" type="text" inputmode="numeric" maxlength="4" data-sbx="max" placeholder="Uses" aria-label="Times it can be accessed" autocomplete="off"></label>
+              <label class="sbar-pill sbx-pill"><input class="sbx-in" type="datetime-local" data-sbx="exp" data-empty="1" aria-label="Expires at"><span class="sbx-ph" aria-hidden="true">Expiration</span></label>
+              <label class="sbar-pill sbx-pill"><input class="sbx-in" type="password" maxlength="5" data-sbx="pw" placeholder="Password" aria-label="Password, 5 characters" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false"></label>
+              <label class="sbar-pill sbx-pill"><input class="sbx-in" type="text" inputmode="numeric" maxlength="4" data-sbx="max" placeholder="Limiting" aria-label="Times it can be accessed" autocomplete="off"></label>
             </div>
             <button class="sbx-go" type="button" data-action="sb-go">Initiate</button>
           </div>
@@ -10940,6 +10941,8 @@ function sbxFill(bar, s) {
     set('emails', (o.emails || []).join(', '));
     set('phones', (o.phones || []).map((p) => '[' + p + ']').join(', '));
     set('exp', o.exp && o.exp > Date.now() ? sbxLocal(o.exp) : '');
+    const exEl = bar.querySelector('[data-sbx="exp"]');
+    if (exEl) exEl.dataset.empty = exEl.value ? '' : '1';
     const pw = set('pw', o.pw ? SBX_MASK : '');
     if (pw) pw.dataset.kept = o.pw ? '1' : '';
     set('max', o.max ? String(o.max) : '');
@@ -10954,6 +10957,7 @@ document.addEventListener('input', (e) => {
   if (bar) bar.dataset.sbxDirty = currentSession.id;
   if (t.classList.contains('sbx-box')) t.classList.toggle('is-off', !t.value.trim());
   if (t.dataset.sbx === 'pw') t.dataset.kept = '';
+  if (t.dataset.sbx === 'exp') t.dataset.empty = t.value ? '' : '1';
   if (t.dataset.sbx === 'max') t.value = t.value.replace(/\D/g, '').slice(0, 4);
 });
 document.addEventListener('focusin', (e) => {
@@ -10965,6 +10969,11 @@ document.addEventListener('focusin', (e) => {
 document.addEventListener('focusout', (e) => {
   const t = e.target;
   if (t && t.dataset && t.dataset.sbx === 'pw' && t.dataset.kept === '1' && !t.value) t.value = SBX_MASK;
+});
+
+document.addEventListener('change', (e) => {
+  const t = e.target;
+  if (t && t.dataset && t.dataset.sbx === 'exp') t.dataset.empty = t.value ? '' : '1';
 });
 
 function sbxParse() {
@@ -11049,11 +11058,31 @@ async function sbGate(d, code) {
   return true;
 }
 
+async function sbRegen() {
+  const s = currentSession;
+  if (sbBusy) return;
+  sbBusy = true;
+  try {
+    const wasPub = !!s.sharePub;
+    if (wasPub) { pubDrop(s); pubSig.delete(s.id); }
+    s.shareCode = sbMakeCode();
+    if (!s.draft) persistSessions();
+    if (wasPub && s.messages.length) await pubPushOne(s, true);
+    toast('New chat ID created.', 'success', 1800);
+  } catch (err) {
+    toast(sbShareErr(err), 'error', 3600);
+  } finally {
+    sbBusy = false;
+  }
+  sbSyncShare();
+}
+
 function sbAction(action) {
   if (action === 'sb-next') sbStep(1);
   else if (action === 'sb-prev') sbStep(-1);
   else if (action === 'sb-share') { if (Date.now() - sbLongAt < 700) return; sbTogglePanel(); }
   else if (action === 'sb-vis') sbSetPublic(!currentSession.sharePub);
+  else if (action === 'sb-regen') sbRegen();
   else if (action === 'sb-go') { if (q$('.sbar-act')?.dataset.mode === 'load') sbLoad(); else sbInitiate(); }
   else if (action === 'sb-act') {
     if (q$('.sbar-act')?.dataset.mode === 'load') sbLoad();
