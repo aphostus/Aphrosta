@@ -16582,13 +16582,13 @@ function introStart() {
   const $ = (s) => root.querySelector(s);
   const input = $('.live-input'), sendB = $('.live-send'), label = $('.live-label');
   const ac = elAudio;
-  const LABEL = { listening: 'Listening', thinking: 'Thinking\u2026', speaking: '' };
+  const LABEL = { listening: 'Listening', hearing: 'Listening', thinking: 'Thinking\u2026', speaking: '' };
   let paused = false, started = false, tok = 0, ampT = 0, glanceT = 0, watchT = 0, lastAct = Date.now(), pend = null, flashT = 0, cardH = 150, asked = '';
 
   const setState = (s, emo) => {
     root.dataset.state = s;
     root.dataset.paused = paused ? '1' : '0';
-    label.textContent = paused ? 'Paused' : (LABEL[s] || '');
+    label.textContent = paused ? 'Paused' : ((micDenied && (s === 'listening' || s === 'hearing')) ? '' : (LABEL[s] || ''));
     if (emo && root.dataset.emo !== emo) {
       root.dataset.emo = emo;
       const pop = $('.live-pop');
@@ -16614,8 +16614,54 @@ function introStart() {
   };
   const ampOff = () => { clearInterval(ampT); ampT = 0; root.style.setProperty('--amp', '0'); };
 
+  /* ---- voice in: the browser's own speech recognition (no server, no key) ---- */
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let rec = null, listening = false, micDenied = !SR, quietN = 0;
+  const stopListen = () => {
+    if (rec) {
+      rec.onresult = null; rec.onerror = null; rec.onend = null;
+      try { rec.abort(); } catch (_) {}
+    }
+    rec = null; listening = false;
+  };
+  const listen = () => {
+    if (!SR || micDenied || listening || !started || paused || !root.isConnected) return;
+    if (root.dataset.state !== 'listening' && root.dataset.state !== 'hearing') return;
+    let r;
+    try { r = new SR(); } catch (_) { micDenied = true; return; }
+    rec = r;
+    r.lang = 'en-US';
+    r.interimResults = true;
+    r.continuous = false;
+    r.maxAlternatives = 1;
+    r.onstart = () => { listening = true; };
+    r.onresult = (e) => {
+      const list = Array.from(e.results);
+      const text = list.map((x) => x[0].transcript).join(' ').trim();
+      if (!text) return;
+      quietN = 0;
+      lastAct = Date.now();
+      if (root.dataset.state === 'listening') setState('hearing', 'neutral');
+      if (list[list.length - 1].isFinal) { stopListen(); send(text); }
+    };
+    r.onerror = (e) => {
+      const err = e && e.error;
+      if (err === 'not-allowed' || err === 'service-not-allowed' || err === 'audio-capture') { micDenied = true; setState('listening'); }
+      else if (err === 'no-speech') quietN++;
+    };
+    r.onend = () => {
+      listening = false; rec = null;
+      if (!root.isConnected || paused || micDenied) return;
+      if (root.dataset.state !== 'listening' && root.dataset.state !== 'hearing') return;
+      if (quietN >= 3) { root.dataset.emo = 'sleepy'; label.textContent = ''; return; }
+      setTimeout(listen, 350);
+    };
+    try { r.start(); } catch (_) { rec = null; listening = false; }
+  };
+
   const halt = () => {
     tok++;
+    stopListen();
     try { ac.pause(); } catch (_) {}
     try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (_) {}
     ampOff();
@@ -16661,7 +16707,7 @@ function introStart() {
       if (my === tok) await deviceSay(text);
     } finally { ampOff(); }
   };
-  const idle = (emo) => { if (!root.isConnected) return; setState('listening', emo || 'neutral'); lastAct = Date.now(); };
+  const idle = (emo) => { if (!root.isConnected) return; quietN = 0; setState('listening', emo || 'neutral'); lastAct = Date.now(); listen(); };
   const asleep = () => {
     started = false; paused = false;
     root.dataset.state = 'listening'; root.dataset.emo = 'sleepy'; root.dataset.paused = '1';
@@ -16722,6 +16768,7 @@ function introStart() {
     if (!started) { greet(); return; }
     if (paused) { resume(); return; }
     if (root.dataset.state === 'speaking') pause();
+    else if (root.dataset.state === 'listening' && !listening) { quietN = 0; setState('listening', 'neutral'); listen(); }
   });
   input.addEventListener('input', () => { sendB.hidden = !input.value.trim(); });
   const go = () => { const t = input.value; input.value = ''; sendB.hidden = true; send(t); };
