@@ -6340,8 +6340,11 @@ function paintUsageCard() {
     pc.textContent = !limit ? '' : p > 0 && p < 1 ? '<1%' : `${Math.round(p)}%`;
   }
   const denom = Math.max(limit, total) || 1;
-  card.querySelector('[data-usage-stack]').innerHTML = '';
-  card.querySelectorAll('[data-legend]').forEach((el) => el.classList.remove('is-used'));
+  card.querySelector('[data-usage-stack]').innerHTML = MODEL_PROVIDERS
+    .filter((p) => by[p.id] > 0)
+    .map((p) => `<i style="width:${((by[p.id] / denom) * 100).toFixed(2)}%;background:${PROVIDER_COLORS[p.id]}"></i>`)
+    .join('');
+  card.querySelectorAll('[data-legend]').forEach((el) => el.classList.toggle('is-used', by[el.dataset.legend] > 0));
   card.dataset.state = !limit ? '' : total >= limit ? 'over' : total >= limit * 0.9 ? 'warn' : '';
 }
 
