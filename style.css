@@ -70,7 +70,7 @@
   --warn: #c79a00;
   --bad: #e0372d;
   --presence-online: rgba(10, 10, 10, 0.38);
-  color-scheme: light;
+  color-scheme: only light;
 
   --composer-bg: rgba(255, 255, 255, 0.55);
   --composer-bg-focus: rgba(255, 255, 255, 0.7);

@@ -16582,7 +16582,7 @@ function introStart() {
     const look0 = root.querySelector('.lv-look');
     const ST0 = ['listening', 'hearing', 'thinking', 'speaking', 'searching'];
     const EM0 = ['neutral', 'happy', 'sad', 'surprised', 'curious', 'sleepy'];
-    const LAB0 = { listening: 'Listening', hearing: 'Listening', thinking: 'Thinking\u2026', speaking: '', searching: '' };
+    const LAB0 = { listening: '', hearing: '', thinking: '', speaking: '', searching: '' };
     const fit0 = () => { root.style.bottom = (card0.offsetHeight || 150) + 'px'; };
     let hist0 = [], tm0 = 0;
     const tick0 = () => {
