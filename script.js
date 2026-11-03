@@ -6260,7 +6260,7 @@ function openUsagePopup() {
   const modelName = (pid, mid) => PROVIDER_API[pid]?.models.find((m) => m.id === mid)?.name || mid;
   const used = MODEL_PROVIDERS.filter((p) => by[p.id] > 0);
 
-  const bar = used.map((p) => `<i style="width:${pct(by[p.id])}%;background:${PROVIDER_COLORS[p.id]}"></i>`).join('');
+  const bar = '';
   const rows = used.map((p) => {
     const mods = Object.entries(d.models[p.id] || {}).sort((a, b) => b[1] - a[1])
       .map(([mid, n]) => `<div class="usage-model"><span>${esc(modelName(p.id, mid))}</span><span>${fmtTokens(n)}</span></div>`).join('');
@@ -6277,14 +6277,14 @@ function openUsagePopup() {
   scrim.className = 'dialog-scrim usage-scrim';
   scrim.innerHTML = `<div class="dialog usage-pop" role="dialog" aria-modal="true" aria-label="Token usage">
     <h3 class="dialog-title">Token usage</h3>
-    <div class="usage-pop-total"><b>${fmtTokens(total)}</b><span>${limit ? `of ${fmtTokens(limit)} \u00b7 ${fmtTokens(left)} left` : 'tokens today'}</span></div>
+    <div class="usage-pop-total" style="display:none"><b>${fmtTokens(total)}</b><span>${limit ? `of ${fmtTokens(limit)} \u00b7 ${fmtTokens(left)} left` : 'tokens today'}</span></div>
     <span class="usage-stack" role="img" aria-label="Tokens by provider">${bar}</span>
-    <div class="usage-tiles">
+    <div class="usage-tiles" style="display:none">
       <div class="usage-tile"><b>${fmtTokens(d.prompt)}</b><span>Input</span></div>
       <div class="usage-tile"><b>${fmtTokens(d.completion)}</b><span>Output</span></div>
       <div class="usage-tile"><b>${d.requests}</b><span>Requests</span></div>
     </div>
-    <div class="usage-rows">${rows}</div>
+    <div class="usage-rows" style="display:none">${rows}</div>
     <p class="field-note">${resetLine}. Counts every model together. Input, output and requests are for this device. Some totals are estimated when a provider doesn\u2019t report usage.</p>
     <div class="dialog-actions"><button class="dialog-btn ok" type="button" data-r="x">Done</button></div>
   </div>`;
@@ -6313,6 +6313,8 @@ function paintUsageCard() {
   if (!card) return;
   const { limit, total, by } = usageView();
   card.querySelector('[data-day-total]').textContent = fmtTokens(total);
+  const fig = card.querySelector('.usage-figure');
+  if (fig) fig.style.display = 'none';
   const of = card.querySelector('[data-day-of]');
   of.hidden = !limit;
   of.textContent = limit ? `/${fmtTokens(limit)}` : '';
@@ -6323,11 +6325,8 @@ function paintUsageCard() {
     pc.textContent = !limit ? '' : p > 0 && p < 1 ? '<1%' : `${Math.round(p)}%`;
   }
   const denom = Math.max(limit, total) || 1;
-  card.querySelector('[data-usage-stack]').innerHTML = MODEL_PROVIDERS
-    .filter((p) => by[p.id] > 0)
-    .map((p) => `<i style="width:${(by[p.id] / denom * 100).toFixed(2)}%;background:${PROVIDER_COLORS[p.id]}"></i>`)
-    .join('');
-  card.querySelectorAll('[data-legend]').forEach((el) => el.classList.toggle('is-used', !!apiKeys[el.dataset.legend]));
+  card.querySelector('[data-usage-stack]').innerHTML = '';
+  card.querySelectorAll('[data-legend]').forEach((el) => el.classList.remove('is-used'));
   card.dataset.state = !limit ? '' : total >= limit ? 'over' : total >= limit * 0.9 ? 'warn' : '';
 }
 
@@ -15248,6 +15247,8 @@ function updateModelButton() {
   const name = ap ? ap.item.name : (p ? p.name : 'Models');
   slot.innerHTML = `${logo}<span class="model-name">${esc(name)}</span>${ap && ap.kind === 'agent' ? '' : ICONS.chevron}`;
   appEl.querySelector('.model-pick-btn')?.classList.toggle('ag-lock', !!ap);
+  const pickBtn = appEl.querySelector('.model-pick-btn');
+  if (pickBtn && !ap) pickBtn.style.opacity = activeModel ? '' : '0.35';
   appEl.querySelector('[data-action="model-select"]')?.classList.toggle('ag-lock', !!ap && ap.kind === 'agent');
   appEl?.querySelector('.composer')?.__resetThink?.();
 }
