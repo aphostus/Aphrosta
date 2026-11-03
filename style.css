@@ -4442,6 +4442,12 @@ mark.ab-mark {
 .signin-screen.is-light .signin-btn { color: #000; background: rgba(0, 0, 0, 0.05); border-color: rgba(0, 0, 0, 0.55); }
 .signin-screen.is-light .signin-btn:not(:disabled):active { background: rgba(0, 0, 0, 0.14); }
 .signin-screen.is-light .signin-agree { color: rgba(0, 0, 0, 0.75); }
+.signin-screen .intro-live { position: absolute; left: 0; right: 0; top: 0; bottom: 150px; height: auto; z-index: 1; background: transparent; animation: none; }
+.signin-screen .intro-live .live-stage { gap: 20px; }
+.signin-screen .intro-live .live-float { width: min(52vw, 240px); }
+.signin-screen .intro-live .live-bar { padding: 10px 14px 12px; }
+.signin-screen.intro-kb .signin-card { display: none; }
+.signin-screen.intro-kb .intro-live .live-float { width: min(34vw, 150px); }
 .signin-screen.is-light .signin-theme { border-color: #000; background: #000; color: #fff; }
 
 /* ---------- Merged message card (user section on top of AI) ---------- */

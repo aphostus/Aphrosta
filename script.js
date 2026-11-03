@@ -16524,6 +16524,242 @@ function startSignArt() {
   }, 90);
 }
 
+/* ---------- INTRO AVATAR (sign-in screen) ---------- */
+const INTRO_WORKER = 'https://hidden-thunder-9380.aphostus-org.workers.dev';
+const INTRO_GREET = 'Hi there, welcome to Aphrosta! Let us talk about it. Ready?';
+const INTRO_GREET_FILE = 'intro-greeting.wav';
+
+function introMarkup() {
+  return `<div class="live-root intro-live" data-state="listening" data-emo="sleepy" data-paused="1">
+      <div class="live-stage">
+        <div class="live-float">
+          <div class="live-halo"></div>
+          <div class="live-orbit"><b style="--a:0deg"></b><b style="--a:120deg"></b><b style="--a:240deg"></b></div>
+          <span class="live-zzz" aria-hidden="true"><b>z</b><b>Z</b><b>z</b></span>
+          <div class="live-ball" data-live="ball">
+            <div class="live-pop">
+              <svg class="live-svg" viewBox="0 0 200 200" aria-hidden="true">
+                <defs>
+                  <radialGradient id="lvBody" cx="34%" cy="28%" r="85%"><stop offset="0" style="stop-color:var(--live-hi)"/><stop offset=".55" style="stop-color:color-mix(in srgb,var(--live-hi) 78%,var(--live-lo))"/><stop offset="1" style="stop-color:var(--live-lo)"/></radialGradient>
+                  <radialGradient id="lvRim" cx="50%" cy="50%" r="50%"><stop offset=".68" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".34"/></radialGradient>
+                  <radialGradient id="lvSpec" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#fff" stop-opacity=".9"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+                  <radialGradient id="lvBounce" cx="50%" cy="100%" r="60%"><stop offset="0" stop-color="#fff" stop-opacity=".28"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+                  <clipPath id="lvClip"><circle cx="100" cy="100" r="88"/></clipPath>
+                </defs>
+                <circle cx="100" cy="100" r="88" fill="url(#lvBody)"/>
+                <g clip-path="url(#lvClip)"><circle cx="100" cy="100" r="88" fill="url(#lvRim)"/><ellipse cx="100" cy="176" rx="64" ry="26" fill="url(#lvBounce)"/></g>
+                <ellipse cx="68" cy="52" rx="40" ry="22" transform="rotate(-32 68 52)" fill="url(#lvSpec)"/>
+                <g class="lv-look">
+                  <path class="lv-brow lv-brow-l" d="M56 70H84"/><path class="lv-brow lv-brow-r" d="M116 70H144"/>
+                  <g class="lv-eyes">
+                    <g class="lv-eye lv-eye-l"><ellipse cx="70" cy="100" rx="12" ry="17"/><circle class="lv-glint" cx="74" cy="93" r="4"/></g>
+                    <g class="lv-eye lv-eye-r"><ellipse cx="130" cy="100" rx="12" ry="17"/><circle class="lv-glint" cx="134" cy="93" r="4"/></g>
+                  </g>
+                  <g class="lv-arcs"><path d="M56 106Q70 86 84 106"/><path d="M116 106Q130 86 144 106"/></g>
+                  <path class="lv-tear" d="M60 120q-6 10 0 14q6-4 0-14z"/>
+                </g>
+              </svg>
+            </div>
+          </div>
+        </div>
+        <div class="live-label" aria-live="polite"></div>
+      </div>
+      <div class="live-bar">
+        <div class="live-pill">
+          <input class="live-input" type="text" placeholder="Type to talk..." aria-label="Type a message" enterkeyhint="send" autocomplete="off" autocapitalize="sentences" maxlength="200">
+          <button class="live-send" type="button" aria-label="Send" hidden>${ICONS.rocket}</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function introStart() {
+  const root = document.querySelector('.intro-live');
+  if (!root || root.dataset.on) return;
+  root.dataset.on = '1';
+  const screen = root.closest('.signin-screen');
+  const card = screen.querySelector('.signin-card');
+  const $ = (s) => root.querySelector(s);
+  const input = $('.live-input'), sendB = $('.live-send'), label = $('.live-label');
+  const ac = elAudio;
+  const LABEL = { listening: 'Listening', thinking: 'Thinking\u2026', speaking: '' };
+  let paused = false, started = false, tok = 0, ampT = 0, glanceT = 0, watchT = 0, lastAct = Date.now(), pend = null, flashT = 0, cardH = 150, asked = '';
+
+  const setState = (s, emo) => {
+    root.dataset.state = s;
+    root.dataset.paused = paused ? '1' : '0';
+    label.textContent = paused ? 'Paused' : (LABEL[s] || '');
+    if (emo && root.dataset.emo !== emo) {
+      root.dataset.emo = emo;
+      const pop = $('.live-pop');
+      pop.classList.remove('pop'); void pop.offsetWidth; pop.classList.add('pop');
+      if (emo === 'happy' || emo === 'surprised') haptic(8);
+    }
+  };
+  const moodOf = (reply) => {
+    const r = String(reply).toLowerCase();
+    if (/\b(sorry|unfortunately|can'?t|cannot|unable|apolog|sad)/.test(r)) return 'sad';
+    if (/\b(wow|whoa|incredible|amazing|surprising)\b/.test(r)) return 'surprised';
+    if (/!|\b(great|glad|love|awesome|nice|haha|congrat|happy|yay)\b/.test(r)) return 'happy';
+    if (/\?/.test(r) || /\?/.test(asked)) return 'curious';
+    return 'neutral';
+  };
+  const ampOn = () => {
+    clearInterval(ampT);
+    let cur = 0.3;
+    ampT = setInterval(() => {
+      cur += ((0.2 + Math.random() * 0.6) - cur) * 0.35;
+      root.style.setProperty('--amp', cur.toFixed(2));
+    }, 120);
+  };
+  const ampOff = () => { clearInterval(ampT); ampT = 0; root.style.setProperty('--amp', '0'); };
+
+  const halt = () => {
+    tok++;
+    try { ac.pause(); } catch (_) {}
+    try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (_) {}
+    ampOff();
+    const p = pend; pend = null;
+    if (p) p();
+  };
+  const playSrc = (src) => new Promise((res, rej) => {
+    pend = res;
+    ac.onended = () => { pend = null; res(); };
+    ac.onerror = () => { pend = null; rej(new Error('audio')); };
+    ac.src = src;
+    const p = ac.play();
+    if (p && p.catch) p.catch((e) => { pend = null; rej(e); });
+  });
+  const blobUrl = async (text) => {
+    const r = await fetch(INTRO_WORKER + '/speak', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) });
+    if (!r.ok) throw new Error('speak ' + r.status);
+    return URL.createObjectURL(await r.blob());
+  };
+  const viaWorker = async (text) => { const u = await blobUrl(text); try { await playSrc(u); } finally { URL.revokeObjectURL(u); } };
+  const deviceSay = (text) => new Promise((resolve) => {
+    try {
+      if (!window.speechSynthesis) return resolve();
+      pend = resolve;
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'en-US';
+      u.onend = () => { pend = null; resolve(); };
+      u.onerror = () => { pend = null; resolve(); };
+      speechSynthesis.cancel();
+      speechSynthesis.speak(u);
+    } catch (_) { resolve(); }
+  });
+  const speak = async (text, my, file) => {
+    setState('speaking', moodOf(text));
+    ampOn();
+    try {
+      if (file) {
+        try { await playSrc(file); }
+        catch (e) { if (e && e.name === 'NotAllowedError') throw e; await viaWorker(text); }
+      } else await viaWorker(text);
+    } catch (e) {
+      if (e && e.name === 'NotAllowedError') throw e;
+      if (my === tok) await deviceSay(text);
+    } finally { ampOff(); }
+  };
+  const idle = (emo) => { if (!root.isConnected) return; setState('listening', emo || 'neutral'); lastAct = Date.now(); };
+  const asleep = () => {
+    started = false; paused = false;
+    root.dataset.state = 'listening'; root.dataset.emo = 'sleepy'; root.dataset.paused = '1';
+    label.textContent = 'Tap to start';
+  };
+
+  const greet = async () => {
+    halt();
+    const my = tok;
+    started = true; paused = false;
+    try { await speak(INTRO_GREET, my, INTRO_GREET_FILE); }
+    catch (e) { if (my === tok) asleep(); return; }
+    if (my === tok) idle('happy');
+  };
+
+  const send = async (raw) => {
+    const t = String(raw || '').replace(/\s+/g, ' ').trim().slice(0, 200);
+    if (!t) return;
+    halt();
+    const my = tok;
+    started = true; paused = false; asked = t; lastAct = Date.now();
+    clearTimeout(flashT);
+    setState('thinking', /\?/.test(t) ? 'curious' : 'neutral');
+    try {
+      const r = await fetch(INTRO_WORKER + '/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: t }) });
+      if (!r.ok) throw new Error('chat ' + r.status);
+      const j = await r.json();
+      if (my !== tok) return;
+      await speak(String(j.reply || 'Let us talk about Aphrosta!'), my);
+      if (my === tok) idle();
+    } catch (e) {
+      if (my !== tok) return;
+      setState('listening', 'sad');
+      label.textContent = 'Try again soon';
+      flashT = setTimeout(() => { if (my === tok) idle(); }, 2500);
+    }
+  };
+
+  const pause = () => {
+    paused = true;
+    try { ac.pause(); } catch (_) {}
+    try { if (window.speechSynthesis) speechSynthesis.pause(); } catch (_) {}
+    ampOff();
+    setState(root.dataset.state);
+    haptic(8);
+  };
+  const resume = () => {
+    paused = false;
+    try { const p = ac.play(); if (p && p.catch) p.catch(() => {}); } catch (_) {}
+    try { if (window.speechSynthesis) speechSynthesis.resume(); } catch (_) {}
+    if (root.dataset.state === 'speaking') ampOn();
+    setState(root.dataset.state);
+    haptic(8);
+  };
+
+  $('.live-ball').addEventListener('click', () => {
+    lastAct = Date.now();
+    if (!started) { greet(); return; }
+    if (paused) { resume(); return; }
+    if (root.dataset.state === 'speaking') pause();
+  });
+  input.addEventListener('input', () => { sendB.hidden = !input.value.trim(); });
+  const go = () => { const t = input.value; input.value = ''; sendB.hidden = true; send(t); };
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); go(); } });
+  sendB.addEventListener('click', go);
+
+  const vv = window.visualViewport;
+  const fit = () => {
+    if (!screen.classList.contains('intro-kb')) cardH = card.offsetHeight || cardH;
+    const kb = vv ? (window.innerHeight - vv.height - vv.offsetTop > 120) : false;
+    screen.classList.toggle('intro-kb', kb);
+    if (kb) { root.style.top = vv.offsetTop + 'px'; root.style.height = vv.height + 'px'; root.style.bottom = 'auto'; }
+    else { root.style.top = ''; root.style.height = ''; root.style.bottom = cardH + 'px'; }
+  };
+  window.addEventListener('resize', fit);
+  if (vv) { vv.addEventListener('resize', fit); vv.addEventListener('scroll', fit); }
+
+  glanceT = setInterval(() => {
+    const calm = root.dataset.state === 'listening' && !paused && started;
+    root.style.setProperty('--gx', calm ? (Math.random() * 16 - 8).toFixed(1) + 'px' : '0px');
+    root.style.setProperty('--gy', calm ? (Math.random() * 10 - 5).toFixed(1) + 'px' : '0px');
+    if (calm && root.dataset.emo !== 'sleepy' && Date.now() - lastAct > 25000) setState('listening', 'sleepy');
+  }, 2600);
+
+  const stop = () => {
+    clearInterval(glanceT); clearInterval(watchT); clearTimeout(flashT);
+    halt();
+    ac.onended = null; ac.onerror = null;
+    window.removeEventListener('resize', fit);
+    if (vv) { vv.removeEventListener('resize', fit); vv.removeEventListener('scroll', fit); }
+  };
+  watchT = setInterval(() => { if (!root.isConnected) stop(); }, 600);
+
+  asleep();
+  fit();
+  setTimeout(() => { if (root.isConnected && !started) greet(); }, 500);
+}
+
 function showSignInButton() {
   const existingBtn = document.getElementById('signin-btn');
   if (existingBtn) {
@@ -16532,6 +16768,7 @@ function showSignInButton() {
   }
   appEl.innerHTML = `
     <div class="signin-screen${document.documentElement.dataset.theme === 'light' ? ' is-light' : ''}">
+      ${introMarkup()}
       <div class="signin-card">
         <div class="signin-row">
         <button id="signin-btn" class="signin-btn">
@@ -16545,6 +16782,7 @@ function showSignInButton() {
     </div>`;
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', document.documentElement.dataset.theme === 'light' ? '#ffffff' : '#000000');
   const btn = document.getElementById('signin-btn');
+  introStart();
   document.getElementById('signin-theme').onclick = (e) => {
     const ic = e.currentTarget.firstElementChild;
     ic.dataset.r = (+ic.dataset.r || 0) + 360;
