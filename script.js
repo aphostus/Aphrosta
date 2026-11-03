@@ -16763,14 +16763,15 @@ function introStart() {
   const asleep = () => {
     started = false; paused = false;
     root.dataset.state = 'listening'; root.dataset.emo = 'neutral'; root.dataset.paused = '0';
-    label.textContent = INTRO_GREET;
+    label.textContent = '';
   };
 
   const greet = async () => {
     halt();
     const my = tok;
     started = true; paused = false;
-    try { await speak(INTRO_GREET, my, INTRO_GREET_FILE); }
+    root.dataset.greetAt = String(Date.now());
+    try { await speak(INTRO_GREET, my); }
     catch (e) { if (my === tok) asleep(); return; }
     if (my === tok) idle('happy');
   };
@@ -16823,6 +16824,7 @@ function introStart() {
 
   $('.live-ball').addEventListener('click', () => {
     lastAct = Date.now();
+    if (Date.now() - (+root.dataset.greetAt || 0) < 900) return;
     if (!started) { greet(); return; }
     if (paused) { resume(); return; }
     if (root.dataset.state === 'speaking') pause();
