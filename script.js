@@ -16752,10 +16752,9 @@ function introStart() {
     try {
       if (file) {
         try { await playSrc(file); }
-        catch (e) { if (e && e.name === 'NotAllowedError') throw e; await viaWorker(text); }
+        catch (e) { await viaWorker(text); }
       } else await viaWorker(text);
     } catch (e) {
-      if (e && e.name === 'NotAllowedError') throw e;
       if (my === tok) await deviceSay(text);
     } finally { ampOff(); }
   };
@@ -16791,18 +16790,36 @@ function introStart() {
     clearTimeout(flashT);
     setState('thinking', /\?/.test(t) ? 'curious' : 'neutral');
     try {
-      const r = await fetch(INTRO_WORKER + '/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: (root.__h || '') + t }) });
+      const ctl = new AbortController();
+      const tmo = setTimeout(() => ctl.abort(), 25000);
+      let r;
+      try {
+        r = await fetch(INTRO_WORKER + '/', { method: 'POST', signal: ctl.signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: (root.__h || '') + t }) });
+      } finally { clearTimeout(tmo); }
       if (!r.ok) throw new Error('chat ' + r.status);
-      const j = await r.json();
+      const rawBody = await r.text();
+      let j = {};
+      try { j = JSON.parse(rawBody); } catch (_) { j = { reply: rawBody }; }
+      const reply = String(j.reply || j.response || j.text || j.message || j.answer || (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '').replace(/\s+/g, ' ').trim();
+      if (!reply) throw new Error('empty reply');
       if (my !== tok) return;
-      root.__h = 'Earlier Q: ' + t.slice(0, 35) + ' A: ' + String(j.reply || '').slice(0, 35) + ' | Now: ';
-      await speak(String(j.reply || 'Let us talk about Aphrosta!'), my);
+      root.__h = 'Earlier Q: ' + t.slice(0, 35) + ' A: ' + reply.slice(0, 35) + ' | Now: ';
+      label.textContent = reply;
+      const spoke0 = Date.now();
+      try { await speak(reply, my); } catch (_) { if (my === tok) await deviceSay(reply); }
+      const hold = Math.min(9000, 1200 + reply.length * 45) - (Date.now() - spoke0);
+      if (hold > 0 && my === tok) await new Promise((ok) => setTimeout(ok, hold));
       if (my === tok) { if (spent()) setDead(); else idle(); }
     } catch (e) {
       if (my !== tok) return;
+      console.warn('[intro] reply failed:', e);
+      const q2 = quota();
+      if (on) q2.a = Math.max(0, q2.a - 1); else q2.o = Math.max(0, q2.o - 1);
+      quotaSave(q2);
+      trialsPaint();
       setState('listening', 'sad');
-      label.textContent = 'Try again soon';
-      flashT = setTimeout(() => { if (my === tok) idle(); }, 2500);
+      label.textContent = 'Try again soon (' + String((e && e.message) || 'error').slice(0, 30) + ')';
+      flashT = setTimeout(() => { if (my === tok) idle(); }, 4000);
     }
   };
 
