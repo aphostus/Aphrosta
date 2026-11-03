@@ -777,7 +777,18 @@ function toast(message, type = 'error', duration = 5000, undo = null) {
     e.stopPropagation();
     reset();
     downAt = Date.now();
-    if (undo) holdT = setTimeout(() => { armed = true; xb.classList.add('is-rev'); haptic(10); }, 250);
+    if (undo) holdT = setTimeout(() => {
+      armed = true;
+      xb.classList.add('is-rev');
+      haptic(10);
+      holdT = setTimeout(() => {
+        const fn = undo;
+        reset();
+        haptic(14);
+        try { fn(); } catch (_) {}
+        dismiss();
+      }, 250);
+    }, 250);
   });
   xb.addEventListener('pointerup', (e) => {
     e.stopPropagation();
@@ -6931,8 +6942,23 @@ function elSpeakStream() {
   const jobs = [];
   const prepped = [];
   let cur = -1, ended = false, wake = null;
+  let devVoice = false;
+  const texts = [];
+  const devSay = (t, g) => new Promise((res) => {
+    const s = window.speechSynthesis;
+    if (!s || !t || g !== speakGen) return res();
+    const u = new SpeechSynthesisUtterance(t.replace(/[\[\]]/g, ''));
+    const v = pickVoice(s);
+    if (v) { u.voice = v; u.lang = v.lang; }
+    else u.lang = (settings.langOut === 'tl' ? 'fil-PH' : settings.langOut) || 'en';
+    u.rate = { slow: 0.8, normal: 1, fast: 1.25 }[settings.voiceOut] || 1;
+    u.pitch = { low: 0.8, normal: 1, high: 1.25 }[settings.voicePitch] || 1;
+    u.onend = u.onerror = () => res();
+    s.speak(u);
+  });
   const poke = () => { if (wake) { const w = wake; wake = null; w(); } };
   const grab = async (t) => {
+    if (devVoice) throw new Error('device voice');
     const key = await keyP;
     const r = await fetch('https://api.groq.com/openai/v1/audio/speech', {
       method: 'POST',
@@ -6959,8 +6985,17 @@ function elSpeakStream() {
           await new Promise((r) => { wake = r; });
         }
         if (gen !== speakGen) return;
-        const got = await jobs[i];
-        if (gen !== speakGen) { URL.revokeObjectURL(got.src); return; }
+        let got = null;
+        if (!devVoice) {
+          try { got = await jobs[i]; }
+          catch (e) {
+            if (gen !== speakGen || (e && e.name === 'AbortError')) return;
+            devVoice = true;
+            toast('Groq voice unavailable (' + ((e && e.message) || 'error') + '). Using the device voice. (G01)', 'info', 2600);
+          }
+        }
+        if (gen !== speakGen) { if (got) URL.revokeObjectURL(got.src); return; }
+        if (devVoice || !got) { await devSay(texts[i], gen); continue; }
         const el = els[i % 2];
         prep(i + 1);
         await new Promise((res, rej) => {
@@ -6984,6 +7019,7 @@ function elSpeakStream() {
     push(t) {
       if (gen !== speakGen || !t) return;
       chunkForSpeech(t, 120).forEach((c) => {
+        texts.push(c);
         const k = jobs.push(grab(c)) - 1;
         jobs[k].catch(() => {});
         if (k === cur + 1) prep(k);
