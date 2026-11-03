@@ -1428,11 +1428,7 @@ const PROVIDER_API = {
       { id: 'claude-haiku-5-5',  name: 'Claude Haiku 5.5',   series: 'Haiku 5',                  effort: 'anthropic' },
       { id: 'claude-opus-5',     name: 'Claude Opus 5',      series: 'Opus 5',   reasoning: true, effort: 'anthropic' },
       { id: 'claude-sonnet-5',   name: 'Claude Sonnet 5',    series: 'Sonnet 5', reasoning: true, effort: 'anthropic' },
-      { id: 'claude-opus-4-8',   name: 'Claude Opus 4.8',    series: 'Opus 4',   reasoning: true, effort: 'anthropic' },
-      { id: 'claude-opus-4-7',   name: 'Claude Opus 4.7',    series: 'Opus 4',   reasoning: true, effort: 'anthropic', legacy: true },
-      { id: 'claude-opus-4-6',   name: 'Claude Opus 4.6',    series: 'Opus 4',   reasoning: true, effort: 'anthropic', legacy: true },
-      { id: 'claude-sonnet-4-6', name: 'Claude Sonnet 4.6',  series: 'Sonnet 4', reasoning: true, effort: 'anthropic', legacy: true },
-      { id: 'claude-haiku-4-5',  name: 'Claude Haiku 4.5',   series: 'Haiku 4',                  effort: 'anthropic', legacy: true }
+      { id: 'claude-opus-4-8',   name: 'Claude Opus 4.8',    series: 'Opus 4',   reasoning: true, effort: 'anthropic' }
     ]
   },
   chatgpt: {
@@ -1479,7 +1475,7 @@ const priceTag = (pid, mid) => {
   const free = isFreeModel(pid, mid);
   return `<span class="price-tag ${free ? 'is-free' : 'is-paid'}">${free ? 'Free' : 'Paid'}</span>`;
 };
-const providerPriceLabel = (pid) => (FREE_TIER[pid] === true ? 'Free' : FREE_TIER[pid] ? 'Free + Paid' : 'Paid');
+const providerPriceLabel = (pid) => (FREE_TIER[pid] ? 'Free' : 'Paid');
 
 const BAD_MODELS_LS = 'aphrosta.badModels';
 let badModels = {};
@@ -1507,10 +1503,7 @@ try {
 function currentVariant(providerId) {
   const api = PROVIDER_API[providerId];
   const all = api?.models || [];
-  const live = all.filter((m) => !m.legacy);
-  return live.find((m) => m.id === modelVariants[providerId])
-    || all.find((m) => m.id === modelVariants[providerId])
-    || live[0]
+  return all.find((m) => m.id === modelVariants[providerId])
     || all[0]
     || { id: '', name: '' };
 }
@@ -3871,7 +3864,7 @@ function agOpenSheet(kind, edit) {
     const llmRow = el.querySelector('#ag-llm-row');
     const fillModels = () => {
       const api = PROVIDER_API[cur.llm.provider];
-      const ms = api ? api.models.filter((m) => !m.legacy) : [];
+      const ms = api ? api.models : [];
       modelSel.innerHTML = '<option value="">Model</option>' + ms.map((m) => `<option value="${esc(m.id)}"${m.id === cur.llm.model ? ' selected' : ''}>${esc(m.name)}</option>`).join('');
     };
     const paintLlm = () => {
@@ -13985,8 +13978,7 @@ const MODEL_CAPS = {
   'grok-4.20-0309-reasoning': 65536, 'grok-4.20-0309-non-reasoning': 65536,
   'claude-fable-5-1': 128000, 'claude-opus-5-5': 128000, 'claude-sonnet-5-5': 128000,
   'claude-haiku-5-5': 128000, 'claude-opus-5': 128000, 'claude-sonnet-5': 128000,
-  'claude-opus-4-8': 128000, 'claude-opus-4-7': 64000, 'claude-opus-4-6': 64000,
-  'claude-sonnet-4-6': 64000, 'claude-haiku-4-5': 64000,
+  'claude-opus-4-8': 128000,
   'gpt-6-astra': 128000, 'gpt-6.1-sol': 128000, 'gpt-6-luna': 128000,
   'kimi-k3': 65536, 'kimi-k2.7-code': 32768, 'kimi-k2.7-code-highspeed': 32768, 'kimi-k2.6': 32768,
   fast: 8192, low: 8192, medium: 8192, high: 8192, xhigh: 8192, 'wide-research': 16384
@@ -15060,9 +15052,6 @@ function openModelPicker() {
       const seriesHtml = [...bySeries.entries()].map(([series, models]) => `
         <div class="picker-series">${esc(series)}</div>
         ${models.map((m) => {
-          if (m.legacy) {
-            return `<div class="effort-option picker-legacy" title="Retired by the provider"><span class="effort-option-name">${esc(m.name)} <span class="effort-option-note">(Retired · view only)</span></span></div>`;
-          }
           const on = activeModel === p.id && currentVariant(p.id).id === m.id;
           const bad = !!badModels[badKey(p.id, m.id)];
           return `<button class="effort-option${on ? ' is-active' : ''}${bad ? ' is-bad' : ''}" type="button" data-p="${p.id}" data-m="${esc(m.id)}" ${bad ? 'title="This API key doesn\u2019t have access"' : ''}>
@@ -15078,7 +15067,7 @@ function openModelPicker() {
     }).filter(Boolean).join('');
 
     body.innerHTML = html;
-    emptyEl.hidden = !!html;
+    emptyEl.hidden = !!html || !q;
     const subEl = scrim.querySelector('[data-role="picker-sub"]');
     if (subEl) {
       const n = body.querySelectorAll('[data-m]').length;
@@ -15152,9 +15141,11 @@ function openModelPicker() {
     }
   });
 
-  scrim.addEventListener('input', (e) => {
+  const onSearch = (e) => {
     if (e.target.matches('[data-role="picker-search"]')) paint(e.target.value);
-  });
+  };
+  scrim.addEventListener('input', onSearch);
+  scrim.addEventListener('search', onSearch);
 
   if (!usable.length) {
     body.innerHTML = `<p class="dialog-msg">Add an API key to a provider first, then pick its models here.</p>`;

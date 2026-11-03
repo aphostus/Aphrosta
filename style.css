@@ -3048,8 +3048,6 @@ html[data-status-mode="auto"][data-status="offline"]
   text-overflow: ellipsis;
 }
 
-.picker-legacy { opacity: .45; cursor: not-allowed; }
-.picker-legacy:hover { background: none; color: var(--gray-light); }
 
 /* ============================================================
    DIALOGS
@@ -3465,16 +3463,19 @@ html[data-motion="reduce"] .think-panel { transition: none; }
 /* ---------- Task 1.4: Free / Paid pricing tags ---------- */
 .price-tag {
   flex-shrink: 0;
-  padding: 2px 7px;
+  padding: 2px 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: calc(10px * var(--ts));
-  font-weight: 600;
-  letter-spacing: 0.03em;
+  font-weight: 500;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  border: 1px solid transparent;
+  color: var(--gray-light);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-pill);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
 }
-.price-tag.is-free { color: #30d158; background: rgba(48, 209, 88, 0.12); border-color: rgba(48, 209, 88, 0.28); }
-.price-tag.is-paid { color: #ffb340; background: rgba(255, 179, 64, 0.12); border-color: rgba(255, 179, 64, 0.28); }
 
 /* ---------- Task 2.5: contain thought panel, drop blur during animation, kill tap delay ---------- */
 .think-panel { contain: layout paint; }
@@ -4922,8 +4923,7 @@ html[data-motion="reduce"] .sess-pw { animation: none; }
 .mv-sheet .effort-option.is-active { background: rgba(var(--accent-rgb), 0.08); border-color: rgba(var(--accent-rgb), 0.45); color: var(--fg); font-weight: 600; }
 .mv-sheet .effort-option .provider-check { align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: rgba(var(--accent-rgb), 0.14); color: var(--accent); }
 .mv-sheet .effort-option .provider-check svg { width: 14px; height: 14px; }
-.mv-sheet .picker-legacy { cursor: not-allowed; }
-.mv-sheet .picker-legacy:hover { background: var(--glass-bg); }
 .mv-sheet .picker-empty { padding: 40px 20px; }
+.fd-empty[hidden], .picker-empty[hidden] { display: none; }
 @media (prefers-reduced-motion: reduce) { .mv-panel { animation: none !important; } }
 
