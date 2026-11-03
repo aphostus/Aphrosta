@@ -389,6 +389,17 @@ const SKILL_LIBRARY = [
     ].join(' ')
   },
   {
+    id: 'files', key: 'skillFiles', name: 'Office files',
+    prompt: () => [
+      'SKILL Office files: ONLY when the user asks for Word/docx, Excel/xlsx, PowerPoint/pptx, PDF, zip, calendar/ics, contact/vcf or svg, this skill overrides the Slides, Documents and Spreadsheets skills. Reply with one short sentence and then ONE file block. The app builds the real file from your text.',
+      'DOCX and PDF: ' + FENCE + 'docx name.docx or ' + FENCE + 'pdf name.pdf with the body in simple markdown: # ## ### headings, "- " bullets, "1. " numbers, **bold**, *italic*, tables as | rows with a |---| separator row, and a blank line between paragraphs. No images and no code fences inside.',
+      'XLSX: ' + FENCE + 'xlsx name.xlsx with strict JSON only, like {"sheets":[{"name":"Budget","rows":[["Item","Cost"],["Rent",1200],["Total","=SUM(B2:B2)"]]}]}. Row 1 is the header. Numbers stay numbers. Formulas are strings that start with =. At most 5 sheets and 300 rows each.',
+      'PPTX: ' + FENCE + 'pptx name.pptx with strict JSON only, like {"slides":[{"title":"Deck title","subtitle":"Optional line"},{"title":"Slide title","bullets":["Short point","Short point"]}]}. A slide with no bullets is a title slide. At most 12 slides and 6 short bullets each. No images and no notes.',
+      'ZIP: ' + FENCE + 'zip name.zip, then each text file as a header line like === folder/file.txt === followed by its content. Text files only, no code fences inside, at most 20 files.',
+      'ICS: ' + FENCE + 'ics name.ics with a complete VCALENDAR. VCF: ' + FENCE + 'vcf name.vcf with a complete VCARD. SVG: ' + FENCE + 'svg name.svg with a complete <svg> document. These three stay plain text.'
+    ].join(' ')
+  },
+  {
     id: 'web', key: 'skillWeb', name: 'Web search', needsTools: true,
     prompt: () => [
       'SKILL Web search: the app searches the web for you before you answer and puts the results in a tool_result block. Never write a web_search or fetch_url tool line. Use those results for current events, prices, people, products, versions and any URL the user gives. If there is no tool_result, answer from what you know and say it may be out of date.',
@@ -443,7 +454,7 @@ const SETTINGS_DEFAULTS = {
   tokenWindowMins: 1440,
   lineHeight: 'normal', codeSize: 'default', codeWrap: true, richFormat: true,
   agentTools: true, agentPlan: true,
-  skillPresentations: true, skillDocuments: true, skillSheets: true, skillWeb: true
+  skillPresentations: true, skillDocuments: true, skillSheets: true, skillFiles: true, skillWeb: true
 };
 
 function loadSettings() {
@@ -1852,6 +1863,7 @@ let AssistanceSection = () => Section('assistance', 'Assistance', [
     SubSwitch('Slides', 'skillPresentations') +
     SubSwitch('Documents', 'skillDocuments') +
     SubSwitch('Spreadsheets', 'skillSheets') +
+    SubSwitch('Office Files', 'skillFiles') +
     SubSwitch('Web Search', 'skillWeb')),
 
   Item('controls', ICONS.stControls, 'Controls',
@@ -10981,7 +10993,8 @@ const FILE_EXT = {
   scss: 'scss', less: 'less', kt: 'kt', swift: 'swift', dart: 'dart', lua: 'lua', r: 'r',
   doc: 'doc', docx: 'docx', word: 'docx', rtf: 'rtf', odt: 'odt', pdf: 'pdf', pages: 'pages',
   xls: 'xls', xlsx: 'xlsx', excel: 'xlsx', ods: 'ods', numbers: 'numbers', sheets: 'csv', sheet: 'csv',
-  ppt: 'ppt', pptx: 'pptx', slides: 'pptx', presentation: 'pptx', odp: 'odp', key: 'key', keynote: 'key'
+  ppt: 'ppt', pptx: 'pptx', slides: 'pptx', presentation: 'pptx', odp: 'odp', key: 'key', keynote: 'key',
+  zip: 'zip', ics: 'ics', vcf: 'vcf'
 };
 
 function parseFence(raw, idx) {
@@ -11013,7 +11026,7 @@ const FILE_KIND = {
   ppt: 'slide', pptx: 'slide', odp: 'slide', key: 'slide',
   html: 'web', htm: 'web', css: 'web', scss: 'web', less: 'web', js: 'web', jsx: 'web', ts: 'web', tsx: 'web', vue: 'web', svelte: 'web',
   json: 'data', jsonc: 'data', xml: 'data', yaml: 'data', yml: 'data', toml: 'data', ini: 'data', log: 'data', env: 'data',
-  svg: 'image'
+  svg: 'image', zip: 'data', ics: 'data', vcf: 'data'
 };
 const fileKind = (f) => FILE_KIND[(f.ext || '').toLowerCase()] || 'code';
 const fileCardHtml = (f, i, extra) =>
@@ -12286,6 +12299,334 @@ function openFileViewer(f, onSave) {
   document.body.appendChild(scrim);
 }
 
+/* ---------- REAL FILE BUILDERS (docx, xlsx, pptx, pdf, zip) ---------- */
+const BX_BINARY = new Set(['docx', 'xlsx', 'pptx', 'pdf', 'zip']);
+const BX_XML = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
+const BX_CT = 'application/vnd.openxmlformats-officedocument.';
+const BX_REL = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/';
+const BX_ENC = new TextEncoder();
+const BX_CRC = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; }
+  return t;
+})();
+const bxCrc = (b) => { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = BX_CRC[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+const bxEsc = (s) => String(s == null ? '' : s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const bxRels = (list) => BX_XML + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' + list.map((r) => '<Relationship Id="' + r[0] + '" Type="' + BX_REL + r[1] + '" Target="' + r[2] + '"/>').join('') + '</Relationships>';
+const bxTypes = (over) => BX_XML + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>' + over.map((o) => '<Override PartName="' + o[0] + '" ContentType="' + o[1] + '"/>').join('') + '</Types>';
+
+function bxZip(entries, mime) {
+  const now = new Date();
+  const dt = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+  const tm = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
+  const chunks = [], central = [];
+  let off = 0;
+  for (const e of entries) {
+    const name = BX_ENC.encode(e.name);
+    const data = typeof e.data === 'string' ? BX_ENC.encode(e.data) : e.data;
+    const crc = bxCrc(data);
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true);
+    lh.setUint16(10, tm, true); lh.setUint16(12, dt, true); lh.setUint32(14, crc, true);
+    lh.setUint32(18, data.length, true); lh.setUint32(22, data.length, true); lh.setUint16(26, name.length, true);
+    chunks.push(new Uint8Array(lh.buffer), name, data);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true);
+    ch.setUint16(12, tm, true); ch.setUint16(14, dt, true); ch.setUint32(16, crc, true);
+    ch.setUint32(20, data.length, true); ch.setUint32(24, data.length, true); ch.setUint16(28, name.length, true);
+    ch.setUint32(42, off, true);
+    central.push(new Uint8Array(ch.buffer), name);
+    off += 30 + name.length + data.length;
+  }
+  let csz = 0;
+  for (const c of central) csz += c.length;
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(8, entries.length, true); end.setUint16(10, entries.length, true);
+  end.setUint32(12, csz, true); end.setUint32(16, off, true);
+  return new Blob([...chunks, ...central, new Uint8Array(end.buffer)], { type: mime || 'application/zip' });
+}
+
+function bxMd(src) {
+  const out = [];
+  let tbl = null;
+  const flush = () => { if (tbl) { out.push({ t: 'tbl', rows: tbl }); tbl = null; } };
+  String(src).replace(/\r/g, '').split('\n').forEach((raw) => {
+    const l = raw.replace(/\s+$/, '');
+    if (/^\s*\|.*\|\s*$/.test(l)) {
+      if (/^\s*\|[\s:|-]+\|\s*$/.test(l)) return;
+      (tbl = tbl || []).push(l.trim().replace(/^\||\|$/g, '').split('|').map((c) => c.trim()));
+      return;
+    }
+    flush();
+    if (!l.trim()) return;
+    let m;
+    if ((m = l.match(/^(#{1,6})\s+(.*)$/))) out.push({ t: 'h', n: Math.min(m[1].length, 3), text: m[2] });
+    else if ((m = l.match(/^\s*[-*+]\s+(.*)$/))) out.push({ t: 'li', mark: '\u2022', text: m[1] });
+    else if ((m = l.match(/^\s*(\d+)[.)]\s+(.*)$/))) out.push({ t: 'li', mark: m[1] + '.', text: m[2] });
+    else out.push({ t: 'p', text: l.trim() });
+  });
+  flush();
+  return out;
+}
+
+function bxRuns(s, bold) {
+  const run = (t, b, i) => t ? '<w:r>' + (b || i ? '<w:rPr>' + (b ? '<w:b/>' : '') + (i ? '<w:i/>' : '') + '</w:rPr>' : '') + '<w:t xml:space="preserve">' + bxEsc(t) + '</w:t></w:r>' : '';
+  const re = /\*\*(.+?)\*\*|\*(.+?)\*/g;
+  s = String(s);
+  let out = '', last = 0, m;
+  while ((m = re.exec(s))) {
+    out += run(s.slice(last, m.index), bold, false) + run(m[1] || m[2], bold || !!m[1], !m[1]);
+    last = re.lastIndex;
+  }
+  return out + run(s.slice(last), bold, false);
+}
+
+function bxDocx(src) {
+  const NS = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"';
+  let body = bxMd(src).map((b) => {
+    if (b.t === 'h') return '<w:p><w:pPr><w:pStyle w:val="Heading' + b.n + '"/></w:pPr>' + bxRuns(b.text) + '</w:p>';
+    if (b.t === 'li') return '<w:p><w:pPr><w:ind w:left="540" w:hanging="270"/></w:pPr>' + bxRuns(b.mark + ' ' + b.text) + '</w:p>';
+    if (b.t === 'tbl') {
+      const cols = Math.max(...b.rows.map((r) => r.length));
+      const w = Math.floor(9360 / cols);
+      const bd = ['top', 'left', 'bottom', 'right', 'insideH', 'insideV'].map((k) => '<w:' + k + ' w:val="single" w:sz="4" w:space="0" w:color="999999"/>').join('');
+      const rows = b.rows.map((r, ri) => '<w:tr>' + Array.from({ length: cols }, (_, ci) => '<w:tc><w:tcPr><w:tcW w:w="' + w + '" w:type="dxa"/>' + (ri === 0 ? '<w:shd w:val="clear" w:color="auto" w:fill="E5E7EB"/>' : '') + '</w:tcPr><w:p>' + bxRuns(r[ci] || '', ri === 0) + '</w:p></w:tc>').join('') + '</w:tr>').join('');
+      return '<w:tbl><w:tblPr><w:tblW w:w="9360" w:type="dxa"/><w:tblBorders>' + bd + '</w:tblBorders><w:tblCellMar><w:left w:w="100" w:type="dxa"/><w:right w:w="100" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>' + ('<w:gridCol w:w="' + w + '"/>').repeat(cols) + '</w:tblGrid>' + rows + '</w:tbl><w:p/>';
+    }
+    return '<w:p>' + bxRuns(b.text) + '</w:p>';
+  }).join('');
+  if (!body) body = '<w:p/>';
+  const hs = (id, name, sz, lvl) => '<w:style w:type="paragraph" w:styleId="' + id + '"><w:name w:val="' + name + '"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:keepNext/><w:spacing w:before="320" w:after="120"/><w:outlineLvl w:val="' + lvl + '"/></w:pPr><w:rPr><w:b/><w:sz w:val="' + sz + '"/></w:rPr></w:style>';
+  const styles = BX_XML + '<w:styles ' + NS + '><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/><w:sz w:val="22"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="120" w:line="276" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style>' + hs('Heading1', 'heading 1', 40, 0) + hs('Heading2', 'heading 2', 32, 1) + hs('Heading3', 'heading 3', 26, 2) + '</w:styles>';
+  const doc = BX_XML + '<w:document ' + NS + '><w:body>' + body + '<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr></w:body></w:document>';
+  return bxZip([
+    { name: '[Content_Types].xml', data: bxTypes([['/word/document.xml', BX_CT + 'wordprocessingml.document.main+xml'], ['/word/styles.xml', BX_CT + 'wordprocessingml.styles+xml']]) },
+    { name: '_rels/.rels', data: bxRels([['rId1', 'officeDocument', 'word/document.xml']]) },
+    { name: 'word/document.xml', data: doc },
+    { name: 'word/styles.xml', data: styles },
+    { name: 'word/_rels/document.xml.rels', data: bxRels([['rId1', 'styles', 'styles.xml']]) }
+  ], BX_CT + 'wordprocessingml.document');
+}
+
+const bxCol = (n) => { let s = ''; for (n++; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + ((n - 1) % 26)) + s; return s; };
+
+function bxXlsx(src) {
+  let data = JSON.parse(String(src).trim());
+  if (Array.isArray(data)) data = { sheets: [{ name: 'Sheet1', rows: data }] };
+  else if (data && Array.isArray(data.rows)) data = { sheets: [data] };
+  const sheets = ((data && data.sheets) || []).slice(0, 10);
+  if (!sheets.length) throw new Error('no sheets in the data');
+  const used = new Set();
+  const names = sheets.map((s, i) => {
+    const base = String((s && s.name) || 'Sheet' + (i + 1)).replace(/[\[\]:*?\/\\]/g, ' ').trim().slice(0, 31) || 'Sheet' + (i + 1);
+    let n = base, k = 2;
+    while (used.has(n.toLowerCase())) n = base.slice(0, 27) + ' ' + k++;
+    used.add(n.toLowerCase());
+    return n;
+  });
+  const M = 'xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"';
+  const sheetXml = sheets.map((s) => {
+    const rows = ((s && s.rows) || []).slice(0, 2000);
+    const cols = Math.max(1, ...rows.map((r) => (Array.isArray(r) ? r.length : 1)));
+    const sd = rows.map((r, ri) => '<row r="' + (ri + 1) + '">' + (Array.isArray(r) ? r : [r]).map((v, ci) => {
+      if (v === null || v === undefined || v === '') return '';
+      const ref = bxCol(ci) + (ri + 1), st = ri === 0 ? ' s="1"' : '';
+      if (typeof v === 'number' && isFinite(v)) return '<c r="' + ref + '"' + st + '><v>' + v + '</v></c>';
+      if (typeof v === 'boolean') return '<c r="' + ref + '"' + st + ' t="b"><v>' + (v ? 1 : 0) + '</v></c>';
+      const t = String(v);
+      if (/^=.+/.test(t)) return '<c r="' + ref + '"' + st + '><f>' + bxEsc(t.slice(1)) + '</f></c>';
+      return '<c r="' + ref + '"' + st + ' t="inlineStr"><is><t xml:space="preserve">' + bxEsc(t) + '</t></is></c>';
+    }).join('') + '</row>').join('');
+    return BX_XML + '<worksheet ' + M + '><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols><col min="1" max="' + cols + '" width="18" customWidth="1"/></cols><sheetData>' + sd + '</sheetData></worksheet>';
+  });
+  const styles = BX_XML + '<styleSheet ' + M + '><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+  const wb = BX_XML + '<workbook ' + M + ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>' + names.map((n, i) => '<sheet name="' + bxEsc(n) + '" sheetId="' + (i + 1) + '" r:id="rId' + (i + 1) + '"/>').join('') + '</sheets><calcPr fullCalcOnLoad="1"/></workbook>';
+  const over = [['/xl/workbook.xml', BX_CT + 'spreadsheetml.sheet.main+xml'], ['/xl/styles.xml', BX_CT + 'spreadsheetml.styles+xml']]
+    .concat(sheets.map((_, i) => ['/xl/worksheets/sheet' + (i + 1) + '.xml', BX_CT + 'spreadsheetml.worksheet+xml']));
+  const rels = sheets.map((_, i) => ['rId' + (i + 1), 'worksheet', 'worksheets/sheet' + (i + 1) + '.xml']).concat([['rId' + (sheets.length + 1), 'styles', 'styles.xml']]);
+  return bxZip([
+    { name: '[Content_Types].xml', data: bxTypes(over) },
+    { name: '_rels/.rels', data: bxRels([['rId1', 'officeDocument', 'xl/workbook.xml']]) },
+    { name: 'xl/workbook.xml', data: wb },
+    { name: 'xl/_rels/workbook.xml.rels', data: bxRels(rels) },
+    { name: 'xl/styles.xml', data: styles }
+  ].concat(sheetXml.map((x, i) => ({ name: 'xl/worksheets/sheet' + (i + 1) + '.xml', data: x }))), BX_CT + 'spreadsheetml.sheet');
+}
+
+function bxPptx(src) {
+  const data = JSON.parse(String(src).trim());
+  const slides = (Array.isArray(data) ? data : (data && data.slides) || []).slice(0, 30);
+  if (!slides.length) throw new Error('no slides in the data');
+  const A = 'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"';
+  const NS = A + ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"';
+  const tree = '<p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/>';
+  const run = (t, sz, col, b) => '<a:r><a:rPr lang="en-US" sz="' + sz + '"' + (b ? ' b="1"' : '') + ' dirty="0"><a:solidFill><a:srgbClr val="' + col + '"/></a:solidFill></a:rPr><a:t>' + bxEsc(t) + '</a:t></a:r>';
+  const para = (t, sz, col, b) => '<a:p>' + run(t, sz, col, b) + '</a:p>';
+  const bullet = (t, sz) => '<a:p><a:pPr marL="342900" indent="-342900"><a:spcBef><a:spcPts val="900"/></a:spcBef><a:buFont typeface="Arial"/><a:buChar char="\u2022"/></a:pPr>' + run(t, sz, 'E5E7EB', false) + '</a:p>';
+  const box = (id, x, y, cx, cy, paras, anchor) => '<p:sp><p:nvSpPr><p:cNvPr id="' + id + '" name="Text ' + id + '"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="' + x + '" y="' + y + '"/><a:ext cx="' + cx + '" cy="' + cy + '"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:noFill/></p:spPr><p:txBody><a:bodyPr wrap="square" lIns="0" rIns="0" anchor="' + (anchor || 't') + '"><a:normAutofit/></a:bodyPr><a:lstStyle/>' + paras + '</p:txBody></p:sp>';
+  const rect = (id, x, y, cx, cy) => '<p:sp><p:nvSpPr><p:cNvPr id="' + id + '" name="Bar ' + id + '"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="' + x + '" y="' + y + '"/><a:ext cx="' + cx + '" cy="' + cy + '"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val="38BDF8"/></a:solidFill><a:ln><a:noFill/></a:ln></p:spPr></p:sp>';
+  const slideXml = slides.map((s, i) => {
+    s = s || {};
+    const title = String(s.title || (i === 0 && !Array.isArray(data) && data.title) || 'Slide ' + (i + 1));
+    const bl = (Array.isArray(s.bullets) ? s.bullets : []).slice(0, 8).map(String);
+    let sp = '';
+    if (!bl.length) {
+      sp += box(2, 914400, 2057400, 10363200, 1371600, para(title, 5400, 'FFFFFF', true), 'b');
+      sp += rect(3, 914400, 3566160, 1371600, 63500);
+      if (s.subtitle) sp += box(4, 914400, 3749040, 10363200, 1143000, para(String(s.subtitle), 2800, '94A3B8', false));
+    } else {
+      sp += box(2, 609600, 457200, 10972800, 914400, para(title, 4000, 'FFFFFF', true), 'b');
+      sp += rect(3, 609600, 1463040, 914400, 54864);
+      sp += box(4, 609600, 1737360, 10972800, 4572000, bl.map((t) => bullet(t, bl.length > 6 ? 2000 : 2400)).join(''));
+    }
+    return BX_XML + '<p:sld ' + NS + '><p:cSld><p:bg><p:bgPr><a:solidFill><a:srgbClr val="0F172A"/></a:solidFill><a:effectLst/></p:bgPr></p:bg><p:spTree>' + tree + sp + '</p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sld>';
+  });
+  const n = slides.length;
+  const clr = [['dk1', '000000'], ['lt1', 'FFFFFF'], ['dk2', '0F172A'], ['lt2', 'E5E7EB'], ['accent1', '38BDF8'], ['accent2', '818CF8'], ['accent3', '34D399'], ['accent4', 'FBBF24'], ['accent5', 'F87171'], ['accent6', 'A78BFA'], ['hlink', '38BDF8'], ['folHlink', '818CF8']]
+    .map((c) => '<a:' + c[0] + '><a:srgbClr val="' + c[1] + '"/></a:' + c[0] + '>').join('');
+  const fnt = '<a:latin typeface="Calibri"/><a:ea typeface=""/><a:cs typeface=""/>';
+  const theme = BX_XML + '<a:theme ' + A + ' name="Aphrosta"><a:themeElements><a:clrScheme name="Aphrosta">' + clr + '</a:clrScheme><a:fontScheme name="Aphrosta"><a:majorFont>' + fnt + '</a:majorFont><a:minorFont>' + fnt + '</a:minorFont></a:fontScheme><a:fmtScheme name="Aphrosta"><a:fillStyleLst>' + '<a:solidFill><a:schemeClr val="phClr"/></a:solidFill>'.repeat(3) + '</a:fillStyleLst><a:lnStyleLst>' + '<a:ln w="9525"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:ln>'.repeat(3) + '</a:lnStyleLst><a:effectStyleLst>' + '<a:effectStyle><a:effectLst/></a:effectStyle>'.repeat(3) + '</a:effectStyleLst><a:bgFillStyleLst>' + '<a:solidFill><a:schemeClr val="phClr"/></a:solidFill>'.repeat(3) + '</a:bgFillStyleLst></a:fmtScheme></a:themeElements></a:theme>';
+  const master = BX_XML + '<p:sldMaster ' + NS + '><p:cSld><p:spTree>' + tree + '</p:spTree></p:cSld><p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/><p:sldLayoutIdLst><p:sldLayoutId id="2147483649" r:id="rId1"/></p:sldLayoutIdLst></p:sldMaster>';
+  const layout = BX_XML + '<p:sldLayout ' + NS + ' type="blank" preserve="1"><p:cSld name="Blank"><p:spTree>' + tree + '</p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sldLayout>';
+  const pres = BX_XML + '<p:presentation ' + NS + '><p:sldMasterIdLst><p:sldMasterId id="2147483648" r:id="rId1"/></p:sldMasterIdLst><p:sldIdLst>' + slides.map((_, i) => '<p:sldId id="' + (256 + i) + '" r:id="rId' + (i + 2) + '"/>').join('') + '</p:sldIdLst><p:sldSz cx="12192000" cy="6858000"/><p:notesSz cx="6858000" cy="9144000"/></p:presentation>';
+  const over = [['/ppt/presentation.xml', BX_CT + 'presentationml.presentation.main+xml'], ['/ppt/slideMasters/slideMaster1.xml', BX_CT + 'presentationml.slideMaster+xml'], ['/ppt/slideLayouts/slideLayout1.xml', BX_CT + 'presentationml.slideLayout+xml'], ['/ppt/theme/theme1.xml', BX_CT + 'theme+xml']]
+    .concat(slides.map((_, i) => ['/ppt/slides/slide' + (i + 1) + '.xml', BX_CT + 'presentationml.slide+xml']));
+  const files = [
+    { name: '[Content_Types].xml', data: bxTypes(over) },
+    { name: '_rels/.rels', data: bxRels([['rId1', 'officeDocument', 'ppt/presentation.xml']]) },
+    { name: 'ppt/presentation.xml', data: pres },
+    { name: 'ppt/_rels/presentation.xml.rels', data: bxRels([['rId1', 'slideMaster', 'slideMasters/slideMaster1.xml']].concat(slides.map((_, i) => ['rId' + (i + 2), 'slide', 'slides/slide' + (i + 1) + '.xml'])).concat([['rId' + (n + 2), 'theme', 'theme/theme1.xml']])) },
+    { name: 'ppt/slideMasters/slideMaster1.xml', data: master },
+    { name: 'ppt/slideMasters/_rels/slideMaster1.xml.rels', data: bxRels([['rId1', 'slideLayout', '../slideLayouts/slideLayout1.xml'], ['rId2', 'theme', '../theme/theme1.xml']]) },
+    { name: 'ppt/slideLayouts/slideLayout1.xml', data: layout },
+    { name: 'ppt/slideLayouts/_rels/slideLayout1.xml.rels', data: bxRels([['rId1', 'slideMaster', '../slideMasters/slideMaster1.xml']]) },
+    { name: 'ppt/theme/theme1.xml', data: theme }
+  ];
+  slideXml.forEach((x, i) => {
+    files.push({ name: 'ppt/slides/slide' + (i + 1) + '.xml', data: x });
+    files.push({ name: 'ppt/slides/_rels/slide' + (i + 1) + '.xml.rels', data: bxRels([['rId1', 'slideLayout', '../slideLayouts/slideLayout1.xml']]) });
+  });
+  return bxZip(files, BX_CT + 'presentationml.presentation');
+}
+
+const BX_HW = [278,278,355,556,556,889,667,191,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,278,278,584,584,584,556,1015,667,667,722,722,667,611,778,722,278,500,667,556,833,722,778,667,778,722,667,611,722,667,944,667,667,611,278,278,278,469,556,333,556,556,500,556,556,278,556,556,222,222,500,222,833,556,556,556,556,333,500,278,556,500,722,500,500,500,334,260,334,584];
+const bxPdfMap = { '\u2018': "'", '\u2019': "'", '\u201C': '"', '\u201D': '"', '\u2013': '-', '\u2014': '-', '\u2026': '...', '\u2022': '\x95' };
+const bxPdfStr = (s) => String(s).replace(/[\u0000-\u001F]/g, ' ').replace(/[^\u0000-\u00FF]/g, (c) => bxPdfMap[c] || '?');
+const bxPdfW = (s, sz, bold) => { let w = 0; for (const c of s) { const k = c.charCodeAt(0); w += k >= 32 && k <= 126 ? BX_HW[k - 32] : 556; } return w * sz / 1000 * (bold ? 1.06 : 1); };
+
+function bxPdfWrap(s, sz, bold, max) {
+  const lines = [];
+  let cur = '';
+  for (let w of bxPdfStr(s).split(/\s+/).filter(Boolean)) {
+    while (bxPdfW(w, sz, bold) > max && w.length > 1) {
+      let k = w.length;
+      while (k > 1 && bxPdfW(w.slice(0, k), sz, bold) > max) k--;
+      if (cur) { lines.push(cur); cur = ''; }
+      lines.push(w.slice(0, k));
+      w = w.slice(k);
+    }
+    const t = cur ? cur + ' ' + w : w;
+    if (bxPdfW(t, sz, bold) <= max) cur = t;
+    else { lines.push(cur); cur = w; }
+  }
+  if (cur) lines.push(cur);
+  return lines.length ? lines : [''];
+}
+
+function bxPdf(src) {
+  const PW = 612, PH = 792, M = 54, MAXW = PW - 2 * M;
+  const pages = [];
+  let ops = [], y = PH - M;
+  const esc = (s) => String(s).replace(/[\\()]/g, '\\$&');
+  const newPage = () => { pages.push(ops.join('\n')); ops = []; y = PH - M; };
+  const ensure = (h) => { if (y - h < M) newPage(); };
+  const text = (s, x, yy, sz, bold) => ops.push('BT /' + (bold ? 'F2' : 'F1') + ' ' + sz + ' Tf ' + x.toFixed(2) + ' ' + yy.toFixed(2) + ' Td (' + esc(bxPdfStr(s)) + ') Tj ET');
+  const strip = (s) => String(s).replace(/\*\*(.+?)\*\*/g, '$1').replace(/\*(.+?)\*/g, '$1');
+  bxMd(src).forEach((b) => {
+    if (b.t === 'h') {
+      const sz = [0, 22, 17, 14][b.n], lead = sz * 1.25;
+      const ls = bxPdfWrap(strip(b.text), sz, true, MAXW);
+      y -= sz * 0.6;
+      ensure(lead * Math.min(ls.length, 2) + 6);
+      ls.forEach((l) => { ensure(lead); y -= lead; text(l, M, y, sz, true); });
+      y -= 4;
+    } else if (b.t === 'li' || b.t === 'p') {
+      const sz = 11, lead = 15, ind = b.t === 'li' ? 18 : 0;
+      bxPdfWrap(strip(b.text), sz, false, MAXW - ind).forEach((l, k) => {
+        ensure(lead);
+        y -= lead;
+        if (k === 0 && b.t === 'li') text(b.mark, M + 2, y, sz, false);
+        text(l, M + ind, y, sz, false);
+      });
+      y -= 4;
+    } else {
+      const cols = Math.max(...b.rows.map((r) => r.length)), cw = MAXW / cols, sz = 10, lead = 13;
+      y -= 4;
+      b.rows.forEach((r, ri) => {
+        const cells = Array.from({ length: cols }, (_, ci) => bxPdfWrap(strip(r[ci] || ''), sz, ri === 0, cw - 8));
+        const n = Math.max(...cells.map((c) => c.length));
+        ensure(n * lead + 6);
+        const top = y;
+        cells.forEach((c, ci) => c.forEach((l, k) => text(l, M + ci * cw + 4, top - lead * (k + 1) + 3, sz, ri === 0)));
+        y = top - n * lead - 4;
+        ops.push('0.7 G 0.5 w ' + M + ' ' + y.toFixed(2) + ' m ' + (M + MAXW) + ' ' + y.toFixed(2) + ' l S 0 G');
+      });
+      y -= 8;
+    }
+  });
+  if (ops.length || !pages.length) newPage();
+  const objs = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [' + pages.map((_, i) => (5 + 2 * i) + ' 0 R').join(' ') + '] /Count ' + pages.length + ' >>',
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>',
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>'
+  ];
+  pages.forEach((c, i) => {
+    objs.push('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + PW + ' ' + PH + '] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ' + (6 + 2 * i) + ' 0 R >>');
+    objs.push('<< /Length ' + c.length + ' >>\nstream\n' + c + '\nendstream');
+  });
+  let out = '%PDF-1.4\n';
+  const offs = [];
+  objs.forEach((o, i) => { offs.push(out.length); out += (i + 1) + ' 0 obj\n' + o + '\nendobj\n'; });
+  const xr = out.length;
+  out += 'xref\n0 ' + (objs.length + 1) + '\n0000000000 65535 f \n' + offs.map((o) => String(o).padStart(10, '0') + ' 00000 n \n').join('') + 'trailer\n<< /Size ' + (objs.length + 1) + ' /Root 1 0 R >>\nstartxref\n' + xr + '\n%%EOF';
+  return new Blob([Uint8Array.from(out, (c) => c.charCodeAt(0) & 255)], { type: 'application/pdf' });
+}
+
+function bxZipFiles(src) {
+  const files = [];
+  let cur = null;
+  String(src).replace(/\r/g, '').split('\n').forEach((l) => {
+    const m = l.match(/^===\s*(.+?)\s*===\s*$/);
+    if (m) { cur = { name: m[1].replace(/^[\/\\.]+/, '').replace(/\.\.+/g, '.'), lines: [] }; files.push(cur); }
+    else if (cur) cur.lines.push(l);
+  });
+  if (!files.length) throw new Error('no files found, use === name === header lines');
+  return bxZip(files.slice(0, 40).map((f) => ({ name: f.name || 'file.txt', data: f.lines.join('\n').replace(/\n+$/, '') + '\n' })));
+}
+
+function bxHandle(f) {
+  const ext = String(f.ext || '').toLowerCase();
+  try {
+    let blob;
+    if (ext === 'docx') blob = bxDocx(f.code);
+    else if (ext === 'xlsx') blob = bxXlsx(f.code);
+    else if (ext === 'pptx') blob = bxPptx(f.code);
+    else if (ext === 'pdf') blob = bxPdf(f.code);
+    else blob = bxZipFiles(f.code);
+    let name = String(f.name || 'file.' + ext).split('/').pop().replace(/[\\/:*?"<>|]+/g, '_');
+    if (!name.toLowerCase().endsWith('.' + ext)) name = name.replace(/\.[^.]*$/, '') + '.' + ext;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    toast('Downloading ' + name, 'info', 2200);
+  } catch (err) {
+    toast('Could not build the ' + ext.toUpperCase() + ' file: ' + (err && err.message ? err.message : err), 'info', 4200);
+  }
+}
+
 function saveFileEdit(mi, fi, oldCode, next) {
   const m = currentSession.messages[mi];
   if (!m) return false;
@@ -12310,7 +12651,9 @@ function onFileCard(card) {
   const m = currentSession.messages[mi];
   const part = m ? String(m.content).split('```')[fi] : null;
   if (part == null) return;
-  openFileViewer(parseFence(part, fi), (prev, next) => saveFileEdit(mi, fi, prev, next));
+  const pf = parseFence(part, fi);
+  if (BX_BINARY.has(String(pf.ext || '').toLowerCase())) { bxHandle(pf); return; }
+  openFileViewer(pf, (prev, next) => saveFileEdit(mi, fi, prev, next));
 }
 
 const statusHTML = () => `<span class="aph-avatar" role="status" aria-label="Loading response">${aphMark({ animated: true })}</span>`;
