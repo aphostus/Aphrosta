@@ -4982,3 +4982,38 @@ html[data-motion="reduce"] .sess-pw { animation: none; }
 .fd-empty[hidden], .picker-empty[hidden] { display: none; }
 @media (prefers-reduced-motion: reduce) { .mv-panel { animation: none !important; } }
 
+/* ---------- search bar: session access options ---------- */
+.sbx { display: flex; flex-direction: column; gap: 8px; padding: 6px 0 4px; }
+.sbx > * { margin: 0 1.67%; }
+.sbx-grid { position: relative; display: flex; gap: 1.67%; }
+.sbx-box {
+  flex: 1 1 0; min-width: 0; height: 74px; padding: 8px 10px; resize: none;
+  font-family: inherit; font-size: calc(11.5px * var(--ts)); line-height: 1.35; color: var(--fg);
+  background: rgba(var(--fg-rgb), 0.05); border: 1px solid var(--glass-border); border-radius: 12px; outline: none;
+  transition: opacity 0.2s var(--ease-smooth), border-color 0.2s var(--ease-smooth);
+}
+.sbx-box::placeholder { color: var(--gray-mid); }
+.sbx-box.is-off { opacity: 0.55; }
+.sbx-box:focus { opacity: 1; border-color: rgba(var(--fg-rgb), 0.28); }
+.sbx-vis {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); margin: 0;
+  width: 34px; height: 34px; background: var(--surface-2); border: 1px solid var(--glass-border); border-radius: 50%;
+}
+.sbx-three { display: flex; gap: 1.67%; }
+.sbx-pill { flex: 1 1 0; min-width: 0; padding: 0 6px; gap: 0; }
+.sbx-in {
+  width: 100%; min-width: 0; height: 100%; padding: 0; background: none; border: 0; outline: 0; color: var(--fg);
+  font-family: inherit; font-size: calc(10px * var(--ts)); text-align: center; overflow: hidden;
+  -moz-appearance: textfield; appearance: none;
+}
+.sbx-in::placeholder { color: var(--gray-mid); }
+.sbx-in::-webkit-calendar-picker-indicator { margin: 0 0 0 2px; padding: 0; transform: scale(0.7); opacity: 0.6; }
+.sbx-in::-webkit-inner-spin-button, .sbx-in::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.sbar-code { text-align: center; }
+.sbx-go {
+  height: 34px; border-radius: 999px; font-size: calc(12.5px * var(--ts)); font-weight: 600;
+  color: var(--on-accent); background: var(--accent); transition: opacity 0.2s var(--ease-smooth), transform 0.2s var(--ease-bounce);
+}
+.sbx-go:active { transform: scale(0.98); }
+.sbx-go.is-dim { opacity: 0.4; }
+

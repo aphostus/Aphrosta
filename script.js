@@ -27,7 +27,8 @@ import {
   setDoc,
   deleteDoc,
   collection,
-  getDocs
+  getDocs,
+  increment
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -6431,11 +6432,17 @@ const SearchBar = () => `
       </div>
       <div class="sbar-panel" inert>
         <div class="sbar-panel-in">
+          <div class="sbx">
+            <div class="sbx-grid">
+              <textarea class="sbx-box is-off" data-sbx="emails" placeholder="Emails, comma separated" aria-label="Emails that can access" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
+              <textarea class="sbx-box is-off" data-sbx="phones" placeholder="[phone], [phone]" aria-label="Phones that can access" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
+              <button class="sbar-vis sbx-vis" type="button" data-action="sb-vis" data-state="private" aria-label="Private. Tap to make public">
+                <span class="sbar-vis-priv">${ICONS.lock}</span>
+                <span class="sbar-vis-pub">${ICONS.unlock}</span>
+              </button>
+            </div>
+          </div>
           <div class="sbar-row sbar-idrow">
-            <button class="sbar-vis" type="button" data-action="sb-vis" data-state="private" aria-label="Private. Tap to make public">
-              <span class="sbar-vis-priv">${ICONS.lock}</span>
-              <span class="sbar-vis-pub">${ICONS.unlock}</span>
-            </button>
             <div class="sbar-pill">
               <input class="sbar-code" type="text" maxlength="30" aria-label="Chat ID" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" value="">
             </div>
@@ -6443,6 +6450,14 @@ const SearchBar = () => `
               <span class="sbar-act-copy">${ICONS.copy}</span>
               <span class="sbar-act-load">${ICONS.loadIn}</span>
             </button>
+          </div>
+          <div class="sbx">
+            <div class="sbx-three">
+              <label class="sbar-pill sbx-pill"><input class="sbx-in" type="datetime-local" data-sbx="exp" aria-label="Expires at"></label>
+              <label class="sbar-pill sbx-pill"><input class="sbx-in" type="password" maxlength="5" data-sbx="pw" placeholder="Pass (5)" aria-label="Password, 5 characters" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false"></label>
+              <label class="sbar-pill sbx-pill"><input class="sbx-in" type="text" inputmode="numeric" maxlength="4" data-sbx="max" placeholder="Uses" aria-label="Times it can be accessed" autocomplete="off"></label>
+            </div>
+            <button class="sbx-go" type="button" data-action="sb-go">Initiate</button>
           </div>
         </div>
       </div>
@@ -10667,6 +10682,11 @@ function sbCodeMode() {
   act.dataset.mode = load ? 'load' : 'copy';
   act.setAttribute('aria-label', load ? 'Load chat' : 'Copy chat ID');
   act.classList.toggle('is-dim', load && code.value.length !== SB_LEN);
+  const go = bar.querySelector('.sbx-go');
+  if (go) {
+    go.textContent = load ? 'Load session' : 'Initiate';
+    go.classList.toggle('is-dim', load && code.value.length !== SB_LEN);
+  }
 }
 
 function sbSyncShare() {
@@ -10684,6 +10704,7 @@ function sbSyncShare() {
     vis.setAttribute('aria-label', s.sharePub ? 'Public. Tap to make private' : 'Private. Tap to make public');
   }
   bar.querySelector('.sbar-share')?.classList.toggle('on', !!s.sharePub);
+  sbxFill(bar, s);
 }
 
 function sbRemark() {
@@ -10763,14 +10784,14 @@ function pubBody(s) {
     .filter((m) => !m.hidden && !m.pubHide && (m.role === 'user' || m.role === 'assistant') && (m.content || (m.pw && m.pw.ct)))
     .map((m) => (m.pw && m.pw.ct ? { role: m.role, pw: { s: m.pw.s, iv: m.pw.iv, ct: m.pw.ct } } : { role: m.role, content: String(m.content), ...(m.role === 'assistant' && m.reasoning ? { reasoning: String(m.reasoning).slice(0, 20000) } : {}) }));
   while (new TextEncoder().encode(JSON.stringify(msgs)).length > 900000 && msgs.length > 2) msgs.shift();
-  return { owner: currentUser.uid, title: String(s.title || 'Shared chat').slice(0, 80), messages: msgs, updated: Date.now() };
+  return { owner: currentUser.uid, title: String(s.title || 'Shared chat').slice(0, 80), messages: msgs, updated: Date.now(), access: sbAccess(s) };
 }
 
 async function pubPushOne(s, force) {
   if (!currentUser || !s.sharePub || !s.shareCode || !s.messages.length) return;
   const sg = `${s.title}|${s.messages.length}|${s.messages[s.messages.length - 1]?.content?.length || 0}|${s.messages.map((m) => (m.pubHide ? 'h' : '') + (m.pw ? 'p' + m.pw.iv : '')).join('')}`;
   if (!force && pubSig.get(s.id) === sg) return;
-  await setDoc(doc(db, 'shared', s.shareCode), pubBody(s));
+  await setDoc(doc(db, 'shared', s.shareCode), pubBody(s), { merge: true });
   pubSig.set(s.id, sg);
 }
 
@@ -10862,6 +10883,10 @@ async function sbLoad() {
     const snap = await getDoc(doc(db, 'shared', code));
     if (!snap.exists()) { toast('No public chat found with that ID.', 'info'); return; }
     const d = snap.data();
+    if (!(await sbGate(d, code))) return;
+    if (d.access && d.access.max && d.owner !== currentUser.uid) {
+      setDoc(doc(db, 'shared', code), { access: { used: increment(1) } }, { merge: true }).catch((e) => console.warn('[share] count failed', e?.code));
+    }
     const now = Date.now();
     const msgs = (Array.isArray(d.messages) ? d.messages : [])
       .filter((m) => m && (m.role === 'user' || m.role === 'assistant') && (typeof m.content === 'string' || (m.pw && m.pw.ct)))
@@ -10888,11 +10913,148 @@ async function sbLoad() {
   }
 }
 
+/* ---------- SESSION ACCESS OPTIONS (emails, phones, expiry, password, uses) ---------- */
+const SBX_MASK = '\u2022\u2022\u2022\u2022\u2022';
+const sbxLocal = (ms) => new Date(ms - new Date(ms).getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+const sbxDigits = (v) => String(v || '').replace(/\D/g, '').replace(/^0+/, '');
+const sbxHash = async (pw, salt) => {
+  const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pw));
+  return Array.from(new Uint8Array(b), (x) => x.toString(16).padStart(2, '0')).join('');
+};
+
+function sbAccess(s) {
+  const o = s.shareOpts || {};
+  return { emails: o.emails || [], phones: o.phones || [], exp: o.exp || 0, max: o.max || 0, pw: o.pw ? { s: o.pw.s, h: o.pw.h } : null };
+}
+
+function sbxFill(bar, s) {
+  const o = s.shareOpts || {};
+  const exp = bar.querySelector('[data-sbx="exp"]');
+  if (exp) exp.min = sbxLocal(Date.now() + 600000);
+  if (bar.dataset.sbxDirty !== s.id) {
+    const set = (k, v) => {
+      const el = bar.querySelector('[data-sbx="' + k + '"]');
+      if (el && document.activeElement !== el) el.value = v;
+      return el;
+    };
+    set('emails', (o.emails || []).join(', '));
+    set('phones', (o.phones || []).map((p) => '[' + p + ']').join(', '));
+    set('exp', o.exp && o.exp > Date.now() ? sbxLocal(o.exp) : '');
+    const pw = set('pw', o.pw ? SBX_MASK : '');
+    if (pw) pw.dataset.kept = o.pw ? '1' : '';
+    set('max', o.max ? String(o.max) : '');
+  }
+  bar.querySelectorAll('.sbx-box').forEach((b) => b.classList.toggle('is-off', !b.value.trim()));
+}
+
+document.addEventListener('input', (e) => {
+  const t = e.target;
+  if (!t || !t.dataset || !t.dataset.sbx) return;
+  const bar = q$('.sbar');
+  if (bar) bar.dataset.sbxDirty = currentSession.id;
+  if (t.classList.contains('sbx-box')) t.classList.toggle('is-off', !t.value.trim());
+  if (t.dataset.sbx === 'pw') t.dataset.kept = '';
+  if (t.dataset.sbx === 'max') t.value = t.value.replace(/\D/g, '').slice(0, 4);
+});
+document.addEventListener('focusin', (e) => {
+  const t = e.target;
+  if (!t || !t.dataset || !t.dataset.sbx) return;
+  if (t.dataset.sbx === 'exp') t.min = sbxLocal(Date.now() + 600000);
+  if (t.dataset.sbx === 'pw' && t.dataset.kept === '1') t.value = '';
+});
+document.addEventListener('focusout', (e) => {
+  const t = e.target;
+  if (t && t.dataset && t.dataset.sbx === 'pw' && t.dataset.kept === '1' && !t.value) t.value = SBX_MASK;
+});
+
+function sbxParse() {
+  const bar = q$('.sbar');
+  const el = (k) => bar.querySelector('[data-sbx="' + k + '"]');
+  const v = (k) => (el(k) ? el(k).value : '');
+  const emails = [...new Set(v('emails').split(/[,\s;]+/).map((x) => x.trim().toLowerCase()).filter(Boolean))];
+  if (emails.some((x) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x))) return { error: 'One of the emails looks wrong.' };
+  const phones = [...new Set(v('phones').split(',').map((x) => sbxDigits(x.replace(/[\[\]]/g, ''))).filter(Boolean))];
+  if (phones.some((p) => p.length < 6 || p.length > 15)) return { error: 'Phones need 6 to 15 digits, like [9171234567].' };
+  let exp = 0;
+  if (v('exp')) {
+    exp = new Date(v('exp')).getTime();
+    if (!(exp >= Date.now() + 540000)) return { error: 'Expiry must be at least 10 minutes from now.' };
+  }
+  const p = el('pw');
+  let pw = null;
+  if (p && p.dataset.kept === '1' && p.value === SBX_MASK) pw = 'keep';
+  else if (p && p.value) {
+    if (p.value.length !== 5) return { error: 'Password must be exactly 5 characters.' };
+    pw = p.value;
+  }
+  const mv = v('max').trim();
+  const max = mv ? parseInt(mv, 10) : 0;
+  if (mv && !(max >= 1)) return { error: 'Uses must be 1 or more.' };
+  return { emails, phones, exp, pw, max };
+}
+
+async function sbInitiate() {
+  const s = currentSession;
+  if (!currentUser) { toast('Sign in to share chats.', 'info'); return; }
+  if (!s.messages.length) { toast('Send a message first, then initiate.', 'info'); return; }
+  if (sbBusy) return;
+  const r = sbxParse();
+  if (r.error) { toast(r.error, 'info', 2800); return; }
+  let pwRec = null;
+  if (r.pw === 'keep') pwRec = (s.shareOpts && s.shareOpts.pw) || null;
+  else if (r.pw) {
+    try {
+      const salt = sbMakeCode().slice(0, 12);
+      pwRec = { s: salt, h: await sbxHash(r.pw, salt) };
+    } catch (_) { toast('Password lock needs https or localhost.', 'error', 3000); return; }
+  }
+  s.shareOpts = { emails: r.emails, phones: r.phones, exp: r.exp, max: r.max, pw: pwRec };
+  if (!s.orderAt) s.orderAt = s.updated;
+  s.updated = Date.now();
+  persistSessions();
+  const bar = q$('.sbar');
+  if (bar) delete bar.dataset.sbxDirty;
+  try {
+    if (!s.sharePub) await sbSetPublic(true);
+    else { toast('Please wait, applying changes.', 'info', 1800); await pubPushOne(s, true); }
+    if (!s.sharePub || !s.shareCode) return;
+    await setDoc(doc(db, 'shared', s.shareCode), { access: { used: 0 } }, { merge: true });
+    toast('Session initiated with your limits.', 'success', 2200);
+  } catch (err) {
+    toast(sbShareErr(err), 'error', 3600);
+  }
+  sbSyncShare();
+}
+
+async function sbGate(d, code) {
+  const a = d.access;
+  if (!a || (d.owner && currentUser && d.owner === currentUser.uid)) return true;
+  if (a.exp && Date.now() > a.exp) { toast('This shared chat has expired.', 'info', 3000); return false; }
+  const em = a.emails || [], ph = a.phones || [];
+  if (em.length || ph.length) {
+    const mail = String(currentUser.email || '').toLowerCase();
+    const p = sbxDigits(settings.phone);
+    const full = p ? sbxDigits(settings.phoneCc) + p : '';
+    const ok = (mail && em.includes(mail)) || (p && (ph.includes(p) || ph.includes(full)));
+    if (!ok) { toast('Your account is not on the access list for this chat.', 'error', 3200); return false; }
+  }
+  if (a.pw && a.pw.h) {
+    const pw = await promptDialog({ title: 'Password', label: 'Enter the 5 character password', value: '', confirmLabel: 'Open', maxlength: 5 });
+    if (pw == null) return false;
+    let h = '';
+    try { h = await sbxHash(pw, a.pw.s); } catch (_) { h = ''; }
+    if (h !== a.pw.h) { toast('Wrong password. (H12)', 'error', 2400); return false; }
+  }
+  if (a.max && (a.used || 0) >= a.max) { toast('This chat has reached its access limit.', 'info', 3200); return false; }
+  return true;
+}
+
 function sbAction(action) {
   if (action === 'sb-next') sbStep(1);
   else if (action === 'sb-prev') sbStep(-1);
   else if (action === 'sb-share') { if (Date.now() - sbLongAt < 700) return; sbTogglePanel(); }
   else if (action === 'sb-vis') sbSetPublic(!currentSession.sharePub);
+  else if (action === 'sb-go') { if (q$('.sbar-act')?.dataset.mode === 'load') sbLoad(); else sbInitiate(); }
   else if (action === 'sb-act') {
     if (q$('.sbar-act')?.dataset.mode === 'load') sbLoad();
     else copyText(sbCode(currentSession)).then((ok) => toast(ok ? 'Chat ID copied.' : 'Could not copy.', ok ? 'success' : 'error', 1600));
