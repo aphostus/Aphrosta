@@ -17113,6 +17113,15 @@ const Acard = (() => {
   function wireAuth(btn) {
     const sp = btn.querySelector('[data-acard-in]');
     if (!sp) return;
+    if (!sp.dataset.acAnim) {
+      sp.dataset.acAnim = '1';
+      sp.insertAdjacentHTML('beforeend', '<svg class="ac-bolt" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2.5L5 13.5h6.5l-1 8L19 10.5h-6.5z" fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>');
+      const acTick = setInterval(() => {
+        if (!sp.isConnected) { clearInterval(acTick); return; }
+        sp.classList.add('is-bolt');
+        setTimeout(() => sp.classList.remove('is-bolt'), 1000);
+      }, 2500);
+    }
     const pick = () => {
       const f = document.createElement('input');
       f.type = 'file'; f.accept = 'image/png,image/*'; f.hidden = true;

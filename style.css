@@ -4437,6 +4437,10 @@ mark.ab-mark {
 .acard-in { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; color: #0a0a0a; background: linear-gradient(145deg, #ffffff, #d6d6d6); box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.9); cursor: pointer; transition: transform 0.15s; }
 .acard-in:active { transform: translateY(-50%) scale(0.92); }
 .acard-in.ac-shake { animation: acShake 0.5s var(--ease-smooth); }
+.acard-in > svg { grid-area: 1 / 1; transition: opacity 0.35s var(--ease-smooth), transform 0.35s var(--ease-smooth); }
+.acard-in > .ac-bolt { opacity: 0; transform: scale(0.4) rotate(-45deg); }
+.acard-in.is-bolt > svg:not(.ac-bolt) { opacity: 0; transform: scale(0.4) rotate(45deg); }
+.acard-in.is-bolt > .ac-bolt { opacity: 1; transform: scale(1) rotate(0deg); }
 @keyframes acShake {
   0%, 100% { transform: translateY(-50%) translateX(0); }
   20% { transform: translateY(-50%) translateX(-7px); }
