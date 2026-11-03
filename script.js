@@ -6432,7 +6432,7 @@ const SearchBar = () => `
       </div>
       <div class="sbar-panel" inert>
         <div class="sbar-panel-in">
-          <div class="sbx">
+          <div class="sbx sbx-fold">
             <div class="sbx-grid">
               <textarea class="sbx-box is-off" data-sbx="emails" placeholder="Emails, e.g. ana@mail.com, ben@mail.com" aria-label="Emails that can access" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
               <textarea class="sbx-box is-off" data-sbx="phones" placeholder="Phones, e.g. [9171234567], [9181234567]" aria-label="Phones that can access" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
@@ -6453,9 +6453,9 @@ const SearchBar = () => `
             </button>
           </div>
           <div class="sbx">
-            <div class="sbx-three">
+            <div class="sbx-three sbx-fold">
               <label class="sbar-pill sbx-pill"><input class="sbx-in" type="datetime-local" data-sbx="exp" data-empty="1" aria-label="Expires at"><span class="sbx-ph" aria-hidden="true">Expiration</span></label>
-              <label class="sbar-pill sbx-pill"><input class="sbx-in" type="password" maxlength="5" data-sbx="pw" placeholder="Password" aria-label="Password, 5 characters" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false"></label>
+              <label class="sbar-pill sbx-pill sbx-p-pw"><input class="sbx-in" type="password" maxlength="5" data-sbx="pw" placeholder="Password" aria-label="Password, 5 characters" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false"></label>
               <label class="sbar-pill sbx-pill"><input class="sbx-in" type="text" inputmode="numeric" maxlength="4" data-sbx="max" placeholder="Limiting" aria-label="Times it can be accessed" autocomplete="off"></label>
             </div>
             <button class="sbx-go" type="button" data-action="sb-go">Initiate</button>
@@ -10672,22 +10672,80 @@ function sbStep(d) {
   sbUi();
 }
 
-/* copy icon while the field shows this chat's own ID, load icon once it holds a different one */
+/* the copy button always copies. Editing the ID (even 1 character) switches the panel to scan mode. */
+function sbFoldInert(bar) {
+  const load = bar.dataset.load === '1';
+  bar.querySelectorAll('.sbx-fold').forEach((el) => {
+    const keep = el.classList.contains('sbx-three') && bar.dataset.pw === '1';
+    el.toggleAttribute('inert', load && !keep);
+  });
+}
+
 function sbCodeMode() {
   const bar = q$('.sbar');
   if (!bar) return;
   const code = bar.querySelector('.sbar-code');
-  const act = bar.querySelector('.sbar-act');
-  if (!code || !act) return;
+  if (!code) return;
   const load = code.value !== (currentSession.shareCode || '');
-  act.dataset.mode = load ? 'load' : 'copy';
-  act.setAttribute('aria-label', load ? 'Load chat' : 'Copy chat ID');
-  act.classList.toggle('is-dim', load && code.value.length !== SB_LEN);
+  if (load) bar.dataset.load = '1';
+  else { delete bar.dataset.load; delete bar.dataset.pw; sbPwRestore(bar); }
+  sbFoldInert(bar);
   const go = bar.querySelector('.sbx-go');
   if (go) {
-    go.textContent = load ? 'Load session' : 'Initiate';
+    go.textContent = load ? 'Scan' : 'Initiate';
     go.classList.toggle('is-dim', load && code.value.length !== SB_LEN);
   }
+}
+
+/* when the typed ID belongs to a password-protected session, the password box opens and takes the full row */
+var sbProbeSeq = 0, sbProbeT = 0, sbProbed = { code: '', pw: false, t: 0 };
+function sbPwRestore(bar) {
+  if (bar.dataset.pwCleared !== '1') return;
+  delete bar.dataset.pwCleared;
+  const p = bar.querySelector('[data-sbx="pw"]');
+  const o = currentSession.shareOpts || {};
+  if (p) { p.value = o.pw ? SBX_MASK : ''; p.dataset.kept = o.pw ? '1' : ''; }
+}
+function sbPwShow(on) {
+  const bar = q$('.sbar');
+  if (!bar) return;
+  const p = bar.querySelector('[data-sbx="pw"]');
+  if (on) {
+    if (bar.dataset.pw !== '1' && p) { p.value = ''; p.dataset.kept = ''; bar.dataset.pwCleared = '1'; }
+    bar.dataset.pw = '1';
+  } else {
+    delete bar.dataset.pw;
+    sbPwRestore(bar);
+  }
+  sbFoldInert(bar);
+}
+function sbPwVal() {
+  const bar = q$('.sbar');
+  const p = bar && bar.querySelector('[data-sbx="pw"]');
+  return bar && bar.dataset.pw === '1' && p ? p.value : null;
+}
+function sbProbeSoon() {
+  const bar = q$('.sbar');
+  const inp = bar && bar.querySelector('.sbar-code');
+  if (!inp) return;
+  const code = inp.value.trim();
+  clearTimeout(sbProbeT);
+  sbProbeSeq++;
+  if (bar.dataset.load !== '1' || code.length !== SB_LEN || /[\/\s]/.test(code) || !currentUser) { sbPwShow(false); return; }
+  if (sbProbed.code === code && Date.now() - sbProbed.t < 20000) { sbPwShow(sbProbed.pw); return; }
+  sbPwShow(false);
+  const seq = sbProbeSeq;
+  sbProbeT = setTimeout(async () => {
+    let pw = false;
+    try {
+      const snap = await getDoc(doc(db, 'shared', code));
+      const d = snap.exists() ? snap.data() : null;
+      pw = !!(d && d.access && d.access.pw && d.access.pw.h && d.owner !== currentUser.uid);
+    } catch (_) { pw = false; }
+    if (seq !== sbProbeSeq) return;
+    sbProbed = { code, pw, t: Date.now() };
+    sbPwShow(pw);
+  }, 280);
 }
 
 function sbSyncShare() {
@@ -10884,7 +10942,7 @@ async function sbLoad() {
     const snap = await getDoc(doc(db, 'shared', code));
     if (!snap.exists()) { toast('No public chat found with that ID.', 'info'); return; }
     const d = snap.data();
-    if (!(await sbGate(d, code))) return;
+    if (!(await sbGate(d, code, sbPwVal()))) return;
     if (d.access && d.access.max && d.owner !== currentUser.uid) {
       setDoc(doc(db, 'shared', code), { access: { used: increment(1) } }, { merge: true }).catch((e) => console.warn('[share] count failed', e?.code));
     }
@@ -11035,7 +11093,7 @@ async function sbInitiate() {
   sbSyncShare();
 }
 
-async function sbGate(d, code) {
+async function sbGate(d, code, pwIn) {
   const a = d.access;
   if (!a || (d.owner && currentUser && d.owner === currentUser.uid)) return true;
   if (a.exp && Date.now() > a.exp) { toast('This shared chat has expired.', 'info', 3000); return false; }
@@ -11048,8 +11106,12 @@ async function sbGate(d, code) {
     if (!ok) { toast('Your account is not on the access list for this chat.', 'error', 3200); return false; }
   }
   if (a.pw && a.pw.h) {
-    const pw = await promptDialog({ title: 'Password', label: 'Enter the 5 character password', value: '', confirmLabel: 'Open', maxlength: 5 });
-    if (pw == null) return false;
+    let pw = pwIn;
+    if (pw === '') { toast('Enter the password first.', 'info', 2400); return false; }
+    if (pw == null) {
+      pw = await promptDialog({ title: 'Password', label: 'Enter the 5 character password', value: '', confirmLabel: 'Open', maxlength: 5 });
+      if (pw == null) return false;
+    }
     let h = '';
     try { h = await sbxHash(pw, a.pw.s); } catch (_) { h = ''; }
     if (h !== a.pw.h) { toast('Wrong password. (H12)', 'error', 2400); return false; }
@@ -11063,17 +11125,24 @@ async function sbRegen() {
   if (sbBusy) return;
   sbBusy = true;
   try {
-    const wasPub = !!s.sharePub;
-    if (wasPub) { pubDrop(s); pubSig.delete(s.id); }
+    const old = s.shareCode;
+    /* the old ID is deleted from the cloud first, so it stops working the moment a new one exists */
+    if (old && currentUser) {
+      try { await deleteDoc(doc(db, 'shared', old)); }
+      catch (e) { if (s.sharePub) throw e; }
+    }
+    pubSig.delete(s.id);
     s.shareCode = sbMakeCode();
     if (!s.draft) persistSessions();
-    if (wasPub && s.messages.length) await pubPushOne(s, true);
+    if (s.sharePub && s.messages.length) await pubPushOne(s, true);
     toast('New chat ID created.', 'success', 1800);
   } catch (err) {
     toast(sbShareErr(err), 'error', 3600);
   } finally {
     sbBusy = false;
   }
+  const f = q$('.sbar-code');
+  if (f && s === currentSession) f.value = s.shareCode || '';
   sbSyncShare();
 }
 
@@ -11083,10 +11152,10 @@ function sbAction(action) {
   else if (action === 'sb-share') { if (Date.now() - sbLongAt < 700) return; sbTogglePanel(); }
   else if (action === 'sb-vis') sbSetPublic(!currentSession.sharePub);
   else if (action === 'sb-regen') sbRegen();
-  else if (action === 'sb-go') { if (q$('.sbar-act')?.dataset.mode === 'load') sbLoad(); else sbInitiate(); }
+  else if (action === 'sb-go') { if (q$('.sbar')?.dataset.load === '1') sbLoad(); else sbInitiate(); }
   else if (action === 'sb-act') {
-    if (q$('.sbar-act')?.dataset.mode === 'load') sbLoad();
-    else copyText(sbCode(currentSession)).then((ok) => toast(ok ? 'Chat ID copied.' : 'Could not copy.', ok ? 'success' : 'error', 1600));
+    const v = (q$('.sbar-code')?.value || '').trim() || sbCode(currentSession);
+    copyText(v).then((ok) => toast(ok ? 'Chat ID copied.' : 'Could not copy.', ok ? 'success' : 'error', 1600));
   }
 }
 
@@ -11098,6 +11167,7 @@ document.addEventListener('input', (e) => {
     sbTimer = setTimeout(() => { sbQuery = t.value.trim(); sbMark(sbQuery, false); }, 120);
   } else if (t.classList.contains('sbar-code')) {
     sbCodeMode();
+    sbProbeSoon();
   }
 });
 
@@ -11111,7 +11181,7 @@ document.addEventListener('keydown', (e) => {
     else sbStep(e.shiftKey ? -1 : 1);
   } else if (t.classList.contains('sbar-code')) {
     e.preventDefault();
-    if (q$('.sbar-act')?.dataset.mode === 'load') sbLoad();
+    if (q$('.sbar')?.dataset.load === '1') sbLoad();
   }
 });
 

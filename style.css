@@ -5032,3 +5032,19 @@ html[data-motion="reduce"] .sess-pw { animation: none; }
 .sbx-in[data-empty="1"]::-webkit-datetime-edit { opacity: 0; }
 .sbx-in[data-empty="1"]::-webkit-calendar-picker-indicator { opacity: 0; }
 
+/* ---------- search bar: scan mode (session ID edited) ---------- */
+.sbx-fold {
+  max-height: 160px; overflow: hidden;
+  transition: max-height 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s var(--ease-smooth),
+    padding 0.35s cubic-bezier(0.22, 1, 0.36, 1), margin 0.35s cubic-bezier(0.22, 1, 0.36, 1), gap 0.3s var(--ease-smooth);
+}
+.sbar[data-load="1"] .sbx-fold { max-height: 0; opacity: 0; padding-top: 0; padding-bottom: 0; pointer-events: none; }
+.sbar[data-load="1"] .sbx > .sbx-three.sbx-fold { margin-top: 0; margin-bottom: -8px; }
+.sbar[data-load="1"][data-pw="1"] .sbx > .sbx-three.sbx-fold { max-height: 80px; opacity: 1; margin-bottom: 0; pointer-events: auto; }
+.sbx-three > .sbx-pill {
+  overflow: hidden;
+  transition: flex 0.35s cubic-bezier(0.22, 1, 0.36, 1), padding 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s var(--ease-smooth);
+}
+.sbar[data-pw="1"] .sbx-three { gap: 0; }
+.sbar[data-pw="1"] .sbx-three > .sbx-pill:not(.sbx-p-pw) { flex: 0 0 0%; padding-left: 0; padding-right: 0; border-width: 0; opacity: 0; pointer-events: none; }
+
