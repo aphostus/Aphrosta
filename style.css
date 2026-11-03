@@ -1987,8 +1987,18 @@ button.lib-card-eye.is-off { opacity: 0.55; }
   user-select: none;
 }
 
-.key-reveal { display: flex; flex-direction: column; gap: 6px; }
-.key-reveal[hidden] { display: none; }
+.key-reveal {
+  display: flex; flex-direction: column; gap: 6px;
+  max-height: 320px; overflow: hidden; opacity: 1;
+  transition: max-height 0.32s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease, margin-top 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.key-reveal[hidden] {
+  display: flex; max-height: 0; opacity: 0; margin-top: -6px;
+  visibility: hidden; pointer-events: none;
+  transition: max-height 0.32s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease, margin-top 0.32s cubic-bezier(0.4, 0, 0.2, 1), visibility 0s 0.32s;
+}
+html[data-motion="reduce"] .key-reveal,
+html[data-motion="reduce"] .key-reveal[hidden] { transition: none; }
 .key-actions { display: flex; gap: 6px; }
 .key-actions .btn-line { flex: 1; padding: 8px 10px; }
 

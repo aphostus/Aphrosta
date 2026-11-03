@@ -1869,14 +1869,13 @@ let AssistanceSection = () => Section('assistance', 'Assistance', [
     SubSwitch('Wrap Code', 'codeWrap') +
     SubSwitch('Rich Output', 'richFormat')),
 
-  Item('agentskills', ICONS.stSkills, 'Tailorship',
-    SubSwitch('Tool Use', 'agentTools') +
-    SubSwitch('Show Plans', 'agentPlan') +
-    SubSwitch('Slides', 'skillPresentations') +
-    SubSwitch('Documents', 'skillDocuments') +
-    SubSwitch('Spreadsheets', 'skillSheets') +
-    SubSwitch('Office Files', 'skillFiles') +
-    SubSwitch('Web Search', 'skillWeb')),
+  `<div class="item" data-item="agentskills">
+    <label class="panel-row">
+      <span class="row-icon">${ICONS.stSkills}</span>
+      <span class="row-label">Tailorship</span>
+      <span class="switch"><input type="checkbox" data-tailor ${['agentTools', 'agentPlan', 'skillPresentations', 'skillDocuments', 'skillSheets', 'skillFiles', 'skillWeb'].some((k) => settings[k]) ? 'checked' : ''}><i></i></span>
+    </label>
+  </div>`,
 
   Item('controls', ICONS.stControls, 'Controls',
     Field('Creativity', Chips('creativity', [{ id: 'precise', name: 'Precise' }, { id: 'balanced', name: 'Balanced' }, { id: 'creative', name: 'Creative' }], settings.creativity)) +
@@ -6150,6 +6149,13 @@ function onSettingsChange(e) {
 
   const pt = t.closest?.('input[data-perm-toggle]');
   if (pt) return togglePerm(pt.dataset.permToggle, pt.checked);
+
+  const tailor = t.closest?.('input[data-tailor]');
+  if (tailor) {
+    ['agentTools', 'agentPlan', 'skillPresentations', 'skillDocuments', 'skillSheets', 'skillFiles', 'skillWeb']
+      .forEach((k) => setSetting(k, tailor.checked));
+    return;
+  }
 
   const input = t.closest?.('input[data-set]');
   if (!input) return;
