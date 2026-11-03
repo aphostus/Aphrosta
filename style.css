@@ -4832,7 +4832,8 @@ html[data-motion="reduce"] .sess-pw { animation: none; }
 :root[data-theme="light"] .ops-cc svg { color: #fff; filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.65)); }
 
 /* portable find/replace + files card */
-.ops-ed .ops-portable { display: flex; flex-direction: column; flex: 1 1 auto; margin-top: 8px; min-height: 0; padding-bottom: 14px; box-sizing: border-box; }
+.ops-ed .ops-portable { display: flex; flex-direction: column; flex: 1 1 auto; margin-top: 8px; min-height: 0; padding: 8px; box-sizing: border-box; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 14px; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.ops-ed .ops-portable > .lib-lab:first-child { margin-top: 0; }
 .ops-ed .ops-portable > .lib-lab:last-child { flex: 1 1 auto; min-height: 0; }
 .ops-ed .ops-portable .ops-st { flex: 1 1 auto; min-height: 0; }
 .ops-ed .ops-portable .ops-tree { flex: 1 1 auto; height: auto; min-height: calc(6 * 52px + 10px); max-height: none; }
