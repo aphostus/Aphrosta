@@ -16547,6 +16547,23 @@ function introStart() {
   }
 }
 
+/* ---------- Auth page legal popups (same popup as Worlds) ---------- */
+function openAuthLegal(key) {
+  const def = AB_PAGES[key];
+  if (!def) return;
+  const search = `<label class="ab-search fd-ab-search">${ICONS.searchPage}<input type="search" placeholder="Search" aria-label="Search this page" autocomplete="off"></label>`;
+  const p = fdOpen(def.title, '', `<div class="ab-body" data-page="${key}">${abBodyHtml(key)}<p class="ab-empty" hidden>No results found.</p></div>`, search);
+  p.classList.add('legal-pop');
+  p.addEventListener('click', (e) => {
+    if (e.target.closest('[data-fd="close"]')) fdClose();
+  });
+  p.querySelector('.ab-search input').addEventListener('input', () => abSearch(p));
+}
+document.addEventListener('click', (e) => {
+  const l = e.target.closest?.('[data-legal]');
+  if (l) openAuthLegal(l.dataset.legal);
+});
+
 function showSignInButton() {
   const existingBtn = document.getElementById('signin-btn');
   if (existingBtn) {
@@ -16564,7 +16581,7 @@ function showSignInButton() {
         </button>
         <button id="signin-theme" class="signin-theme" type="button" aria-label="Switch theme"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>
         </div>
-        <p class="signin-agree">By continuing, you agree to the About &amp; License, Terms &amp; Conditions, and Rules &amp; Policies.</p>
+        <p class="signin-agree">By continuing, you agree to the <button type="button" class="legal-link" data-legal="licenses">About &amp; License</button>, <button type="button" class="legal-link" data-legal="terms">Terms &amp; Conditions</button>, and <button type="button" class="legal-link" data-legal="rules">Rules &amp; Policies</button>.</p>
       </div>
     </div>`;
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', document.documentElement.dataset.theme === 'light' ? '#ffffff' : '#000000');

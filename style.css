@@ -4441,6 +4441,18 @@ mark.ab-mark {
 .signin-screen.is-light .signin-btn { color: #000; background: rgba(0, 0, 0, 0.05); border-color: rgba(0, 0, 0, 0.55); }
 .signin-screen.is-light .signin-btn:not(:disabled):active { background: rgba(0, 0, 0, 0.14); }
 .signin-screen.is-light .signin-agree { color: rgba(0, 0, 0, 0.75); }
+
+/* auth page: dotted underline links that open the legal popups */
+.legal-link { display: inline; margin: 0; padding: 0; border: 0; background: none; font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; text-decoration: underline dotted #fff; text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
+.signin-screen.is-light .legal-link { text-decoration-color: #000; }
+
+/* legal popup: search bar sits in the top bar next to the X */
+.legal-pop .fd-heading { flex: 0 1 auto; min-width: 0; }
+.legal-pop .fd-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.legal-pop .fd-bar-actions { flex: 1; min-width: 0; justify-content: flex-end; }
+.legal-pop .fd-ab-search { flex: 1; min-width: 0; max-width: 220px; width: auto; height: 34px; margin: 0; padding: 0 10px; border: 1px solid var(--glass-border); border-radius: var(--radius-pill); }
+.legal-pop .fd-ab-search svg { width: 15px; height: 15px; }
+.legal-pop .fd-body .ab-body { overflow: visible; flex: none; padding-bottom: 0; }
 .signin-screen .intro-live { position: absolute; left: 0; right: 0; top: 0; bottom: 150px; height: auto; z-index: 1; background: transparent; animation: none; }
 .signin-screen .intro-live .live-stage { gap: 20px; }
 .signin-screen .intro-live .live-float { width: min(52vw, 240px); }
