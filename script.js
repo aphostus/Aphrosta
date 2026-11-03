@@ -15015,7 +15015,7 @@ function openModelPicker() {
         </div>
         <span class="fd-bar-actions">
           ${usable.length ? '<button class="fd-pill" type="button" data-r="save">Save</button>' : '<button class="fd-pill" type="button" data-r="open">Providers</button>'}
-          <button class="fd-pill" type="button" data-r="reset">Refresh</button>
+          ${usable.length ? '<button class="fd-pill" type="button" data-r="reset">Refresh</button>' : ''}
           <button class="fd-ic" type="button" data-r="close" aria-label="Close">${ICONS.close}</button>
         </span>
       </div>
