@@ -15689,7 +15689,7 @@ function tutScenes() {
   const tkn = (n) => (typeof fmtTokens === 'function' ? fmtTokens(n) : String(n));
   const cmp = (c = '') => `<div class="composer is-idle tut-real ${c}" data-mode="text" data-k="cp">
     <button class="resize-handle" type="button" tabindex="-1" data-k="gr">${ic('grip')}</button>
-    <div class="think-panel" data-k="tp"><div class="think-inner"><div class="think-head"><span class="think-title"><span class="think-dot"></span>Thought</span><span class="think-model">Medium</span><button class="think-close" type="button" tabindex="-1" data-k="tx">${ic('close')}</button></div><div class="think-plan" data-k="pn" hidden></div><div class="think-body" data-k="tb"></div></div></div>
+    <div class="think-panel" data-k="tp"><div class="think-inner"><div class="think-head"><span class="think-title"><span class="think-dot"></span>Thought</span><span class="think-model">Groq · GPT-OSS 120B</span><button class="think-close" type="button" tabindex="-1" data-k="tx">${ic('close')}</button></div><div class="think-plan" data-k="pn" hidden></div><div class="think-body" data-k="tb"></div></div></div>
     <textarea class="composer-input" rows="1" placeholder="Message..." readonly tabindex="-1" data-k="in"></textarea>
     <div class="composer-bar">
       <button class="agent-btn" type="button" tabindex="-1" data-k="br"><span class="agent-icon agent-icon-robot">${ic('brain')}</span><span class="agent-icon agent-icon-x">${ic('closeLg')}</span><span class="agent-icon agent-icon-pause">${ic('pause')}</span><span class="agent-icon agent-icon-play">${ic('play')}</span></button>
@@ -15698,14 +15698,39 @@ function tutScenes() {
       <button class="attach-btn" type="button" tabindex="-1" data-k="at"><span class="attach-ico-main">${ic('attach')}</span><span class="attach-ico-trash">${ic('trash')}</span></button>
       <button class="send-btn" type="button" tabindex="-1" data-k="snd"><span class="send-icon send-icon-switch">${ic('switch')}</span><span class="send-icon send-icon-chat">${ic('newChat')}</span><span class="send-icon send-icon-go">${ic('rocket')}</span><span class="send-icon send-icon-stop"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><rect x="1" y="1" width="12" height="12" rx="2.5" fill="currentColor"/></svg></span></button>
     </div></div>`;
-  const blocksOf = (v) => v.trim().split(/\s+/).filter(Boolean).map(() => '<span class="word-block" data-state="known"></span>').join('');
-  const typeIn = (S, at, txt, t0, gap) => {
-    for (let n = 0; n < txt.length; n++) at(t0 + n * gap, () => {
-      const v = txt.slice(0, n + 1);
-      Q(S, 'in').value = v; Q(S, 'cp').classList.remove('is-idle'); Q(S, 'snd').classList.add('has-text'); Q(S, 'wb').innerHTML = blocksOf(v);
+  const syncBlocks = (wb, v) => {
+    const w = v.trim().split(/\s+/).filter(Boolean);
+    const open = !/\s$/.test(v);
+    while (wb.children.length < w.length) { const s = document.createElement('span'); s.className = 'word-block'; s.dataset.state = 'typing'; wb.appendChild(s); }
+    while (wb.children.length > w.length) wb.lastChild.remove();
+    [...wb.children].forEach((b, k) => {
+      const st = open && k === w.length - 1 ? 'typing' : 'known';
+      if (b.dataset.state !== st) b.dataset.state = st;
+      const px = Math.min(28, 8 + w[k].length * 3) + 'px';
+      if (b.style.width !== px) b.style.width = px;
     });
   };
+  const typeIn = (S, at, txt, t0, gap) => {
+    let t = t0;
+    for (let n = 0; n < txt.length; n++) {
+      t += gap * (0.75 + Math.random() * 0.7) + (txt[n] === ' ' ? gap * 0.8 : 0);
+      const v = txt.slice(0, n + 1);
+      at(Math.round(t), () => {
+        Q(S, 'in').value = v; Q(S, 'cp').classList.remove('is-idle'); Q(S, 'snd').classList.add('has-text'); syncBlocks(Q(S, 'wb'), v);
+      });
+    }
+    at(Math.round(t + 300), () => { const wb = Q(S, 'wb'); if (wb) wb.querySelectorAll('.word-block').forEach((b) => { b.dataset.state = 'known'; }); });
+    return t;
+  };
   const clearIn = (S) => { Q(S, 'in').value = ''; Q(S, 'cp').classList.add('is-idle'); Q(S, 'snd').classList.remove('has-text'); Q(S, 'wb').innerHTML = ''; };
+  const msgCard = (userTxt, hideEnd) => {
+    const pv = (typeof MODEL_PROVIDERS !== 'undefined' && MODEL_PROVIDERS[0]) || { logo: '' };
+    const stamp = typeof msgStamp === 'function' ? msgStamp(Date.now() - 86400000) : '';
+    const uico = typeof MSG_USER_ICO !== 'undefined' ? MSG_USER_ICO : '';
+    const ab = (k, i) => `<button class="msg-act" type="button" tabindex="-1" data-k="${k}">${ic(i)}</button>`;
+    const hd = hideEnd ? ' style="display:none"' : '';
+    return `<div class="msg msg-ai"><div class="msg-card"><div class="msg-sec msg-sec-user"><span class="msg-ico msg-user-ico">${uico}</span><div class="msg-user-col"><div class="msg-bubble">${userTxt}</div></div></div><div class="msg-sec msg-sec-main"><div class="msg-body" data-k="ans"></div></div><div class="msg-actions msg-sec msg-sec-act" data-k="acts"${hd}>${ab('m-copy', 'copy')}${ab('m-voice', 'volume')}${ab('m-branch', 'branchTree')}${ab('m-like', 'thumbUp')}${ab('m-dislike', 'thumbDown')}${ab('m-regen', 'regen')}${ab('m-edit', 'pencil')}<span class="msg-ico msg-prov">${pv.logo}</span></div><div class="msg-sec msg-sec-foot" data-k="ft"${hd}><span class="msg-meta"><span class="msg-time" data-k="f-time">${stamp}</span><span class="msg-model" data-k="f-model">GPT-OSS 120B</span></span><span class="msg-tok" data-k="f-tok">Minima ~8T</span></div></div></div>`;
+  };
   const body = (h) => `<div class="np-body lib-list" data-k="bd">${h}</div>`;
   const tagEl = '<div class="tut-tag" data-k="tag"></div>';
 
@@ -15729,17 +15754,27 @@ function tutScenes() {
       EFFORT_LEVELS.forEach((e, n) => at(600 + n * 1500, () => S.querySelectorAll('.effort-option').forEach((o, k) => o.classList.toggle('is-active', k === n))));
     } },
 
-    { ch: 'Chatting', ms: 10000, t: 'Ask anything', x: 'Type, speak or attach files. Ask for a deck, a document or a spreadsheet and it arrives as a file card. This is a demo, nothing here is saved.', b: (S, at) => {
-      S.innerHTML = `<div class="tut-phone tut-chat"><span class="tut-demo">Demo only. Nothing is saved.</span><div class="tut-msgs" data-k="msgs"></div>${cmp()}</div>`;
+    { ch: 'Chatting', ms: 11000, t: 'Ask anything', x: 'Type, speak or attach files. Ask for a deck, a document or a spreadsheet and it arrives as a file card. This is a demo, nothing here is saved.', b: (S, at) => {
+      S.innerHTML = `<div class="tut-phone tut-chat" style="height:min(66vh,480px)"><span class="tut-demo">Demo only. Nothing is saved.</span><div class="tut-msgs" data-k="msgs"></div>${cmp()}</div>`;
       const msgs = Q(S, 'msgs'), snd = Q(S, 'snd');
-      const add = (c, h) => { const d = document.createElement('div'); d.className = c; d.innerHTML = h; msgs.appendChild(d); return d; };
-      typeIn(S, at, 'Make a 3 slide deck about coffee', 500, 55);
-      let ans = null, think = null;
-      at(2500, () => { clearIn(S); snd.classList.add('is-busy'); add('tut-u', 'Make a 3 slide deck about coffee'); });
-      at(3000, () => { think = add('tut-a', '<div class="tut-think">Thinking...</div><div class="tut-ans"></div>'); ans = think.querySelector('.tut-ans'); });
+      const q = 'Make a 3 slide deck about coffee';
+      const t1 = Math.round(typeIn(S, at, q, 500, 85) + 800);
+      let ans = null;
+      at(t1, () => { clearIn(S); snd.classList.add('is-busy'); msgs.innerHTML = msgCard(q, true); ans = Q(S, 'ans'); ans.innerHTML = '<div class="tut-think">Thinking...</div>'; });
       const words = 'Done. Here is a three-slide deck on coffee: its origins, how it is brewed, and tasting notes.'.split(' ');
-      words.forEach((w, n) => at(3800 + n * 140, () => { think.querySelector('.tut-think')?.remove(); ans.textContent = words.slice(0, n + 1).join(' '); }));
-      at(6800, () => { ans.insertAdjacentHTML('afterend', '<div class="tut-file"><i></i><div><b>Coffee.pptx</b><small>3 slides</small></div></div>'); snd.classList.remove('is-busy'); Q(S, 'tk').textContent = tkn(1890); });
+      words.forEach((w, n) => at(t1 + 1200 + n * 140, () => { ans.textContent = words.slice(0, n + 1).join(' '); }));
+      at(t1 + 1600 + words.length * 140, () => {
+        ans.insertAdjacentHTML('beforeend', '<div class="tut-file"><i></i><div><b>Coffee.pptx</b><small>3 slides</small></div></div>');
+        snd.classList.remove('is-busy'); Q(S, 'tk').textContent = tkn(1890);
+        Q(S, 'acts').style.display = ''; Q(S, 'ft').style.display = '';
+      });
+    } },
+
+    { ch: 'Chatting', ms: 12500, t: 'Message actions', x: 'Under every reply: copy, read aloud, branch, like, dislike and regenerate. Branch starts a new session that remembers the chat up to that reply. The pencil edits your message, and the footer shows the time, model, effort and tokens.', b: (S, at) => {
+      S.innerHTML = `<div class="tut-phone">${msgCard('Yo', false)}${tagEl}</div>`;
+      Q(S, 'ans').textContent = 'Hey! How can I help you today?';
+      const steps = [['m-copy', 'Copy the reply'], ['m-voice', 'Read it aloud'], ['m-branch', 'Branch from here'], ['m-like', 'Good response'], ['m-dislike', 'Bad response'], ['m-regen', 'Regenerate the reply'], ['m-edit', 'Edit your message'], ['f-time', 'When it was sent'], ['f-model', 'Which model answered'], ['f-tok', 'Effort level and tokens']];
+      steps.forEach(([k, t], n) => at(600 + n * 1100, () => { steps.forEach(([j]) => Q(S, j).classList.toggle('hl', j === k)); Q(S, 'tag').textContent = t; }));
     } },
 
     { ch: 'Chatting', ms: 11000, t: 'Everything in the composer', x: 'Drag the grip to resize. The brain on the left follows the thinking. The pill shows tokens used today, then attach, and the button on the right. Empty, it switches to speech. With text, it sends.', b: (S, at) => {
@@ -15749,20 +15784,14 @@ function tutScenes() {
       tags.forEach((t, n) => at(600 + n * 1600, () => { parts.forEach((e, k) => e.classList.toggle('hl', k === n)); Q(S, 'tag').textContent = t; }));
     } },
 
-    { ch: 'Chatting', ms: 11500, t: 'Watch it think', x: 'Tap the brain to open the Thought panel and follow the reasoning and the agent steps as they stream in. Its close button hides it again.', b: (S, at) => {
-      const steps = ['Reading your request', 'Planning the structure', 'Writing each section', 'Building the file'];
-      const plan = (st) => { const pn = Q(S, 'pn'); const md = steps.map((s, n) => `- [${n < st ? 'x' : n === st ? '~' : ' '}] ${s}`).join('\n'); pn.innerHTML = typeof renderRich === 'function' ? renderRich(md) : md; pn.hidden = false; };
+    { ch: 'Chatting', ms: 7500, t: 'Watch it think', x: 'Tap the brain to open the Thought panel and read the reasoning as it streams in. Its close button hides it again.', b: (S, at) => {
       S.innerHTML = `<div class="tut-phone">${cmp()}${tagEl}</div>`;
       at(500, () => { Q(S, 'br').classList.add('press'); Q(S, 'tag').textContent = 'Tap the brain'; });
       at(1100, () => { Q(S, 'br').classList.remove('press'); Q(S, 'tp').classList.add('is-open'); Q(S, 'tag').textContent = 'The Thought panel opens'; });
-      at(1800, () => { plan(0); Q(S, 'tag').textContent = 'Agent steps tick off'; });
-      typeTo(at, Q(S, 'tb'), 'The user wants a three slide deck about coffee. I will cover origins, brewing and tasting notes, then build the file.', 2000, 28);
-      at(3600, () => plan(1));
-      at(5200, () => plan(2));
-      at(6800, () => plan(3));
-      at(8300, () => plan(4));
-      at(9600, () => { Q(S, 'tx').classList.add('press'); Q(S, 'tag').textContent = 'Close it with the X'; });
-      at(10200, () => { Q(S, 'tx').classList.remove('press'); Q(S, 'tp').classList.remove('is-open'); });
+      at(1800, () => { Q(S, 'tag').textContent = 'The reasoning streams in'; });
+      typeTo(at, Q(S, 'tb'), 'User just says "Yo". Greeting, 1-2 sentences.', 1800, 45);
+      at(5200, () => { Q(S, 'tx').classList.add('press'); Q(S, 'tag').textContent = 'Close it with the X'; });
+      at(5900, () => { Q(S, 'tx').classList.remove('press'); Q(S, 'tp').classList.remove('is-open'); });
     } },
 
     { ch: 'Around the app', ms: 11000, t: 'Your sidebar', x: 'Sessions at the top, then Projects, Agents and Libraries, then Automations, Connections and Operations. Inbox sits in the header, Archive at the bottom.', b: (S, at) => {
