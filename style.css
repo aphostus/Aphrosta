@@ -4430,7 +4430,8 @@ mark.ab-mark {
 .signin-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .signin-row { display: flex; align-items: center; gap: 12px; width: 100%; max-width: 480px; margin: 0 auto; }
 .signin-row .signin-btn { flex: 1; min-width: 0; max-width: none; margin: 0; padding-left: 12px; padding-right: 12px; }
-.signin-theme { flex: none; width: 54px; height: 54px; padding: 0; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.55); background: linear-gradient(90deg, #fff 50%, #000 50%); cursor: pointer; }
+.signin-theme { flex: none; display: grid; place-items: center; width: 54px; height: 54px; padding: 0; border-radius: 50%; border: 1px solid #fff; background: #fff; color: #000; cursor: pointer; transition: background 0.3s, color 0.3s, border-color 0.3s; }
+.signin-theme svg { display: block; transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
 .signin-btn:not(:disabled):active { background: rgba(255, 255, 255, 0.18); }
 .signin-agree { width: 100%; max-width: 480px; margin: 0 auto; text-align: center; font-size: 13px; line-height: 1.45; color: rgba(255, 255, 255, 0.78); }
 
@@ -4441,7 +4442,7 @@ mark.ab-mark {
 .signin-screen.is-light .signin-btn { color: #000; background: rgba(0, 0, 0, 0.05); border-color: rgba(0, 0, 0, 0.55); }
 .signin-screen.is-light .signin-btn:not(:disabled):active { background: rgba(0, 0, 0, 0.14); }
 .signin-screen.is-light .signin-agree { color: rgba(0, 0, 0, 0.75); }
-.signin-screen.is-light .signin-theme { border-color: rgba(0, 0, 0, 0.55); }
+.signin-screen.is-light .signin-theme { border-color: #000; background: #000; color: #fff; }
 
 /* ---------- Merged message card (user section on top of AI) ---------- */
 .msg-sec-user { position: relative; display: flex; flex-direction: column; align-items: stretch; gap: 4px; padding: 12px 14px; min-width: 0; }
