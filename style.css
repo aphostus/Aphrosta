@@ -4903,4 +4903,6 @@ html[data-motion="reduce"] .sess-pw { animation: none; }
 .live-root.is-dead .lv-look { transform: none; }
 .lv-x { fill: none; stroke: var(--bg); stroke-width: 7; stroke-linecap: round; }
 .live-trials { margin-top: -14px; font-size: 12px; letter-spacing: 0.04em; text-align: center; font-variant-numeric: tabular-nums; opacity: 0.55; user-select: none; }
+.intro-live .live-trials { margin-top: 0; }
+.intro-live .live-label { max-width: 300px; margin: 0 auto; padding: 0 12px; line-height: 1.4; }
 

@@ -16528,6 +16528,7 @@ function startSignArt() {
 const INTRO_WORKER = 'https://hidden-thunder-9380.aphostus-org.workers.dev';
 const INTRO_GREET = 'Hi there, welcome to Aphrosta! Let us talk about it. Ready?';
 const INTRO_GREET_FILE = 'intro-greeting.wav';
+const INTRO_GUIDE = 'Guide for your reply: you are the friendly Aphrosta guide on its sign-in screen. Answer the question below in 1-3 short spoken sentences, no markdown or lists. Aphrosta is a mobile-first AI chat app where you bring your own API key (Groq, Gemini, Claude, ChatGPT, DeepSeek, Grok, Kimi, Perplexity). It has chat sessions, memory, a library of files, agents, projects, automations, connections, operations, voice and Live mode, themes, and encrypted cloud sync. Answer questions about Aphrosta directly and helpfully. For unrelated topics, answer briefly and kindly, then steer back to Aphrosta. Mention signing in or signing up for more features when it fits. Question: ';
 
 function introMarkup() {
   return `<div class="live-root intro-live" data-state="listening" data-emo="sleepy" data-paused="1">
@@ -16761,8 +16762,8 @@ function introStart() {
   const idle = (emo) => { if (!root.isConnected) return; quietN = 0; setState('listening', emo || 'neutral'); lastAct = Date.now(); listen(); };
   const asleep = () => {
     started = false; paused = false;
-    root.dataset.state = 'listening'; root.dataset.emo = 'sleepy'; root.dataset.paused = '1';
-    label.textContent = '';
+    root.dataset.state = 'listening'; root.dataset.emo = 'neutral'; root.dataset.paused = '0';
+    label.textContent = INTRO_GREET;
   };
 
   const greet = async () => {
@@ -16789,7 +16790,7 @@ function introStart() {
     clearTimeout(flashT);
     setState('thinking', /\?/.test(t) ? 'curious' : 'neutral');
     try {
-      const r = await fetch(INTRO_WORKER + '/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: t }) });
+      const r = await fetch(INTRO_WORKER + '/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: INTRO_GUIDE + t, guide: INTRO_GUIDE, question: t }) });
       if (!r.ok) throw new Error('chat ' + r.status);
       const j = await r.json();
       if (my !== tok) return;
