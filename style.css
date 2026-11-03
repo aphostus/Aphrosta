@@ -3840,6 +3840,13 @@ html[data-motion="reduce"] .aph-mark * { animation: none !important; }
 .tut-hb { position: relative; align-self: center; padding: 12px 26px; border-radius: 999px; border: 1px solid var(--glass-border); background: rgba(var(--fg-rgb), 0.06); animation: tutGlow 3s ease-in-out infinite; }
 .tut-hb em { position: absolute; inset: -6px; border-radius: 999px; border: 2px solid var(--accent, var(--fg)); animation: tutRing 3s ease-out infinite; }
 .tut-hb .tut-finger { right: 10px; bottom: -14px; }
+.tut-hb-ico { width: 56px; height: 56px; padding: 0; display: grid; place-items: center; border-radius: 50%; color: var(--fg); }
+.tut-hb-ico em { border-radius: 50%; }
+.tut-hb-wide { padding: 12px 22px; }
+.tut-hbi { display: inline-flex; align-items: center; gap: 8px; }
+.tut-hbi svg { width: 24px; height: 24px; flex-shrink: 0; }
+.tut-hb-wide .tut-hbi svg { width: 20px; height: 20px; }
+.tut-hb-ico .tut-finger { right: -6px; bottom: -16px; }
 .tut-rz { position: relative; align-self: center; width: 80%; height: 90px; display: flex; align-items: flex-end; }
 .tut-rzbox { width: 100%; box-sizing: border-box; border: 1px solid var(--glass-border); border-radius: 14px; padding: 12px; height: 70px; animation: tutRz 3.6s ease-in-out infinite; }
 .tut-grip { position: absolute; right: 8px; top: 0; z-index: 2; width: 34px; height: 6px; border-radius: 3px; background: var(--accent, var(--fg)); animation: tutGrip 3.6s ease-in-out infinite; }
@@ -3853,6 +3860,15 @@ html[data-motion="reduce"] .aph-mark * { animation: none !important; }
 .tut-ui .lib-in.lib-ta { min-height: 56px; }
 .tut-ui .sbar-wrap { height: auto; margin: 0; max-width: none; }
 .tut-ui .sbar { position: relative; top: 0; left: 0; right: 0; }
+.tut-ui .sbar-wrap { padding: 2px 0 6px; }
+.tut-ui .sbar-row { height: 52px; gap: 10px; padding: 0 8px 0 14px; }
+.tut-ui .sbar-pill { height: 38px; gap: 4px; padding: 0 14px 0 6px; border-radius: 14px; }
+.tut-ui .sbar-nav { width: 28px; height: 28px; }
+.tut-ui .sbar-share, .tut-ui .sbar-act, .tut-ui .sbar-vis { width: 34px; height: 34px; }
+.tut-ui .sbar-input, .tut-ui .sbar-code { display: flex; align-items: center; padding: 0 10px; line-height: 1.5; }
+.tut-ui .sbar-count { margin-left: 8px; letter-spacing: 0.02em; }
+.tut-ui .sbar-idrow { margin-top: 2px; }
+.tut-ui .sbar[data-open="1"] .sbar-panel-in { padding: 0 0 10px; }
 .tut-fake { min-height: 20px; }
 .tut-cmp i.tut-ci { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--glass-border); font-style: normal; transition: background 0.25s, color 0.25s, transform 0.25s; }
 .tut-ci svg, .tut-snd svg { width: 18px; height: 18px; }

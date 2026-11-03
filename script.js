@@ -15642,6 +15642,13 @@ function tutIcon(n) {
   return { play: p('M8 5l11 7-11 7z', 1), pause: p('M7 5h4v14H7zM13 5h4v14h-4z', 1), prev: p('M15 5l-7 7 7 7'), next: p('M9 5l7 7-7 7'), x: p('M6 6l12 12M18 6L6 18') }[n];
 }
 
+function tutHoldBtn(name, f) {
+  const ico = (n) => (typeof ICONS !== 'undefined' && ICONS[n]) || '';
+  const map = { Brain: 'brain', Attach: 'attach', Send: 'switch', People: 'teamShare' };
+  if (name === 'Make Session') return `<div class="tut-hb tut-hb-wide"><span class="tut-hbi">${ico('newChat')}<span>Make Session</span></span><em></em>${f}</div>`;
+  return `<div class="tut-hb tut-hb-ico" aria-label="${name}"><span class="tut-hbi">${ico(map[name] || 'brain')}</span><em></em>${f}</div>`;
+}
+
 function tutHintDemo(h) {
   const f = '<i class="tut-finger"></i>';
   const row = (t, c = '') => `<div class="tut-r ${c}">${t}${c ? f : ''}</div>`;
@@ -15649,7 +15656,7 @@ function tutHintDemo(h) {
   if (h.k === 'drag') inner = row('Chat one') + row('Chat two', 'mv') + row('Chat three');
   else if (h.k === 'zone') inner = '<div class="tut-zone">Replace from JSON</div>' + row('Chat one') + row('Chat two', 'mv dn') + '<div class="tut-zone">Download JSON</div>';
   else if (h.k === 'swipe') inner = `<div class="tut-sw"><span class="l">Stats</span><span class="r">Archive</span><div class="tut-r sw">Chat two${f}</div></div>`;
-  else if (h.k === 'hold') inner = `<div class="tut-hb"><span>${h.b}</span><em></em>${f}</div>`;
+  else if (h.k === 'hold') inner = tutHoldBtn(h.b, f);
   else if (h.k === 'resize') inner = `<div class="tut-rz"><i class="tut-grip">${f}</i><div class="tut-rzbox">Message</div></div>`;
   else if (h.k === 'ops') inner = row('Item one') + row('Item two', 'mv ops') + '<div class="tut-chip">Folder</div>';
   return `<div class="tut-demo2">${inner}</div>`;
