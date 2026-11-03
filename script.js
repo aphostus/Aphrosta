@@ -770,6 +770,7 @@ function toast(message, type = 'error', duration = 5000, undo = null) {
     el.addEventListener('animationend', () => el.remove(), { once: true });
   };
   const xb = el.querySelector('.tk-x');
+  if (undo) xb.classList.add('can-undo');
   let holdT = 0, armed = false, downAt = 0;
   const reset = () => { clearTimeout(holdT); holdT = 0; armed = false; downAt = 0; xb.classList.remove('is-rev'); };
   xb.addEventListener('pointerdown', (e) => {
