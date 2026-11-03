@@ -3869,6 +3869,22 @@ html[data-motion="reduce"] .aph-mark * { animation: none !important; }
 .tut-ui .sbar-count { margin-left: 8px; letter-spacing: 0.02em; }
 .tut-ui .sbar-idrow { margin-top: 2px; }
 .tut-ui .sbar[data-open="1"] .sbar-panel-in { padding: 0 0 10px; }
+.tut-real { width: 100%; box-sizing: border-box; box-shadow: none; }
+.tut-real button, .tut-real textarea { pointer-events: none; }
+.tut-real .composer-input { height: 40px; resize: none; color: var(--fg); }
+.tut-real .think-body { min-height: 56px; }
+.tut .tut-real .hl { background: rgba(var(--accent-rgb), 0.16); color: inherit; border-color: var(--accent, var(--fg)); box-shadow: 0 0 0 2px var(--accent, var(--fg)); transform: none; }
+.tut .tut-real .composer-input.hl { border-radius: 10px; }
+.tut .tut-real .press { background: var(--glass-bg-hover); color: inherit; border-color: transparent; transform: scale(0.9); }
+.tut-selrow { border-color: var(--accent, var(--fg)); background: rgba(var(--accent-rgb), 0.12); }
+.tut-obs { display: grid; margin-top: 6px; }
+.tut-obs .tut-ob { grid-area: 1 / 1; display: flex; align-items: center; gap: 6px; }
+.tut-obs .tut-ob.a { animation: tutBarA 5s ease-in-out infinite; }
+.tut-obs .tut-ob.b { animation: tutBarB 5s ease-in-out infinite; }
+.tut-obs .ops-hint { margin-right: auto; }
+.tut-obs .ops-tb.mv { border-color: var(--accent, var(--fg)); box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.35); }
+@keyframes tutBarA { 0%, 45% { opacity: 1; } 55%, 100% { opacity: 0; } }
+@keyframes tutBarB { 0%, 45% { opacity: 0; } 55%, 100% { opacity: 1; } }
 .tut-fake { min-height: 20px; }
 .tut-cmp i.tut-ci { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--glass-border); font-style: normal; transition: background 0.25s, color 0.25s, transform 0.25s; }
 .tut-ci svg, .tut-snd svg { width: 18px; height: 18px; }

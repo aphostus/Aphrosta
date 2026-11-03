@@ -15634,7 +15634,7 @@ const TUT_HINTS = [
   { k: 'hold', b: 'Attach', t: 'Hold attach', x: 'Hold for half a second and a trash icon glows. Keep holding to 2.5s and the whole composer is cleared.' },
   { k: 'resize', t: 'Resize or hide the composer', x: 'Drag the grip to resize the input. Pull it well below its smallest height and the composer slides away. Double-tap the screen to bring it back.' },
   { k: 'hold', b: 'People', t: 'Hold the people icon', x: 'In the session bar, hold the people icon to pin or unpin the team-share panel.' },
-  { k: 'ops', t: 'Move things in Operations', x: 'Hold an item to select it, then drag it onto a folder or a path chip to move it. Hold the Go button for This, All or Undo.' }
+  { k: 'ops', t: 'Move files in Operations', x: 'Hold a file or folder to select it, then tap Move. Open the folder you want and tap Paste here. Copy works the same way.' }
 ];
 
 function tutIcon(n) {
@@ -15658,7 +15658,7 @@ function tutHintDemo(h) {
   else if (h.k === 'swipe') inner = `<div class="tut-sw"><span class="l">Stats</span><span class="r">Archive</span><div class="tut-r sw">Chat two${f}</div></div>`;
   else if (h.k === 'hold') inner = tutHoldBtn(h.b, f);
   else if (h.k === 'resize') inner = `<div class="tut-rz"><i class="tut-grip">${f}</i><div class="tut-rzbox">Message</div></div>`;
-  else if (h.k === 'ops') inner = row('Item one') + row('Item two', 'mv ops') + '<div class="tut-chip">Folder</div>';
+  else if (h.k === 'ops') inner = '<div class="tut-r">src</div><div class="tut-r tut-selrow">script.js</div><div class="tut-obs ops-bar"><div class="tut-ob a"><span class="ops-hint">1 selected</span><button class="ops-tb" type="button" tabindex="-1">Copy</button><button class="ops-tb mv" type="button" tabindex="-1">Move</button><button class="ops-tb" type="button" tabindex="-1">Delete</button></div><div class="tut-ob b"><span class="ops-hint">Moving 1 item</span><button class="ops-tb mv" type="button" tabindex="-1">Paste here</button></div></div>';
   return `<div class="tut-demo2">${inner}</div>`;
 }
 
@@ -15685,7 +15685,27 @@ function tutScenes() {
   const card = (k, icon, title, meta, instr, acts, extra = '', cls = '', col = 0) => `<div class="lib-card ops-card ${cls}" data-k="${k}" style="--oc:${ink(clr(col))}"><div class="lib-card-top"><h4 class="lib-card-title">${icon ? `<span class="ops-ico">${icon}</span>` : ''}${title}</h4><div class="lib-card-act">${acts}</div></div>${meta ? `<p class="lib-card-meta">${meta}</p>` : ''}${instr ? `<p class="lib-card-instr">${instr}</p>` : ''}${extra}</div>`;
   const edt = ib('ed', ic('pencil')) + ib('dl', ic('trash'));
   const eyeB = (k) => ib(k, ic('eye'), 'lib-card-eye');
-  const cmp = () => `<div class="tut-cmp"><i class="tut-ci">${ic('brain')}</i><span data-k="in">Message...</span><i class="tut-ci">${ic('attach')}</i><b class="tut-snd" data-k="snd">${ic('switch')}</b></div>`;
+  const WV = (typeof WAVE_BARS !== 'undefined' ? WAVE_BARS : '');
+  const tkn = (n) => (typeof fmtTokens === 'function' ? fmtTokens(n) : String(n));
+  const cmp = (c = '') => `<div class="composer is-idle tut-real ${c}" data-mode="text" data-k="cp">
+    <button class="resize-handle" type="button" tabindex="-1" data-k="gr">${ic('grip')}</button>
+    <div class="think-panel" data-k="tp"><div class="think-inner"><div class="think-head"><span class="think-title"><span class="think-dot"></span>Thought</span><span class="think-model">Medium</span><button class="think-close" type="button" tabindex="-1" data-k="tx">${ic('close')}</button></div><div class="think-plan" data-k="pn" hidden></div><div class="think-body" data-k="tb"></div></div></div>
+    <textarea class="composer-input" rows="1" placeholder="Message..." readonly tabindex="-1" data-k="in"></textarea>
+    <div class="composer-bar">
+      <button class="agent-btn" type="button" tabindex="-1" data-k="br"><span class="agent-icon agent-icon-robot">${ic('brain')}</span><span class="agent-icon agent-icon-x">${ic('closeLg')}</span><span class="agent-icon agent-icon-pause">${ic('pause')}</span><span class="agent-icon agent-icon-play">${ic('play')}</span></button>
+      <div class="composer-pill" data-k="pill"><div class="word-blocks" data-k="wb"></div><div class="idle-ring"><span class="token-meter"><span class="token-text"><b class="token-used" data-k="tk">${tkn(1240)}</b><span class="token-unit">tokens</span></span></span></div><div class="state-label"></div><div class="wave">${WV}</div></div>
+      <div class="composer-spacer"></div>
+      <button class="attach-btn" type="button" tabindex="-1" data-k="at"><span class="attach-ico-main">${ic('attach')}</span><span class="attach-ico-trash">${ic('trash')}</span></button>
+      <button class="send-btn" type="button" tabindex="-1" data-k="snd"><span class="send-icon send-icon-switch">${ic('switch')}</span><span class="send-icon send-icon-chat">${ic('newChat')}</span><span class="send-icon send-icon-go">${ic('rocket')}</span><span class="send-icon send-icon-stop"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><rect x="1" y="1" width="12" height="12" rx="2.5" fill="currentColor"/></svg></span></button>
+    </div></div>`;
+  const blocksOf = (v) => v.trim().split(/\s+/).filter(Boolean).map(() => '<span class="word-block" data-state="known"></span>').join('');
+  const typeIn = (S, at, txt, t0, gap) => {
+    for (let n = 0; n < txt.length; n++) at(t0 + n * gap, () => {
+      const v = txt.slice(0, n + 1);
+      Q(S, 'in').value = v; Q(S, 'cp').classList.remove('is-idle'); Q(S, 'snd').classList.add('has-text'); Q(S, 'wb').innerHTML = blocksOf(v);
+    });
+  };
+  const clearIn = (S) => { Q(S, 'in').value = ''; Q(S, 'cp').classList.add('is-idle'); Q(S, 'snd').classList.remove('has-text'); Q(S, 'wb').innerHTML = ''; };
   const body = (h) => `<div class="np-body lib-list" data-k="bd">${h}</div>`;
   const tagEl = '<div class="tut-tag" data-k="tag"></div>';
 
@@ -15711,32 +15731,38 @@ function tutScenes() {
 
     { ch: 'Chatting', ms: 10000, t: 'Ask anything', x: 'Type, speak or attach files. Ask for a deck, a document or a spreadsheet and it arrives as a file card. This is a demo, nothing here is saved.', b: (S, at) => {
       S.innerHTML = `<div class="tut-phone tut-chat"><span class="tut-demo">Demo only. Nothing is saved.</span><div class="tut-msgs" data-k="msgs"></div>${cmp()}</div>`;
-      const msgs = Q(S, 'msgs'), inp = Q(S, 'in'), snd = Q(S, 'snd');
+      const msgs = Q(S, 'msgs'), snd = Q(S, 'snd');
       const add = (c, h) => { const d = document.createElement('div'); d.className = c; d.innerHTML = h; msgs.appendChild(d); return d; };
-      at(300, () => { inp.textContent = ''; snd.innerHTML = ic('rocket'); });
-      typeTo(at, inp, 'Make a 3 slide deck about coffee', 500, 55);
+      typeIn(S, at, 'Make a 3 slide deck about coffee', 500, 55);
       let ans = null, think = null;
-      at(2500, () => { inp.textContent = 'Message...'; snd.innerHTML = ic('switch'); add('tut-u', 'Make a 3 slide deck about coffee'); });
+      at(2500, () => { clearIn(S); snd.classList.add('is-busy'); add('tut-u', 'Make a 3 slide deck about coffee'); });
       at(3000, () => { think = add('tut-a', '<div class="tut-think">Thinking...</div><div class="tut-ans"></div>'); ans = think.querySelector('.tut-ans'); });
       const words = 'Done. Here is a three-slide deck on coffee: its origins, how it is brewed, and tasting notes.'.split(' ');
       words.forEach((w, n) => at(3800 + n * 140, () => { think.querySelector('.tut-think')?.remove(); ans.textContent = words.slice(0, n + 1).join(' '); }));
-      at(6800, () => { ans.insertAdjacentHTML('afterend', '<div class="tut-file"><i></i><div><b>Coffee.pptx</b><small>3 slides</small></div></div>'); });
+      at(6800, () => { ans.insertAdjacentHTML('afterend', '<div class="tut-file"><i></i><div><b>Coffee.pptx</b><small>3 slides</small></div></div>'); snd.classList.remove('is-busy'); Q(S, 'tk').textContent = tkn(1890); });
     } },
 
-    { ch: 'Chatting', ms: 8500, t: 'Everything in the composer', x: 'Brain on the left to follow the thinking, then your message, attach, and the button on the right. Empty, it switches to speech. With text, it sends.', b: (S, at) => {
+    { ch: 'Chatting', ms: 11000, t: 'Everything in the composer', x: 'Drag the grip to resize. The brain on the left follows the thinking. The pill shows tokens used today, then attach, and the button on the right. Empty, it switches to speech. With text, it sends.', b: (S, at) => {
       S.innerHTML = `<div class="tut-phone">${cmp()}${tagEl}</div>`;
-      const kids = [...S.querySelectorAll('.tut-cmp > *')];
-      const tags = ['The brain: follow its thinking', 'Type your message', 'Attach files', 'Switch to speech, or send'];
-      tags.forEach((t, n) => at(600 + n * 1800, () => { kids.forEach((e, k) => e.classList.toggle('hl', k === n)); Q(S, 'tag').textContent = t; }));
+      const parts = [Q(S, 'gr'), Q(S, 'br'), Q(S, 'in'), Q(S, 'pill'), Q(S, 'at'), Q(S, 'snd')];
+      const tags = ['Drag to resize or hide it', 'The brain: follow its thinking', 'Type your message', 'Tokens used today', 'Attach files', 'Switch to speech, or send'];
+      tags.forEach((t, n) => at(600 + n * 1600, () => { parts.forEach((e, k) => e.classList.toggle('hl', k === n)); Q(S, 'tag').textContent = t; }));
     } },
 
-    { ch: 'Chatting', ms: 8000, t: 'Watch it think', x: 'Tap the brain to open the Thought panel and follow the reasoning and the agent steps as they stream in. Its close button hides it again.', b: (S, at) => {
+    { ch: 'Chatting', ms: 11500, t: 'Watch it think', x: 'Tap the brain to open the Thought panel and follow the reasoning and the agent steps as they stream in. Its close button hides it again.', b: (S, at) => {
       const steps = ['Reading your request', 'Planning the structure', 'Writing each section', 'Building the file'];
-      S.innerHTML = ui(`<div class="tut-thk-h"><i class="tut-dot"></i><b>Thought</b><span>Medium</span><em>${ic('close')}</em></div>${steps.map((s, n) => `<div class="tut-step" data-k="s${n}"><u></u><span>${s}</span></div>`).join('')}`);
-      steps.forEach((s, n) => {
-        at(500 + n * 1500, () => Q(S, 's' + n).classList.add('on'));
-        at(1500 + n * 1500, () => Q(S, 's' + n).classList.add('ok'));
-      });
+      const plan = (st) => { const pn = Q(S, 'pn'); const md = steps.map((s, n) => `- [${n < st ? 'x' : n === st ? '~' : ' '}] ${s}`).join('\n'); pn.innerHTML = typeof renderRich === 'function' ? renderRich(md) : md; pn.hidden = false; };
+      S.innerHTML = `<div class="tut-phone">${cmp()}${tagEl}</div>`;
+      at(500, () => { Q(S, 'br').classList.add('press'); Q(S, 'tag').textContent = 'Tap the brain'; });
+      at(1100, () => { Q(S, 'br').classList.remove('press'); Q(S, 'tp').classList.add('is-open'); Q(S, 'tag').textContent = 'The Thought panel opens'; });
+      at(1800, () => { plan(0); Q(S, 'tag').textContent = 'Agent steps tick off'; });
+      typeTo(at, Q(S, 'tb'), 'The user wants a three slide deck about coffee. I will cover origins, brewing and tasting notes, then build the file.', 2000, 28);
+      at(3600, () => plan(1));
+      at(5200, () => plan(2));
+      at(6800, () => plan(3));
+      at(8300, () => plan(4));
+      at(9600, () => { Q(S, 'tx').classList.add('press'); Q(S, 'tag').textContent = 'Close it with the X'; });
+      at(10200, () => { Q(S, 'tx').classList.remove('press'); Q(S, 'tp').classList.remove('is-open'); });
     } },
 
     { ch: 'Around the app', ms: 11000, t: 'Your sidebar', x: 'Sessions at the top, then Projects, Agents and Libraries, then Automations, Connections and Operations. Inbox sits in the header, Archive at the bottom.', b: (S, at) => {
@@ -15872,11 +15898,14 @@ function tutScenes() {
       at(6200, () => { Q(S, 'id').textContent = 'coffee-notes'; Q(S, 'tag').textContent = 'Copy the ID to share it'; });
     } },
 
-    { ch: 'Voice and Live', ms: 9000, t: 'Speak instead of typing', x: 'With an empty box, the button on the right switches to speech. Talk, and your words appear as you speak.', b: (S, at) => {
-      S.innerHTML = `<div class="tut-phone">${cmp()}<div class="tut-wave" data-k="wv">${'<i></i>'.repeat(20)}</div>${tagEl}</div>`;
+    { ch: 'Voice and Live', ms: 10000, t: 'Speak instead of typing', x: 'With an empty box, the button on the right switches to speech. Talk, and your words appear as you speak.', b: (S, at) => {
+      S.innerHTML = `<div class="tut-phone">${cmp()}${tagEl}</div>`;
+      const cp = Q(S, 'cp'), bars = [...S.querySelectorAll('.wave i')];
       at(800, () => { Q(S, 'snd').classList.add('press'); Q(S, 'tag').textContent = 'Switch to speech'; });
-      at(2000, () => { Q(S, 'wv').classList.add('on'); Q(S, 'in').textContent = 'Listening...'; Q(S, 'tag').textContent = 'Say what you want'; });
-      typeTo(at, Q(S, 'in'), 'Plan my week', 4000, 90);
+      at(1400, () => { Q(S, 'snd').classList.remove('press'); cp.dataset.mode = 'speech'; cp.classList.remove('is-idle'); Q(S, 'in').placeholder = 'Listening...'; Q(S, 'tag').textContent = 'Say what you want'; });
+      for (let n = 0; n < 32; n++) at(1500 + n * 110, () => bars.forEach((b) => { const v = Math.random(); b.style.transform = `scaleY(${(0.2 + v * 0.8).toFixed(2)})`; b.dataset.lv = v > 0.66 ? '2' : v > 0.33 ? '1' : '0'; }));
+      typeIn(S, at, 'Plan my week', 3000, 90);
+      at(5200, () => { bars.forEach((b) => { b.style.transform = ''; }); cp.dataset.mode = 'text'; Q(S, 'tag').textContent = 'Then send it'; });
     } },
 
     { ch: 'Voice and Live', ms: 10000, t: 'Live mode', x: 'Talk hands-free. The orb listens, thinks and answers out loud while the reply is still being written. Type in the pill if you prefer. X stops it.', b: (S, at) => {
