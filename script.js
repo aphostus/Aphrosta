@@ -16955,25 +16955,37 @@ async function acDraw(color, id, text) {
   const c = document.createElement('canvas');
   c.width = W; c.height = H;
   const x = c.getContext('2d');
-  x.fillStyle = dark ? '#0b0b0b' : '#ffffff';
+  const g = x.createLinearGradient(0, 0, W, H);
+  if (dark) { g.addColorStop(0, '#26262a'); g.addColorStop(0.55, '#0c0c0e'); g.addColorStop(1, '#020203'); }
+  else { g.addColorStop(0, '#ffffff'); g.addColorStop(0.6, '#f4f4f6'); g.addColorStop(1, '#e4e4e8'); }
+  x.fillStyle = g;
   acRound(x, 0, 0, W, H, 56); x.fill();
-  x.lineWidth = 4; x.strokeStyle = dark ? '#2a2a2a' : '#d9d9d9';
+  x.save(); acRound(x, 0, 0, W, H, 56); x.clip();
+  const sh = x.createRadialGradient(W * 0.88, -60, 20, W * 0.88, -60, 760);
+  sh.addColorStop(0, dark ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.9)');
+  sh.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = sh; x.fillRect(0, 0, W, H); x.restore();
+  const eg = x.createLinearGradient(0, 0, W, H);
+  eg.addColorStop(0, dark ? '#5a5a60' : '#ffffff');
+  eg.addColorStop(0.5, dark ? '#202024' : '#c9c9ce');
+  eg.addColorStop(1, dark ? '#48484e' : '#b8b8be');
+  x.lineWidth = 4; x.strokeStyle = eg;
   acRound(x, 2, 2, W - 4, H - 4, 54); x.stroke();
   const logo = await new Promise((r) => { const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = 'Materials/Public/images/Logo.png'; });
   if (logo) x.drawImage(logo, 80, 80, 120, 120);
   x.textBaseline = 'middle'; x.textAlign = 'left';
-  x.fillStyle = dark ? '#ffffff' : '#000000';
+  x.fillStyle = dark ? '#f5f5f7' : '#0b0b0c';
   x.font = '700 92px ui-monospace, Menlo, Consolas, monospace';
   x.fillText(id, 230, 140);
-  x.fillStyle = dark ? '#9a9a9a' : '#6b6b6b';
+  x.fillStyle = dark ? '#8e8e93' : '#6e6e73';
   x.font = '500 34px system-ui, -apple-system, sans-serif';
   ACARD_INFO.forEach((ln, i) => x.fillText(ln, 230, 245 + i * 46));
   const q = window.qrcode(0, 'M');
   q.addData(text); q.make();
   const n = q.getModuleCount(), size = 300, cell = Math.floor(size / (n + 4));
   const span = cell * (n + 4);
-  const qx = 80, qy = H - 80 - span;
-  if (dark) { x.fillStyle = '#ffffff'; acRound(x, qx - 14, qy - 14, span + 28, span + 28, 22); x.fill(); }
+  const qx = W - 80 - span, qy = H - 80 - span;
+  if (dark) { x.fillStyle = '#f4f4f6'; acRound(x, qx - 14, qy - 14, span + 28, span + 28, 22); x.fill(); }
   x.fillStyle = '#000000';
   for (let r = 0; r < n; r++) for (let k = 0; k < n; k++) if (q.isDark(r, k)) x.fillRect(qx + (k + 2) * cell, qy + (r + 2) * cell, cell, cell);
   return c;
@@ -17013,7 +17025,7 @@ const Acard = (() => {
     const slot = ov.querySelector('[data-ac-slot]');
     slot.innerHTML = ''; slot.appendChild(cv); ov._cv = cv;
     ov.querySelectorAll('[data-ac-c]').forEach((b) => b.classList.toggle('on', b.dataset.acC === color));
-    ov.querySelector('[data-ac-id]').textContent = pack.id;
+
   }
   function onClick(e) {
     const t = e.target;
@@ -17040,9 +17052,9 @@ const Acard = (() => {
     d.className = 'ac-ov';
     d.innerHTML = '<div class="ac-box"><div class="ac-head"><b>Acard</b><button class="ac-x" type="button" data-ac-x aria-label="Close">\u00d7</button></div>'
       + '<div class="ac-slot" data-ac-slot><p class="ac-note">Making your card\u2026</p></div>'
-      + '<p class="ac-id" data-ac-id></p>'
+
       + '<div class="ac-seg"><button type="button" data-ac-c="white">White</button><button type="button" data-ac-c="black">Black</button></div>'
-      + '<button class="ac-dl" type="button" data-ac-dl>Download PNG</button>'
+      + '<button class="ac-dl" type="button" data-ac-dl>Download</button>'
       + '<p class="ac-note">This card holds your login and encryption key. Anyone with it can open your account.</p></div>';
     ov = d;
     document.body.appendChild(ov);
