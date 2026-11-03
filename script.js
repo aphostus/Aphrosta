@@ -7,6 +7,10 @@ import {
   getAuth,
   GoogleAuthProvider,
   signInWithPopup,
+  EmailAuthProvider,
+  linkWithCredential,
+  updatePassword,
+  signInWithEmailAndPassword,
   getRedirectResult,
   onAuthStateChanged,
   signOut,
@@ -443,7 +447,7 @@ const SETTINGS_DEFAULTS = {
   langOut: 'en',
   memoryNotes: [], memInit: true, nickname: '', instructions: '', creativity: 'balanced',
   enterSends: true, autoScroll: true, voiceIn: 'auto', voiceOut: 'normal',
-  username: '', phone: '', privUsage: true, privTrain: false, keyAuto: true,
+  username: '', phone: '', privUsage: true, privTrain: false, keyAuto: true, acardColor: 'black',
   phoneCc: '+63', avatar: '',
   voiceName: '', voicePitch: 'normal', autoRead: false,
   elOn: true, elVoice: 'troy',
@@ -1280,6 +1284,7 @@ Object.assign(ICONS, {
   stClose:       svg('<path d="M6 6l12 12M6 18L18 6"/>', 16),  
   stBack:        svg('<path d="M19 12H5M11 6l-6 6 6 6"/>', 16),
   stReset:       svg('<path d="M4 12a8 8 0 108-8H8"/><path d="M11 1L8 4l3 3"/>', 16),
+  stAcard:       svg('<rect x="2.5" y="5" width="19" height="14" rx="3"/><circle cx="8.5" cy="11" r="2"/><path d="M5.8 16c.5-1.3 1.5-1.9 2.7-1.9s2.2.6 2.7 1.9M14 10h4.5M14 13.5h3"/>', 16),
   stTutorial:    svg('<path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11.5V16c0 1.5 3 3 6 3s6-1.5 6-3v-4.5"/><path d="M22 9v6"/>', 16),
   stAppearance:  svg('<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 000 18z"/>', 16),
   stLanguage:    svg('<path d="M4 5h9M8.5 3v2M6 5c.5 3 3 6 6.5 7.5M12 5c-.8 3.5-3.5 6.5-7.5 8.5"/><path d="M12 20l4-9 4 9M13.5 17h5"/>', 16),
@@ -1803,8 +1808,9 @@ let ThemeSection = () => Section('theme', 'Theme', [
 
 const ResetGroup = () => Section('reset', 'Defaults', [
   LinkRow('reset-defaults', ICONS.stReset, 'Default', { act: 'reset-defaults' }),
-  LinkRow('tutorial', ICONS.stTutorial, 'Tutorial', { act: 'tutorial' })
-], 2);
+  LinkRow('tutorial', ICONS.stTutorial, 'Tutorial', { act: 'tutorial' }),
+  LinkRow('acard', ICONS.stAcard, 'Acard', { act: 'acard' })
+], 3);
 
 const memListHtml = () => (settings.memoryNotes?.length
   ? settings.memoryNotes.map((n, i) => `<div class="mem-item"><span title="${esc(n)}">${esc(n)}</span><button type="button" data-act="mem-del" data-i="${i}">Delete</button></div>`).join('')
@@ -5913,6 +5919,7 @@ function onSettingsClick(e) {
     case 'feedback':      return openFeedback();
     case 'usage-info':    return openUsagePopup();
     case 'key-backup':    return KeyBackup.open();
+    case 'acard':         return Acard.open();
     case 'key-eye':       return KeyBackup.eye(actEl);
     case 'key-copy':      return KeyBackup.copy();
     case 'key-restore':   return KeyBackup.restore();
@@ -16897,6 +16904,180 @@ function introStart() {
   }
 }
 
+/* ---------- ACARD: portable account card (PNG with QR login + encryption key) ---------- */
+const ACARD_ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="3"/><circle cx="8.5" cy="11" r="2"/><path d="M5.8 16c.5-1.3 1.5-1.9 2.7-1.9s2.2.6 2.7 1.9M14 10h4.5M14 13.5h3"/></svg>';
+const ACARD_INFO = ['Always keep this card safe and secure', 'and do not let anyone touch it.'];
+const acEnc = (o) => 'APH1.' + btoa(unescape(encodeURIComponent(JSON.stringify(o))));
+const acDec = (s) => JSON.parse(decodeURIComponent(escape(atob(String(s).slice(5)))));
+const acB64 = (u8) => btoa(String.fromCharCode(...u8)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+function acLoad(src) {
+  return new Promise((ok, no) => {
+    const s = document.createElement('script');
+    s.src = src; s.onload = ok; s.onerror = () => no(new Error('lib'));
+    document.head.appendChild(s);
+  });
+}
+async function acLibs() {
+  if (!window.qrcode) await acLoad('https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js');
+  if (!window.jsQR) await acLoad('https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js');
+}
+async function acId(uid) {
+  const h = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('aphrosta:' + uid)));
+  const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let s = '';
+  for (let i = 0; i < 12; i++) s += A[h[i] % 32];
+  return 'APH-' + s.slice(0, 4) + '-' + s.slice(4, 8) + '-' + s.slice(8, 12);
+}
+/* the login key: a random password linked to the Google account (needs Email/Password enabled in Firebase) */
+async function acCred(user) {
+  const k = 'aphrosta.acardpw.' + user.uid;
+  let pw = '';
+  try { pw = localStorage.getItem(k) || ''; } catch (_) {}
+  if (pw) return pw;
+  pw = acB64(crypto.getRandomValues(new Uint8Array(24)));
+  if (user.providerData.some((p) => p.providerId === 'password')) await updatePassword(user, pw);
+  else await linkWithCredential(user, EmailAuthProvider.credential(user.email, pw));
+  try { localStorage.setItem(k, pw); } catch (_) {}
+  return pw;
+}
+function acRound(x, px, py, w, h, r) {
+  x.beginPath();
+  x.moveTo(px + r, py);
+  x.arcTo(px + w, py, px + w, py + h, r);
+  x.arcTo(px + w, py + h, px, py + h, r);
+  x.arcTo(px, py + h, px, py, r);
+  x.arcTo(px, py, px + w, py, r);
+  x.closePath();
+}
+async function acDraw(color, id, text) {
+  const W = 1600, H = 800, dark = color !== 'white';
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const x = c.getContext('2d');
+  x.fillStyle = dark ? '#0b0b0b' : '#ffffff';
+  acRound(x, 0, 0, W, H, 56); x.fill();
+  x.lineWidth = 4; x.strokeStyle = dark ? '#2a2a2a' : '#d9d9d9';
+  acRound(x, 2, 2, W - 4, H - 4, 54); x.stroke();
+  const logo = await new Promise((r) => { const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = 'Materials/Public/images/Logo.png'; });
+  if (logo) x.drawImage(logo, 80, 80, 120, 120);
+  x.textBaseline = 'middle'; x.textAlign = 'left';
+  x.fillStyle = dark ? '#ffffff' : '#000000';
+  x.font = '700 92px ui-monospace, Menlo, Consolas, monospace';
+  x.fillText(id, 230, 140);
+  x.fillStyle = dark ? '#9a9a9a' : '#6b6b6b';
+  x.font = '500 34px system-ui, -apple-system, sans-serif';
+  ACARD_INFO.forEach((ln, i) => x.fillText(ln, 230, 245 + i * 46));
+  const q = window.qrcode(0, 'M');
+  q.addData(text); q.make();
+  const n = q.getModuleCount(), size = 300, cell = Math.floor(size / (n + 4));
+  const span = cell * (n + 4);
+  const qx = 80, qy = H - 80 - span;
+  if (dark) { x.fillStyle = '#ffffff'; acRound(x, qx - 14, qy - 14, span + 28, span + 28, 22); x.fill(); }
+  x.fillStyle = '#000000';
+  for (let r = 0; r < n; r++) for (let k = 0; k < n; k++) if (q.isDark(r, k)) x.fillRect(qx + (k + 2) * cell, qy + (r + 2) * cell, cell, cell);
+  return c;
+}
+async function acSignIn(file) {
+  if (!file) return;
+  try {
+    toast('Reading card\u2026', 'info', 1800);
+    await acLibs();
+    const bmp = await createImageBitmap(file);
+    const c = document.createElement('canvas');
+    c.width = bmp.width; c.height = bmp.height;
+    const x = c.getContext('2d');
+    x.drawImage(bmp, 0, 0);
+    const d = x.getImageData(0, 0, c.width, c.height);
+    const r = window.jsQR(d.data, d.width, d.height);
+    if (!r || !String(r.data).startsWith('APH1.')) return toast('No Acard found in that image.', 'error', 3200);
+    const p = acDec(r.data);
+    if (!p.e || !p.p || !p.u || !p.k) throw new Error('bad card');
+    await Vault.importKey(p.u, p.k);
+    await signInWithEmailAndPassword(auth, p.e, p.p);
+    toast('Signed in with Acard.', 'success', 2200);
+    setTimeout(() => { try { setSetting('acardColor', p.c === 'white' ? 'white' : 'black'); } catch (_) {} }, 3500);
+  } catch (err) {
+    console.error('[ACARD] sign-in failed:', err?.code || err?.message);
+    toast('That card could not sign you in.', 'error', 3600);
+  }
+}
+const Acard = (() => {
+  let ov = null, pack = null, color = 'black';
+  function close() { if (ov) ov.remove(); ov = null; pack = null; }
+  async function paint() {
+    if (!ov || !pack) return;
+    const cv = await acDraw(color, pack.id, acEnc({ ...pack.base, c: color }));
+    if (!ov) return;
+    cv.className = 'ac-cv';
+    const slot = ov.querySelector('[data-ac-slot]');
+    slot.innerHTML = ''; slot.appendChild(cv); ov._cv = cv;
+    ov.querySelectorAll('[data-ac-c]').forEach((b) => b.classList.toggle('on', b.dataset.acC === color));
+    ov.querySelector('[data-ac-id]').textContent = pack.id;
+  }
+  function onClick(e) {
+    const t = e.target;
+    if (t === ov || t.closest('[data-ac-x]')) return close();
+    const b = t.closest('[data-ac-c]');
+    if (b) { color = b.dataset.acC; setSetting('acardColor', color); paint(); return; }
+    if (t.closest('[data-ac-dl]') && ov._cv) {
+      ov._cv.toBlob((bl) => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(bl);
+        a.download = 'Aphrosta-Acard-' + pack.id + '.png';
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+        toast('Card saved as PNG.', 'success', 2000);
+      }, 'image/png');
+    }
+  }
+  async function open() {
+    const user = auth.currentUser;
+    if (!user) return toast('Sign in first.', 'info', 2000);
+    if (ov) return;
+    color = settings.acardColor === 'white' ? 'white' : 'black';
+    const d = document.createElement('div');
+    d.className = 'ac-ov';
+    d.innerHTML = '<div class="ac-box"><div class="ac-head"><b>Acard</b><button class="ac-x" type="button" data-ac-x aria-label="Close">\u00d7</button></div>'
+      + '<div class="ac-slot" data-ac-slot><p class="ac-note">Making your card\u2026</p></div>'
+      + '<p class="ac-id" data-ac-id></p>'
+      + '<div class="ac-seg"><button type="button" data-ac-c="white">White</button><button type="button" data-ac-c="black">Black</button></div>'
+      + '<button class="ac-dl" type="button" data-ac-dl>Download PNG</button>'
+      + '<p class="ac-note">This card holds your login and encryption key. Anyone with it can open your account.</p></div>';
+    ov = d;
+    document.body.appendChild(ov);
+    ov.addEventListener('click', onClick);
+    try {
+      if (!user.email) throw new Error('no email');
+      await acLibs();
+      const p = await acCred(user);
+      const k = await Vault.exportKey(user.uid);
+      pack = { id: await acId(user.uid), base: { e: user.email, p, u: user.uid, k } };
+      await paint();
+    } catch (err) {
+      console.error('[ACARD] build failed:', err?.code || err?.message);
+      close();
+      toast(err?.code === 'auth/requires-recent-login'
+        ? 'Sign out and back in with Google, then try Acard again.'
+        : 'Could not make your card. Check Email/Password sign-in is on. (ACARD)', 'error', 4200);
+    }
+  }
+  function wireAuth(btn) {
+    const sp = btn.querySelector('[data-acard-in]');
+    if (!sp) return;
+    const pick = () => {
+      const f = document.createElement('input');
+      f.type = 'file'; f.accept = 'image/png,image/*'; f.hidden = true;
+      f.onchange = () => { acSignIn(f.files && f.files[0]); f.remove(); };
+      document.body.appendChild(f);
+      f.click();
+    };
+    sp.addEventListener('click', (e) => { e.stopPropagation(); pick(); });
+    sp.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); pick(); } });
+  }
+  return { open, wireAuth };
+})();
+
 /* ---------- Auth page legal popups (same popup as Worlds) ---------- */
 function openAuthLegal(key) {
   const def = AB_PAGES[key];
@@ -16925,7 +17106,7 @@ function showSignInButton() {
       ${introMarkup()}
       <div class="signin-card">
         <div class="signin-row">
-        <button id="signin-btn" class="signin-btn">
+        <button id="signin-btn" class="signin-btn"><span class="acard-in" data-acard-in role="button" tabindex="0" aria-label="Sign in with Acard">${ACARD_ICON}</span>
           <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.5 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.2 5.5-4.7 7.2l7.6 5.9c4.4-4.1 6.9-10.1 6.9-17.6z"/><path fill="#FBBC05" d="M10.5 28.7a14.5 14.5 0 0 1 0-9.4l-7.9-6.1a24 24 0 0 0 0 21.6l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.9 2.3-8.3 2.3-6.3 0-11.6-4-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>
           <span>Sign-in/Sign-up</span>
         </button>
@@ -16945,7 +17126,9 @@ function showSignInButton() {
     saveSettings();
     applySettings();
   };
-  btn.onclick = () => {
+  Acard.wireAuth(btn);
+  btn.onclick = (e) => {
+    if (e.target.closest('[data-acard-in]')) return;
     signInConsent = true;
     authBusy = false;
     autoSignIn();
