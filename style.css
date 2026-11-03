@@ -927,6 +927,12 @@ mark.sb-hit.is-cur {
 .live-root[data-emo="sleepy"] .lv-eyes { animation: none; }
 .live-root[data-emo="sleepy"] .live-svg { animation-duration: 8s; }
 .live-root[data-emo="sleepy"] .live-float { animation-duration: 9s; }
+.live-zzz { position: absolute; right: 4%; top: 2%; width: 30%; height: 40%; z-index: 2; opacity: 0; transition: opacity 0.4s; pointer-events: none; }
+.live-zzz b { position: absolute; left: 0; bottom: 0; font: 700 calc(22px * var(--ts, 1))/1 system-ui, sans-serif; color: var(--fg); opacity: 0; animation: liveZzz 3s ease-in-out infinite; }
+.live-zzz b:nth-child(2) { animation-delay: 1s; }
+.live-zzz b:nth-child(3) { animation-delay: 2s; }
+.live-root[data-paused="1"] .live-zzz { opacity: 1; }
+@keyframes liveZzz { 0% { transform: translate(0, 0) scale(0.6); opacity: 0; } 20% { opacity: 0.85; } 100% { transform: translate(28px, -64px) scale(1.25); opacity: 0; } }
 .live-root[data-state="hearing"] { --ly: 4px; }
 .live-root[data-state="hearing"] .lv-eye { transform: scale(1.14); }
 .live-root[data-state="hearing"] .live-halo, .live-root[data-state="speaking"] .live-halo { opacity: 1; }
@@ -3902,7 +3908,15 @@ html[data-motion="reduce"] .aph-mark * { animation: none !important; }
 .tut-wave i:nth-child(3n) { animation-delay: -0.3s; }
 .tut-wave i:nth-child(3n + 1) { animation-delay: -0.6s; }
 .tut-orb { align-self: center; width: 120px; height: 120px; margin: 14px 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; gap: 22px; background: radial-gradient(circle at 34% 28%, color-mix(in srgb, var(--accent, #0a84ff) 65%, #fff), var(--accent, #0a84ff) 60%, color-mix(in srgb, var(--accent, #0a84ff) 60%, #000)); animation: tutBob 3s ease-in-out infinite; }
-.tut-orb i { width: 12px; height: 18px; border-radius: 50%; background: #111; }
+.tut-orb i { width: 12px; height: 18px; border-radius: 50%; background: #111; transition: height 0.4s ease; }
+.tut-orb { position: relative; }
+.tut-orb.sleep { animation-duration: 6s; }
+.tut-orb.sleep i { height: 3px; }
+.tut-zzz { position: absolute; right: 4px; top: 2px; width: 30px; height: 40px; opacity: 0; transition: opacity 0.4s; pointer-events: none; }
+.tut-zzz b { position: absolute; left: 0; bottom: 0; font: 700 16px/1 system-ui, sans-serif; color: var(--fg, #111); opacity: 0; animation: liveZzz 3s ease-in-out infinite; }
+.tut-zzz b:nth-child(2) { animation-delay: 1s; }
+.tut-zzz b:nth-child(3) { animation-delay: 2s; }
+.tut-orb.sleep .tut-zzz { opacity: 1; }
 .tut-orb.think i { animation: tutBlink 1s ease-in-out infinite; }
 .tut-orb.talk { animation: tutTalk 0.5s ease-in-out infinite alternate; }
 .tut-livebar { display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--glass-border); border-radius: 999px; padding: 6px 8px 6px 14px; opacity: 0.85; }

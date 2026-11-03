@@ -7753,7 +7753,7 @@ function openAttach() {
 const Live = (() => {
   let root = null, active = false, tok = 0;
   let stream = null, ctx = null, an = null, buf = null, timer = 0, rec = null, seg = null;
-  let quiet = 0, armed = false, lvl = 0, said = '', lastAct = 0, ampT = 0, glanceT = 0, vvFit = null;
+  let quiet = 0, armed = false, lvl = 0, said = '', lastAct = 0, ampT = 0, glanceT = 0, vvFit = null, paused = false;
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const $ = (s) => (root ? root.querySelector(s) : null);
   const LABEL = { listening: 'Listening\u2026', hearing: 'Listening\u2026', thinking: 'Thinking\u2026', searching: 'Searching the web\u2026', speaking: '', idle: '' };
@@ -7761,8 +7761,9 @@ const Live = (() => {
   const setState = (s, emo) => {
     if (!root) return;
     root.dataset.state = s;
+    root.dataset.paused = paused ? '1' : '0';
     const lab = $('.live-label');
-    if (lab) lab.textContent = LABEL[s] || '';
+    if (lab) lab.textContent = paused ? '' : (LABEL[s] || '');
     if (emo && root.dataset.emo !== emo) {
       root.dataset.emo = emo;
       const pop = $('.live-pop');
@@ -7797,7 +7798,7 @@ const Live = (() => {
 
   const glance = () => {
     if (!root) return;
-    const calm = root.dataset.state === 'listening';
+    const calm = root.dataset.state === 'listening' && !paused;
     root.style.setProperty('--gx', calm ? (Math.random() * 16 - 8).toFixed(1) + 'px' : '0px');
     root.style.setProperty('--gy', calm ? (Math.random() * 10 - 5).toFixed(1) + 'px' : '0px');
     if (calm && root.dataset.emo !== 'sleepy' && Date.now() - lastAct > 25000) setState('listening', 'sleepy');
@@ -7868,7 +7869,7 @@ const Live = (() => {
     armed = true;
     lastAct = Date.now();
     try { begin(); } catch (_) { armed = false; toast('Recording is not supported here. (L06)'); close(); return; }
-    setState('listening', 'neutral');
+    setState('listening', paused ? 'sleepy' : 'neutral');
   };
   const disarm = () => { armed = false; endRec(true); };
 
@@ -7879,14 +7880,14 @@ const Live = (() => {
     for (let i = 0; i < buf.length; i++) { const d = (buf[i] - 128) / 128; s += d * d; }
     const lv = Math.sqrt(s / buf.length);
     lvl = lvl * 0.6 + Math.min(1, lv * 7) * 0.4;
-    if (root) root.style.setProperty('--lvl', lvl.toFixed(3));
+    if (root) root.style.setProperty('--lvl', paused ? '0' : lvl.toFixed(3));
     if (!armed || !seg) return;
     if (lv > 0.03) {
       quiet = 0;
       lastAct = Date.now();
       if (!seg.heard) {
         seg.heard = true;
-        setState('hearing', root && root.dataset.emo === 'sleepy' ? 'surprised' : 'neutral');
+        if (!paused) setState('hearing', root && root.dataset.emo === 'sleepy' ? 'surprised' : 'neutral');
       }
     } else if (seg.heard && (quiet += 60) >= 1200) {
       armed = false;
@@ -7897,7 +7898,7 @@ const Live = (() => {
   /* ---- Groq speech to text ---- */
   const transcribe = async (blob) => {
     const my = tok;
-    setState('thinking', 'neutral');
+    if (!paused) setState('thinking', 'neutral');
     try {
       const key = groqKeyGet() || (await groqPrompt());
       if (!key) throw new Error('no Groq key');
@@ -7917,6 +7918,13 @@ const Live = (() => {
       const t = String(j.text || '').trim();
       if (my !== tok) return;
       if (t.replace(/[^\p{L}\p{N}]/gu, '').length < 2) { arm(); return; }
+      const cmd = t.toLowerCase().replace(/[^a-z ]/g, ' ').replace(/\s+/g, ' ').trim().replace(/^(?:ok|okay|hey) /, '').replace(/ please$/, '');
+      if (paused) {
+        if (cmd === 'continue') { paused = false; lastAct = Date.now(); haptic(8); }
+        arm();
+        return;
+      }
+      if (cmd === 'pause') { paused = true; haptic(8); arm(); return; }
       await turn(t, my);
     } catch (e) {
       if (my !== tok) return;
@@ -8048,6 +8056,7 @@ const Live = (() => {
   const submitText = async (t) => {
     t = String(t || '').trim();
     if (!t || !active) return;
+    paused = false;
     stopSpeaking();
     disarm();
     const my = ++tok;
@@ -8074,6 +8083,7 @@ const Live = (() => {
         <div class="live-float">
           <div class="live-halo"></div>
           <div class="live-orbit"><b style="--a:0deg"></b><b style="--a:120deg"></b><b style="--a:240deg"></b></div>
+          <span class="live-zzz" aria-hidden="true"><b>z</b><b>Z</b><b>z</b></span>
           <div class="live-ball" data-live="ball">
             <div class="live-pop">
               <svg class="live-svg" viewBox="0 0 200 200" aria-hidden="true">
@@ -8142,6 +8152,7 @@ const Live = (() => {
     if (!groqKeyGet()) { const k = await groqPrompt(); if (!k) return; }
     if (active) return;
     active = true;
+    paused = false;
     tok++;
     build();
     haptic([10, 40, 16]);
@@ -15959,10 +15970,14 @@ function tutScenes() {
       at(8600, () => { bars.forEach((b) => { b.style.transform = ''; }); cp.dataset.mode = 'text'; delete cp.dataset.voice; Q(S, 'tag').textContent = 'Then send it'; });
     } },
 
-    { ch: 'Voice and Live', ms: 10000, t: 'Live mode', x: 'Talk hands-free. The orb listens, thinks and answers out loud while the reply is still being written. Type in the pill if you prefer. X stops it.', b: (S, at) => {
-      S.innerHTML = ui(`<div class="tut-orb" data-k="orb"><i></i><i></i></div><div class="tut-tag" data-k="tag">Listening</div><div class="tut-livebar"><span>Type to talk...</span><b>${ic('close')}</b></div>`);
+    { ch: 'Voice and Live', ms: 14000, t: 'Live mode', x: 'Talk hands-free. The orb listens, thinks and answers out loud while the reply is still being written. Say "Pause" and it falls asleep, hearing only "Continue". Type in the pill if you prefer. X stops it.', b: (S, at) => {
+      S.innerHTML = ui(`<div class="tut-orb" data-k="orb"><i></i><i></i><span class="tut-zzz"><b>z</b><b>Z</b><b>z</b></span></div><div class="tut-tag" data-k="tag">Listening</div><div class="tut-livebar"><span>Type to talk...</span><b>${ic('close')}</b></div>`);
       at(3000, () => { Q(S, 'tag').textContent = 'Thinking'; Q(S, 'orb').classList.add('think'); });
       at(5000, () => { Q(S, 'tag').textContent = 'Speaking'; Q(S, 'orb').classList.remove('think'); Q(S, 'orb').classList.add('talk'); });
+      at(8000, () => { Q(S, 'tag').textContent = 'Say "Pause"'; });
+      at(9500, () => { Q(S, 'tag').textContent = 'Asleep. Only "Continue" wakes it'; Q(S, 'orb').classList.remove('talk'); Q(S, 'orb').classList.add('sleep'); });
+      at(12500, () => { Q(S, 'tag').textContent = 'Say "Continue"'; });
+      at(13200, () => { Q(S, 'tag').textContent = 'Listening again'; Q(S, 'orb').classList.remove('sleep'); });
     } },
 
     { ch: 'Around the app', ms: 9500, t: 'Make it yours', x: 'Settings holds Theme, Assistance and more. Pick an accent and typeface, set Memory, write Tailorship, and replay this film from Defaults, then Tutorial.', b: (S, at) => {
