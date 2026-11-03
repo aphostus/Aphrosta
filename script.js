@@ -16955,20 +16955,26 @@ async function acDraw(color, id, text) {
   const c = document.createElement('canvas');
   c.width = W; c.height = H;
   const x = c.getContext('2d');
-  const g = x.createLinearGradient(0, 0, W, H);
-  if (dark) { g.addColorStop(0, '#26262a'); g.addColorStop(0.55, '#0c0c0e'); g.addColorStop(1, '#020203'); }
-  else { g.addColorStop(0, '#fbfbfc'); g.addColorStop(0.5, '#e7e7ea'); g.addColorStop(1, '#c4c4ca'); }
+  const g = x.createLinearGradient(W * 0.3, 0, W * 0.7, H);
+  if (dark) { g.addColorStop(0, '#4a4a52'); g.addColorStop(0.45, '#17171b'); g.addColorStop(1, '#000000'); }
+  else { g.addColorStop(0, '#ffffff'); g.addColorStop(0.45, '#d9d9de'); g.addColorStop(1, '#8e8e96'); }
   x.fillStyle = g;
   acRound(x, 0, 0, W, H, 56); x.fill();
   x.save(); acRound(x, 0, 0, W, H, 56); x.clip();
-  const sh = x.createRadialGradient(W * 0.88, -60, 20, W * 0.88, -60, 760);
-  sh.addColorStop(0, dark ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.5)');
+  const sh = x.createRadialGradient(W * 0.28, H * 0.12, 10, W * 0.28, H * 0.12, 900);
+  sh.addColorStop(0, dark ? 'rgba(255,255,255,0.30)' : 'rgba(255,255,255,0.95)');
   sh.addColorStop(1, 'rgba(255,255,255,0)');
-  x.fillStyle = sh; x.fillRect(0, 0, W, H); x.restore();
+  x.fillStyle = sh; x.fillRect(0, 0, W, H);
+  const bs = x.createLinearGradient(0, H * 0.55, 0, H);
+  bs.addColorStop(0, 'rgba(0,0,0,0)');
+  bs.addColorStop(1, dark ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.25)');
+  x.fillStyle = bs; x.fillRect(0, 0, W, H);
+  x.fillStyle = 'rgba(255,255,255,0.45)'; x.fillRect(60, 3, W - 120, 3);
+  x.restore();
   const eg = x.createLinearGradient(0, 0, W, H);
-  eg.addColorStop(0, dark ? '#5a5a60' : '#ffffff');
-  eg.addColorStop(0.5, dark ? '#202024' : '#c9c9ce');
-  eg.addColorStop(1, dark ? '#48484e' : '#b8b8be');
+  eg.addColorStop(0, dark ? '#9a9aa2' : '#ffffff');
+  eg.addColorStop(0.5, dark ? '#2c2c32' : '#9a9aa2');
+  eg.addColorStop(1, dark ? '#74747c' : '#6c6c74');
   x.lineWidth = 4; x.strokeStyle = eg;
   acRound(x, 2, 2, W - 4, H - 4, 54); x.stroke();
   const logo = await new Promise((r) => { const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = 'Materials/Public/images/Logo.png'; });
@@ -17055,7 +17061,7 @@ const Acard = (() => {
 
       + '<div class="ac-seg"><button type="button" data-ac-c="white">White</button><button type="button" data-ac-c="black">Black</button></div>'
       + '<button class="ac-dl" type="button" data-ac-dl>Download</button>'
-      + '<p class="ac-note">This card holds your login and encryption key. Anyone with it can open your account.</p></div>';
+      + '<p class="ac-note">This card holds your login and encryption key. Anyone with it can open your account. Never share it online.</p></div>';
     ov = d;
     document.body.appendChild(ov);
     ov.addEventListener('click', onClick);
