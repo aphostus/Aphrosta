@@ -4862,6 +4862,7 @@ const body = `
     if (b.dataset.fd !== 'ops-save') return;
     const name = p.querySelector('[data-ops="name"]').value.trim();
     if (!name) { toast('Add a project name. (H10)', 'info', 2000); return; }
+    if (!autoApiOk()) { fdApiToast('projects'); return; }
     const now = Date.now();
     const rec = {
       id: draftId, name, description: p.querySelector('[data-ops="desc"]').value.trim(), instruction: p.querySelector('[data-ops="instr"]').value.trim(),
@@ -5235,7 +5236,8 @@ function connOpenEditor(edit) {
   const draftId = edit?.id || uid();
   let autoName = !edit?.name || (connProv(edit.provider)?.name === edit.name);
   const cfgOld = edit?.cfg || {};
-  const rows = CONN_PROVIDERS.map((pv) => `
+  const connUsed = new Set(connItems.filter((c) => c.id !== edit?.id).map((c) => c.provider));
+  const rows = CONN_PROVIDERS.filter((pv) => !connUsed.has(pv.id)).map((pv) => `
     <div class="conn-item${cur.provider === pv.id ? ' open' : ''}" data-conn-item="${esc(pv.id)}" data-q="${esc((pv.name + ' ' + pv.blurb).toLowerCase())}">
       <button class="conn-row${cur.provider === pv.id ? ' on' : ''}" type="button" data-conn-pick="${esc(pv.id)}" style="--pc:${esc(pv.ink ? 'var(--fg)' : pv.color)}">
         <span class="conn-tile">${connLogo(pv)}</span>
@@ -5268,7 +5270,7 @@ function connOpenEditor(edit) {
       <div class="lib-lab">
         <div class="conn-wrap">
           <input class="lib-in conn-search" type="text" data-conn-search autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Search services" aria-label="Search services">
-          <div class="conn-list" data-conn-list>${rows}<p class="field-note conn-none" data-conn-none hidden>No match.</p></div>
+          <div class="conn-list" data-conn-list>${rows}<p class="field-note conn-none" data-conn-none${rows ? ' hidden' : ''}>${rows ? 'No match.' : 'Every service is already connected.'}</p></div>
         </div>
       </div>
     </div>`;
@@ -5321,6 +5323,7 @@ function connOpenEditor(edit) {
     if (b.dataset.fd !== 'conn-save') return;
     const name = nameIn.value.trim();
     if (!name) { toast('Add a connection name.', 'info', 2000); return; }
+    if (!autoApiOk()) { fdApiToast('connections'); return; }
     const pvSel = connProv(cur.provider);
     if (!pvSel) { toast('Pick a service first.', 'info', 2000); return; }
     const miss = pvSel.fields.find((f) => f.req && !(p.querySelector('[data-conn-f="' + pvSel.id + '"][data-k="' + f.k + '"]')?.value || '').trim());
@@ -5401,6 +5404,7 @@ function autoApiOk() {
 }
 
 const autoApiToast = () => toast('Add a working API key and pick a model before making automations. (D03)', 'info', 3200);
+const fdApiToast = (what) => toast('Add a working API key and pick a model before saving ' + what + '. (D03)', 'info', 3200);
 
 /* Reads the trigger out of the Input text. Returns null when no trigger is found. */
 function autoParse(text) {
@@ -5531,7 +5535,6 @@ function autoRefresh() {
 }
 
 function autoOpenEditor(edit) {
-  if (!autoApiOk()) { autoApiToast(); return; }
   const cur = { color: edit?.color || OPS_COLORS[0] };
   const draftId = edit?.id || uid();
   const ta = (k, label, ph) => `<label class="lib-lab" style="flex:1 1 0;min-height:0;margin-top:0">${label}
