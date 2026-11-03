@@ -167,8 +167,8 @@ const EL_SEAL = { p: ["R9h8BHPVU6qp","2IZh0x7iJZoA","ZJ9CqxIZtXOX","UyolL3Sv9iUG
 /* ---------- GROQ voice (user's own key) ---------- */
 const GROQ_KEY_LS = 'aphrosta.groqKey';
 const GROQ_TTS = 'canopylabs/orpheus-v1-english';
-const GROQ_STT = 'whisper-large-v3';
-const GROQ_STT_ALT = 'whisper-large-v3-turbo';
+const GROQ_STT = 'whisper-large-v3-turbo';
+const GROQ_STT_ALT = 'whisper-large-v3';
 let groqAsk = null, groqNoAt = 0;
 function groqKeyGet() { try { return (localStorage.getItem(GROQ_KEY_LS) || '').trim(); } catch (_) { return ''; } }
 function groqBad() { try { localStorage.removeItem(GROQ_KEY_LS); } catch (_) {} }
@@ -393,8 +393,8 @@ const SKILL_LIBRARY = [
   {
     id: 'web', key: 'skillWeb', name: 'Web search', needsTools: true,
     prompt: () => [
-      'SKILL Web search: you MUST use web_search or fetch_url for current events, prices, people, products, versions, "latest/today/current", or any URL the user gives. Search by default: if you are not completely sure of a fact, or it could have changed since your training, search first instead of guessing. Skip only for stable general knowledge, small talk, maths and pure writing or coding tasks.',
-      'At most 3 searches per answer, one per distinct question. Results are short snippets: summarise them in your own words, never paste long passages, and cite sources as markdown links [Title](url).',
+      'SKILL Web search: the app searches the web for you before you answer and puts the results in a tool_result block. Never write a web_search or fetch_url tool line. Use those results for current events, prices, people, products, versions and any URL the user gives. If there is no tool_result, answer from what you know and say it may be out of date.',
+      'Results are short snippets: summarise them in your own words, never paste long passages, and cite sources as markdown links [Title](url).',
       'If results are thin or off-topic, say so instead of guessing.'
     ].join(' ')
   }
@@ -7753,17 +7753,18 @@ function openAttach() {
 const Live = (() => {
   let root = null, active = false, tok = 0;
   let stream = null, ctx = null, an = null, buf = null, timer = 0, rec = null, seg = null;
-  let quiet = 0, armed = false, lvl = 0, said = '', lastAct = 0, ampT = 0, glanceT = 0, vvFit = null, paused = false;
+  let quiet = 0, armed = false, lvl = 0, said = '', lastAct = 0, ampT = 0, glanceT = 0, vvFit = null, paused = false, flash = '', contT = 0, feedT = 0, voiced = 0;
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const $ = (s) => (root ? root.querySelector(s) : null);
-  const LABEL = { listening: 'Listening\u2026', hearing: 'Listening\u2026', thinking: 'Thinking\u2026', searching: 'Searching the web\u2026', speaking: '', idle: '' };
+  const LABEL = { listening: 'Listening', hearing: 'Listening', thinking: 'Thinking\u2026', searching: 'Searching', speaking: '', idle: '' };
 
   const setState = (s, emo) => {
     if (!root) return;
     root.dataset.state = s;
     root.dataset.paused = paused ? '1' : '0';
     const lab = $('.live-label');
-    if (lab) lab.textContent = paused ? '' : (LABEL[s] || '');
+    if (lab) lab.textContent = paused ? 'Paused' : (flash || LABEL[s] || '');
+    if (s === 'searching') feedOn(); else feedOff();
     if (emo && root.dataset.emo !== emo) {
       root.dataset.emo = emo;
       const pop = $('.live-pop');
@@ -7795,6 +7796,31 @@ const Live = (() => {
     ampT = 0;
     if (root) root.style.setProperty('--amp', '0');
   };
+
+  const BITS = ['01', '<>', '{ }', 'www', '://', '.com', '?', '#', 'fx', '404', 'http'];
+  const feedSpawn = () => {
+    const fl = $('.live-float');
+    if (!fl || !root || root.dataset.state !== 'searching') return;
+    const w = fl.offsetWidth || 240;
+    let a = 0;
+    for (let i = 0; i < 8; i++) { a = Math.random() * Math.PI * 2; if (Math.sin(a) < 0.45) break; }
+    const rr = w * (0.62 + Math.random() * 0.26);
+    const dx = Math.cos(a) * rr, dy = Math.sin(a) * rr;
+    const words = String(said).split(/\s+/).filter((x) => x.length > 2).slice(0, 12);
+    const pick = words.length && Math.random() < 0.6 ? words[Math.floor(Math.random() * words.length)] : BITS[Math.floor(Math.random() * BITS.length)];
+    const el = document.createElement('i');
+    el.className = 'live-bit';
+    el.textContent = pick.slice(0, 14);
+    el.style.setProperty('--x', (w / 2 + dx).toFixed(0) + 'px');
+    el.style.setProperty('--y', (w / 2 + dy).toFixed(0) + 'px');
+    el.style.setProperty('--dx', (-dx * 0.92).toFixed(0) + 'px');
+    el.style.setProperty('--dy', (-dy * 0.92 + 10).toFixed(0) + 'px');
+    el.style.setProperty('--d', (1.05 + Math.random() * 0.45).toFixed(2) + 's');
+    el.addEventListener('animationend', () => el.remove());
+    fl.appendChild(el);
+  };
+  const feedOn = () => { if (!feedT) { feedSpawn(); feedT = setInterval(feedSpawn, 210); } };
+  const feedOff = () => { clearInterval(feedT); feedT = 0; };
 
   const glance = () => {
     if (!root) return;
@@ -7848,12 +7874,13 @@ const Live = (() => {
     mr.onstop = () => {
       if (mine.drop || !mine.heard) return;
       const blob = new Blob(parts, { type: mr.mimeType || mt || 'audio/webm' });
-      if (blob.size > 1500) transcribe(blob);
+      if (blob.size > 1500) transcribe(blob, mine.ms || 0);
     };
     mr.start();
     rec = mr;
     seg = mine;
     quiet = 0;
+    voiced = 0;
   };
 
   const endRec = (drop) => {
@@ -7884,21 +7911,23 @@ const Live = (() => {
     if (!armed || !seg) return;
     if (lv > 0.03) {
       quiet = 0;
+      voiced += 60;
       lastAct = Date.now();
       if (!seg.heard) {
         seg.heard = true;
         if (!paused) setState('hearing', root && root.dataset.emo === 'sleepy' ? 'surprised' : 'neutral');
       }
-    } else if (seg.heard && (quiet += 60) >= 1200) {
+    } else if (seg.heard && (quiet += 60) >= (paused ? 450 : voiced < 800 ? 650 : 1200)) {
       armed = false;
+      seg.ms = voiced;
       endRec(false);
     }
   };
 
   /* ---- Groq speech to text ---- */
-  const transcribe = async (blob) => {
+  const transcribe = async (blob, ms) => {
     const my = tok;
-    if (!paused) setState('thinking', 'neutral');
+    if (!paused && ms > 1500) setState('thinking', 'neutral');
     try {
       const key = groqKeyGet() || (await groqPrompt());
       if (!key) throw new Error('no Groq key');
@@ -7918,13 +7947,31 @@ const Live = (() => {
       const t = String(j.text || '').trim();
       if (my !== tok) return;
       if (t.replace(/[^\p{L}\p{N}]/gu, '').length < 2) { arm(); return; }
-      const cmd = t.toLowerCase().replace(/[^a-z ]/g, ' ').replace(/\s+/g, ' ').trim().replace(/^(?:ok|okay|hey) /, '').replace(/ please$/, '');
+      const cw = t.toLowerCase().replace(/[^a-z ]/g, ' ').split(/\s+/).filter((w) => w && !/^(?:ok|okay|hey|please|now|it|just)$/.test(w));
+      const saidCmd = (w) => cw.length === 1 && (cw[0] === w || cw[0] === w + 'd');
       if (paused) {
-        if (cmd === 'continue') { paused = false; lastAct = Date.now(); haptic(8); }
+        if (saidCmd('continue')) {
+          paused = false;
+          lastAct = Date.now();
+          flash = 'Continued';
+          arm();
+          if (root) {
+            setState('listening', 'surprised');
+            root.classList.remove('flinch');
+            void root.offsetWidth;
+            root.classList.add('flinch');
+          }
+          clearTimeout(contT);
+          contT = setTimeout(() => {
+            flash = '';
+            if (root) { root.classList.remove('flinch'); setState(root.dataset.state, 'neutral'); }
+          }, 500);
+          return;
+        }
         arm();
         return;
       }
-      if (cmd === 'pause') { paused = true; haptic(8); arm(); return; }
+      if (saidCmd('pause') || (cw.length === 1 && cw[0] === 'paws')) { paused = true; haptic(8); arm(); return; }
       await turn(t, my);
     } catch (e) {
       if (my !== tok) return;
@@ -7944,7 +7991,7 @@ const Live = (() => {
     while (my === tok && Date.now() - t0 < 240000) {
       const ms = currentSession.messages;
       const last = ms[ms.length - 1];
-      const tooling = !!(last && (last.hidden || (last.role === 'assistant' && callsOf(last))));
+      const tooling = searchBusy > 0 || !!(last && (last.hidden || (last.role === 'assistant' && callsOf(last))));
       if (chatBusy || tooling) {
         calm = 0;
         if (root && root.dataset.state !== 'speaking') {
@@ -8032,7 +8079,7 @@ const Live = (() => {
     while (my === tok && Date.now() - t0 < 240000) {
       const ms = currentSession.messages;
       const last = ms[ms.length - 1];
-      const tooling = !!(last && (last.hidden || (last.role === 'assistant' && callsOf(last))));
+      const tooling = searchBusy > 0 || !!(last && (last.hidden || (last.role === 'assistant' && callsOf(last))));
       if (last && last.role === 'assistant' && !last.hidden && ms.length > before) {
         if (cur !== last) { cur = last; done = 0; }
         if (!last.__empty && !last.__failed) feed(false);
@@ -8171,6 +8218,10 @@ const Live = (() => {
     micClose();
     clearInterval(glanceT);
     glanceT = 0;
+    clearInterval(feedT);
+    feedT = 0;
+    clearTimeout(contT);
+    flash = '';
     document.removeEventListener('keydown', onKey);
     if (vvFit && window.visualViewport) {
       window.visualViewport.removeEventListener('resize', vvFit);
@@ -14264,7 +14315,7 @@ const TOOL_DOCS = {
   get connect() { return connDoc(); }
 };
 
-const enabledAgentTools = () => (!settings.agentTools ? [] : Object.keys(TOOL_DOCS).filter((k) => ((k !== 'web_search' && k !== 'fetch_url') || settings.skillWeb) && (k !== 'connect' || connReady().length)));
+const enabledAgentTools = () => (!settings.agentTools ? [] : Object.keys(TOOL_DOCS).filter((k) => (k !== 'web_search' && k !== 'fetch_url') && (k !== 'connect' || connReady().length)));
 
 async function readerFetch(target, signal) {
   const tries = [
@@ -14287,6 +14338,56 @@ async function readerFetch(target, signal) {
   throw new Error(last);
 }
 
+const searchCache = new Map();
+const tidyHits = (t) => String(t)
+  .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
+  .replace(/\((?:https?:)?\/\/duckduckgo\.com\/l\/\?[^)]*?uddg=([^&)\s]+)[^)]*\)/g, (m, u) => { try { return '(' + decodeURIComponent(u) + ')'; } catch (_) { return ' '; } })
+  .replace(/\s+/g, ' ')
+  .trim();
+
+function readerRace(target, signal) {
+  const tries = [
+    'https://r.jina.ai/' + target,
+    'https://api.allorigins.win/raw?url=' + encodeURIComponent(target),
+    'https://corsproxy.io/?url=' + encodeURIComponent(target)
+  ];
+  return Promise.any(tries.map(async (u) => {
+    const r = await fetch(u, { signal });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    let t = await r.text();
+    if (/<html|<body|<!doctype/i.test(t.slice(0, 500))) t = t.replace(/<(script|style|noscript|svg)[\s\S]*?<\/\1>/gi, ' ').replace(/<[^>]+>/g, ' ');
+    t = t.replace(/\s+/g, ' ').trim();
+    if (t.length < 150) throw new Error('empty page');
+    return t;
+  }));
+}
+
+async function fastWebSearch(q, outer) {
+  const key = q.toLowerCase();
+  const hit = searchCache.get(key);
+  if (hit && Date.now() - hit.t < 300000) return hit.v;
+  const ctl = new AbortController();
+  const stop = () => ctl.abort();
+  if (outer) outer.addEventListener('abort', stop);
+  const timer = setTimeout(stop, 7000);
+  try {
+    const enc = encodeURIComponent(q);
+    const t = await Promise.any([
+      readerRace('https://html.duckduckgo.com/html/?q=' + enc, ctl.signal),
+      readerRace('https://www.bing.com/search?q=' + enc, ctl.signal)
+    ]);
+    ctl.abort();
+    const v = ('Web results for: ' + q + '\n' + tidyHits(t)).slice(0, 3000);
+    searchCache.set(key, { t: Date.now(), v });
+    return v;
+  } catch (_) {
+    return null;
+  } finally {
+    clearTimeout(timer);
+    if (outer) outer.removeEventListener('abort', stop);
+  }
+}
+
 const AGENT_TOOLS = {
   async web_search({ query } = {}) {
     if (!settings.skillWeb) return 'Error: web search is turned off in settings.';
@@ -14301,11 +14402,9 @@ const AGENT_TOOLS = {
         const j = await r.json();
         items = (j.results || []).slice(0, 5).map((x) => ({ title: x.title, url: x.url, text: x.content || '' }));
       } else {
-        for (const eng of [
-          'https://html.duckduckgo.com/html/?q=',
-          'https://lite.duckduckgo.com/lite/?q=',
-          'https://www.bing.com/search?q='
-        ]) {
+        const fast = await fastWebSearch(q, ctl.signal);
+        if (fast) return fast;
+        for (const eng of []) {
           try {
             const t = await readerFetch(eng + encodeURIComponent(q), ctl.signal);
             return ('Web results for: ' + q + '\n' + t).slice(0, 3000);
@@ -14400,11 +14499,12 @@ function agentPromptLines() {
   if (settings.agentPlan) out.push(PLAN_PROMPT);
   const tools = enabledAgentTools();
   if (tools.length) {
-  out.push('TOOLS: NEVER use any built-in, native, browser, python or function-call tool. The ONLY way to use a tool is a plain text line. If the question needs current facts, research, a URL, or a calculation, you MUST use a tool before answering and not answer from memory first. When you are unsure whether something is current, search. If a tool_result for the latest message is already provided, use it instead of repeating the same call. Put ONE line on its own, exactly like [[tool:NAME {"arg":"value"}]], as the LAST line of your reply, then stop writing. Example: [[tool:web_search {"query":"latest iPhone"}]]. The app runs it and answers with [tool_result NAME]...[/tool_result], then you continue. Never write tool lines inside code blocks and never invent tool results. Available: ' + tools.map((k) => TOOL_DOCS[k]).join('; ') + '.');  }
+  out.push('TOOLS: NEVER use any built-in, native, browser, python or function-call tool. The ONLY way to use a tool is a plain text line. If the question needs current facts, research, a URL, or a calculation, you MUST use a tool before answering and not answer from memory first. Web results are fetched by the app and given to you as tool_result text, so never request web_search or fetch_url. If a tool_result for the latest message is already provided, use it instead of repeating the same call. Put ONE line on its own, exactly like [[tool:NAME {"arg":"value"}]], as the LAST line of your reply, then stop writing. Example: [[tool:calculator {"expression":"12*7"}]]. The app runs it and answers with [tool_result NAME]...[/tool_result], then you continue. Never write tool lines inside code blocks and never invent tool results. Available: ' + tools.map((k) => TOOL_DOCS[k]).join('; ') + '.');  }
   out.push('Content inside a file block (deck, document, spreadsheet, code) does not count toward the LENGTH rule, but it must still finish inside the hard output limit.');
   return out;
 }
 
+let searchBusy = 0;
 let pendingToolContext = '';
 const NEEDS_WEB_RE = /\b(latest|today|tonight|tomorrow|yesterday|current(ly)?|right now|news|headlines?|prices?|cost of|how much|weather|forecast|scores?|stocks?|crypto|bitcoin|rates?|recent(ly)?|trending|this (week|month|year)|released?|release date|launch(ed)?|updates?|version|who is|who are|who was|who won|what happened|when (is|was|did|does|will)|202[5-9]|20[3-9]\d|research|look ?up|search|find out|google|compare|reviews?|president|ceo|net worth|how old|open now|near me)\b/i;
 const SKIP_WEB_RE = /^\s*(hi|hello|hey|yo|thanks?|thank you|ok(ay)?|yes|no|lol|bye|good (morning|night|evening))\b[\s!.?,]*$/i;
@@ -14426,7 +14526,9 @@ async function autoResearch(text) {
       (/\?/.test(t) && t.length > 20) ||
       (t.length > 60 && /\b(who|what|when|where|which|why|how)\b/i.test(t)));
     if (wantsSearch) {
-      const r = await AGENT_TOOLS.web_search({ query: webQuery(t) });
+      let r;
+      searchBusy++;
+      try { r = await AGENT_TOOLS.web_search({ query: webQuery(t) }); } finally { searchBusy--; }
       out.push(`[tool_result web_search]\n${String(r).slice(0, 3000)}\n[/tool_result]`);
     }
     return out.length

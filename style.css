@@ -932,6 +932,16 @@ mark.sb-hit.is-cur {
 .live-zzz b:nth-child(2) { animation-delay: 1s; }
 .live-zzz b:nth-child(3) { animation-delay: 2s; }
 .live-root[data-paused="1"] .live-zzz { opacity: 1; }
+.live-root .lv-eye { transition: transform 0.35s ease; }
+.live-root.flinch .live-ball { animation: liveFlinch 0.5s ease-out; }
+@keyframes liveFlinch { 0% { transform: scale(1); } 22% { transform: scale(0.9) translateY(4px); } 55% { transform: scale(1.07) translateY(-3px); } 100% { transform: scale(1); } }
+.live-bit { position: absolute; left: var(--x); top: var(--y); z-index: 3; font: 600 calc(13px * var(--ts, 1))/1 ui-monospace, Menlo, monospace; font-style: normal; white-space: nowrap; color: var(--fg); opacity: 0; transform: translate(-50%, -50%) scale(0.4); pointer-events: none; animation: liveBit var(--d, 1.3s) forwards; }
+@keyframes liveBit {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+  18% { opacity: 0.9; transform: translate(-50%, -50%) scale(1.12); }
+  32% { opacity: 0.9; transform: translate(-50%, -50%) scale(1); animation-timing-function: cubic-bezier(0.55, 0, 0.9, 0.4); }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--dx, 0px)), calc(-50% + var(--dy, 0px))) scale(0.2); }
+}
 @keyframes liveZzz { 0% { transform: translate(0, 0) scale(0.6); opacity: 0; } 20% { opacity: 0.85; } 100% { transform: translate(28px, -64px) scale(1.25); opacity: 0; } }
 .live-root[data-state="hearing"] { --ly: 4px; }
 .live-root[data-state="hearing"] .lv-eye { transform: scale(1.14); }
@@ -941,7 +951,7 @@ mark.sb-hit.is-cur {
 .live-root[data-state="searching"] .lv-look { animation: liveScan 1.3s ease-in-out infinite; }
 @keyframes liveScan { 0%, 100% { translate: -12px -2px; } 50% { translate: 12px -2px; } }
 .live-root[data-state="thinking"] .live-orbit, .live-root[data-state="searching"] .live-orbit { opacity: 0.85; animation: liveSpin 2.6s linear infinite; }
-.live-root[data-state="searching"] .live-orbit { animation-duration: 1.3s; border: 2px dashed color-mix(in srgb, var(--fg) 35%, transparent); }
+.live-root[data-state="searching"] .live-orbit { opacity: 0; animation: none; border: 0; }
 @keyframes liveSpin { to { transform: rotate(360deg); } }
 .live-root[data-state="speaking"] .live-ball { animation: liveVibeSoft 0.36s ease-in-out infinite; }
 @keyframes liveVibeSoft { 0%, 100% { transform: translate(0, 0) rotate(0deg); } 25% { transform: translate(calc(var(--amp, 0) * -1.2px), calc(var(--amp, 0) * 0.8px)) rotate(calc(var(--amp, 0) * -0.4deg)); } 50% { transform: translate(calc(var(--amp, 0) * 1px), calc(var(--amp, 0) * -1px)) rotate(calc(var(--amp, 0) * 0.4deg)); } 75% { transform: translate(calc(var(--amp, 0) * -0.7px), calc(var(--amp, 0) * -0.8px)) rotate(calc(var(--amp, 0) * 0.3deg)); } }
