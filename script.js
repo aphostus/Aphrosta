@@ -13610,7 +13610,7 @@ function renderSessionList() {
   if (!pinnedBox || !chatsBox) return;
   const q = sessionQuery.trim().toLowerCase();
   const match = (s) => !q || (sessLocked(s) ? 'secured'.includes(q) : (String(s.title || '').toLowerCase().includes(q) || s.messages.some((m) => String(m.content || '').toLowerCase().includes(q))));
-  const visible = sessions.filter((s) => s && !s.archived && !s.draft);
+  const visible = sessions.filter((s) => s && !s.archived);
   const pinned = visible.filter((s) => s.pinned && match(s)).sort((a, b) => b.pinnedAt - a.pinnedAt);
   const normal = visible.filter((s) => !s.pinned && match(s)).sort((a, b) => (b.orderAt || b.updated) - (a.orderAt || a.updated));
 
