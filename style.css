@@ -3446,7 +3446,7 @@ html[data-motion="reduce"] .think-panel { transition: none; }
 .usage-legend { display: flex; flex-wrap: nowrap; justify-content: space-between; gap: 6px; margin-top: 2px; }
 .usage-legend .legend-ico { flex: 0 1 24px; min-width: 0; width: auto; height: auto; aspect-ratio: 1; }
 .usage-legend .legend-ico img.ap-logo,
-:root[data-theme="light"] .usage-legend .legend-ico img.ap-logo { filter: none; opacity: 1; width: 13px; height: 13px; object-fit: contain; }
+:root[data-theme="light"] .usage-legend .legend-ico img.ap-logo { filter: none; opacity: 1; width: 17px; height: 17px; object-fit: contain; }
 .ag-prov-logo .ap-logo { width: 100%; height: 100%; object-fit: contain; }
 .ap-svg { max-width: none; flex: none; opacity: 0.9; mix-blend-mode: screen; }
 :root[data-theme="light"] .ap-svg { filter: invert(1); mix-blend-mode: multiply; }

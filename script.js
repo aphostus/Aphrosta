@@ -1396,7 +1396,7 @@ const MODEL_PROVIDERS = [
 ];
 
 const PROVIDER_COLORS = {
-  deepseek: '#4d6bfe', groq: '#f55036', gemini: '#b57bff', grok: '#a1a1aa',
+  deepseek: '#4d6bfe', groq: '#f55036', gemini: '#b57bff', grok: '#71717a',
   claude: '#e8b04a', chatgpt: '#10a37f', kimi: '#ff6bb5', perplexity: '#20b8cd',
   openrouter: '#6366f1'
 };
@@ -1988,7 +1988,7 @@ let AccountPage = function (user) {
 
 const UsageLegend = () => MODEL_PROVIDERS.map((p) =>
   `<span class="legend-ico" data-legend="${p.id}" style="--c:${PROVIDER_COLORS[p.id]}" role="img" aria-label="${esc(p.name)}" title="${esc(p.name)}">${p.logo}</span>`
-).join('') + `<span class="legend-ico" data-legend="aphrosta" style="--c:rgba(var(--fg-rgb), 0.7)" role="img" aria-label="Aphrosta" title="Aphrosta"><img class="ap-logo" src="Materials/Public/images/Logo.png" alt=""></span>`;
+).join('') + `<span class="legend-ico" data-legend="aphrosta" style="--c:#d4d4d8" role="img" aria-label="Aphrosta" title="Aphrosta"><img class="ap-logo" src="Materials/Public/images/Logo.png" alt=""></span>`;
 
 const SettingsPanel = (user) => `
   <aside class="settings-panel" id="settings-panel" aria-label="Settings">
