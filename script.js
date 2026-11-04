@@ -1287,7 +1287,7 @@ Object.assign(ICONS, {
 Object.assign(ICONS, {
   navWorlds:     svg('<circle cx="12" cy="12" r="11"/><circle class="wrld-ring" cx="12" cy="12" r="7" pathLength="24" stroke-dasharray="3 3"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/>', 28),
   navProjects:   svg('<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 7v6M12 7v10M16 7v3"/>'),
-  navAgents:     svg('<ellipse cx="12" cy="14" rx="8.5" ry="6.5"/><path d="M9 10.5v7M14.5 10.5v7"/><path d="M10 7.5C9.5 4.5 10.5 3 12.5 3s3 1.5 2 4.5"/><path d="M17.5 9.5L20 6.5M18 13.5h.01"/>'),
+  navAgents:     svg('<rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M7 10l3 2.5L7 15M13 15h4"/>', 16),
   navLibrary:    svg('<path d="M5 18.5A2.5 2.5 0 017.5 16H22"/><path d="M7.5 4H22v18H7.5A2.5 2.5 0 015 19.5v-13A2.5 2.5 0 017.5 4z"/><path d="M9 8h9M9 12h7"/>'),
   navAutomation: svg('<rect x="3" y="3" width="6" height="6" rx="1.5"/><rect x="15" y="15" width="6" height="6" rx="1.5"/><path d="M9 6h3a3 3 0 013 3v6"/>', 16),
   navConnectors: svg('<path d="M9 2v6M15 2v6"/><path d="M6 8h12v3a6 6 0 01-12 0z"/><path d="M12 17v5"/>', 16),
@@ -1637,45 +1637,7 @@ const Sidebar = (user) => `
       <button class="side-btn" type="button" data-action="nav-data">${ICONS.navLibrary}<span>Libraries</span></button>
     </nav>
 
-    <div class="side-tools" aria-label="Workspace tools">
-      <button class="side-tool" type="button" data-action="nav-automation">
-        <span class="side-tool-ico">${ICONS.navAutomation}</span>
-        <span class="side-tool-text">
-          <b>Automations</b>
-          <i>Build flows and routines</i>
-        </span>
-        <span class="side-tool-chev">${ICONS.chevronR}</span>
-      </button>
 
-      <button class="side-tool" type="button" data-action="nav-connectors">
-        <span class="side-tool-ico">${ICONS.navConnectors}</span>
-        <span class="side-tool-text">
-          <b>Connections</b>
-          <i>Link apps and data</i>
-        </span>
-        <span class="side-tool-chev">${ICONS.chevronR}</span>
-      </button>
-
-      <button class="side-tool" type="button" data-action="nav-operations">
-        <span class="side-tool-ico">${ICONS.navOperations}</span>
-        <span class="side-tool-text">
-          <b>Operations</b>
-          <i>Run tasks and tools</i>
-        </span>
-        <span class="side-tool-chev">${ICONS.chevronR}</span>
-      </button>
-    </div>
-
-    <div class="side-scroll">
-      <section class="side-section" data-sec="pinned">
-        <div class="side-label"><span>Pinned</span><span data-pin-count>0/3</span></div>
-        <div class="chat-list" data-list="pinned"></div>
-      </section>
-      <section class="side-section" data-sec="chats">
-        <div class="side-label"><span>Chats</span></div>
-        <div class="chat-list" data-list="chats"></div>
-      </section>
-    </div>
 
     <div class="side-foot">
       ${Avatar(user)}
@@ -2018,7 +1980,7 @@ let AccountPage = function (user) {
 
 const UsageLegend = () => MODEL_PROVIDERS.map((p) =>
   `<span class="legend-ico" data-legend="${p.id}" style="--c:${PROVIDER_COLORS[p.id]}" role="img" aria-label="${esc(p.name)}" title="${esc(p.name)}">${p.logo}</span>`
-).join('') + `<span class="legend-ico" data-legend="aphrosta" style="--c:#d4d4d8" role="img" aria-label="Aphrosta" title="Aphrosta"><img class="ap-logo" src="Materials/Public/images/Logo.png" alt=""></span>`;
+).join('');
 
 const SettingsPanel = (user) => `
   <aside class="settings-panel" id="settings-panel" aria-label="Settings">
@@ -5776,10 +5738,6 @@ document.addEventListener('visibilitychange', () => {
 
 /* ---------- NAV SIDE PANEL (Alpha placeholder) ---------- */
 const NAV_PANELS = {
-  'nav-connectors': { title: 'Connections',  icon: 'navConnectors', desc: 'Linked apps and data sources will show up here.' },
-  'nav-operations': { title: 'Operations',  icon: 'navOperations', desc: 'Running tasks and tools will show up here.' },
-  'nav-automation': { title: 'Automations', icon: 'navAutomation', desc: 'Saved flows and routines will show up here.' },
-  'nav-worlds':     { title: 'Worlds',      icon: 'navWorlds',     desc: 'Your worlds will show up here.' },
   'nav-projects':   { title: 'Projects',    icon: 'navProjects',   desc: 'Your projects will show up here.' },
   'nav-agent':      { title: 'Agents',      icon: 'navAgents',     desc: 'Your agents will show up here.' },
   'nav-data':       { title: 'Libraries',    icon: 'navLibrary',    desc: 'Your library items will show up here.' }
@@ -6481,39 +6439,6 @@ const SearchBar = () => `
           <button class="sbar-nav" type="button" data-action="sb-next" aria-label="Next match" disabled>${ICONS.chevronR}</button>
           <input class="sbar-input" type="text" placeholder="Search" aria-label="Search this chat" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="search">
           <span class="sbar-count"></span>
-        </div>
-        <button class="sbar-share" type="button" data-action="sb-share" aria-label="Team share" aria-expanded="false" aria-pressed="false"><span class="sbar-share-ppl">${ICONS.teamShare}</span><span class="sbar-share-pin">${ICONS.pushpinOn}</span></button>
-      </div>
-      <div class="sbar-panel" inert>
-        <div class="sbar-panel-in">
-          <div class="sbx sbx-fold">
-            <div class="sbx-grid">
-              <textarea class="sbx-box is-off" data-sbx="emails" placeholder="Emails, e.g. ana@mail.com, ben@mail.com" aria-label="Emails that can access" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
-              <textarea class="sbx-box is-off" data-sbx="phones" placeholder="Phones, e.g. [9171234567], [9181234567]" aria-label="Phones that can access" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
-              <button class="sbar-vis sbx-vis" type="button" data-action="sb-vis" data-state="private" aria-label="Private. Tap to make public">
-                <span class="sbar-vis-priv">${ICONS.lock}</span>
-                <span class="sbar-vis-pub">${ICONS.unlock}</span>
-              </button>
-            </div>
-          </div>
-          <div class="sbar-row sbar-idrow">
-            <button class="sbar-regen" type="button" data-action="sb-regen" aria-label="Make a new chat ID" title="New chat ID">${ICONS.regen}</button>
-            <div class="sbar-pill">
-              <input class="sbar-code" type="text" maxlength="30" aria-label="Chat ID" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" value="">
-            </div>
-            <button class="sbar-act" type="button" data-action="sb-act" data-mode="copy" aria-label="Copy chat ID">
-              <span class="sbar-act-copy">${ICONS.copy}</span>
-              <span class="sbar-act-load">${ICONS.loadIn}</span>
-            </button>
-          </div>
-          <div class="sbx">
-            <div class="sbx-three sbx-fold">
-              <label class="sbar-pill sbx-pill"><input class="sbx-in" type="datetime-local" data-sbx="exp" data-empty="1" aria-label="Expires at"><span class="sbx-ph" aria-hidden="true">Expiration</span></label>
-              <label class="sbar-pill sbx-pill sbx-p-pw"><input class="sbx-in" type="password" maxlength="5" data-sbx="pw" placeholder="Password" aria-label="Password, 5 characters" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false"></label>
-              <label class="sbar-pill sbx-pill"><input class="sbx-in" type="text" inputmode="numeric" maxlength="4" data-sbx="max" placeholder="Limiting" aria-label="Times it can be accessed" autocomplete="off"></label>
-            </div>
-            <button class="sbx-go" type="button" data-action="sb-go">Initiate</button>
-          </div>
         </div>
       </div>
     </div>
@@ -9792,7 +9717,7 @@ function refreshTokenMeter() {
   const pid = activeModel;
 
   if (!pid || !PROVIDER_API[pid]) {
-    setTokenUsage(0, { label: 'No model' });
+    setTokenUsage(0, { label: 'Unknown' });
   } else {
     const name = MODEL_PROVIDERS.find((p) => p.id === pid)?.name || pid;
     const view = usageView();
@@ -11152,14 +11077,6 @@ async function sbRegen() {
 function sbAction(action) {
   if (action === 'sb-next') sbStep(1);
   else if (action === 'sb-prev') sbStep(-1);
-  else if (action === 'sb-share') { if (Date.now() - sbLongAt < 700) return; sbTogglePanel(); }
-  else if (action === 'sb-vis') sbSetPublic(!currentSession.sharePub);
-  else if (action === 'sb-regen') sbRegen();
-  else if (action === 'sb-go') { if (q$('.sbar')?.dataset.load === '1') sbLoad(); else sbInitiate(); }
-  else if (action === 'sb-act') {
-    const v = (q$('.sbar-code')?.value || '').trim() || sbCode(currentSession);
-    copyText(v).then((ok) => toast(ok ? 'Chat ID copied.' : 'Could not copy.', ok ? 'success' : 'error', 1600));
-  }
 }
 
 document.addEventListener('input', (e) => {
@@ -14317,52 +14234,7 @@ function openArchive() {
   renderArchive();
 }
 
-function openWorlds() {
-  const p = fdOpen('Worlds', 'Communities and Networking', '<div class="fd-empty fd-soon"><h3>Coming Soon!</h3><p>Arrival in V1.5, stay tuned!</p></div>');
-  p.addEventListener('click', (e) => {
-    if (e.target.closest('[data-fd="close"]')) fdClose();
-  });
-}
 
-/* long press on the profile (menu): 0.5s glow, 1s opens the Worlds popup */
-(() => {
-  const SEL = '.side-foot .avatar, .side-foot .profile-meta';
-  let glowT = 0, fireT = 0, glowEl = null, active = false, sx = 0, sy = 0;
-  const lpReset = () => {
-    clearTimeout(glowT);
-    clearTimeout(fireT);
-    if (glowEl) glowEl.classList.remove('lp-glow');
-    glowEl = null;
-    active = false;
-  };
-  document.addEventListener('pointerdown', (e) => {
-    if (e.pointerType === 'mouse' && e.button !== 0) return;
-    const hit = e.target.closest ? e.target.closest(SEL) : null;
-    if (!hit) return;
-    lpReset();
-    active = true;
-    sx = e.clientX;
-    sy = e.clientY;
-    const av = hit.closest('.side-foot').querySelector('.avatar');
-    glowT = setTimeout(() => {
-      glowEl = av;
-      if (av) av.classList.add('lp-glow');
-      haptic(10);
-    }, 500);
-    fireT = setTimeout(() => {
-      lpReset();
-      haptic(25);
-      openWorlds();
-    }, 1000);
-  });
-  document.addEventListener('pointermove', (e) => {
-    if (active && Math.hypot(e.clientX - sx, e.clientY - sy) > 10) lpReset();
-  });
-  ['pointerup', 'pointercancel'].forEach((ev) => document.addEventListener(ev, lpReset));
-  document.addEventListener('contextmenu', (e) => {
-    if (e.target.closest && e.target.closest(SEL)) e.preventDefault();
-  });
-})();
 
 async function deleteSession(id) {
   const s = sessions.find((x) => x.id === id);
@@ -16184,8 +16056,8 @@ function toggleEffortMenu() {
 function renderProviderList() {
   const list = document.getElementById('provider-list');
   if (!list) return;
-  const top = ApCard() + MODEL_PROVIDERS.filter((p) => p.id === 'openrouter').map(ProviderCard).join('');
-  const rest = MODEL_PROVIDERS.filter((p) => p.id !== 'openrouter').map(ProviderCard).join('');
+  const top = ApCard();
+  const rest = MODEL_PROVIDERS.map(ProviderCard).join('');
   list.innerHTML = `<section class="provider-group">${top}</section><section class="provider-group">${rest}</section>`;
   list.querySelector('[data-ap-aura]')?.addEventListener('click', apAura);
 }
@@ -18084,13 +17956,9 @@ const KB_SHORTCUTS = [
   { g: 'Navigate', t: 'Show or hide the sidebar', k: 'mod+shift+KeyS', run: () => toggleSidebar() },
   { g: 'Navigate', t: 'Previous session', k: 'alt+ArrowUp', run: () => kbStep(-1) },
   { g: 'Navigate', t: 'Next session', k: 'alt+ArrowDown', run: () => kbStep(1) },
-  { g: 'Navigate', t: 'Open Worlds', k: 'alt+Digit1', run: () => openWorlds() },
   { g: 'Navigate', t: 'Open Agents', k: 'alt+Digit2', run: () => kbClickSel('[data-action="nav-agent"]') },
   { g: 'Navigate', t: 'Open Library', k: 'alt+Digit3', run: () => kbClickSel('[data-action="nav-data"]') },
   { g: 'Navigate', t: 'Open Projects', k: 'alt+Digit4', run: () => kbClickSel('[data-action="nav-projects"]') },
-  { g: 'Navigate', t: 'Open Automations', k: 'alt+Digit5', run: () => kbClickSel('[data-action="nav-automation"]') },
-  { g: 'Navigate', t: 'Open Connectors', k: 'alt+Digit6', run: () => kbClickSel('[data-action="nav-connectors"]') },
-  { g: 'Navigate', t: 'Open Operations', k: 'alt+Digit7', run: () => kbClickSel('[data-action="nav-operations"]') },
   { g: 'Navigate', t: 'Go to the newest session', k: 'alt+shift+ArrowUp', run: () => kbEdgeSession(true) },
   { g: 'Navigate', t: 'Go to the oldest session', k: 'alt+shift+ArrowDown', run: () => kbEdgeSession(false) },
   { g: 'Navigate', t: 'Jump to the top of the chat', k: 'mod+Home', when: (e) => !kbTyping(e.target), run: () => kbScroll(true) },
@@ -18507,7 +18375,7 @@ function abCardHtml(c) {
 
 function abBodyHtml(key) {
   if (key !== 'billing') return (AB_PAGES[key]?.cards || []).map(abCardHtml).join('');
-  return `${abBillingCards().map(abCardHtml).join('')}<p class="ab-empty" hidden>No results found.</p>`;
+  return '';
 }
 
 function abClearMarks(root) {
