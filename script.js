@@ -6311,9 +6311,8 @@ function openUsagePopup() {
   const scrim = document.createElement('div');
   scrim.className = 'dialog-scrim usage-scrim';
   scrim.innerHTML = `<div class="dialog usage-pop" role="dialog" aria-modal="true" aria-label="Token usage">
-    <h3 class="dialog-title">Token usage</h3>
+    <h3 class="dialog-title">${limit ? Math.round((total / limit) * 100) : 0}%</h3>
     <div class="usage-pop-total" style="display:none"><b>${fmtTokens(total)}</b><span>${limit ? `of ${fmtTokens(limit)} \u00b7 ${fmtTokens(left)} left` : 'tokens today'}</span></div>
-    <span class="usage-stack" role="img" aria-label="Tokens by provider">${bar}</span>
     <div class="usage-tiles" style="display:none">
       <div class="usage-tile"><b>${fmtTokens(d.prompt)}</b><span>Input</span></div>
       <div class="usage-tile"><b>${fmtTokens(d.completion)}</b><span>Output</span></div>
