@@ -1988,7 +1988,7 @@ let AccountPage = function (user) {
 
 const UsageLegend = () => MODEL_PROVIDERS.map((p) =>
   `<span class="legend-ico" data-legend="${p.id}" style="--c:${PROVIDER_COLORS[p.id]}" role="img" aria-label="${esc(p.name)}" title="${esc(p.name)}">${p.logo}</span>`
-).join('');
+).join('') + `<span class="legend-ico" data-legend="aphrosta" style="--c:rgba(var(--fg-rgb), 0.7)" role="img" aria-label="Aphrosta" title="Aphrosta"><img class="ap-logo" src="Materials/Public/images/Logo.png" alt=""></span>`;
 
 const SettingsPanel = (user) => `
   <aside class="settings-panel" id="settings-panel" aria-label="Settings">
@@ -3817,13 +3817,14 @@ function agPickLlm(current, onPick) {
           <button class="icon-btn" type="button" id="ag-llm-close" aria-label="Close">${ICONS.stClose}</button>
         </div>
       </div>
-      <div class="ag-provs">${list.map((p) => `<button class="ag-prov${p.id === current ? ' on' : ''}" type="button" data-ag-prov="${esc(p.id)}"><span class="ag-prov-logo">${p.logo}</span><span>${esc(p.name)}</span></button>`).join('')}</div>
+      <div class="ag-provs">${list.map((p) => `<button class="ag-prov${p.id === current ? ' on' : ''}" type="button" data-ag-prov="${esc(p.id)}"><span class="ag-prov-logo">${p.logo}</span><span>${esc(p.name)}</span></button>`).join('')}<button class="ag-prov" type="button" data-ag-aphrosta><span class="ag-prov-logo"><img class="ap-logo" src="Materials/Public/images/Logo.png" alt=""></span><span>Aphrosta</span></button></div>
     </div>`;
   document.body.appendChild(el);
   requestAnimationFrame(() => el.classList.add('show'));
   const close = () => { el.classList.remove('show'); setTimeout(() => el.remove(), 250); };
   el.addEventListener('click', (e) => {
     if (e.target === el || e.target.closest('#ag-llm-close')) { close(); return; }
+    if (e.target.closest('[data-ag-aphrosta]')) { toast('Aphrosta isn\u2019t available yet.', 'error', 2400); return; }
     const b = e.target.closest('[data-ag-prov]');
     if (!b) return;
     onPick(b.dataset.agProv);
@@ -15978,7 +15979,7 @@ function toggleEffortMenu() {
 function renderProviderList() {
   const list = document.getElementById('provider-list');
   if (!list) return;
-  const top = MODEL_PROVIDERS.filter((p) => p.id === 'openrouter').map(ProviderCard).join('') + ApCard();
+  const top = ApCard() + MODEL_PROVIDERS.filter((p) => p.id === 'openrouter').map(ProviderCard).join('');
   const rest = MODEL_PROVIDERS.filter((p) => p.id !== 'openrouter').map(ProviderCard).join('');
   list.innerHTML = `<section class="provider-group">${top}</section><section class="provider-group">${rest}</section>`;
   list.querySelector('[data-ap-aura]')?.addEventListener('click', apAura);
@@ -15989,7 +15990,7 @@ function ApCard() {
     <div class="ap-prov">
       <div class="provider-head">
         <button class="provider-select ap-select" type="button" data-ap-aura aria-label="Aphrosta">
-          <span class="provider-logo"><img class="ap-logo" src="logo.png" alt=""></span>
+          <span class="provider-logo"><img class="ap-logo" src="Materials/Public/images/Logo.png" alt=""></span>
           <div class="provider-meta">
             <span class="provider-name">Aphrosta</span>
             <span class="provider-state">Coming soon</span>
