@@ -13610,8 +13610,9 @@ function renderSessionList() {
   if (!pinnedBox || !chatsBox) return;
   const q = sessionQuery.trim().toLowerCase();
   const match = (s) => !q || (sessLocked(s) ? 'secured'.includes(q) : (String(s.title || '').toLowerCase().includes(q) || s.messages.some((m) => String(m.content || '').toLowerCase().includes(q))));
-  const pinned = sessions.filter((s) => !s.archived && s.pinned && match(s)).sort((a, b) => b.pinnedAt - a.pinnedAt);
-  const normal = sessions.filter((s) => !s.archived && !s.pinned && match(s)).sort((a, b) => (b.orderAt || b.updated) - (a.orderAt || a.updated));
+  const visible = sessions.filter((s) => s && !s.archived && !s.draft);
+  const pinned = visible.filter((s) => s.pinned && match(s)).sort((a, b) => b.pinnedAt - a.pinnedAt);
+  const normal = visible.filter((s) => !s.pinned && match(s)).sort((a, b) => (b.orderAt || b.updated) - (a.orderAt || a.updated));
 
   const count = q$('[data-pin-count]');
   if (count) count.textContent = `${sessions.filter((s) => s.pinned).length}/${MAX_PINS}`;

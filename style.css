@@ -427,6 +427,7 @@ html.has-vv #app-shell { height: var(--app-h); }
   scrollbar-width: thin;
   scrollbar-color: rgba(var(--fg-rgb), 0.12) transparent;
 }
+.sbar-wrap.is-empty { display: none; }
 .side-label {
   display: flex;
   justify-content: space-between;
