@@ -16282,7 +16282,7 @@ function ApCard() {
           <span class="provider-logo"><img class="ap-svg" src="Materials/Public/images/logo.svg" alt=""></span>
           <div class="provider-meta">
             <span class="provider-name">Aphrosta</span>
-            <span class="provider-state">Coming soon</span>
+            <span class="provider-state">Coming Soon</span>
           </div>
         </button>
       </div>
