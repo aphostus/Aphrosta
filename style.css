@@ -2666,6 +2666,11 @@ html[data-status-mode="auto"][data-status="offline"]
 
 .effort-dropdown { width: 220px; }
 
+#model-dropdown:not(.effort-dropdown) {
+  max-height: calc(100vh - 80px);
+  max-height: calc(100dvh - 80px);
+}
+
 .effort-list {
   display: flex;
   flex-direction: column;
