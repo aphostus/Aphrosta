@@ -3817,7 +3817,7 @@ function agPickLlm(current, onPick) {
           <button class="icon-btn" type="button" id="ag-llm-close" aria-label="Close">${ICONS.stClose}</button>
         </div>
       </div>
-      <div class="ag-provs">${list.map((p) => `<button class="ag-prov${p.id === current ? ' on' : ''}" type="button" data-ag-prov="${esc(p.id)}"><span class="ag-prov-logo">${p.logo}</span><span>${esc(p.name)}</span></button>`).join('')}<button class="ag-prov" type="button" data-ag-aphrosta><span class="ag-prov-logo"><img class="ap-logo" src="Materials/Public/images/Logo.png" alt=""></span><span>Aphrosta</span></button></div>
+      <div class="ag-provs">${list.map((p) => `<button class="ag-prov${p.id === current ? ' on' : ''}" type="button" data-ag-prov="${esc(p.id)}"><span class="ag-prov-logo">${p.logo}</span><span>${esc(p.name)}</span></button>`).join('')}<button class="ag-prov" type="button" data-ag-aphrosta><span class="ag-prov-logo"><img class="ap-svg" src="Materials/Public/images/logo.svg" alt=""></span><span>Aphrosta</span></button></div>
     </div>`;
   document.body.appendChild(el);
   requestAnimationFrame(() => el.classList.add('show'));
@@ -15990,7 +15990,7 @@ function ApCard() {
     <div class="ap-prov">
       <div class="provider-head">
         <button class="provider-select ap-select" type="button" data-ap-aura aria-label="Aphrosta">
-          <span class="provider-logo"><img class="ap-logo" src="Materials/Public/images/Logo.png" alt=""></span>
+          <span class="provider-logo"><img class="ap-svg" src="Materials/Public/images/logo.svg" alt=""></span>
           <div class="provider-meta">
             <span class="provider-name">Aphrosta</span>
             <span class="provider-state">Coming soon</span>

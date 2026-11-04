@@ -3448,6 +3448,11 @@ html[data-motion="reduce"] .think-panel { transition: none; }
 .usage-legend .legend-ico img.ap-logo,
 :root[data-theme="light"] .usage-legend .legend-ico img.ap-logo { filter: none; opacity: 1; width: 13px; height: 13px; object-fit: contain; }
 .ag-prov-logo .ap-logo { width: 100%; height: 100%; object-fit: contain; }
+.ap-svg { max-width: none; flex: none; opacity: 0.9; mix-blend-mode: screen; }
+:root[data-theme="light"] .ap-svg { filter: invert(1); mix-blend-mode: multiply; }
+.provider-logo .ap-svg { width: 21.6px; height: 23.8px; }
+.ag-prov-logo { align-items: center; justify-content: center; }
+.ag-prov-logo .ap-svg { width: 26.4px; height: 29.1px; }
 .legend-ico {
   width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
   box-shadow: inset 0 0 0 2px var(--c); opacity: 0.4; transition: opacity 0.25s var(--ease-smooth);
