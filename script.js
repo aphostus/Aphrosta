@@ -1390,12 +1390,15 @@ const MODEL_PROVIDERS = [
   { id: 'kimi',       name: 'Kimi',       keysUrl: 'https://platform.moonshot.ai/console/api-keys',
     logo: `<img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/kimi.svg" alt="" class="provider-logo-img">` },
   { id: 'perplexity', name: 'Perplexity', keysUrl: 'https://www.perplexity.ai/settings/api',
-    logo: `<img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/perplexity.svg" alt="" class="provider-logo-img">` }
+    logo: `<img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/perplexity.svg" alt="" class="provider-logo-img">` },
+  { id: 'openrouter', name: 'OpenRouter', keysUrl: 'https://openrouter.ai/settings/keys',
+    logo: `<img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/openrouter.svg" alt="" class="provider-logo-img">` }
 ];
 
 const PROVIDER_COLORS = {
   deepseek: '#4d6bfe', groq: '#f55036', gemini: '#b57bff', grok: '#a1a1aa',
-  claude: '#e8b04a', chatgpt: '#10a37f', kimi: '#ff6bb5', perplexity: '#20b8cd'
+  claude: '#e8b04a', chatgpt: '#10a37f', kimi: '#ff6bb5', perplexity: '#20b8cd',
+  openrouter: '#6366f1'
 };
 
 const PROVIDER_API = {
@@ -1482,6 +1485,21 @@ const PROVIDER_API = {
       { id: 'xhigh',         name: 'XHigh',         series: 'Agent' },
       { id: 'wide-research', name: 'Wide Research', series: 'Agent' }
     ]
+  },
+  openrouter: {
+    url: 'https://openrouter.ai/api/v1/chat/completions',
+    models: [
+      { id: 'deepseek/deepseek-v4.1-flash',  name: 'DeepSeek V4.1 Flash', series: 'Most used' },
+      { id: 'z-ai/glm-5.3-flash',            name: 'GLM 5.3 Flash',       series: 'Most used' },
+      { id: 'openai/gpt-6-luna',             name: 'GPT-6 Luna',          series: 'Most used' },
+      { id: 'tencent/hy4-preview',           name: 'Hy4 Preview',         series: 'Most used', reasoning: true },
+      { id: 'stepfun/step-5-preview',        name: 'Step 5 Preview',      series: 'Most used', reasoning: true },
+      { id: 'anthropic/claude-opus-5.5',     name: 'Claude Opus 5.5',     series: 'Most used', reasoning: true },
+      { id: 'minimax/minimax-m3.1-flash',    name: 'MiniMax M3.1 Flash',  series: 'Most used' },
+      { id: 'xiaomi/mimo-v2.6-flash',        name: 'MiMo V2.6 Flash',     series: 'Most used' },
+      { id: 'z-ai/glm-5.3',                  name: 'GLM 5.3',             series: 'Most used' },
+      { id: 'openai/gpt-6.1-sol',            name: 'GPT-6.1 Sol',         series: 'Most used' }
+    ]
   }
 };
 
@@ -1523,9 +1541,15 @@ try {
   }
 } catch (_) {}
 
+function openrouterPool() {
+  const base = PROVIDER_API.openrouter.models;
+  const cur = modelVariants.openrouter;
+  return cur && !base.some((m) => m.id === cur) ? base.concat([{ id: cur, name: cur, series: 'Custom' }]) : base;
+}
+
 function currentVariant(providerId) {
   const api = PROVIDER_API[providerId];
-  const all = api?.models || [];
+  const all = providerId === 'openrouter' ? openrouterPool() : (api?.models || []);
   return all.find((m) => m.id === modelVariants[providerId])
     || all[0]
     || { id: '', name: '' };
@@ -14616,7 +14640,8 @@ const SERIES_CAPS = {
   'Opus 4': 64000, 'Sonnet 4': 64000, 'Haiku 4': 64000,
   'Grok 4': 65536, 'Grok 4.20': 65536, 'Gemini 3': 65536,
   'DeepSeek': 65536, 'K3': 65536, 'K2.7': 32768, 'K2.6': 32768,
-  'Qwen': 32768, 'GPT-OSS': 32768, 'Llama': 32768, 'Agent': 8192
+  'Qwen': 32768, 'GPT-OSS': 32768, 'Llama': 32768, 'Agent': 8192,
+  'Most used': 16384, 'Custom': 16384
 };
 
 const DEFAULT_CAP = 4096;
@@ -15632,6 +15657,7 @@ function openModelPicker() {
   body.id = 'picker-body';
 
   const activeProviderName = MODEL_PROVIDERS.find((p) => p.id === activeModel)?.name || 'Select';
+  const orMode = shown.length === 1 && shown[0].id === 'openrouter';
 
   scrim.innerHTML = `
     <div class="fd-sheet mv-sheet" role="dialog" aria-modal="true" aria-label="Select model">
@@ -15647,10 +15673,13 @@ function openModelPicker() {
         </span>
       </div>
       <div class="mv-top">
-        <label class="picker-search">
+        ${orMode ? `<label class="picker-search picker-custom">
+          <span class="picker-custom-tag">Custom</span>
+          <input type="text" placeholder="provider/model, e.g. openai/gpt-4o" aria-label="Custom model" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" data-role="picker-custom">
+        </label>` : `<label class="picker-search">
           ${ICONS.searchModels}
           <input type="search" placeholder="Search models" aria-label="Search models" autocomplete="off" data-role="picker-search">
-        </label>
+        </label>`}
       </div>
       <div class="mv-slot"></div>
       <div class="picker-empty fd-empty" hidden><h3>No models match</h3><p>Try a different search.</p></div>
@@ -15664,7 +15693,7 @@ function openModelPicker() {
   function paint(query = '') {
     const q = query.trim().toLowerCase();
     const html = shown.map((p) => {
-      const matches = PROVIDER_API[p.id].models.filter((m) => {
+      const matches = (p.id === 'openrouter' ? openrouterPool() : PROVIDER_API[p.id].models).filter((m) => {
         if (!q) return true;
         return m.name.toLowerCase().includes(q) || m.id.toLowerCase().includes(q) || (m.series || '').toLowerCase().includes(q) || p.name.toLowerCase().includes(q);
       });
@@ -15787,6 +15816,28 @@ function openModelPicker() {
   };
   scrim.addEventListener('input', onSearch);
   scrim.addEventListener('search', onSearch);
+
+  const customRe = /^[^\s\/]+\/\S+$/;
+  const pickCustom = (v) => {
+    picked = { pid: 'openrouter', mid: v };
+    body.querySelectorAll('.effort-option.is-active').forEach((b) => {
+      b.classList.remove('is-active');
+      b.querySelector('.provider-check')?.remove();
+    });
+  };
+  scrim.addEventListener('input', (e) => {
+    if (!e.target.matches('[data-role="picker-custom"]')) return;
+    const v = e.target.value.trim();
+    if (customRe.test(v)) pickCustom(v);
+  });
+  scrim.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || !e.target.matches('[data-role="picker-custom"]')) return;
+    e.preventDefault();
+    const v = e.target.value.trim();
+    if (!customRe.test(v)) return toast('Use provider/model, like openai/gpt-4o.', 'info', 2200);
+    pickCustom(v);
+    commitPick();
+  });
 
   if (usable.length) {
     paint();
@@ -15927,7 +15978,35 @@ function toggleEffortMenu() {
 function renderProviderList() {
   const list = document.getElementById('provider-list');
   if (!list) return;
-  list.innerHTML = MODEL_PROVIDERS.map(ProviderCard).join('');
+  const top = MODEL_PROVIDERS.filter((p) => p.id === 'openrouter').map(ProviderCard).join('') + ApCard();
+  const rest = MODEL_PROVIDERS.filter((p) => p.id !== 'openrouter').map(ProviderCard).join('');
+  list.innerHTML = `<section class="provider-group">${top}</section><section class="provider-group">${rest}</section>`;
+  list.querySelector('[data-ap-aura]')?.addEventListener('click', apAura);
+}
+
+function ApCard() {
+  return `
+    <div class="ap-prov">
+      <div class="provider-head">
+        <button class="provider-select ap-select" type="button" data-ap-aura aria-label="Aphrosta">
+          <span class="provider-logo"><img class="ap-logo" src="logo.png" alt=""></span>
+          <div class="provider-meta">
+            <span class="provider-name">Aphrosta</span>
+            <span class="provider-state">Coming soon</span>
+          </div>
+        </button>
+      </div>
+    </div>`;
+}
+
+function apAura(e) {
+  const c = e.currentTarget.closest('.ap-prov');
+  if (!c) return;
+  c.classList.remove('ap-fire');
+  void c.offsetWidth;
+  c.classList.add('ap-fire');
+  clearTimeout(c._apT);
+  c._apT = setTimeout(() => c.classList.remove('ap-fire'), 1200);
 }
 
 function isModelMenuOpen() {

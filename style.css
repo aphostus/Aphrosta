@@ -2384,6 +2384,48 @@ html[data-status-mode="auto"][data-status="offline"]
   padding-bottom: 28px;
 }
 
+.provider-group { display: flex; flex-direction: column; gap: 2px; }
+.provider-group + .provider-group { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--glass-border); }
+
+.ap-prov { position: relative; overflow: hidden; border-radius: var(--radius-md); }
+.ap-select { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.ap-logo { width: 18px; height: 18px; object-fit: contain; display: block; }
+.ap-prov::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 12%; bottom: 12%;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: linear-gradient(to bottom, transparent, rgba(var(--fg-rgb), 0.95), transparent);
+  box-shadow: 0 0 18px 6px rgba(var(--fg-rgb), 0.45);
+  opacity: 0;
+  transform: scaleY(0.2);
+  pointer-events: none;
+}
+.ap-prov::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 140% at 0% 50%, rgba(var(--fg-rgb), 0.22), transparent 62%);
+  opacity: 0;
+  pointer-events: none;
+}
+.ap-prov.ap-fire::before { animation: ap-bar 1.1s var(--ease-smooth) both; }
+.ap-prov.ap-fire::after { animation: ap-wash 1.1s var(--ease-smooth) both; }
+@keyframes ap-bar {
+  0% { opacity: 0; transform: scaleY(0.2); }
+  25% { opacity: 1; transform: scaleY(1); }
+  100% { opacity: 0; transform: scaleY(1.15); }
+}
+@keyframes ap-wash {
+  0% { opacity: 0; }
+  30% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ap-prov.ap-fire::before, .ap-prov.ap-fire::after { animation-duration: 0.01s; }
+}
+
 .provider {
   border-radius: var(--radius-md);
   transition: background 0.2s var(--ease-smooth);
@@ -3016,6 +3058,17 @@ html[data-status-mode="auto"][data-status="offline"]
   appearance: none;
 }
 .picker-search input::-webkit-search-cancel-button { display: none; }
+.picker-custom-tag {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  height: 60%;
+  padding-right: 10px;
+  font-size: calc(12px * var(--ts));
+  font-weight: 600;
+  color: var(--fg);
+  border-right: 1px solid var(--glass-border);
+}
 
 .picker-groups {
   display: flex;
