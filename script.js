@@ -18285,6 +18285,24 @@ const AB_PAGES = {
       b: `<p>Aphrosta is provided as it is. We work hard to keep it fast and reliable, but we cannot promise that every feature will always be available, error-free, or fit for a particular purpose.</p>
       <h4>Limits of liability</h4><p>To the fullest extent allowed by law, Aphrosta and its makers are not liable for indirect or consequential losses, for data you have not backed up, or for costs you incur by using third-party AI providers through your own API keys.</p>
       <h4>Availability</h4><p>We may pause or stop the service for maintenance or updates without notice. We do not guarantee that data stored in the cloud will be available forever.</p>` },
+    { t: 'Ownership and Intellectual Property', st: 1, kw: 'ownership intellectual property copyright trademark owner',
+      b: `<p>Aphrosta, including its name, source code, design, interface and original content, is owned by Gabriel Yoan L. Cortez and is protected by the Intellectual Property Code of the Philippines (Republic Act No. 8293) and other applicable laws. All rights not expressly granted to you are reserved.</p>
+      <h4>Feedback</h4><p>If you send ideas or suggestions, you allow the owner to use them to improve Aphrosta without payment or credit to you.</p>
+      <h4>Infringement notices</h4><p>If you believe content in Aphrosta infringes your rights, email <a href="mailto:Aphostus@gmail.com">Aphostus@gmail.com</a> with your name, contact details, a description of the work, where it appears and a statement that you are the rights holder or authorised to act for them. We will review it and act where appropriate.</p>` },
+    { t: 'Disclaimer and Independence', st: 1, kw: 'disclaimer warranty liability affiliation openrouter independent',
+      b: `<p>Aphrosta is provided as it is and as available, without warranties of any kind, whether express or implied, including fitness for a particular purpose, accuracy, availability or non-infringement, to the fullest extent allowed by law.</p>
+      <h4>Not affiliated</h4><p>Aphrosta is independent. It is not affiliated with, endorsed by or sponsored by Google, Groq, DeepSeek, xAI, Anthropic, OpenAI, Moonshot, Perplexity, OpenRouter, ElevenLabs or any other provider. Any provider you connect is chosen and paid for by you, with your own API key, and its own terms apply.</p>
+      <h4>No professional advice</h4><p>Nothing in Aphrosta is legal, medical, financial or other professional advice. Outputs from AI models can be wrong.</p>
+      <h4>Limit of liability</h4><p>To the fullest extent allowed by law, the owner is not liable for indirect, incidental or consequential loss, lost data, lost profits, or charges from third-party providers. Nothing here limits any right you have under law that cannot be waived, including under the Consumer Act of the Philippines where it applies.</p>` },
+    { t: 'Your Privacy Rights', st: 1, kw: 'privacy data protection rights dpa philippines national privacy commission delete access',
+      b: `<p>Aphrosta handles personal information in line with the Data Privacy Act of 2012 (Republic Act No. 10173) and its rules. Under that law you may have the right to be informed, to access, correct and object to the processing of your personal data, to request erasure or blocking, to data portability, and to claim damages where allowed.</p>
+      <h4>Data controller</h4><p>Gabriel Yoan L. Cortez, <a href="mailto:Aphostus@gmail.com">Aphostus@gmail.com</a>, <a href="tel:+639245266251">+63 9245266251</a>.</p>
+      <h4>How to use your rights</h4><p>Email us or use the in-app export, Abolish and Destruct tools. We will respond within a reasonable time. You may also file a complaint with the National Privacy Commission of the Philippines.</p>
+      <h4>Providers</h4><p>Messages you send go to the provider you choose. We do not control how that provider handles them.</p>` },
+    { t: 'Governing Law and Disputes', st: 1, kw: 'governing law jurisdiction disputes philippines courts severability',
+      b: `<p>These Terms are governed by the laws of the Republic of the Philippines, without regard to conflict of law rules. You agree to try to settle any dispute in good faith first by emailing <a href="mailto:Aphostus@gmail.com">Aphostus@gmail.com</a>. If it is not resolved, the proper courts of the Philippines have jurisdiction, subject to any mandatory rights you have as a consumer.</p>
+      <h4>Electronic agreement</h4><p>Your use of Aphrosta and your acceptance of these Terms are valid electronic acts under the Electronic Commerce Act of 2000 (Republic Act No. 8792).</p>
+      <h4>General</h4><p>If a part of these Terms is found unenforceable, the rest stays in force. Not enforcing a right is not a waiver of it. These Terms, with the Rules &amp; Policies, are the whole agreement between you and the owner about Aphrosta.</p>` },
     { t: 'Your Content', st: 1, kw: 'content rights own',
       b: `<p>You keep the rights you already have in content that you submit. Subject to applicable law and the terms of the model provider you choose, you may use the outputs available to you, but Aphrosta does not guarantee that an output is original, exclusive, accurate, or eligible for copyright protection. You are responsible for having the rights and permissions needed for anything you upload or share. You give us only the minimum permission needed to store and sync your sessions, settings and memories so the app can work across your devices.</p>
       <h4>What you must not do</h4><p>Do not use Aphrosta to break the law, to harm other people, to infringe copyright, or to build tools that do the same. We may limit or remove access where abuse is clear.</p>
@@ -18343,70 +18361,79 @@ const AB_PAGES = {
   licenses: { title: 'About & Licenses', icon: () => ICONS.stLicense, cards: [
     abTextCard("About Aphrosta", "Who we are and what we make", "Aphrosta is a mobile web app built to make everyday tools and AI assistance feel simple, fast, and easy to use. It runs entirely in your browser, talks to model providers you choose, and keeps your work yours.", "Design goals", "Every screen is designed for one hand on a phone first. Big targets, readable type, safe motion, and fast transitions. Thank you for using Aphrosta. We work to keep the experience clear, reliable, and comfortable on every screen size."),
 
-    { t: 'Licensing Overview', st: 1, kw: 'license MIT Apache which parts',
-      b: `<p>Aphrosta is split into modules. Each module below has its own license so that the parts you reuse stay easy to comply with.</p>
-      <h4>MIT</h4><p>The whole app — interface, layout, styles, settings, the assistant engine, the memory systems, the agent tools, the billing screens and the onboarding tour. MIT lets you reuse, modify and ship this code freely as long as you keep the copyright and permission notice.</p>
-      <h4>Apache 2.0</h4><p>The parts that depend on third-party services or fonts whose licenses require a patent grant or trademark notice: the ElevenLabs voice integration, the bundled Google Fonts fallbacks, and the file export helpers.</p>
-      <p>If you are unsure, treat the file as MIT. The Apache 2.0 pieces of Aphrosta itself are called out by name below. Third-party libraries keep the license their authors chose and are listed under Third-Party Libraries.</p>` },
+    { t: 'Owner and Copyright', st: 1, kw: 'owner author copyright developer creator contact email phone all rights reserved',
+      b: `<h4>Owner and developer</h4><p>Aphrosta is created, owned and operated by <b>Gabriel Yoan L. Cortez</b>.</p>
+      <h4>Copyright notice</h4><p>&copy; 2026 Gabriel Yoan L. Cortez. All rights reserved.</p>
+      <p>The Aphrosta name, the app, its source code, interface, design, text, layout, features and original content are the exclusive property of Gabriel Yoan L. Cortez and are protected by the Intellectual Property Code of the Philippines (Republic Act No. 8293) and by applicable international copyright treaties. Third-party names, logos, libraries and services remain the property of their respective owners.</p>
+      <h4>Contact the owner</h4><p>Email: <a href="mailto:Aphostus@gmail.com">Aphostus@gmail.com</a></p><p>Phone: <a href="tel:+639245266251">+63 9245266251</a></p>` },
 
-    { t: 'App Shell and Layout', st: 1, kw: 'layout sidebar topbar composer stage license MIT',
-      b: `${abLic('app shell', 'MIT', 'The sidebar, top bar, stage, and responsive CSS grid/flex rules that arrange every screen. Reuse it as a starting point for your own app.')}
-      ${abLic('messages and rich text', 'MIT', 'The message bubbles, action buttons, and the rich-text renderer that turns markdown, tables, task lists, callouts, math and file cards into clean HTML.')}
-      ${abLic('composer and pill', 'MIT', 'The textarea, attach tray, word-state pill, token meter, live speech wave and the resize handle.')}
-      ${abLic('thinking panel', 'MIT', 'The collapsible thought panel that streams reasoning, plans and task lists while a reply is being written.')}
-      ${abLic('onboarding tour', 'MIT', 'The step-by-step spotlight tour with keyboard support and reduced-motion handling.')}
-      ${abLic('accessibility tree', 'MIT', 'The ARIA labels, focus traps, keyboard navigation, and screen-reader announcements built into every component.')}
-      ${abLic('motion engine', 'MIT', 'The spring animations, staggered reveals, and the reduced-motion fallbacks driven by CSS variables and data attributes.')}` },
+    { t: 'License and Permitted Use', st: 1, kw: 'license all rights reserved permission copy reuse',
+      b: `<p>Aphrosta is proprietary software. It is <b>not</b> open source. No license is granted to you except the limited, personal, non-exclusive, non-transferable and revocable right to use the app as provided, under the Terms &amp; Conditions.</p>
+      <h4>What you may not do without written permission</h4><p>Copy, modify, redistribute, sell, sublicense, mirror, scrape, decompile or reverse engineer the app or any part of its code, design or content, except where the law clearly allows it despite this restriction. Do not remove or change any copyright, trademark or ownership notice.</p>
+      <h4>Third-party components</h4><p>Third-party libraries, fonts, icons and services keep their own licenses and terms. They are listed under Third-Party Libraries and Third-Party Services. This notice does not change those licenses.</p>
+      <h4>Permission requests</h4><p>To ask for permission to use any part of Aphrosta, email <a href="mailto:Aphostus@gmail.com">Aphostus@gmail.com</a>.</p>` },
 
-    { t: 'Settings, Profile and Account', st: 1, kw: 'settings account profile privacy license MIT',
-      b: `${abLic('settings panel', 'MIT', 'Every settings row, the usage card, the reset controls, and the expandable item pattern used across the panel.')}
-      ${abLic('profile and account page', 'MIT', 'The avatar editor, phone and email masking, device list, permissions grid, deactivation and locking flows.')}
-      ${abLic('billing and payment screens', 'MIT', 'The billing date, saved cards, billing details and history screens. Card data stays on this device and is never sent to the cloud.')}
-      ${abLic('permissions manager', 'MIT', 'The UI for requesting and tracking microphone, camera, location, and notification permissions.')}
-      ${abLic('device registry', 'MIT', 'The local and cloud list of devices connected to your account, including remove-device logic.')}
-      ${abLic('data export/import', 'MIT', 'The JSON serialization, validation, and merging logic that lets you back up and restore your settings and sessions.')}` },
+    { t: 'App Shell and Layout', st: 1, kw: 'layout sidebar topbar composer stage license all rights reserved',
+      b: `${abLic('app shell', 'All rights reserved', 'The sidebar, top bar, stage, and responsive CSS grid/flex rules that arrange every screen. Reuse it as a starting point for your own app.')}
+      ${abLic('messages and rich text', 'All rights reserved', 'The message bubbles, action buttons, and the rich-text renderer that turns markdown, tables, task lists, callouts, math and file cards into clean HTML.')}
+      ${abLic('composer and pill', 'All rights reserved', 'The textarea, attach tray, word-state pill, token meter, live speech wave and the resize handle.')}
+      ${abLic('thinking panel', 'All rights reserved', 'The collapsible thought panel that streams reasoning, plans and task lists while a reply is being written.')}
+      ${abLic('onboarding tour', 'All rights reserved', 'The step-by-step spotlight tour with keyboard support and reduced-motion handling.')}
+      ${abLic('accessibility tree', 'All rights reserved', 'The ARIA labels, focus traps, keyboard navigation, and screen-reader announcements built into every component.')}
+      ${abLic('motion engine', 'All rights reserved', 'The spring animations, staggered reveals, and the reduced-motion fallbacks driven by CSS variables and data attributes.')}` },
 
-    { t: 'Chat Engine and Sessions', st: 1, kw: 'chat engine sessions firebase provider license MIT',
-      b: `${abLic('chat engine', 'MIT', 'The send, stream, regenerate, edit and retry flow, including the per-provider adapters, the retry-on-400 fallback and the friendly error messages.')}
-      ${abLic('session storage', 'MIT', 'The local session list, drafts, pinning, rename and delete, plus the cloud sync helpers.')}
-      ${abLic('token recorder', 'MIT', 'The per-provider token counter, the rolling limit window and the pause logic when a limit is reached.')}
-      ${abLic('provider adapters', 'MIT', 'The specific formatting logic for OpenAI, Anthropic, Google Gemini, and other API shapes so they all speak the same internal language.')}
-      ${abLic('prompt builder', 'MIT', 'The logic that assembles system prompts from your settings, effort level, memories, and enabled skills.')}
-      ${abLic('stream parser', 'MIT', 'The chunked reader that processes server-sent events (SSE) and updates the UI as text arrives.')}` },
+    { t: 'Settings, Profile and Account', st: 1, kw: 'settings account profile privacy license all rights reserved',
+      b: `${abLic('settings panel', 'All rights reserved', 'Every settings row, the usage card, the reset controls, and the expandable item pattern used across the panel.')}
+      ${abLic('profile and account page', 'All rights reserved', 'The avatar editor, phone and email masking, device list, permissions grid, deactivation and locking flows.')}
+      ${abLic('billing and payment screens', 'All rights reserved', 'The billing date, saved cards, billing details and history screens. Card data stays on this device and is never sent to the cloud.')}
+      ${abLic('permissions manager', 'All rights reserved', 'The UI for requesting and tracking microphone, camera, location, and notification permissions.')}
+      ${abLic('device registry', 'All rights reserved', 'The local and cloud list of devices connected to your account, including remove-device logic.')}
+      ${abLic('data export/import', 'All rights reserved', 'The JSON serialization, validation, and merging logic that lets you back up and restore your settings and sessions.')}` },
 
-    { t: 'Memory and Agent', st: 1, kw: 'memory agent tools license MIT',
-      b: `${abLic('memory systems', 'MIT', 'The fact store, the scoped database and the compact state log, including their cloud sync, retention rules and clearing actions.')}
-      ${abLic('agent and tools', 'MIT', 'The tool-call protocol, the web search, page reader, calculator and clock tools, and the auto-research step that runs before a reply is written.')}
-      ${abLic('skills library', 'MIT', 'The Presentations, Documents, Spreadsheets and Web search skill prompts that teach the assistant to build decks, docs, sheets and researched answers.')}
-      ${abLic('file blocks', 'MIT', 'The parser that detects fenced code blocks with filenames and turns them into the downloadable/previewable file cards.')}
-      ${abLic('web reader', 'MIT', 'The proxy-based HTML-to-text extractor used by the fetch_url tool to read web pages without CORS issues.')}` },
+    { t: 'Chat Engine and Sessions', st: 1, kw: 'chat engine sessions firebase provider license all rights reserved',
+      b: `${abLic('chat engine', 'All rights reserved', 'The send, stream, regenerate, edit and retry flow, including the per-provider adapters, the retry-on-400 fallback and the friendly error messages.')}
+      ${abLic('session storage', 'All rights reserved', 'The local session list, drafts, pinning, rename and delete, plus the cloud sync helpers.')}
+      ${abLic('token recorder', 'All rights reserved', 'The per-provider token counter, the rolling limit window and the pause logic when a limit is reached.')}
+      ${abLic('provider adapters', 'All rights reserved', 'The specific formatting logic for OpenAI, Anthropic, Google Gemini, and other API shapes so they all speak the same internal language.')}
+      ${abLic('prompt builder', 'All rights reserved', 'The logic that assembles system prompts from your settings, effort level, memories, and enabled skills.')}
+      ${abLic('stream parser', 'All rights reserved', 'The chunked reader that processes server-sent events (SSE) and updates the UI as text arrives.')}` },
 
-    { t: 'Auth, Voice and Extras', st: 1, kw: 'auth firebase elevenlabs voice fonts apache',
-      b: `${abLic('authentication', 'MIT', 'Firebase sign-in, persistence, the locked-account check and the switch-account flow.')}
-      ${abLic('ElevenLabs voice', 'Apache 2.0', 'The text-to-speech and speech-to-text integration, the sealed key loader, and the chunked playback pipeline. Apache 2.0 keeps the patent grant intact for the APIs this module calls.')}
-      ${abLic('bundled font fallbacks', 'Apache 2.0', 'The named fallback font stacks (Inter, Roboto, Nunito, Montserrat and others) used when a device does not ship with the system font. Only the font names appear in the stack; the actual font files follow their own licenses.')}
-      ${abLic('file export helpers', 'Apache 2.0', 'The JSON export and import flow, the file download helper and the CSV escape rules.')}
-      ${abLic('sound effects and music', 'MIT', 'The small synthesised tap, send, done and error sounds, plus the background music scheduler that plays from the bundled audio folder.')}
-      ${abLic('onboarding tour', 'MIT', 'The step-by-step spotlight tour with keyboard support and reduced-motion handling.')}` },
+    { t: 'Memory and Agent', st: 1, kw: 'memory agent tools license all rights reserved',
+      b: `${abLic('memory systems', 'All rights reserved', 'The fact store, the scoped database and the compact state log, including their cloud sync, retention rules and clearing actions.')}
+      ${abLic('agent and tools', 'All rights reserved', 'The tool-call protocol, the web search, page reader, calculator and clock tools, and the auto-research step that runs before a reply is written.')}
+      ${abLic('skills library', 'All rights reserved', 'The Presentations, Documents, Spreadsheets and Web search skill prompts that teach the assistant to build decks, docs, sheets and researched answers.')}
+      ${abLic('file blocks', 'All rights reserved', 'The parser that detects fenced code blocks with filenames and turns them into the downloadable/previewable file cards.')}
+      ${abLic('web reader', 'All rights reserved', 'The proxy-based HTML-to-text extractor used by the fetch_url tool to read web pages without CORS issues.')}` },
+
+    { t: 'Auth, Voice and Extras', st: 1, kw: 'auth firebase elevenlabs voice fonts all rights reserved',
+      b: `${abLic('authentication', 'All rights reserved', 'Firebase sign-in, persistence, the locked-account check and the switch-account flow.')}
+      ${abLic('ElevenLabs voice', 'All rights reserved', 'The text-to-speech and speech-to-text integration, the sealed key loader, and the chunked playback pipeline. The ElevenLabs service itself stays under the own terms of ElevenLabs.')}
+      ${abLic('bundled font fallbacks', 'All rights reserved', 'The named fallback font stacks (Inter, Roboto, Nunito, Montserrat and others) used when a device does not ship with the system font. Only the font names appear in the stack; the actual font files follow their own licenses and are not owned by Aphrosta.')}
+      ${abLic('file export helpers', 'All rights reserved', 'The JSON export and import flow, the file download helper and the CSV escape rules.')}
+      ${abLic('sound effects and music', 'All rights reserved', 'The small synthesised tap, send, done and error sounds, plus the background music scheduler that plays from the bundled audio folder.')}
+      ${abLic('onboarding tour', 'All rights reserved', 'The step-by-step spotlight tour with keyboard support and reduced-motion handling.')}` },
 
     { t: 'Third-Party Libraries', st: 1, kw: 'third party libraries firebase mermaid icons lobehub simple icons apache mit cc0 open source credits',
       b: `<p>Aphrosta loads these libraries at run time. They are not copied into the app code, and each one keeps the license its authors chose. Everything else in Aphrosta is hand-written.</p>
       ${abLic('Firebase JS SDK 10.12.0', 'Apache 2.0', 'Authentication and Firestore sync. The app, auth and firestore modules load from the Google static host.')}
       ${abLic('Mermaid 11.4.1', 'MIT', 'Draws the flowcharts, sequence diagrams and class diagrams that appear in replies. It loads from the jsDelivr host.')}
-      ${abLic('Lobe Icons (static SVG)', 'MIT', 'The Groq, Grok, Kimi and Perplexity provider logos in the model picker. They load from the unpkg host.')}
+      ${abLic('Lobe Icons (static SVG)', 'MIT', 'The Groq, Grok, Kimi, Perplexity and OpenRouter provider logos in the model picker. They load from the unpkg host.')}
       ${abLic('Icons static SVG by bentwnghk', 'Own license', 'The OpenAI provider logo. It loads from the unpkg host and follows the license shown on its package page.')}
+      ${abLic('Gemini logo (Wikimedia Commons)', 'Per source page', 'The Gemini provider logo in the model picker. It loads from Wikimedia Commons and follows the license shown on its page. The Gemini name and logo are trademarks of Google.')}
       ${abLic('Simple Icons', 'CC0 1.0', 'The DeepSeek and Claude logos and the logos shown for connections. The icon set is public domain, but the brands themselves stay trademarks of their owners.')}` },
 
     { t: 'Third-Party Services', st: 1, kw: 'third party services providers firebase elevenlabs npm jina allorigins corsproxy gemini groq terms',
       b: `<p>These are online services Aphrosta talks to. They are not part of the app code, and their own terms and privacy policies apply to anything you send them.</p>
-      ${abLic('Model providers you connect', 'Service terms', 'Google Gemini, Groq, DeepSeek, Grok, Claude, ChatGPT, Kimi, Perplexity and the others in the model picker. Your messages go to the provider you pick, using your own API key.')}
+      ${abLic('Model providers you connect', 'Service terms', 'Google Gemini, Groq, DeepSeek, Grok, Claude, ChatGPT, Kimi, Perplexity, OpenRouter and the others in the model picker. Your messages go to the provider you pick, using your own API key.')}
       ${abLic('Firebase Authentication and Firestore', 'Service terms', 'Google sign-in and cloud sync for signed-in accounts.')}
+      ${abLic('OpenRouter', 'Service terms', 'An independent gateway that forwards your messages to many different AI model makers. When you pick OpenRouter, your messages pass through OpenRouter and then to the maker of the model you chose, so the terms and privacy policies of both apply. Aphrosta is not affiliated with, endorsed by or sponsored by OpenRouter, and OpenRouter does not operate Aphrosta.')}
       ${abLic('ElevenLabs', 'Service terms', 'Voice output and transcription when you add an ElevenLabs key.')}
+      ${abLic('Groq voice', 'Service terms', 'Spoken replies and listening in Live mode use Groq text-to-speech and speech-to-text with your own Groq key, saved only on this device.')}
       ${abLic('npm registry', 'Service terms', 'Package details and weekly download counts for the package info connection. No key needed.')}
       ${abLic('Web reader proxies', 'Service terms', 'Jina Reader, AllOrigins and corsproxy.io help the page reader fetch web pages that a browser would otherwise block.')}` },
 
-    abTextCard("Trademarks and Brand Marks", "Whose marks you see", "The bundled icons, provider logos and brand marks are used under the terms of their own projects.", "Names and trademarks", "Google, Gemini, Groq, DeepSeek, Grok, Claude, ChatGPT, Kimi, Perplexity and their logos are trademarks of their owners. Aphrosta is not affiliated with or endorsed by any of them. Their marks are shown so you can recognise which provider you are using."),
-    abTextCard("Reusing Aphrosta Code", "How to stay compliant", "If you copy an MIT part, keep the original copyright notice and the MIT permission text somewhere in your project. If you copy an Apache 2.0 part, keep the notice file and state what you changed.", "No warranty", "All code is provided as it is, without warranty of any kind. The authors are not liable for any loss that comes from using or reusing it. This page is a plain summary, not legal advice; the official license texts on the project pages are the ones that apply.")
+    abTextCard("Trademarks and Brand Marks", "Whose marks you see", "The bundled icons, provider logos and brand marks are used under the terms of their own projects.", "Names and trademarks", "Google, Gemini, Firebase, Groq, DeepSeek, Grok, Claude, Anthropic, ChatGPT, OpenAI, Kimi, Perplexity, OpenRouter, ElevenLabs and their names and logos are trademarks or registered trademarks of their respective owners. Aphrosta is an independent product of Gabriel Yoan L. Cortez. It is not affiliated with, endorsed by, sponsored by or officially connected to any of these companies or their services, including OpenRouter. Their names and marks are shown only to identify the provider you choose to connect, and no endorsement or partnership is implied."),
+    abTextCard("Using Aphrosta Code and Content", "Please ask first", "Aphrosta's code, design and original content are not available for reuse. You may not copy or republish them without the written permission of Gabriel Yoan L. Cortez. To ask for permission, email Aphostus@gmail.com.", "No warranty", "The app is provided as it is and as available, without warranty of any kind, to the fullest extent allowed by law. The owner is not liable for any loss that comes from using it. This page is a plain summary and is not legal advice; the official terms of each third-party service are the ones that apply to that service.")
   ] },
 
   help: { title: 'Help & Support', icon: () => ICONS.stHelp, cards: [
@@ -18461,8 +18488,10 @@ const AB_PAGES = {
       <h4>Library</h4><p>10 files per item, 8 MB per file, 25 MB per item.</p>
       <h4>Import</h4><p>Up to 25 MB.</p>
       <h4>Feedback</h4><p>One message per hour.</p>` },
-    { t: 'Contact and Feedback', st: 1, kw: 'contact feedback bug',
-      b: `<p>If something is not working as expected, send us feedback from the app so our team can look into it. Feedback is limited to once per hour to keep the inbox tidy.</p>
+    { t: 'Contact and Feedback', st: 1, kw: 'contact feedback bug email phone owner support legal',
+      b: `<h4>Owner contact</h4><p>Gabriel Yoan L. Cortez</p><p>Email: <a href="mailto:Aphostus@gmail.com">Aphostus@gmail.com</a></p><p>Phone: <a href="tel:+639245266251">+63 9245266251</a></p>
+      <p>For legal notices, privacy requests, permission requests or copyright concerns, please use email.</p>
+      <h4>In-app feedback</h4><p>If something is not working as expected, send us feedback from the app so our team can look into it. Feedback is limited to once per hour to keep the inbox tidy.</p>
       <h4>What to include</h4><p>Include a short description of what you were doing and what happened. Leave device info on so we can match your report to the browser and screen size.</p>
       <h4>Error Codes</h4><p>If you see an error message with a code, include it in your feedback. It helps us find the exact issue faster.</p>` },
     { t: 'Troubleshooting', st: 1, kw: 'troubleshoot troubleshooting problem fix not working blank slow stuck reload no reply microphone key rejected',
