@@ -3384,11 +3384,11 @@ html[data-motion="reduce"] .think-panel { transition: none; }
 .price-tag {
   flex-shrink: 0;
   padding: 2px 8px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--font);
   font-size: calc(10px * var(--ts));
   font-weight: 500;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  letter-spacing: normal;
+  text-transform: none;
   color: var(--gray-light);
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);

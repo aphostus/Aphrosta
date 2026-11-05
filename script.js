@@ -454,6 +454,7 @@ function loadSettings() {
   s.tokenWindowMins = Math.min(1440, Math.max(1, Math.round(+s.tokenWindowMins) || 1440));
   s.version = '1.00';
   if (!raw.memInit) { s.memoryLong = s.memoryShort = s.saveSessions = true; s.memInit = true; }
+  s.saveSessions = true; /* Save Sessions toggle was removed, so sessions always load and save */
   if (!raw.cwInit) { s.codeWrap = true; s.cwInit = true; }
   return s;
 }
