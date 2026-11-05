@@ -402,7 +402,7 @@ const SETTINGS_DEFAULTS = {
   langOut: 'en',
   memoryNotes: [], memInit: true, nickname: '', instructions: '', creativity: 'balanced',
   enterSends: true, autoScroll: true, voiceIn: 'auto', voiceOut: 'normal',
-  username: '', phone: '', privUsage: true, privTrain: true, keyAuto: true, acardColor: 'black',
+  username: '', phone: '', privUsage: true, privTrain: false, privTrainV: 0, privTrainAt: 0, consentVer: '', consentAt: 0, ageOk: false, keyAuto: true, acardColor: 'black',
   phoneCc: '+63', avatar: '',
   voiceName: '', voicePitch: 'normal', autoRead: false,
   elOn: true, elVoice: 'adam',
@@ -421,6 +421,7 @@ function loadSettings() {
   try { raw = JSON.parse(localStorage.getItem(SETTINGS_LS) || '{}') || {}; } catch (_) {}
   const s = { ...SETTINGS_DEFAULTS, ...raw };
   delete s.sections;
+  if (s.privTrainV !== 1) s.privTrain = false;
   const valid = (list, id, fb) => (list.some((x) => x.id === id) ? id : fb);
   s.appearance = valid(APPEARANCES, s.appearance, 'dark');
   s.accent     = valid(ACCENTS, s.accent, 'mono');
@@ -5074,7 +5075,12 @@ function onSettingsClick(e) {
       }).then(async (yes) => {
         if (!yes) return;
         toast('Deleting account data…', 'info', 4000);
-        try { await purgeAllUserData(); } catch (_) {}
+        try { await purgeAllUserData(); }
+        catch (err) {
+          console.error('Abolish failed:', err);
+          toast('Some of your data could not be deleted, so nothing else was removed. Check your connection and try again.');
+          return;
+        }
         Cloud.reset();
         try { Object.keys(localStorage).filter((k) => k.startsWith('aphrosta.')).forEach((k) => localStorage.removeItem(k)); } catch (_) {}
         await signOut(auth);
@@ -5097,7 +5103,11 @@ function onSettingsClick(e) {
           return;
         }
         Cloud.reset();
-        try { await purgeAllUserData(true); } catch (_) {}
+        try { await purgeAllUserData(true); }
+        catch (err) {
+          console.error('Destruct purge failed:', err);
+          toast('Your account is locked, but some cloud data could not be deleted. Please contact us so we can remove it.', 'error', 9000);
+        }
         try { Object.keys(localStorage).filter((k) => k.startsWith('aphrosta.')).forEach((k) => localStorage.removeItem(k)); } catch (_) {}
         authBlocked = true;
         showBlockedScreen('blocked');
@@ -5195,7 +5205,12 @@ function onSettingsChange(e) {
   if (input.dataset.set === 'saveSessions' && !input.checked) {
     Cloud.deleteAllSessions?.();
   }
-  if (input.dataset.set === 'privTrain') Cloud.queueSessions?.();
+  if (input.dataset.set === 'privTrain') {
+    settings.privTrainV = 1;
+    settings.privTrainAt = Date.now();
+    saveSettings();
+    Cloud.queueSessions?.();
+  }
   if (input.dataset.set === 'keyAuto') KeyBackup.toggled(input);
 }
 
@@ -9131,7 +9146,7 @@ const Cloud = (() => {
   }
 
   async function syncImprove(live, bodyOf) {
-    if (settings.privTrain) {
+    if (settings.privTrain && settings.privTrainV === 1) {
       const ids = new Set(live.map((x) => x.id));
       for (const x of live) {
         const sg = sig(x);
@@ -9417,7 +9432,7 @@ const Cloud = (() => {
       }
       if (mine !== initSeq) return;
 
-      if (settings.privTrain && settings.saveSessions) {
+      if (settings.privTrain && settings.privTrainV === 1 && settings.saveSessions) {
         try {
           const snapI = await getDocs(collection(db, 'users', uid, 'improve'));
           snapI.forEach((d) => {
@@ -16011,6 +16026,7 @@ const Acard = (() => {
       }, 2500);
     }
     const pick = () => {
+      if (!ageGateOk()) return;
       const f = document.createElement('input');
       f.type = 'file'; f.accept = 'image/png,image/*'; f.hidden = true;
       f.onchange = () => { acSignIn(f.files && f.files[0]); f.remove(); };
@@ -16039,6 +16055,23 @@ document.addEventListener('click', (e) => {
   if (l) openAuthLegal(l.dataset.legal);
 });
 
+function ageGateOk() {
+  const cb = document.getElementById('signin-age');
+  if (!cb) return true;
+  if (!cb.checked) {
+    toast('Please confirm that you are 13 or older to continue.');
+    try { cb.focus(); } catch (_) {}
+    return false;
+  }
+  try {
+    settings.ageOk = true;
+    settings.consentVer = typeof AB_UPDATED === 'string' ? AB_UPDATED : '';
+    settings.consentAt = Date.now();
+    saveSettings();
+  } catch (_) {}
+  return true;
+}
+
 function showSignInButton() {
   const existingBtn = document.getElementById('signin-btn');
   if (existingBtn) {
@@ -16056,6 +16089,7 @@ function showSignInButton() {
         </button>
         <button id="signin-theme" class="signin-theme" type="button" aria-label="Switch theme"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>
         </div>
+        <label class="signin-age"><input type="checkbox" id="signin-age"> I am 13 years old or older.</label>
         <p class="signin-agree">By continuing, you agree to the <button type="button" class="legal-link" data-legal="licenses">About &amp; License</button>, <button type="button" class="legal-link" data-legal="terms">Terms &amp; Conditions</button>, and <button type="button" class="legal-link" data-legal="rules">Rules &amp; Policies</button>.</p>
       </div>
     </div>`;
@@ -16073,6 +16107,7 @@ function showSignInButton() {
   Acard.wireAuth(btn);
   btn.onclick = (e) => {
     if (e.target.closest('[data-acard-in]')) return;
+    if (!ageGateOk()) return;
     signInConsent = true;
     authBusy = false;
     autoSignIn();
@@ -16113,16 +16148,24 @@ function showBlockedScreen(type) {
 async function purgeAllUserData(keepAccount = false) {
   const uid = currentUser?.uid;
   if (!uid) return;
+  const failed = [];
   const cols = ['sessions', 'usage', 'feedback', 'devices', 'improve'];
   for (const c of cols) {
     try {
       const snap = await getDocs(collection(db, 'users', uid, c));
       await Promise.all(snap.docs.map((d) => deleteDoc(d.ref)));
-    } catch (_) {}
+    } catch (err) {
+      console.error('Delete failed for', c, err);
+      failed.push(c);
+    }
   }
   for (const docId of keepAccount ? ['settings', 'memsys'] : ['settings', 'memsys', 'account']) {
-    try { await deleteDoc(doc(db, 'users', uid, 'data', docId)); } catch (_) {}
+    try { await deleteDoc(doc(db, 'users', uid, 'data', docId)); } catch (err) {
+      console.error('Delete failed for', docId, err);
+      failed.push(docId);
+    }
   }
+  if (failed.length) throw new Error('Could not delete: ' + failed.join(', '));
 }
 
 function wipeLocalChatState() {
