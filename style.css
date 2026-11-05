@@ -1654,6 +1654,15 @@ button.lib-card-eye.is-off { opacity: 0.55; }
 .usage-title svg { width: 14px; height: 14px; }
 .usage-sub { font-size: calc(11.5px * var(--ts)); color: var(--gray-mid); }
 .usage-card { gap: 8px; }
+.credits-soon {
+  font-size: calc(10.5px * var(--ts));
+  font-weight: 600;
+  color: var(--gray-mid);
+  padding: 3px 8px;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  background: rgba(var(--fg-rgb), 0.06);
+}
 .usage-figure { display: flex; align-items: center; gap: 6px; font-size: calc(22px * var(--ts)); line-height: 1.1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
 .usage-pct { font-weight: 600; color: var(--gray-light); padding-right: 10px; margin-right: 4px; border-right: 1px solid var(--glass-border); }
 .usage-unit { display: inline-flex; flex-direction: column; justify-content: center; gap: 2px; line-height: 1; letter-spacing: 0; }
