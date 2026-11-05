@@ -16170,11 +16170,10 @@ async function boot() {
 
   const withTimeout = (p, ms) =>
     Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
-  try { await withTimeout(getRedirectResult(auth), 5000); }
-  catch (err) {
+  withTimeout(getRedirectResult(auth), 5000).catch((err) => {
     console.error('Redirect error:', err?.code, err?.message);
     toastOnce('redirect', 'Couldn\u2019t finish sign-in. Try again.');
-  }
+  });
 
   let authResolved = false;
 
@@ -16189,17 +16188,15 @@ async function boot() {
       accountStatusOffline = false;
       const emailKey = lockKey(user.email);
       try {
-        if (emailKey) {
-          const b = await getDoc(doc(db, 'blocks', emailKey));
-          if (b.exists()) blocked = b.data().type === 'blocked' ? 'blocked' : 'abandoned';
-        }
-        if (!blocked) {
-          const acc = await getDoc(doc(db, 'users', user.uid, 'data', 'account'));
-          if (acc.exists()) {
-            const a = acc.data();
-            if (a.blocked) blocked = 'blocked';
-            else if (a.abandoned) blocked = 'abandoned';
-          }
+        const [b, acc] = await Promise.all([
+          emailKey ? getDoc(doc(db, 'blocks', emailKey)) : Promise.resolve(null),
+          getDoc(doc(db, 'users', user.uid, 'data', 'account')),
+        ]);
+        if (b && b.exists()) blocked = b.data().type === 'blocked' ? 'blocked' : 'abandoned';
+        if (!blocked && acc.exists()) {
+          const a = acc.data();
+          if (a.blocked) blocked = 'blocked';
+          else if (a.abandoned) blocked = 'abandoned';
         }
       } catch (err) {
         console.error('Lock check failed:', err?.code, err?.message);
@@ -16219,14 +16216,18 @@ async function boot() {
         await signOut(auth);
         return;
       }
-      await registerDevice(user);
+      registerDevice(user);
 
       renderHome(user);
       loadDictionary(settings.langIn);
-      try { await Cloud.init(user); } catch (_) {}
       applyProfile();
       refreshStorage();
       updateAccountBanner();
+      Cloud.init(user).catch(() => {}).then(() => {
+        applyProfile();
+        refreshStorage();
+        updateAccountBanner();
+      });
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
       clearTimeout(loaderSafety);
       hideLoader();
