@@ -14090,7 +14090,8 @@ function tokenCeiling(pid, variant) {
   else ceil = Math.max(ceil, Math.min(Math.round(answerBudget() * 2.5), hard));
   const learned = rateLearn[pid + '|' + variant.id];
   const learnedCap = learned ? Math.max(512, Math.floor(learned * 0.45)) : Infinity;
-  return Math.max(256, Math.min(ceil, hard, learnedCap, pid === 'groq' ? 4500 : hard));
+  const groqCap = { minima: 6000, low: 8000, medium: 12000, high: 16000 }[activeEffort] || hard;
+  return Math.max(256, Math.min(ceil, hard, learnedCap, pid === 'groq' ? groqCap : hard));
 }
 
 let systemPrompt = function () {
