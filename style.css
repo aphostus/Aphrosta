@@ -3829,7 +3829,7 @@ html[data-theme="light"] .ac-dl { background: #000; color: #fff; }
 .signin-screen.is-light .signin-btn { color: #000; background: rgba(0, 0, 0, 0.05); border-color: rgba(0, 0, 0, 0.55); }
 .signin-screen.is-light .signin-btn:not(:disabled):active { background: rgba(0, 0, 0, 0.14); }
 .signin-screen.is-light .signin-agree { color: rgba(0, 0, 0, 0.75); }
-.signin-age { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; max-width: 480px; margin: 0 auto 8px; font-size: 13px; color: rgba(255, 255, 255, 0.9); cursor: pointer; }
+.signin-age { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; max-width: 480px; margin: 0 auto; font-size: 13px; color: rgba(255, 255, 255, 0.9); cursor: pointer; }
 .signin-age input { width: 18px; height: 18px; accent-color: currentColor; cursor: pointer; }
 .signin-screen.is-light .signin-age { color: rgba(0, 0, 0, 0.85); }
 

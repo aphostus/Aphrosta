@@ -16089,8 +16089,8 @@ function showSignInButton() {
         </button>
         <button id="signin-theme" class="signin-theme" type="button" aria-label="Switch theme"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>
         </div>
-        <label class="signin-age"><input type="checkbox" id="signin-age"> I am 13 years old or older.</label>
         <p class="signin-agree">By continuing, you agree to the <button type="button" class="legal-link" data-legal="licenses">About &amp; License</button>, <button type="button" class="legal-link" data-legal="terms">Terms &amp; Conditions</button>, and <button type="button" class="legal-link" data-legal="rules">Rules &amp; Policies</button>.</p>
+        <label class="signin-age"><input type="checkbox" id="signin-age"> I am 13 years old or older.</label>
       </div>
     </div>`;
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', document.documentElement.dataset.theme === 'light' ? '#ffffff' : '#000000');
