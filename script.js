@@ -16523,146 +16523,291 @@ const AB_PAGES = {
   shortcuts: { title: 'Keyboard Shortcuts', icon: () => ICONS.stKeys, cards: () => kbCards() },
 
   terms: { title: 'Terms & Conditions', icon: () => ICONS.stTerms, cards: () => [
-    { t: 'Agreement to these Terms', kw: 'agreement acceptance owner updated changes',
-      b: `<p>Last updated ${AB_UPDATED}.</p><p>Aphrosta is an independent web app owned and operated by ${esc(AB_OWNER)}, an individual based in the Philippines. By creating an account or using Aphrosta you agree to these Terms and to the Privacy Policy in Rules &amp; Policies. If you do not agree, please do not use the app.</p>
-      <h4>Changes</h4><p>These Terms may be updated as Aphrosta develops. The current version is always in the app. Where the law requires it, you will be asked to accept the new version. Using Aphrosta after a change means you accept it.</p>` },
-    { t: 'Who may use Aphrosta', kw: 'age minimum 13 children parent guardian',
-      b: `<p>You must be at least 13 years old, or the minimum age to consent to online services in your country if that is higher. If you are under 18, or under the age of majority where you live, use Aphrosta only with the permission of a parent or legal guardian.</p>
-      <p>Do not create an account or give personal information if you are below the minimum age. If we learn that we collected personal information from a child under 13, we will delete it.</p>` },
-    { t: 'Your account', kw: 'account sign in google email password security responsibility',
-      b: `<p>You can sign in with Google or with an email and password. You are responsible for everything done through your account. Keep your sign-in details, your Acard and your API keys private, and use one account per person.</p>
-      <p>Tell us right away if you think someone else has accessed your account. We may suspend or lock an account that breaks these Terms.</p>` },
-    { t: 'Acard (login card)', kw: 'acard card png login key encryption share security',
+    { t: 'Agreement to these Terms', kw: 'agreement acceptance owner updated changes related documents interpretation',
+      b: `<p>Last updated ${AB_UPDATED}.</p>
+      <p>These Terms &amp; Conditions ("Terms") are a binding agreement between you and ${esc(AB_OWNER)} ("the Owner", "we", "us"), an individual based in the Philippines who owns and operates Aphrosta ("Aphrosta", "the App", "the Service").</p>
+      <h4>Acceptance</h4><p>By creating an account, signing in, or using Aphrosta in any way, you confirm that you have read, understood and agree to these Terms, to the Rules &amp; Policies (which include the Privacy Policy), and to About &amp; Licenses. If you do not agree, do not use Aphrosta.</p>
+      <h4>Electronic agreement</h4><p>You agree that these Terms may be accepted and kept in electronic form, and that your continued use of the App is a valid electronic signature and acceptance, as recognised under the Philippine Electronic Commerce Act (Republic Act No. 8792).</p>
+      <h4>Changes to these Terms</h4><p>These Terms may be updated as Aphrosta develops. The current version is always available in the App with its "last updated" date. Where the law requires it, you will be asked to accept the new version. Using Aphrosta after a change takes effect means you accept the change.</p>
+      <h4>How to read these Terms</h4><p>Headings are for convenience only and do not limit the meaning of a clause. "Including" means "including without limitation". If a part of these Terms is found unenforceable, the rest stays in force.</p>` },
+    { t: 'Definitions', kw: 'definitions meaning content provider acard services account',
+      b: `<h4>"Account"</h4><p>The profile created when you sign in with Google or with an email and password.</p>
+      <h4>"Acard"</h4><p>The PNG login card generated in Settings that holds your login and your encryption key.</p>
+      <h4>"Content"</h4><p>Everything you enter or receive through Aphrosta, including chats, prompts, files, memories, library items, settings and AI outputs.</p>
+      <h4>"Provider"</h4><p>A third-party company whose AI model or service you connect to Aphrosta, such as OpenAI, Anthropic, Google, Groq or others in the model picker.</p>
+      <h4>"API key"</h4><p>A secret credential issued by a Provider that lets Aphrosta send requests on your behalf and charges the Provider's fees to you.</p>
+      <h4>"Third-party services"</h4><p>Any outside service Aphrosta relies on or connects to, including Firebase, Providers, ElevenLabs, web readers and data sources.</p>` },
+    { t: 'Who may use Aphrosta', kw: 'age minimum 13 children parent guardian eligibility capacity location',
+      b: `<h4>Minimum age</h4><p>You must be at least 13 years old, or the minimum age to consent to online services in your country if that is higher.</p>
+      <h4>Minors</h4><p>If you are under 18, or under the age of majority where you live, you may use Aphrosta only with the permission and supervision of a parent or legal guardian, who is responsible for your use and agrees to these Terms for you.</p>
+      <h4>Children under 13</h4><p>Do not create an account or give personal information if you are below the minimum age. If we learn that we collected personal information from a child under 13, we will delete it. Parents or guardians can contact us to ask about or delete a child's information.</p>
+      <h4>Legal capacity and local law</h4><p>You confirm that you have the legal capacity to enter into this agreement and that you are not barred from using the Service under any law that applies to you. You are responsible for following the laws of the place where you use Aphrosta.</p>` },
+    { t: 'Your account', kw: 'account sign in google email password security responsibility suspend accurate',
+      b: `<h4>Accurate details</h4><p>You can sign in with Google or with an email and password. Give accurate information and keep it up to date.</p>
+      <h4>Your responsibility</h4><p>You are responsible for everything done through your account. Keep your sign-in details, your Acard and your API keys private, and do not let anyone else use your account.</p>
+      <h4>Unauthorised access</h4><p>Tell us right away if you think someone else has accessed your account, your Acard or your keys. Until you tell us, you remain responsible for activity on the account.</p>
+      <h4>One person per account</h4><p>An account is for one person. Do not sell, rent, transfer or share accounts.</p>
+      <h4>Suspension</h4><p>We may pause, lock or remove an account that breaks these Terms or puts the Service or other people at risk.</p>` },
+    { t: 'Acard (login card)', kw: 'acard card png login key encryption share security lost recover',
       b: `<p>The Acard is a PNG image that holds your login and your encryption key. Anyone who has it can open your account and read your encrypted data.</p>
       <h4>Never share it</h4><p>Do not post, send or show your Acard to anyone, and store the exact file somewhere safe. Aphrosta cannot currently cancel or revoke an Acard that has been shared or leaked.</p>
-      <h4>If it is exposed or lost</h4><p>Contact us immediately. If you lose every copy of your Acard and your key backup, your encrypted data may not be recoverable.</p>` },
-    { t: 'Subscriptions and payments', kw: 'subscription payment price refund cancel stripe billing',
-      b: `<p>Some features may require a paid subscription. The price and billing period are shown when you subscribe. Payments are currently handled manually with the owner. Online payments through Stripe are planned, and these Terms will be updated when they launch.</p>
+      <h4>If it is exposed or lost</h4><p>Contact us immediately. If you lose every copy of your Acard and your key backup, your encrypted data may not be recoverable, and we cannot decrypt it for you.</p>
+      <h4>Your risk</h4><p>You accept the risk of keeping, sharing or losing your Acard and key backup. We are not liable for loss or access that results from how you store or share them.</p>` },
+    { t: 'Subscriptions and payments', kw: 'subscription payment price refund cancel stripe billing taxes',
+      b: `<p>Some features may require a paid subscription. The full rules are on the Billing &amp; Payment page, which forms part of these Terms.</p>
+      <h4>Price and period</h4><p>The price and billing period are shown when you subscribe. Taxes may apply.</p>
+      <h4>Payment method</h4><p>Payments are currently handled manually with the Owner. Online payments through Stripe are planned, and these Terms will be updated when they launch.</p>
       <h4>No refunds</h4><p>All payments are final and non-refundable, including for unused or partial periods, except where the law gives you a right that cannot be waived, or where we agree otherwise in writing.</p>
-      <h4>Cancelling</h4><p>You can cancel by contacting us. Cancelling stops future charges. Prices may change with notice before your next billing period. See Billing &amp; Payment for details.</p>` },
-    { t: 'AI features and your own keys', kw: 'ai model provider api key byok voice synthetic accuracy advice',
-      b: `<p>Aphrosta lets you chat with AI models from providers you choose, using your own API keys. Your messages go to the provider you pick, and that provider's terms and charges apply to you.</p>
-      <h4>AI can be wrong</h4><p>AI replies can be inaccurate, incomplete or out of date. Check anything important. Nothing in Aphrosta is legal, medical, financial or other professional advice.</p>
-      <h4>Synthetic voices</h4><p>Spoken replies use computer-generated voices. They are not real people.</p>` },
-    { t: 'Your content', kw: 'content ownership chats outputs license feedback improve',
-      b: `<p>You own the chats you write and the AI outputs you receive. You give Aphrosta permission to store, sync and process them only as needed to run the app for you, and, if Improve Service is on, as described in Rules &amp; Policies.</p>
-      <p>You are responsible for what you enter and for having the right to use it. If you send ideas or feedback, you allow the owner to use them to improve Aphrosta without payment or credit.</p>` },
-    { t: 'Acceptable use', kw: 'abuse spam harassment illegal malware bypass safety rules',
-      b: `<p>Use Aphrosta lawfully. Do not use it for harassment, threats, sexual content involving minors, malware, fraud or any illegal activity. Do not try to bypass provider safety systems, overload the app or its proxies, or access data that is not yours.</p>
-      <p>Breaking these rules may lead to removal of access or a locked account. Serious cases may be reported to the authorities.</p>` },
-    { t: 'Ownership and trademarks', kw: 'copyright intellectual property trademark independent affiliation',
-      b: `<p>Aphrosta's code, design and original content belong to ${esc(AB_OWNER)}. All rights reserved. You may not copy or republish them without written permission.</p>
-      <p>Provider names and logos belong to their owners. Aphrosta is independent and is not affiliated with, endorsed by or sponsored by any of them.</p>` },
-    { t: 'Availability and liability', kw: 'warranty liability disclaimer as is availability loss',
-      b: `<p>Aphrosta is provided as it is and as available, without warranties of any kind, to the fullest extent allowed by law. Aphrosta is in development, so features may change, pause or stop.</p>
-      <p>To the fullest extent allowed by law, the owner is not liable for indirect or consequential loss, lost data you did not back up, or charges from third-party providers. Nothing here limits rights that cannot legally be limited.</p>` },
-    { t: 'Ending your account', kw: 'delete deactivate abandon abolish destruct terminate',
-      b: `<p>Settings has account actions to pause, lock or delete your account. Some of them are permanent, so read each confirmation carefully. You can also export your data first from Settings, Privacy.</p>` },
-    { t: 'Governing law and contact', kw: 'governing law philippines disputes contact',
-      b: `<p>These Terms are governed by the laws of the Philippines. We encourage you to contact us first so we can try to settle any problem in good faith. If that fails, the courts of the Philippines may hear the dispute. Consumers elsewhere keep any mandatory rights their local law gives them.</p><h4>Contact</h4>${abContact()}` }
+      <h4>Cancelling</h4><p>You can cancel by contacting us. Cancelling stops future charges. Prices may change with notice before your next billing period.</p>` },
+    { t: 'AI features and your own keys', kw: 'ai model provider api key byok voice synthetic accuracy advice tools',
+      b: `<h4>Bring your own key</h4><p>Aphrosta lets you chat with AI models from Providers you choose, using your own API keys. Your messages and files go to the Provider you pick, and that Provider's terms, privacy policy and charges apply to you.</p>
+      <h4>AI can be wrong</h4><p>AI replies can be inaccurate, incomplete, biased, offensive or out of date, and may describe things that do not exist. Check anything important before relying on it. You are responsible for how you use any output.</p>
+      <h4>No professional advice</h4><p>Nothing in Aphrosta is legal, medical, financial, tax, safety or other professional advice. Do not use it for emergencies. Ask a qualified professional.</p>
+      <h4>Synthetic voices</h4><p>Spoken replies use computer-generated voices. They are not real people, and Aphrosta does not clone real people's voices.</p>
+      <h4>Web and data tools</h4><p>Some tools may read web pages or fetch public data such as news, prices or exchange rates. That information comes from outside sources and may be wrong or delayed.</p>
+      <h4>Provider rules</h4><p>You must follow each Provider's usage policies. A Provider may refuse, filter, limit or suspend your use, and Aphrosta does not control that.</p>` },
+    { t: 'Your content', kw: 'content ownership chats outputs license feedback improve responsibility rights',
+      b: `<h4>You own it</h4><p>You own the chats you write and the AI outputs you receive, to the extent the law allows ownership of AI outputs and subject to the rights of others and of the Providers.</p>
+      <h4>Permission you give us</h4><p>You give Aphrosta permission to store, sync, transmit and process your Content only as needed to run the App for you, and, if Improve Service is on, as described in Rules &amp; Policies. This permission ends when you delete the Content or your account, except for copies that law requires us to keep.</p>
+      <h4>Your responsibility</h4><p>You are responsible for what you enter. You confirm that you have the right to use it and that it does not break the law or anyone's rights, including privacy, confidentiality and intellectual property rights.</p>
+      <h4>Other people's data</h4><p>Do not enter other people's sensitive personal information unless you have a lawful basis and their permission.</p>
+      <h4>Ideas and feedback</h4><p>If you send ideas, suggestions or feedback, you allow the Owner to use them to improve Aphrosta without payment, credit or duty to you.</p>` },
+    { t: 'Acceptable use', kw: 'abuse spam harassment illegal malware bypass safety rules prohibited conduct',
+      b: `<p>Use Aphrosta lawfully and with respect for others. You agree not to:</p>
+      <h4>Illegal and harmful use</h4><p>Use the App for harassment, threats, hate, fraud, impersonation, sexual content involving minors, malware, or any activity that is illegal under Philippine law or the law that applies to you, including the Cybercrime Prevention Act of 2012 (Republic Act No. 10175).</p>
+      <h4>Abuse of the Service</h4><p>Overload, scrape, probe or attack the App, its proxies or its servers, or try to get around limits, locks, usage caps or access controls.</p>
+      <h4>Bypassing safety</h4><p>Try to bypass Provider safety systems, or use the App to produce content that a Provider forbids.</p>
+      <h4>Other people's data</h4><p>Access, copy or interfere with data or accounts that are not yours.</p>
+      <h4>Reverse engineering</h4><p>Copy, decompile or resell the App's code, design or content except where the law lets you do so despite this clause.</p>
+      <h4>Enforcement</h4><p>Breaking these rules may lead to removal of content, removal of access or a locked account. Serious cases may be reported to the authorities.</p>` },
+    { t: 'Ownership and intellectual property', kw: 'copyright intellectual property trademark independent affiliation license restrictions',
+      b: `<h4>Our rights</h4><p>Aphrosta's code, design, text, structure and original content belong to ${esc(AB_OWNER)} and are protected by the Intellectual Property Code of the Philippines (Republic Act No. 8293) and other laws. All rights reserved.</p>
+      <h4>Limited permission</h4><p>We give you a personal, non-exclusive, non-transferable, revocable permission to use Aphrosta as a service under these Terms. No ownership passes to you.</p>
+      <h4>Restrictions</h4><p>You may not copy, republish, sell, sublicense or create derivative works from Aphrosta without written permission.</p>
+      <h4>Trademarks and independence</h4><p>Provider names and logos belong to their owners. Aphrosta is independent and is not affiliated with, endorsed by or sponsored by any of them.</p>
+      <h4>Third-party materials</h4><p>Open-source and third-party materials stay under their own licenses, listed in About &amp; Licenses.</p>` },
+    { t: 'Third-party services', kw: 'third party services providers firebase elevenlabs links dependence',
+      b: `<h4>No control</h4><p>Aphrosta depends on outside services such as Google Firebase, your Provider, ElevenLabs and web tools. We do not control them, and their own terms and privacy policies apply to you when your data reaches them.</p>
+      <h4>Changes by others</h4><p>A third party may change, charge for, restrict or end its service at any time, which may affect Aphrosta. We are not responsible for that.</p>
+      <h4>Charges</h4><p>Fees charged by Providers are your responsibility and are separate from Aphrosta.</p>` },
+    { t: 'Privacy and data protection', kw: 'privacy data protection data privacy act encryption improve service rights',
+      b: `<p>Aphrosta handles personal information as described in Rules &amp; Policies, in line with the Philippine Data Privacy Act of 2012 (Republic Act No. 10173).</p>
+      <h4>Please read</h4><p>Pay special attention to the sections on Improve Service, encryption limits and third parties. These are part of your agreement with us.</p>
+      <h4>Your rights</h4><p>You may use the privacy controls in Settings or email ${AB_MAIL} to exercise your rights.</p>` },
+    { t: 'Availability, development and changes', kw: 'availability development beta maintenance changes features outage',
+      b: `<h4>In development</h4><p>Aphrosta is in development. Features, limits, models, prices and designs may change, pause or stop at any time.</p>
+      <h4>No guaranteed uptime</h4><p>We do not promise that the Service will always be available, fast, secure or free of errors, or that it will work with every device, browser or Provider.</p>
+      <h4>Back up your data</h4><p>Use Export Data in Settings, Privacy, and keep your Acard and key backup safe. You are responsible for keeping your own backups.</p>` },
+    { t: 'Ending your account', kw: 'delete deactivate abandon abolish destruct terminate suspend survive',
+      b: `<h4>By you</h4><p>Settings has account actions to pause, lock or delete your account. Some are permanent, so read each confirmation carefully. You can export your data first from Settings, Privacy.</p>
+      <h4>By us</h4><p>We may suspend or end your access if you break these Terms, if the law requires it, if we are unable to provide the Service, or to protect people or the Service. Where reasonable, we will tell you why.</p>
+      <h4>What happens next</h4><p>Your right to use Aphrosta stops. Data deletion follows the Rules &amp; Policies. Sections that by their nature should continue, including ownership, payment, disclaimers, liability limits and governing law, remain in effect.</p>` },
+    { t: 'Disclaimers', kw: 'disclaimer warranty as is accuracy security fitness',
+      b: `<p>To the fullest extent allowed by law, Aphrosta is provided "as it is" and "as available", without warranties of any kind, whether express or implied, including warranties of accuracy, merchantability, fitness for a particular purpose and non-infringement.</p>
+      <h4>AI output</h4><p>We make no promise that any AI output is correct, safe, lawful or suitable for your purpose.</p>
+      <h4>Security</h4><p>We use reasonable measures to protect your data, but no system is perfectly secure. We do not warrant that Aphrosta will be free from interruption, loss, leaks or attacks.</p>
+      <h4>Your rights stay</h4><p>Nothing here removes rights you have under mandatory consumer law that cannot be waived.</p>` },
+    { t: 'Limitation of liability', kw: 'liability limitation indirect loss damages cap third party charges',
+      b: `<p>To the fullest extent allowed by law, the Owner is not liable for indirect, incidental, special, consequential or punitive loss, or for loss of profits, business, goodwill or data, arising from your use of or inability to use Aphrosta.</p>
+      <h4>Specific exclusions</h4><p>This includes lost data you did not back up, a lost or leaked Acard, decisions you make from AI output, and charges from Providers or other third parties.</p>
+      <h4>Overall limit</h4><p>Where liability cannot be excluded, our total liability for any claim is limited to the amount you paid to us for the Service in the 3 months before the claim, or PHP 1,000 if you paid nothing.</p>
+      <h4>What is not limited</h4><p>Nothing here limits liability for fraud, wilful misconduct or any liability that cannot legally be limited.</p>` },
+    { t: 'Indemnity', kw: 'indemnity indemnify claims breach responsibility',
+      b: `<p>To the extent allowed by law, you agree to defend and compensate the Owner against claims, losses and reasonable costs that arise from your Content, your breach of these Terms, or your breach of another person's rights or of the law. This clause does not apply to claims caused by our own fault or gross negligence, or where the law does not allow it.</p>` },
+    { t: 'Governing law and disputes', kw: 'governing law philippines disputes courts consumers jurisdiction settle',
+      b: `<h4>Governing law</h4><p>These Terms are governed by the laws of the Republic of the Philippines, without regard to conflict-of-law rules.</p>
+      <h4>Settle in good faith first</h4><p>We encourage you to contact us first so we can try to settle any problem in good faith. If that fails, the courts of the Philippines may hear the dispute.</p>
+      <h4>Consumers elsewhere</h4><p>Consumers elsewhere keep any mandatory protections of the country where they live that cannot be waived by contract.</p>` },
+    { t: 'General terms', kw: 'general terms entire agreement severability waiver assignment force majeure notices',
+      b: `<h4>Entire agreement</h4><p>These Terms, Rules &amp; Policies, Billing &amp; Payment and About &amp; Licenses together are the whole agreement between you and the Owner about Aphrosta.</p>
+      <h4>Severability</h4><p>If a part of these Terms is invalid, the rest stays in force.</p>
+      <h4>No waiver</h4><p>Not enforcing a right is not giving it up.</p>
+      <h4>Assignment</h4><p>You may not transfer your rights under these Terms. We may transfer ours as part of a handover of the Service, and will respect your rights under the law when doing so.</p>
+      <h4>Events beyond control</h4><p>We are not responsible for failure or delay caused by events beyond our reasonable control, such as outages of Providers, networks, power or hosting.</p>
+      <h4>Notices</h4><p>We may give notice in the App or by email. You may contact us using the details below.</p>` },
+    { t: 'Contact', kw: 'contact owner email phone legal notice',
+      b: `<p>Questions about these Terms:</p>${abContact()}` }
   ] },
 
   rules: { title: 'Rules & Policies', icon: () => ICONS.stRules, cards: () => [
-    { t: 'Privacy Policy overview', kw: 'privacy policy controller data privacy act philippines',
-      b: `<p>Last updated ${AB_UPDATED}.</p><p>The data controller is ${esc(AB_OWNER)}, contact ${AB_MAIL}. Aphrosta handles personal information in line with the Philippine Data Privacy Act of 2012 (Republic Act No. 10173). Aphrosta is available worldwide, so people in other countries may have extra rights under their own laws.</p>` },
-    { t: 'Information we handle', kw: 'data collected account chats voice usage feedback devices phone',
+    { t: 'Privacy Policy overview', kw: 'privacy policy controller data privacy act philippines scope worldwide',
+      b: `<p>Last updated ${AB_UPDATED}.</p>
+      <h4>Who is responsible</h4><p>The data controller is ${esc(AB_OWNER)}, contact ${AB_MAIL}. Aphrosta handles personal information in line with the Philippine Data Privacy Act of 2012 (Republic Act No. 10173) and its Implementing Rules.</p>
+      <h4>Scope</h4><p>This policy covers the Aphrosta web app and its related services. Aphrosta is available worldwide, so people in other countries may have additional rights under their local laws, which we respect where they apply.</p>
+      <h4>Principles we follow</h4><p>We aim to be transparent about what we collect, to collect only what the App needs, to use it only for stated purposes, to keep it secure, and to keep it no longer than needed.</p>` },
+    { t: 'Information we handle', kw: 'data collected account chats voice usage feedback devices phone sensitive',
       b: `<h4>Account</h4><p>Sign-in details from Google or email and password, handled through Firebase Authentication.</p>
       <h4>Profile</h4><p>Details you choose to add, such as a username or phone number.</p>
-      <h4>Your content</h4><p>Chats, memories, settings and the provider API keys you save.</p>
+      <h4>Your content</h4><p>Chats, memories, settings, library items and the provider API keys you save.</p>
       <h4>Voice and audio</h4><p>When you use voice features, your speech is sent for transcription and your replies are sent to create spoken audio.</p>
-      <h4>Usage and devices</h4><p>Usage records and a device list, so the app can track limits and show where you are signed in.</p>
-      <h4>Feedback</h4><p>Messages you choose to send, which may include basic device information.</p>` },
-    { t: 'How your data is protected', kw: 'encryption vault aes key api keys security',
-      b: `<p>Your chats, memories, settings and saved API keys are encrypted in your browser with AES-GCM and a 256-bit key before they are synced to Firestore. The cloud stores encrypted records. The encryption key is kept on your device and in your Acard, and is not uploaded.</p>
-      <h4>Limits</h4><p>Encryption does not protect data while it is readable in your browser, while it is sent to a provider, or if your device or account is compromised. Keep your device, Acard and key backup secure.</p>` },
-    { t: 'Share Usage and Improve Service', kw: 'share usage improve service training conversations opt out toggle',
+      <h4>Usage and devices</h4><p>Usage records and a device list, so the App can track limits and show where you are signed in.</p>
+      <h4>Feedback</h4><p>Messages you choose to send, which may include basic device information.</p>
+      <h4>Sensitive information</h4><p>Aphrosta does not ask for sensitive personal information. If you choose to type it into a chat, you do so at your own risk and subject to Improve Service below.</p>` },
+    { t: 'Why we use your data', kw: 'purposes legal basis consent legitimate interest contract',
+      b: `<h4>To run the App</h4><p>To sign you in, sync your data, apply limits and send your requests to the Provider you choose.</p>
+      <h4>To keep it safe</h4><p>To protect accounts, prevent abuse and fix problems.</p>
+      <h4>To improve it</h4><p>To improve Aphrosta and its AI features, only through Improve Service when it is on.</p>
+      <h4>To talk with you</h4><p>To answer your messages and requests.</p>
+      <h4>To meet the law</h4><p>To follow legal duties and protect legal rights.</p>
+      <h4>Basis</h4><p>We rely on your consent, on what is needed to give you the Service, on our legitimate interests that do not override your rights, and on legal obligations.</p>` },
+    { t: 'How your data is protected', kw: 'encryption vault aes key api keys security acard breach',
+      b: `<p>Your chats, memories, settings and saved API keys are encrypted in your browser with AES-GCM and a 256-bit key before they are synced to Firestore. The cloud stores encrypted records. The encryption key is kept on your device and in your Acard, and is not readable by the Owner.</p>
+      <h4>Limits</h4><p>Encryption does not protect data while it is readable in your browser, while it is sent to a Provider, or if your device or account is compromised. Keep your device, Acard and key backup secure.</p>
+      <h4>Other safeguards</h4><p>We use organisational and technical measures that are reasonable for an app of this size.</p>
+      <h4>Data breaches</h4><p>If a breach affects your personal information, we will notify you and the National Privacy Commission as required by law.</p>` },
+    { t: 'Share Usage and Improve Service', kw: 'share usage improve service training conversations opt out toggle readable copy',
       b: `<h4>Share Usage</h4><p>On by default. It lets memory and usage records sync to your cloud space. Turn it off in Settings, Privacy to keep them on this device.</p>
-      <h4>Improve Service</h4><p>On by default. While it is on, a readable copy of your conversations is stored so the owner can review them and improve Aphrosta and its AI features. This copy is not protected by your encryption key. This applies to all users.</p>
-      <p>Turn Improve Service off in Settings, Privacy at any time. Turning it off stops new copies and deletes the copies already stored.</p>` },
-    { t: 'Who else receives data', kw: 'third party processors providers firebase elevenlabs proxies cdn transfers',
-      b: `<p>Aphrosta depends on outside services, and their own terms and privacy policies apply to what they receive.</p>
+      <h4>Improve Service</h4><p>On by default. While it is on, a readable copy of your conversations is stored so the Owner can review them and improve Aphrosta and its AI features. This copy is not protected by your encryption key. This applies to all users.</p>
+      <h4>Turning it off</h4><p>Turn Improve Service off in Settings, Privacy at any time. Turning it off stops new copies and deletes the copies already stored.</p>
+      <h4>Be careful</h4><p>While Improve Service is on, do not enter anything you do not want the Owner to be able to read.</p>
+      <h4>Mask Details</h4><p>Settings, Privacy also has Mask Details. See that screen for what it hides.</p>` },
+    { t: 'Who else receives data', kw: 'third party processors providers firebase elevenlabs proxies cdn transfers cloudflare',
+      b: `<p>Aphrosta depends on outside services, and their own terms and privacy policies apply to what they receive. We do not sell your personal information.</p>
       <h4>Google Firebase</h4><p>Sign-in and cloud storage.</p>
-      <h4>Your AI provider</h4><p>Your messages and files go to the provider you choose, using your key.</p>
+      <h4>Your AI provider</h4><p>Your messages and files go to the Provider you choose, using your key.</p>
       <h4>ElevenLabs</h4><p>Speech and audio features, through the Aphrosta voice proxy hosted on Cloudflare Workers.</p>
       <h4>Web tools</h4><p>Page reading uses Jina Reader, AllOrigins and corsproxy.io. Search and data tools may contact DuckDuckGo, Google News, Wikipedia, CoinGecko, Yahoo Finance, Frankfurter and the npm registry.</p>
       <h4>Content hosts</h4><p>Libraries and icons load from Google, jsDelivr, unpkg and Wikimedia, which can see your IP address.</p>
-      <p>Because these services run in many countries, your data may be processed outside the Philippines.</p>` },
-    { t: 'Your rights and choices', kw: 'rights access correct delete export object retention complaint npc gdpr',
-      b: `<p>Under Philippine law you may have the right to be informed, to access, correct and object to the processing of your data, to erase or block it, and to data portability. Where other laws apply, you may have similar rights.</p>
+      <h4>Legal disclosure</h4><p>We may disclose data where a valid legal process or law requires it, or to protect rights and safety.</p>` },
+    { t: 'International transfers', kw: 'transfers cross border outside philippines countries processed',
+      b: `<p>Because these services run in many countries, your data may be processed outside the Philippines, including where the data protection laws differ from yours. We choose services that apply safeguards, and you accept this by using the App.</p>` },
+    { t: 'How long we keep data', kw: 'retention delete keep period backups',
+      b: `<h4>Your data</h4><p>Your data is kept until you delete it or delete your account.</p>
+      <h4>Improve Service copies</h4><p>Deleted when you turn Improve Service off.</p>
+      <h4>Backups and legal needs</h4><p>Some copies may remain for a short time in backups, or longer where the law requires.</p>` },
+    { t: 'Your rights and choices', kw: 'rights access correct delete export object retention complaint npc gdpr portability',
+      b: `<p>Under Philippine law you may have the right to be informed, to access, correct and object to the processing of your data, to erase or block it, to data portability, to claim damages for misuse, and to file a complaint. Where other laws apply, you may have similar rights.</p>
       <h4>In the app</h4><p>Settings, Privacy has Export Data, Import Data and Delete Local, and Settings has account actions for deleting your account data.</p>
-      <h4>Retention</h4><p>Your data is kept until you delete it or delete your account.</p>
-      <h4>Requests and complaints</h4><p>Email ${AB_MAIL} for any request. You may also complain to the National Privacy Commission of the Philippines.</p>` },
+      <h4>Requests</h4><p>Email ${AB_MAIL} for any request. We may ask you to confirm your identity first.</p>
+      <h4>Complaints</h4><p>You may complain to the National Privacy Commission of the Philippines, or to the authority in your own country.</p>` },
     { t: 'Children', kw: 'children minors age 13 parents',
       b: `<p>Aphrosta is for people aged 13 and over. It is not directed to younger children. Parents or guardians can email us to ask about or delete a child's information.</p>` },
-    { t: 'Browser storage', kw: 'cookies local storage indexeddb tracking',
-      b: `<p>Aphrosta uses your browser's local storage and IndexedDB to keep you signed in and to save settings, drafts, saved keys and encryption keys on your device. It does not use them for advertising.</p>` },
+    { t: 'Browser storage', kw: 'cookies local storage indexeddb tracking advertising',
+      b: `<p>Aphrosta uses your browser's local storage and IndexedDB to keep you signed in and to save settings, drafts, saved keys and encryption keys on your device. It does not use them for advertising. Clearing your browser data may sign you out and remove local data.</p>` },
+    { t: 'Content and conduct rules', kw: 'content rules prohibited illegal harmful safe conduct community',
+      b: `<p>These rules apply to everything you enter into or create with Aphrosta.</p>
+      <h4>Not allowed</h4><p>Content that is illegal, threatens or harasses others, promotes violence or hate, exploits or endangers minors, is fraudulent or deceptive, spreads malware, or invades privacy.</p>
+      <h4>Respect rights</h4><p>Do not use Aphrosta to infringe copyright, trademarks or other rights.</p>
+      <h4>Responsible AI use</h4><p>Do not present AI output as professional advice, and do not use it to deceive others about its source where honesty matters.</p>
+      <h4>Consequences</h4><p>We may remove content, limit features, or suspend or lock accounts that break these rules. Serious cases may be reported to the authorities.</p>` },
     { t: 'AI and voice notice', kw: 'ai generated content voice synthetic responsibility emergency',
-      b: `<p>Replies come from AI models run by the providers you choose. They can be wrong, and their safety filters are controlled by those providers. Aphrosta is not a source of professional advice and must not be used for emergencies.</p>
-      <p>Spoken replies use stock computer-generated voices. Aphrosta does not clone real people's voices.</p>` },
-    { t: 'Reporting and legal notices', kw: 'report abuse feedback copyright infringement notice contact',
-      b: `<p>To report content or behaviour that breaks these rules, use Feedback in Settings or email us. Reports are reviewed and access may be removed where needed.</p>
-      <h4>Copyright notices</h4><p>If you believe something in Aphrosta infringes your rights, email ${AB_MAIL} with your contact details, a description of the work and where it appears.</p>${abContact()}` }
+      b: `<p>Replies come from AI models run by the Providers you choose. They can be wrong, and their safety filters are controlled by those Providers. Aphrosta is not a source of professional advice and must not be used for emergencies.</p>
+      <h4>Voices</h4><p>Spoken replies use stock computer-generated voices. Aphrosta does not clone real people's voices.</p>` },
+    { t: 'Reporting and legal notices', kw: 'report abuse feedback copyright infringement notice takedown contact',
+      b: `<h4>Reporting</h4><p>To report content or behaviour that breaks these rules, use Feedback in Settings or email us. Reports are reviewed and access may be removed where needed.</p>
+      <h4>Copyright notices</h4><p>If you believe something in Aphrosta infringes your rights, email ${AB_MAIL} with your contact details, a description of the work, where it appears, and a statement that you are the owner or authorised to act for the owner.</p>
+      <h4>Our response</h4><p>We review notices in good faith and may remove or disable access to material while we do.</p>
+      <h4>Contact</h4>${abContact()}` },
+    { t: 'Changes to these Rules', kw: 'changes updates policy notice',
+      b: `<p>We may update these Rules &amp; Policies. The current version and its date are always in the App. If a change is significant, we will tell you in the App or by email where the law requires it.</p>` }
   ] },
 
   licenses: { title: 'About & Licenses', icon: () => ICONS.stLicense, cards: () => [
     { t: 'About Aphrosta', kw: 'about aphrosta app what it does version development',
-      b: `<p>Aphrosta is a mobile-first web app for chatting with AI models using your own API keys, with voice, memory, files and a personal library. It is currently in development, so features may change.</p>` },
+      b: `<p>Aphrosta is a mobile-first web app for chatting with AI models using your own API keys, with voice, memory, files and a personal library.</p>
+      <h4>Status</h4><p>Aphrosta is currently in development, so features may change.</p>
+      <h4>Independence</h4><p>Aphrosta is built and run independently by one owner.</p>` },
     { t: 'Owner and copyright', kw: 'owner copyright rights reserved contact',
-      b: `<p>&copy; 2026 ${esc(AB_OWNER)}. All rights reserved.</p>${abContact()}` },
-    { t: 'Permitted use', kw: 'license use copy permission code content',
-      b: `<p>You may use Aphrosta as a service under the Terms &amp; Conditions. Its code, design and original content may not be copied or republished without written permission. To ask, email ${AB_MAIL}.</p>` },
-    { t: 'Third-party libraries', kw: 'libraries firebase mermaid icons lobe simple icons wikimedia licenses credits',
-      b: `${abItem('Firebase JS SDK 10.12.0', 'Apache-2.0', 'Authentication and Firestore, loaded from Google.')}
+      b: `<p>&copy; 2026 ${esc(AB_OWNER)}. All rights reserved.</p>
+      <h4>Contact</h4>${abContact()}` },
+    { t: 'Permitted use', kw: 'license use copy permission code content restrictions',
+      b: `<h4>What you may do</h4><p>You may use Aphrosta as a service under the Terms &amp; Conditions.</p>
+      <h4>What you may not do</h4><p>Its code, design and original content may not be copied, republished, sold or modified without written permission.</p>
+      <h4>Asking permission</h4><p>To ask, email ${AB_MAIL}.</p>` },
+    { t: 'Third-party libraries', kw: 'libraries firebase mermaid icons lobe simple icons wikimedia licenses credits open source',
+      b: `<p>Aphrosta uses the following third-party materials. Each stays under its own license, and its owners keep their rights.</p>
+      ${abItem('Firebase JS SDK 10.12.0', 'Apache-2.0', 'Authentication and Firestore, loaded from Google.')}
       ${abItem('Mermaid 11.4.1', 'MIT', 'Draws diagrams in replies, loaded from jsDelivr.')}
       ${abItem('Lobe Icons (static SVG)', 'MIT', 'Groq, Grok, Kimi, Perplexity and OpenRouter logos, loaded from unpkg.')}
       ${abItem('Icons static SVG by bentwnghk', 'Per source', 'The OpenAI logo, loaded from unpkg under the license in that project.')}
       ${abItem('Gemini icon (Wikimedia Commons)', 'Per source', 'The Gemini logo, under the terms on its Wikimedia page.')}
-      ${abItem('Simple Icons', 'CC0 1.0', 'The DeepSeek and Claude logos. The icon set is public domain, but the brands remain trademarks of their owners.')}` },
+      ${abItem('Simple Icons', 'CC0 1.0', 'The DeepSeek and Claude logos. The icon set is public domain, but the brands remain trademarks of their owners.')}
+      <h4>Notices</h4><p>License names are given in good faith. If a license changes or you find an error, email ${AB_MAIL}.</p>` },
     { t: 'Third-party services', kw: 'services providers openai anthropic gemini groq deepseek xai moonshot perplexity openrouter elevenlabs firebase',
-      b: `${abItem('AI model providers', 'Service terms', 'OpenAI, Anthropic, Google Gemini, Groq, DeepSeek, xAI, Moonshot, Perplexity, OpenRouter and others in the model picker, used with your own key.')}
+      b: `<p>These services are not part of Aphrosta. Their own terms apply when you use them.</p>
+      ${abItem('AI model providers', 'Service terms', 'OpenAI, Anthropic, Google Gemini, Groq, DeepSeek, xAI, Moonshot, Perplexity, OpenRouter and others in the model picker, used with your own key.')}
       ${abItem('Firebase', 'Service terms', 'Sign-in and cloud sync.')}
       ${abItem('ElevenLabs', 'Service terms', 'Speech and audio features through the Aphrosta voice proxy.')}
       ${abItem('Web reader and data sources', 'Service terms', 'Jina Reader, AllOrigins, corsproxy.io, DuckDuckGo, Google News, Wikipedia, CoinGecko, Yahoo Finance, Frankfurter and the npm registry.')}` },
     { t: 'Trademarks and independence', kw: 'trademarks affiliation independent endorsement',
-      b: `<p>All provider names and logos are trademarks of their owners and are shown only to identify the provider you connect. Aphrosta is independent and is not affiliated with, endorsed by or sponsored by any of them.</p>` },
+      b: `<p>All provider names and logos are trademarks of their owners and are shown only to identify the Provider you connect. Aphrosta is independent and is not affiliated with, endorsed by or sponsored by any of them.</p>` },
     { t: 'No warranty', kw: 'warranty disclaimer legal advice',
       b: `<p>Aphrosta is provided as it is and as available. This page is a plain summary and not legal advice. The official terms of each third-party service apply to that service.</p>` }
   ] },
 
   help: { title: 'Help & Support', icon: () => ICONS.stHelp, cards: () => [
-    { t: 'Getting started', kw: 'start begin basics settings sign in',
-      b: `<p>Sign in with Google or email, then open Settings to set your theme and text size. Choose a model, add your API key and start chatting.</p>` },
-    { t: 'Connect a model', kw: 'api key model provider setup connect',
-      b: `<p>Open the model picker, choose a provider, then paste an API key from that provider's website and save it. Most key problems come from extra spaces when pasting, no billing set up with the provider, or no access to the chosen model.</p>` },
-    { t: 'Your Acard', kw: 'acard card login key backup',
-      b: `<p>Find Acard in Settings. It makes a PNG that can sign you in and holds your encryption key. Save it somewhere safe and never share it. Use Key Backup in Settings for an extra copy of your key.</p>` },
+    { t: 'Getting started', kw: 'start begin basics settings sign in first steps',
+      b: `<h4>1. Sign in</h4><p>Sign in with Google or with an email and password.</p>
+      <h4>2. Set up the look</h4><p>Open Settings to set your theme and text size.</p>
+      <h4>3. Connect a model</h4><p>Choose a model, add your API key and start chatting.</p>
+      <h4>4. Save your Acard</h4><p>Make your Acard and keep it somewhere safe.</p>` },
+    { t: 'Connect a model', kw: 'api key model provider setup connect billing access',
+      b: `<h4>Add a key</h4><p>Open the model picker, choose a provider, then paste an API key from that provider's website and save it.</p>
+      <h4>Common problems</h4><p>Most key problems come from extra spaces when pasting, no billing set up with the Provider, or no access to the chosen model.</p>
+      <h4>Costs</h4><p>The Provider charges you directly for usage. See Billing &amp; Payment.</p>` },
+    { t: 'Your account and Acard', kw: 'acard card login key backup account sign out pause lock delete',
+      b: `<h4>Acard</h4><p>Find Acard in Settings. It makes a PNG that can sign you in and holds your encryption key. Save it somewhere safe and never share it.</p>
+      <h4>Key Backup</h4><p>Use Key Backup in Settings for an extra copy of your key.</p>
+      <h4>Account actions</h4><p>Settings has actions to pause, lock or delete your account. Some are permanent, so read each confirmation.</p>` },
     { t: 'Backup and restore', kw: 'backup restore export import delete local data',
-      b: `<p>Settings, Privacy has Export Data to save your data, Import Data to bring it back, and Delete Local to remove data from this device.</p>` },
+      b: `<h4>Export Data</h4><p>Settings, Privacy has Export Data to save your data.</p>
+      <h4>Import Data</h4><p>Use Import Data to bring it back.</p>
+      <h4>Delete Local</h4><p>Use Delete Local to remove data from this device.</p>` },
     { t: 'Privacy switches', kw: 'privacy share usage improve service mask details',
-      b: `<p>Settings, Privacy lets you control Share Usage, Improve Service and Mask Details. See Rules &amp; Policies for what each one does.</p>` },
+      b: `<p>Settings, Privacy lets you control these switches. See Rules &amp; Policies for the full rules.</p>
+      <h4>Share Usage</h4><p>Syncs memory and usage records to your cloud space.</p>
+      <h4>Improve Service</h4><p>Stores a readable copy of conversations for the Owner to improve Aphrosta.</p>
+      <h4>Mask Details</h4><p>Hides personal details as described in that setting.</p>` },
     { t: 'Voice', kw: 'voice microphone speech permission read aloud',
-      b: `<p>Voice input needs microphone permission. If it does not work, allow the microphone in your browser's site settings and close other apps that may be using it.</p>` },
-    { t: 'Troubleshooting', kw: 'troubleshoot problem not working blank stuck reload no reply',
-      b: `<h4>No reply</h4><p>Check your API key, billing with the provider and model access.</p>
+      b: `<h4>Microphone</h4><p>Voice input needs microphone permission. If it does not work, allow the microphone in your browser's site settings.</p>
+      <h4>Other apps</h4><p>Close other apps that may be using the microphone.</p>` },
+    { t: 'Keyboard and display tips', kw: 'keyboard shortcuts text size theme display desktop',
+      b: `<h4>Shortcuts</h4><p>Shortcuts work on a computer with a physical keyboard, when turned on. See Keyboard Shortcuts in About.</p>
+      <h4>Text size and theme</h4><p>Change them in Settings if text is hard to read.</p>` },
+    { t: 'Troubleshooting', kw: 'troubleshoot problem not working blank stuck reload no reply error',
+      b: `<h4>No reply</h4><p>Check your API key, billing with the Provider and model access.</p>
       <h4>Something looks stuck</h4><p>Reload the page. Your settings and chats are saved.</p>
-      <h4>Still stuck</h4><p>Send feedback and say what you were doing when it happened.</p>` },
-    { t: 'Contact and feedback', kw: 'contact feedback support email phone owner',
-      b: `${abContact()}<p>For privacy requests, legal notices or permission requests, please use email.</p><button class="btn-line" type="button" data-ab="feedback">Send feedback</button>` }
+      <h4>Signed out</h4><p>Clearing browser data can sign you out. Sign in again with your Acard or account.</p>
+      <h4>Still stuck</h4><p>Use the app's feedback button and say what you were doing when it happened.</p>` },
+    { t: 'Safety reminders', kw: 'safety security tips never share key acard emergency advice',
+      b: `<h4>Protect your secrets</h4><p>Never share your Acard or API keys.</p>
+      <h4>Check AI answers</h4><p>AI can be wrong. Do not rely on it for emergencies or for legal, medical or financial decisions.</p>` },
+    { t: 'Contact', kw: 'contact support email phone owner privacy legal',
+      b: `${abContact()}<p>For privacy requests, legal notices or permission requests, please use email.</p>` }
   ] },
 
   billing: { title: 'Billing & Payment', icon: () => ICONS.stBilling, cards: () => [
-    { t: 'Plans and subscriptions', kw: 'plan subscription price period renew',
-      b: `<p>Some features may need a paid subscription. The price and billing period are shown when you subscribe, and taxes may apply.</p>` },
-    { t: 'How payments work today', kw: 'manual payment email card',
-      b: `<p>Payments are currently arranged manually with the owner by email. Aphrosta does not ask for or store payment card numbers inside the app.</p>` },
+    { t: 'Overview', kw: 'billing overview payment summary',
+      b: `<p>Last updated ${AB_UPDATED}.</p>
+      <p>This page explains how payment for Aphrosta works. It forms part of the Terms &amp; Conditions.</p>
+      <h4>Two kinds of cost</h4><p>You may pay the Owner for an Aphrosta subscription, and you pay your AI Provider directly for your API usage. These are separate.</p>` },
+    { t: 'Plans and subscriptions', kw: 'plan subscription price period renew free features',
+      b: `<h4>Paid features</h4><p>Some features may need a paid subscription. Other features may be free.</p>
+      <h4>What you see</h4><p>The price and billing period are shown when you subscribe.</p>
+      <h4>Taxes</h4><p>Taxes may apply, and you are responsible for them.</p>
+      <h4>Changes to plans</h4><p>Plans and features may change as Aphrosta develops.</p>` },
+    { t: 'How payments work today', kw: 'manual payment email card current method',
+      b: `<h4>Manual payments</h4><p>Payments are currently arranged manually with the Owner by email.</p>
+      <h4>Card details</h4><p>Aphrosta does not ask for or store payment card numbers inside the app.</p>
+      <h4>Be careful</h4><p>Only pay using details given by the Owner from the email address on this page.</p>` },
     { t: 'Online payments (planned)', kw: 'stripe online payments card future',
       b: `<p>Online payments through Stripe are planned for a future version. When they launch, Stripe will process card details under its own terms, and the Terms and Privacy Policy will be updated.</p>` },
-    { t: 'Cancellation and refunds', kw: 'cancel refund no refunds',
-      b: `<p>You can cancel by contacting us, and cancelling stops future charges. All payments are final and non-refundable, including for unused or partial periods, except where the law gives you a right that cannot be waived or where we agree otherwise in writing.</p>` },
+    { t: 'Payment records', kw: 'receipt invoice records proof',
+      b: `<p>You may ask for confirmation of your payment by email. Keep your own records of what you paid and when.</p>` },
+    { t: 'Cancellation', kw: 'cancel stop future charges how to',
+      b: `<h4>How to cancel</h4><p>You can cancel by contacting us. Cancelling stops future charges.</p>
+      <h4>After cancelling</h4><p>You keep access to paid features until the end of the period you already paid for, unless your account is suspended under the Terms.</p>` },
+    { t: 'Refunds', kw: 'refund no refunds final consumer law',
+      b: `<h4>General rule</h4><p>All payments are final and non-refundable, including for unused or partial periods.</p>
+      <h4>Exceptions</h4><p>This does not apply where the law gives you a right that cannot be waived, or where we agree otherwise in writing.</p>` },
     { t: 'Price changes', kw: 'price change notice',
-      b: `<p>Prices may change. We will give notice before the change applies to your next billing period.</p>` },
+      b: `<p>Prices may change. We will give notice before the change applies to your next billing period, and you may cancel before it takes effect.</p>` },
+    { t: 'Billing mistakes and disputes', kw: 'error wrong charge dispute complaint',
+      b: `<p>If you think you were charged in error, email us with the date, amount and details. We will look into it in good faith and correct genuine mistakes.</p>` },
     { t: 'Your AI provider costs', kw: 'api key provider charges byok cost',
       b: `<p>Because you use your own API keys, the AI providers bill you directly. Those charges are separate from any Aphrosta subscription, and Aphrosta is not responsible for them.</p>` },
+    { t: 'Non-payment and suspension', kw: 'unpaid suspension access stop',
+      b: `<p>If a paid subscription is not paid, we may limit or remove paid features. Your data stays under the Rules &amp; Policies, and you can still export it.</p>` },
     { t: 'Billing help', kw: 'billing help contact',
       b: `${abContact()}` }
   ] }
@@ -16671,10 +16816,14 @@ const AB_PAGES = {
 function abBodyHtml(key) {
   const def = AB_PAGES[key];
   if (!def) return '';
-  return def.cards().map((c, i) => `<section class="ab-card${i === 0 ? ' open' : ''}" data-kw="${esc(((c.t || '') + ' ' + (c.kw || '')).toLowerCase())}">
-    <button class="ab-hd" type="button" data-ab="toggle" aria-expanded="${i === 0}"><span class="ab-t">${esc(c.t)}</span><svg class="ab-chev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
-    <div class="ab-bd">${c.b}</div>
-  </section>`).join('');
+  return def.cards().map((c, i) => {
+    let j = 0;
+    const body = String(c.b).replace(/<h4>/g, () => `<h4><span class="ab-n">${i + 1}.${++j}</span>`);
+    return `<section class="ab-card open" data-kw="${esc(((c.t || '') + ' ' + (c.kw || '')).toLowerCase())}">
+    <div class="ab-hd"><span class="ab-n">${i + 1}.0</span><h3 class="ab-t">${esc(c.t)}</h3></div>
+    <div class="ab-bd">${body}</div>
+  </section>`;
+  }).join('');
 }
 
 function abClearMarks(root) {
