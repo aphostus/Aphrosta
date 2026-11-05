@@ -16481,22 +16481,16 @@ const kbCaps = (txt) => {
 const kbCombo = (s) => (s.lbl || kbLabel(s.k)).split(' or ').map((t) => kbCaps(t.trim())).join('<i>or</i>');
 const kbRow = (s) => `<div class="kb-row"><span>${esc(s.t)}</span><span class="kb-keys">${kbCombo(s)}</span></div>`;
 const kbCards = () => [
-  { t: 'About shortcuts', st: 1, kw: 'keyboard shortcuts keys hotkeys desktop mac ctrl command option',
-    b: `<p>Shortcuts work on computers with a keyboard and mouse. ${KB_MAC ? '\u2318 is Command, \u2325 is Option and \u21e7 is Shift.' : 'On a Mac, Ctrl becomes \u2318 and Alt becomes \u2325.'} They pause while a popup is open. Keys without Ctrl or Alt only work when you are not typing.</p>` },
-  { t: 'Most used', st: 1, kw: 'most used popular favourites quick start top',
-    b: `<h4>Most used</h4>` + KB_SHORTCUTS.filter((s) => KB_TOP.includes(s.k)).map(kbRow).join('') },
+  { t: 'Using shortcuts', kw: 'keyboard shortcuts keys hotkeys desktop mac ctrl command option',
+    b: `<p>Shortcuts work on a computer with a physical keyboard. ${KB_MAC ? '\u2318 is Command, \u2325 is Option and \u21e7 is Shift.' : 'On a Mac, Ctrl becomes \u2318 and Alt becomes \u2325.'}</p><p>Press ${esc(kbLabel('mod+Slash'))} anywhere, or ? when you are not typing, to open this list. Touch screens do not use shortcuts.</p>` },
+  { t: 'Most used', kw: 'most used popular favourites quick start top',
+    b: KB_SHORTCUTS.filter((s) => KB_TOP.includes(s.k)).map(kbRow).join('') },
   ...KB_GROUPS.map((g) => {
     const rows = KB_SHORTCUTS.filter((s) => s.g === g && !s.hide);
-    return {
-      t: g, st: 1, kw: `${g} ` + rows.map((s) => s.t + ' ' + (s.lbl || kbLabel(s.k))).join(' '),
-      b: `<h4>${esc(g)}</h4>` + rows.map(kbRow).join('')
-    };
+    return { t: g, kw: `${g} ` + rows.map((s) => s.t + ' ' + (s.lbl || kbLabel(s.k))).join(' '), b: rows.map(kbRow).join('') };
   }),
-  { t: 'Tips and conflicts', st: 1, kw: 'tips conflicts browser not working extension typing help feedback',
-    b: `<h4>Open this list</h4><p>Press ${esc(kbLabel('mod+Slash'))} anywhere, or ? when you are not typing.</p>
-    <h4>When a key does nothing</h4><p>Some browsers keep keys like Ctrl + T, Ctrl + W and Ctrl + N for themselves, so Aphrosta avoids them. If a shortcut still does nothing, another app or a browser extension may be using the same keys.</p>
-    <h4>Typing safely</h4><p>Plain keys such as / and ? only work when no text box is focused, so they never get in the way of what you type. ${esc(kbLabel('shift+Escape'))} jumps back to the message box from anywhere.</p>
-    <h4>Need more help?</h4><p>Press ${esc(kbLabel('alt+shift+KeyH'))} for Help and Support, or ${esc(kbLabel('alt+shift+KeyF'))} to send feedback.</p>` }
+  { t: 'When a shortcut does nothing', kw: 'tips conflicts browser not working extension typing help feedback',
+    b: `<p>Some browsers keep keys such as Ctrl + T, Ctrl + W and Ctrl + N for themselves, so Aphrosta avoids them. If a shortcut still does nothing, another app or a browser extension may be using it.</p><p>Plain keys such as / and ? only work when no text box is focused, so they never interfere with typing.</p>` }
 ];
 
 document.addEventListener('keydown', (e) => {
@@ -16517,279 +16511,170 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-const AB_BILL_LS = 'aphrosta.billing';
+const AB_OWNER = 'Gabriel Yoan L. Cortez';
+const AB_MAIL = 'Aphostus@gmail.com';
+const AB_PHONE = '+63 9245266251';
+const AB_UPDATED = 'November 5, 2026';
 
-
-const abTextCard = (title, tagline, desc, sub, desc2) => ({
-  t: title, st: 1, kw: `${title} ${tagline}`,
-  b: `<div style="font-size:calc(15px * var(--ts));font-weight:600;color:var(--fg)">${title}</div><div style="font-size:calc(12.5px * var(--ts));color:var(--gray-mid)">${tagline}</div><p style="margin:0">${desc}</p><div style="font-size:calc(12.5px * var(--ts));font-weight:600;color:var(--gray-mid)">${sub}</div><p style="margin:0">${desc2}</p>`
-});
-
-const abLic = (name, lic, what) => `<h4>${esc(name)}<span class="ab-tag">${esc(lic)}</span></h4><p>${what}</p>`;
-
+const abItem = (name, tag, what) => `<h4>${esc(name)}${tag ? `<span class="ab-tag">${esc(tag)}</span>` : ''}</h4><p>${what}</p>`;
+const abContact = () => `<p>${esc(AB_OWNER)}<br>Email: <a href="mailto:${AB_MAIL}">${AB_MAIL}</a><br>Phone: <a href="tel:+639245266251">${esc(AB_PHONE)}</a></p>`;
 
 const AB_PAGES = {
-  shortcuts: { title: 'Keyboard Shortcuts', icon: () => ICONS.stKeys, cards: kbCards() },
-  terms: { title: 'Terms & Conditions', icon: () => ICONS.stTerms, cards: [
-    { t: 'Agreement to Terms', st: 1, kw: 'terms acceptance agreement',
-      b: `<p>By creating an account or using Aphrosta, you agree to these Terms and Conditions. If you do not agree, please stop using the app and remove any local data you have saved.</p>
-      <h4>What this covers</h4><p>These terms apply to everyone who accesses or uses the app, including visitors who have not signed in. They cover the app itself, your account, your content, and the limits of what we promise.</p>
-      <h4>Changes to Terms</h4><p>We may update these terms from time to time. We will try to highlight significant changes when they happen, and where the law requires it we will ask you to accept the updated version. Nothing in these terms limits rights that cannot legally be limited.</p>
-      <h4>Age requirements and younger users</h4><p>Aphrosta is a general-audience service and is not directed to children under 13. You may use Aphrosta only if you are at least 13 years old, or the minimum age required to consent to online services in your country, whichever is higher. If you are under 18, or under the age of majority where you live, use Aphrosta only with the permission and supervision of a parent or legal guardian, who should review these Terms.</p>
-      <p>Do not create an account or provide personal information if you are below the applicable minimum age. If we learn that we collected personal information from a child under 13 without legally required parental consent, we will take appropriate steps to delete it. Parents or guardians can contact us through the Feedback option in the app to ask about a child's information or request deletion.</p>` },
-    { t: 'Account Responsibilities', st: 1, kw: 'account secure password login',
-      b: `<p>You are responsible for the activity on your account and for keeping your sign-in details private. One person should use one account. Sharing accounts can lead to data loss or confusion.</p>
-      <h4>Staying secure</h4><p>Tell us right away if you think someone else has used your account so we can help you secure it. Do not share your Google sign-in, your API keys, or your device with people you do not trust.</p>
-      <h4>Account Removal</h4><p>You can deactivate, abandon or abolish your account from Settings at any time. Review the differences carefully before confirming, as some actions are permanent.</p>` },
-    { t: 'Using the App', st: 1, kw: 'liability app service warranty',
-      b: `<p>Aphrosta is provided as it is. We work hard to keep it fast and reliable, but we cannot promise that every feature will always be available, error-free, or fit for a particular purpose.</p>
-      <h4>Limits of liability</h4><p>To the fullest extent allowed by law, Aphrosta and its makers are not liable for indirect or consequential losses, for data you have not backed up, or for costs you incur by using third-party AI providers through your own API keys.</p>
-      <h4>Availability</h4><p>We may pause or stop the service for maintenance or updates without notice. We do not guarantee that data stored in the cloud will be available forever.</p>` },
-    { t: 'Ownership and Intellectual Property', st: 1, kw: 'ownership intellectual property copyright trademark owner',
-      b: `<p>Aphrosta, including its name, source code, design, interface and original content, is owned by Gabriel Yoan L. Cortez and is protected by the Intellectual Property Code of the Philippines (Republic Act No. 8293) and other applicable laws. All rights not expressly granted to you are reserved.</p>
-      <h4>Feedback</h4><p>If you send ideas or suggestions, you allow the owner to use them to improve Aphrosta without payment or credit to you.</p>
-      <h4>Infringement notices</h4><p>If you believe content in Aphrosta infringes your rights, email <a href="mailto:Aphostus@gmail.com">Aphostus@gmail.com</a> with your name, contact details, a description of the work, where it appears and a statement that you are the rights holder or authorised to act for them. We will review it and act where appropriate.</p>` },
-    { t: 'Disclaimer and Independence', st: 1, kw: 'disclaimer warranty liability affiliation openrouter independent',
-      b: `<p>Aphrosta is provided as it is and as available, without warranties of any kind, whether express or implied, including fitness for a particular purpose, accuracy, availability or non-infringement, to the fullest extent allowed by law.</p>
-      <h4>Not affiliated</h4><p>Aphrosta is independent. It is not affiliated with, endorsed by or sponsored by Google, Groq, DeepSeek, xAI, Anthropic, OpenAI, Moonshot, Perplexity, OpenRouter, ElevenLabs or any other provider. Any provider you connect is chosen and paid for by you, with your own API key, and its own terms apply.</p>
-      <h4>No professional advice</h4><p>Nothing in Aphrosta is legal, medical, financial or other professional advice. Outputs from AI models can be wrong.</p>
-      <h4>Limit of liability</h4><p>To the fullest extent allowed by law, the owner is not liable for indirect, incidental or consequential loss, lost data, lost profits, or charges from third-party providers. Nothing here limits any right you have under law that cannot be waived, including under the Consumer Act of the Philippines where it applies.</p>` },
-    { t: 'Your Privacy Rights', st: 1, kw: 'privacy data protection rights dpa philippines national privacy commission delete access',
-      b: `<p>Aphrosta handles personal information in line with the Data Privacy Act of 2012 (Republic Act No. 10173) and its rules. Under that law you may have the right to be informed, to access, correct and object to the processing of your personal data, to request erasure or blocking, to data portability, and to claim damages where allowed.</p>
-      <h4>Data controller</h4><p>Gabriel Yoan L. Cortez, <a href="mailto:Aphostus@gmail.com">Aphostus@gmail.com</a>, <a href="tel:+639245266251">+63 9245266251</a>.</p>
-      <h4>How to use your rights</h4><p>Email us or use the in-app export, Abolish and Destruct tools. We will respond within a reasonable time. You may also file a complaint with the National Privacy Commission of the Philippines.</p>
-      <h4>Providers</h4><p>Messages you send go to the provider you choose. We do not control how that provider handles them.</p>` },
-    { t: 'Governing Law and Disputes', st: 1, kw: 'governing law jurisdiction disputes philippines courts severability',
-      b: `<p>These Terms are governed by the laws of the Republic of the Philippines, without regard to conflict of law rules. You agree to try to settle any dispute in good faith first by emailing <a href="mailto:Aphostus@gmail.com">Aphostus@gmail.com</a>. If it is not resolved, the proper courts of the Philippines have jurisdiction, subject to any mandatory rights you have as a consumer.</p>
-      <h4>Electronic agreement</h4><p>Your use of Aphrosta and your acceptance of these Terms are valid electronic acts under the Electronic Commerce Act of 2000 (Republic Act No. 8792).</p>
-      <h4>General</h4><p>If a part of these Terms is found unenforceable, the rest stays in force. Not enforcing a right is not a waiver of it. These Terms, with the Rules &amp; Policies, are the whole agreement between you and the owner about Aphrosta.</p>` },
-    { t: 'Your Content', st: 1, kw: 'content rights own',
-      b: `<p>You keep the rights you already have in content that you submit. Subject to applicable law and the terms of the model provider you choose, you may use the outputs available to you, but Aphrosta does not guarantee that an output is original, exclusive, accurate, or eligible for copyright protection. You are responsible for having the rights and permissions needed for anything you upload or share. You give us only the minimum permission needed to store and sync your sessions, settings and memories so the app can work across your devices.</p>
-      <h4>What you must not do</h4><p>Do not use Aphrosta to break the law, to harm other people, to infringe copyright, or to build tools that do the same. We may limit or remove access where abuse is clear.</p>
-      <h4>AI Generated Content</h4><p>AI models can make mistakes. You are responsible for verifying any code, advice, or information generated by the app before you rely on it in the real world.</p>` },
-    { t: 'Third-Party AI Providers', st: 1, kw: 'ai keys api provider terms',
-      b: `<p>Aphrosta talks to AI providers such as Groq, Google, DeepSeek, xAI, Anthropic, OpenAI, Moonshot and Perplexity using API keys that you add yourself. Those providers have their own terms, prices and privacy policies.</p>
-      <h4>Your responsibility</h4><p>Your use of a provider may be subject to that provider's terms, so review them before sending data or using a paid key. Any spending on your own API keys is your responsibility.</p>
-      <h4>Data sharing and provider requests</h4><p>When you send a request to a model provider, the browser sends it to the provider selected in the app using the provider key you supplied. That provider receives and handles the request under its own terms and privacy policy. Separately, Aphrosta may store account, settings, session, memory, usage, feedback, sharing, and operational records. When Improve Service is enabled, Aphrosta may store a readable copy of eligible chats for that feature, and when sharing is used, selected content may be made available through the sharing feature. Do not enter confidential, regulated, or highly sensitive information unless you understand these flows.</p>` }
-  ] },
-  rules: { title: 'Rules & Policies', icon: () => ICONS.stRules, cards: [
-    { t: 'Acceptable Use Policy', st: 1, kw: 'abuse spam bad behavior',
-      b: `<p>Use Aphrosta for lawful purposes only. Do not attempt to disrupt the service, access data that is not yours, or misuse its features. Do not try to overload the model providers with automated spam or scripts.</p>
-      <h4>Content limits</h4><p>Content you create stays yours, but you agree not to use the app to share material that is harmful, abusive, or illegal. This includes harassment, threats, sexual content involving minors, malware, and attempts to bypass provider safety systems.</p>
-      <h4>Consequences</h4><p>Violating these rules may result in your API keys being removed from the app or your account being locked. Severe violations may be reported to the relevant authorities.</p>` },
-    { t: 'Privacy and Data Collection', st: 1, kw: 'privacy data tracking cloud encrypted api keys',
-      b: `<p>Aphrosta is designed so that your private app data is encrypted in your browser before it is synchronized to your private cloud space. The cloud stores encrypted records, not a readable copy of your conversations, settings, memories, model configuration, or provider credentials.</p>
-  <h4>What is included in the encrypted vault</h4>
-  <p>The encrypted vault may contain your saved sessions, settings, memories, language preferences, effort level, active model, model variants, known words, token usage records, and the provider API keys that you choose to save in Aphrosta.</p>
-  <h4>How API-key protection works</h4>
-  <p>Your provider API keys are stored inside the encrypted vault payload. They are not stored inside the encryption key. The encryption key is a separate 256-bit AES-GCM key created for your account on this device. The key is required to decrypt the vault and is never uploaded to Firestore.</p>
-  <h4>What happens after clearing site data</h4>
-  <p>Clearing browser site data removes the local copy of your settings and API keys. If your encrypted cloud record still exists, you can sign in again and provide your exported encryption key from Settings → Key Backup. Aphrosta can then decrypt and restore the saved data, including the API keys included in the vault.</p>
-  <h4>Data that is not part of the encrypted vault</h4>
-  <p>Some operational records, such as account status, registered-device metadata, and feedback that you voluntarily submit, may be stored separately so account and support features can work. Browser-only drafts, billing information, and local library files should be treated as device-local unless the app explicitly provides an export or sync option for them.</p>
-  <h4>Your responsibility</h4>
-  <p>Keep a copy of your encryption key in a secure password manager or other secure location. Aphrosta cannot recover encrypted data if every copy of the key is lost.</p>` },
-    { t: 'Encryption and Your Privacy', st: 1, kw: 'encryption private safety key secure aes api keys vault',
-      b: `<p>Aphrosta encrypts private vault data in your browser before sending it to Firestore. The vault uses AES-GCM with a 256-bit key. Firestore receives the encrypted ciphertext and initialization vector, not the readable contents.</p>
-  <h4>The encryption key</h4>
-  <p>The encryption key is separate from your API keys. It is generated for your account and kept locally by the browser. It is never uploaded as a readable value and is not used as an API credential for any model provider.</p>
-  <h4>API keys inside the vault</h4>
-  <p>When you save a model provider key, Aphrosta places it inside the vault data before encryption. This allows the encrypted cloud copy to restore your provider keys after site data is deleted, provided that you still have the encryption key. Saved provider keys are accessible to the app in browser storage and memory when needed for app features, not only at the instant of a request. Encryption does not protect information while it is readable in the browser, while it is sent to a provider, or if your device, browser, or account is compromised. Keep your device, browser, account, and encryption-key backup secure.</p>
-  <h4>Auto backup</h4>
-  <p>When Auto backup is enabled, an additional copy of the encryption key is kept in this device's IndexedDB. That spare copy is device-local and is not sent to the cloud. Use the Backup button to export a copy for another device or for recovery after clearing site data.</p>
-  <h4>Improve Service</h4>
-  <p>Improve Service is separate from the encrypted vault. When enabled, Aphrosta may store a readable copy of chats for that feature. When disabled, Aphrosta removes that readable copy where possible. Disabling it does not decrypt or weaken your encrypted vault.</p>
-  <h4>Important limitation</h4>
-  <p>Encryption protects stored data, but a browser running modified or malicious code could access data after it has been decrypted locally. Keep your browser, hosting files, and account secure, and never share your encryption key or provider API keys.</p>` },
-    { t: 'Memory Systems Details', st: 1, kw: 'memory short long term context',
-      b: `<p>Aphrosta's memory has three parts: a fact store (long-term), a scoped database (short-term), and a compact state log. Memories respect your Memory settings.</p>
-      <h4>What is stored</h4><p>Long-term memory extracts facts like your name, preferences, and ongoing projects. Short-term memory keeps track of the current chat context so you don't have to repeat yourself.</p>
-      <h4>Clearing memory</h4><p>Settings → Assistance → Memory lets you delete individual memories or clear everything. Clearing memory also clears the remote copy in your private cloud space. Turning memory off stops new memories from being learned.</p>` },
-    { t: 'Token Limits and Usage', st: 1, kw: 'token limit usage tracking',
-      b: `<p>Token usage is recorded on this device and, when Share Usage is on, in your private cloud space. A custom limit and reset timer can pause chatting until the timer ends. Provider limits are separate and still apply.</p>
-      <h4>How it works</h4><p>Every message you send and every reply you receive uses tokens. Some providers report exact usage, while others do not. When they don't, Aphrosta estimates the count from the size of the text.</p>
-      <h4>Estimates</h4><p>The number you see is a close guide, not a billing statement from the provider. Always check your provider's dashboard for exact billing and limits.</p>` },
-    { t: 'Account Status and Locking', st: 1, kw: 'delete deactivate lock abandon destruct',
-      b: `<p>Deactivate pauses chatting without deleting anything. Abandon locks the account so it can never be signed into again. Abolish deletes your data but lets you start fresh later. Destruct deletes your data and locks the account permanently.</p>
-      <h4>Irreversible actions</h4><p>Abandon and Destruct are permanent and cannot be undone by support. Read the confirmation carefully before typing the confirmation phrase.</p>
-      <h4>What is deleted</h4><p>Abolish and Destruct delete your sessions, settings, memories, and usage records. Abandon keeps the data but prevents any future sign-in.</p>` },
-    { t: 'Changes and Reporting', st: 1, kw: 'report update rules',
-      b: `<p>We may update these rules as the app changes. The current version always lives in the app, so check here if you are unsure. Continuing to use Aphrosta after a change means you accept it.</p>
-      <h4>Reporting</h4><p>If you see content or behaviour that breaks these rules, send feedback from Settings → Feedback. Reports are reviewed and, where warranted, access is removed.</p>
-      <h4>False Reports</h4><p>Abusing the reporting system to harass others or spam our inbox is a violation of the acceptable use policy.</p>` }
-  ] },
-  licenses: { title: 'About & Licenses', icon: () => ICONS.stLicense, cards: [
-    abTextCard("About Aphrosta", "Who we are and what we make", "Aphrosta is a mobile web app built to make everyday tools and AI assistance feel simple, fast, and easy to use. It runs entirely in your browser, talks to model providers you choose, and keeps your work yours.", "Design goals", "Every screen is designed for one hand on a phone first. Big targets, readable type, safe motion, and fast transitions. Thank you for using Aphrosta. We work to keep the experience clear, reliable, and comfortable on every screen size."),
+  shortcuts: { title: 'Keyboard Shortcuts', icon: () => ICONS.stKeys, cards: () => kbCards() },
 
-    { t: 'Owner and Copyright', st: 1, kw: 'owner author copyright developer creator contact email phone all rights reserved',
-      b: `<h4>Owner and developer</h4><p>Aphrosta is created, owned and operated by <b>Gabriel Yoan L. Cortez</b>.</p>
-      <h4>Copyright notice</h4><p>&copy; 2026 Gabriel Yoan L. Cortez. All rights reserved.</p>
-      <p>The Aphrosta name, the app, its source code, interface, design, text, layout, features and original content are the exclusive property of Gabriel Yoan L. Cortez and are protected by the Intellectual Property Code of the Philippines (Republic Act No. 8293) and by applicable international copyright treaties. Third-party names, logos, libraries and services remain the property of their respective owners.</p>
-      <h4>Contact the owner</h4><p>Email: <a href="mailto:Aphostus@gmail.com">Aphostus@gmail.com</a></p><p>Phone: <a href="tel:+639245266251">+63 9245266251</a></p>` },
-
-    { t: 'License and Permitted Use', st: 1, kw: 'license all rights reserved permission copy reuse',
-      b: `<p>Aphrosta is proprietary software. It is <b>not</b> open source. No license is granted to you except the limited, personal, non-exclusive, non-transferable and revocable right to use the app as provided, under the Terms &amp; Conditions.</p>
-      <h4>What you may not do without written permission</h4><p>Copy, modify, redistribute, sell, sublicense, mirror, scrape, decompile or reverse engineer the app or any part of its code, design or content, except where the law clearly allows it despite this restriction. Do not remove or change any copyright, trademark or ownership notice.</p>
-      <h4>Third-party components</h4><p>Third-party libraries, fonts, icons and services keep their own licenses and terms. They are listed under Third-Party Libraries and Third-Party Services. This notice does not change those licenses.</p>
-      <h4>Permission requests</h4><p>To ask for permission to use any part of Aphrosta, email <a href="mailto:Aphostus@gmail.com">Aphostus@gmail.com</a>.</p>` },
-
-    { t: 'App Shell and Layout', st: 1, kw: 'layout sidebar topbar composer stage license all rights reserved',
-      b: `${abLic('app shell', 'All rights reserved', 'The sidebar, top bar, stage, and responsive CSS grid/flex rules that arrange every screen. Reuse it as a starting point for your own app.')}
-      ${abLic('messages and rich text', 'All rights reserved', 'The message bubbles, action buttons, and the rich-text renderer that turns markdown, tables, task lists, callouts, math and file cards into clean HTML.')}
-      ${abLic('composer and pill', 'All rights reserved', 'The textarea, attach tray, word-state pill, token meter, live speech wave and the resize handle.')}
-      ${abLic('thinking panel', 'All rights reserved', 'The collapsible thought panel that streams reasoning, plans and task lists while a reply is being written.')}
-      ${abLic('accessibility tree', 'All rights reserved', 'The ARIA labels, focus traps, keyboard navigation, and screen-reader announcements built into every component.')}
-      ${abLic('motion engine', 'All rights reserved', 'The spring animations, staggered reveals, and the reduced-motion fallbacks driven by CSS variables and data attributes.')}` },
-
-    { t: 'Settings, Profile and Account', st: 1, kw: 'settings account profile privacy license all rights reserved',
-      b: `${abLic('settings panel', 'All rights reserved', 'Every settings row, the usage card, the reset controls, and the expandable item pattern used across the panel.')}
-      ${abLic('profile and account page', 'All rights reserved', 'The avatar editor, phone and email masking, device list, permissions grid, deactivation and locking flows.')}
-      ${abLic('billing and payment screens', 'All rights reserved', 'The billing date, saved cards, billing details and history screens. Card data stays on this device and is never sent to the cloud.')}
-      ${abLic('permissions manager', 'All rights reserved', 'The UI for requesting and tracking microphone, camera, location, and notification permissions.')}
-      ${abLic('device registry', 'All rights reserved', 'The local and cloud list of devices connected to your account, including remove-device logic.')}
-      ${abLic('data export/import', 'All rights reserved', 'The JSON serialization, validation, and merging logic that lets you back up and restore your settings and sessions.')}` },
-
-    { t: 'Chat Engine and Sessions', st: 1, kw: 'chat engine sessions firebase provider license all rights reserved',
-      b: `${abLic('chat engine', 'All rights reserved', 'The send, stream, regenerate, edit and retry flow, including the per-provider adapters, the retry-on-400 fallback and the friendly error messages.')}
-      ${abLic('session storage', 'All rights reserved', 'The local session list, drafts, pinning, rename and delete, plus the cloud sync helpers.')}
-      ${abLic('token recorder', 'All rights reserved', 'The per-provider token counter, the rolling limit window and the pause logic when a limit is reached.')}
-      ${abLic('provider adapters', 'All rights reserved', 'The specific formatting logic for OpenAI, Anthropic, Google Gemini, and other API shapes so they all speak the same internal language.')}
-      ${abLic('prompt builder', 'All rights reserved', 'The logic that assembles system prompts from your settings, effort level, memories, and enabled skills.')}
-      ${abLic('stream parser', 'All rights reserved', 'The chunked reader that processes server-sent events (SSE) and updates the UI as text arrives.')}` },
-
-    { t: 'Memory and Agent', st: 1, kw: 'memory agent tools license all rights reserved',
-      b: `${abLic('memory systems', 'All rights reserved', 'The fact store, the scoped database and the compact state log, including their cloud sync, retention rules and clearing actions.')}
-      ${abLic('agent and tools', 'All rights reserved', 'The tool-call protocol, the web search, page reader, calculator and clock tools, and the auto-research step that runs before a reply is written.')}
-      ${abLic('skills library', 'All rights reserved', 'The Presentations, Documents, Spreadsheets and Web search skill prompts that teach the assistant to build decks, docs, sheets and researched answers.')}
-      ${abLic('file blocks', 'All rights reserved', 'The parser that detects fenced code blocks with filenames and turns them into the downloadable/previewable file cards.')}
-      ${abLic('web reader', 'All rights reserved', 'The proxy-based HTML-to-text extractor used by the fetch_url tool to read web pages without CORS issues.')}` },
-
-    { t: 'Auth, Voice and Extras', st: 1, kw: 'auth firebase elevenlabs voice fonts all rights reserved',
-      b: `${abLic('authentication', 'All rights reserved', 'Firebase sign-in, persistence, the locked-account check and the switch-account flow.')}
-      ${abLic('ElevenLabs voice', 'All rights reserved', 'The text-to-speech and speech-to-text integration, the sealed key loader, and the chunked playback pipeline. The ElevenLabs service itself stays under the own terms of ElevenLabs.')}
-      ${abLic('bundled font fallbacks', 'All rights reserved', 'The named fallback font stacks (Inter, Roboto, Nunito, Montserrat and others) used when a device does not ship with the system font. Only the font names appear in the stack; the actual font files follow their own licenses and are not owned by Aphrosta.')}
-      ${abLic('file export helpers', 'All rights reserved', 'The JSON export and import flow, the file download helper and the CSV escape rules.')}
-      ${abLic('sound effects and music', 'All rights reserved', 'The small synthesised tap, send, done and error sounds, plus the background music scheduler that plays from the bundled audio folder.')}` },
-
-    { t: 'Third-Party Libraries', st: 1, kw: 'third party libraries firebase mermaid icons lobehub simple icons apache mit cc0 open source credits',
-      b: `<p>Aphrosta loads these libraries at run time. They are not copied into the app code, and each one keeps the license its authors chose. Everything else in Aphrosta is hand-written.</p>
-      ${abLic('Firebase JS SDK 10.12.0', 'Apache 2.0', 'Authentication and Firestore sync. The app, auth and firestore modules load from the Google static host.')}
-      ${abLic('Mermaid 11.4.1', 'MIT', 'Draws the flowcharts, sequence diagrams and class diagrams that appear in replies. It loads from the jsDelivr host.')}
-      ${abLic('Lobe Icons (static SVG)', 'MIT', 'The Groq, Grok, Kimi, Perplexity and OpenRouter provider logos in the model picker. They load from the unpkg host.')}
-      ${abLic('Icons static SVG by bentwnghk', 'Own license', 'The OpenAI provider logo. It loads from the unpkg host and follows the license shown on its package page.')}
-      ${abLic('Gemini logo (Wikimedia Commons)', 'Per source page', 'The Gemini provider logo in the model picker. It loads from Wikimedia Commons and follows the license shown on its page. The Gemini name and logo are trademarks of Google.')}
-      ${abLic('Simple Icons', 'CC0 1.0', 'The DeepSeek and Claude logos and the logos shown for connections. The icon set is public domain, but the brands themselves stay trademarks of their owners.')}` },
-
-    { t: 'Third-Party Services', st: 1, kw: 'third party services providers firebase elevenlabs npm jina allorigins corsproxy gemini groq terms',
-      b: `<p>These are online services Aphrosta talks to. They are not part of the app code, and their own terms and privacy policies apply to anything you send them.</p>
-      ${abLic('Model providers you connect', 'Service terms', 'Google Gemini, Groq, DeepSeek, Grok, Claude, ChatGPT, Kimi, Perplexity, OpenRouter and the others in the model picker. Your messages go to the provider you pick, using your own API key.')}
-      ${abLic('Firebase Authentication and Firestore', 'Service terms', 'Google sign-in and cloud sync for signed-in accounts.')}
-      ${abLic('OpenRouter', 'Service terms', 'An independent gateway that forwards your messages to many different AI model makers. When you pick OpenRouter, your messages pass through OpenRouter and then to the maker of the model you chose, so the terms and privacy policies of both apply. Aphrosta is not affiliated with, endorsed by or sponsored by OpenRouter, and OpenRouter does not operate Aphrosta.')}
-      ${abLic('ElevenLabs', 'Service terms', 'Spoken replies, listening in Live mode, sound and music generation, and image and video generation. These run through the Aphrosta voice proxy, so you never need an ElevenLabs key.')}
-      ${abLic('npm registry', 'Service terms', 'Package details and weekly download counts for the package info connection. No key needed.')}
-      ${abLic('Web reader proxies', 'Service terms', 'Jina Reader, AllOrigins and corsproxy.io help the page reader fetch web pages that a browser would otherwise block.')}` },
-
-    abTextCard("Trademarks and Brand Marks", "Whose marks you see", "The bundled icons, provider logos and brand marks are used under the terms of their own projects.", "Names and trademarks", "Google, Gemini, Firebase, Groq, DeepSeek, Grok, Claude, Anthropic, ChatGPT, OpenAI, Kimi, Perplexity, OpenRouter, ElevenLabs and their names and logos are trademarks or registered trademarks of their respective owners. Aphrosta is an independent product of Gabriel Yoan L. Cortez. It is not affiliated with, endorsed by, sponsored by or officially connected to any of these companies or their services, including OpenRouter. Their names and marks are shown only to identify the provider you choose to connect, and no endorsement or partnership is implied."),
-    abTextCard("Using Aphrosta Code and Content", "Please ask first", "Aphrosta's code, design and original content are not available for reuse. You may not copy or republish them without the written permission of Gabriel Yoan L. Cortez. To ask for permission, email Aphostus@gmail.com.", "No warranty", "The app is provided as it is and as available, without warranty of any kind, to the fullest extent allowed by law. The owner is not liable for any loss that comes from using it. This page is a plain summary and is not legal advice; the official terms of each third-party service are the ones that apply to that service.")
+  terms: { title: 'Terms & Conditions', icon: () => ICONS.stTerms, cards: () => [
+    { t: 'Agreement to these Terms', kw: 'agreement acceptance owner updated changes',
+      b: `<p>Last updated ${AB_UPDATED}.</p><p>Aphrosta is an independent web app owned and operated by ${esc(AB_OWNER)}, an individual based in the Philippines. By creating an account or using Aphrosta you agree to these Terms and to the Privacy Policy in Rules &amp; Policies. If you do not agree, please do not use the app.</p>
+      <h4>Changes</h4><p>These Terms may be updated as Aphrosta develops. The current version is always in the app. Where the law requires it, you will be asked to accept the new version. Using Aphrosta after a change means you accept it.</p>` },
+    { t: 'Who may use Aphrosta', kw: 'age minimum 13 children parent guardian',
+      b: `<p>You must be at least 13 years old, or the minimum age to consent to online services in your country if that is higher. If you are under 18, or under the age of majority where you live, use Aphrosta only with the permission of a parent or legal guardian.</p>
+      <p>Do not create an account or give personal information if you are below the minimum age. If we learn that we collected personal information from a child under 13, we will delete it.</p>` },
+    { t: 'Your account', kw: 'account sign in google email password security responsibility',
+      b: `<p>You can sign in with Google or with an email and password. You are responsible for everything done through your account. Keep your sign-in details, your Acard and your API keys private, and use one account per person.</p>
+      <p>Tell us right away if you think someone else has accessed your account. We may suspend or lock an account that breaks these Terms.</p>` },
+    { t: 'Acard (login card)', kw: 'acard card png login key encryption share security',
+      b: `<p>The Acard is a PNG image that holds your login and your encryption key. Anyone who has it can open your account and read your encrypted data.</p>
+      <h4>Never share it</h4><p>Do not post, send or show your Acard to anyone, and store the exact file somewhere safe. Aphrosta cannot currently cancel or revoke an Acard that has been shared or leaked.</p>
+      <h4>If it is exposed or lost</h4><p>Contact us immediately. If you lose every copy of your Acard and your key backup, your encrypted data may not be recoverable.</p>` },
+    { t: 'Subscriptions and payments', kw: 'subscription payment price refund cancel stripe billing',
+      b: `<p>Some features may require a paid subscription. The price and billing period are shown when you subscribe. Payments are currently handled manually with the owner. Online payments through Stripe are planned, and these Terms will be updated when they launch.</p>
+      <h4>No refunds</h4><p>All payments are final and non-refundable, including for unused or partial periods, except where the law gives you a right that cannot be waived, or where we agree otherwise in writing.</p>
+      <h4>Cancelling</h4><p>You can cancel by contacting us. Cancelling stops future charges. Prices may change with notice before your next billing period. See Billing &amp; Payment for details.</p>` },
+    { t: 'AI features and your own keys', kw: 'ai model provider api key byok voice synthetic accuracy advice',
+      b: `<p>Aphrosta lets you chat with AI models from providers you choose, using your own API keys. Your messages go to the provider you pick, and that provider's terms and charges apply to you.</p>
+      <h4>AI can be wrong</h4><p>AI replies can be inaccurate, incomplete or out of date. Check anything important. Nothing in Aphrosta is legal, medical, financial or other professional advice.</p>
+      <h4>Synthetic voices</h4><p>Spoken replies use computer-generated voices. They are not real people.</p>` },
+    { t: 'Your content', kw: 'content ownership chats outputs license feedback improve',
+      b: `<p>You own the chats you write and the AI outputs you receive. You give Aphrosta permission to store, sync and process them only as needed to run the app for you, and, if Improve Service is on, as described in Rules &amp; Policies.</p>
+      <p>You are responsible for what you enter and for having the right to use it. If you send ideas or feedback, you allow the owner to use them to improve Aphrosta without payment or credit.</p>` },
+    { t: 'Acceptable use', kw: 'abuse spam harassment illegal malware bypass safety rules',
+      b: `<p>Use Aphrosta lawfully. Do not use it for harassment, threats, sexual content involving minors, malware, fraud or any illegal activity. Do not try to bypass provider safety systems, overload the app or its proxies, or access data that is not yours.</p>
+      <p>Breaking these rules may lead to removal of access or a locked account. Serious cases may be reported to the authorities.</p>` },
+    { t: 'Ownership and trademarks', kw: 'copyright intellectual property trademark independent affiliation',
+      b: `<p>Aphrosta's code, design and original content belong to ${esc(AB_OWNER)}. All rights reserved. You may not copy or republish them without written permission.</p>
+      <p>Provider names and logos belong to their owners. Aphrosta is independent and is not affiliated with, endorsed by or sponsored by any of them.</p>` },
+    { t: 'Availability and liability', kw: 'warranty liability disclaimer as is availability loss',
+      b: `<p>Aphrosta is provided as it is and as available, without warranties of any kind, to the fullest extent allowed by law. Aphrosta is in development, so features may change, pause or stop.</p>
+      <p>To the fullest extent allowed by law, the owner is not liable for indirect or consequential loss, lost data you did not back up, or charges from third-party providers. Nothing here limits rights that cannot legally be limited.</p>` },
+    { t: 'Ending your account', kw: 'delete deactivate abandon abolish destruct terminate',
+      b: `<p>Settings has account actions to pause, lock or delete your account. Some of them are permanent, so read each confirmation carefully. You can also export your data first from Settings, Privacy.</p>` },
+    { t: 'Governing law and contact', kw: 'governing law philippines disputes contact',
+      b: `<p>These Terms are governed by the laws of the Philippines. We encourage you to contact us first so we can try to settle any problem in good faith. If that fails, the courts of the Philippines may hear the dispute. Consumers elsewhere keep any mandatory rights their local law gives them.</p><h4>Contact</h4>${abContact()}` }
   ] },
 
-  help: { title: 'Help & Support', icon: () => ICONS.stHelp, cards: [
-    { t: 'Getting Started', st: 1, kw: 'start first time basics',
-      b: `<p>Open Settings to change your text size, theme, and account details. Use the search bar on each page to find what you need quickly. Your changes save automatically.</p>
-      <h4>Making it yours</h4><p>You can pick your accent color, choose a font, change the text size, and toggle off animations from the Settings panel.</p>` },
-    { t: 'Connecting a Model', st: 1, kw: 'api key model provider setup',
-      b: `<p>Tap the model button at the top of the chat. Pick a provider, tap Get your API key, sign in there, create a key, then paste it back into Aphrosta and tap Save.</p>
-      <h4>Common Issues</h4><p>Most key problems are one of three things: no billing set up on the provider, the key was copied with extra spaces, or the provider has no access to that specific model.</p>
-      <h4>Unsupported Models</h4><p>If a model fails with a 404 or "not found" error, Aphrosta will mark it as unsupported for that key and grey it out in the model picker.</p>` },
-    { t: 'Effort and Length Controls', st: 1, kw: 'effort length tokens response',
-      b: `<p>Effort controls how deeply the assistant thinks. Minima is fastest and uses the fewest tokens. Maxima is slowest but picks up edge cases. Length controls how long the final answer is.</p>
-      <h4>When replies cut off</h4><p>If a reply stops mid-sentence, lower the Effort or the Length, or switch to a non-reasoning model. Reasoning models spend part of the budget on thinking before they write anything.</p>
-      <h4>Reasoning Models</h4><p>Models like DeepSeek V4 Pro or Claude Opus 5 will output their thought process before the final answer. You can watch this in the thought panel.</p>` },
-    { t: 'Files and Attachments', st: 1, kw: 'images files attach upload',
-      b: `<p>You can attach images and text or code files up to 4 at a time. Ask for a deck, a document or a spreadsheet and it arrives as a file card you can preview, copy and download.</p>
-      <h4>Limits</h4><p>Images only work on vision models. Text files are trimmed to about 12,000 characters. Images are shrunk on this device before they are sent so your phone does not waste data.</p>
-      <h4>Supported Text Files</h4><p>Most code files, .txt, .md, .json, and .csv files are supported. They will be inserted into the chat as plain text so the model can read them.</p>` },
-    { t: 'Memory and Privacy', st: 1, kw: 'memory privacy clear delete',
-      b: `<p>Memory has three parts: facts about you, a scoped database and a compact state log. All three can be switched off in Settings → Assistance → Memory.</p>
-      <h4>Clearing everything</h4><p>Clear Memory forgets facts and per-chat context. Clear Sessions deletes every saved session. Delete Local removes settings, sessions and API keys from this device.</p>
-      <h4>Cloud Sync</h4><p>If you are signed in, your memory syncs across devices. Turning off Share Usage prevents memory from being stored in the cloud.</p>` },
-    { t: 'Account Actions', st: 1, kw: 'account deactivate abandon abolish destruct',
-      b: `<p>Deactivate pauses chatting. Abandon locks the account forever but keeps the data. Abolish deletes the data but lets you start fresh. Destruct deletes the data and locks the account forever.</p>
-      <h4>Which one to choose</h4><p>If you are just taking a break, Deactivate. If you are moving on but want the data back later, do nothing. Abandon and Destruct are for cases where the account must never be used again.</p>
-      <h4>Data Recovery</h4><p>Once an account is abolished or destructed, the data cannot be recovered. Please be absolutely sure before confirming.</p>` },
-    { t: 'Permissions Explained', st: 1, kw: 'permissions microphone camera location notifications clipboard audio blocked',
-      b: `<p>Settings → Permissions shows what Aphrosta may use on this device. Turning one off there stops the app from asking. The browser has the final say, so a blocked permission must be allowed in your browser's site settings.</p>
-      <h4>Microphone</h4><p>Voice input and live transcription.</p>
-      <h4>Camera / Media</h4><p>Photos and video.</p>
-      <h4>Location</h4><p>Nearby and local answers. Nothing is shared until you ask for it.</p>
-      <h4>Notifications</h4><p>Alerts when a reply is ready.</p>
-      <h4>Clipboard</h4><p>Pasting from the clipboard.</p>
-      <h4>Audio playback</h4><p>Sounds and music.</p>` },
-    { t: 'Voice and Read Aloud', st: 1, kw: 'voice speech read aloud elevenlabs microphone transcription',
-      b: `<p>Aphrosta can listen and speak. Voice input needs the microphone permission. Read aloud speaks a reply out loud and Auto Read does it for every reply.</p>
-      <h4>ElevenLabs and the device voice</h4><p>If ElevenLabs is unavailable, Aphrosta falls back to your device's own voice for speaking and to device transcription for listening, and tells you with a code.</p>
-      <h4>Live transcription</h4><p>It needs an internet connection and a supported browser. Chrome works best. If the microphone is busy in another app, close that app first.</p>` },
-    { t: 'Backup and Restore', st: 1, kw: 'backup restore export import json data transfer',
-      b: `<p>Export Data saves your settings and chats to a JSON file named aphrosta-data.json on this device. Your profile photo is not included.</p>
-      <h4>Importing</h4><p>Import accepts files up to 25 MB. Chats are merged with the ones you already have and the newer copy wins. Your current settings are replaced. You see a summary and confirm before anything changes, and the app reloads when it finishes.</p>
-      <h4>Delete Local</h4><p>Removes settings, sessions and saved API keys from this device. Your cloud copy is not touched.</p>` },
-    { t: 'Library', st: 1, kw: 'library files instructions knowledge context items',
-      b: `<p>The library holds items made of a title, instructions for the AI and up to 10 text or code files. When your message matches an item, the best-matching parts are added to the prompt.</p>
-      <h4>Size and storage</h4><p>Each file can be up to 8 MB and an item up to 25 MB in total. Large files are split into parts on this device. Files whose contents cannot be read are kept by name only.</p>` },
-    { t: 'Limits at a Glance', st: 1, kw: 'limits size max files attachments image feedback import',
-      b: `<h4>Attachments</h4><p>4 files per message. Images up to 12 MB and text or code files up to 150 KB. Text is trimmed to about 12,000 characters.</p>
-      <h4>Profile photo</h4><p>Up to 8 MB.</p>
-      <h4>Library</h4><p>10 files per item, 8 MB per file, 25 MB per item.</p>
-      <h4>Import</h4><p>Up to 25 MB.</p>
-      <h4>Feedback</h4><p>One message per hour.</p>` },
-    { t: 'Contact and Feedback', st: 1, kw: 'contact feedback bug email phone owner support legal',
-      b: `<h4>Owner contact</h4><p>Gabriel Yoan L. Cortez</p><p>Email: <a href="mailto:Aphostus@gmail.com">Aphostus@gmail.com</a></p><p>Phone: <a href="tel:+639245266251">+63 9245266251</a></p>
-      <p>For legal notices, privacy requests, permission requests or copyright concerns, please use email.</p>
-      <h4>In-app feedback</h4><p>If something is not working as expected, send us feedback from the app so our team can look into it. Feedback is limited to once per hour to keep the inbox tidy.</p>
-      <h4>What to include</h4><p>Include a short description of what you were doing and what happened. Leave device info on so we can match your report to the browser and screen size.</p>` },
-    { t: 'Troubleshooting', st: 1, kw: 'troubleshoot troubleshooting problem fix not working blank slow stuck reload no reply microphone key rejected',
-      b: `<p>Most problems have a quick fix. Work down this list before sending feedback.</p>
-      <h4>No reply, or the reply stops</h4><p>Check that the API key is pasted without extra spaces, that the provider has billing set up, and that it has access to the model you picked. Lowering Effort or Length also helps when a reply cuts off.</p>
-      <h4>Voice does not work</h4><p>Check Settings → Permissions, then allow the microphone in your browser's site settings. If another app is using the microphone, close it first.</p>
-      <h4>Something looks stuck</h4><p>Reload the page. Your settings and chats are saved on this device, so a reload does not lose them.</p>
-      <h4>Still stuck</h4><p>Send feedback and describe what you were doing when it happened. It helps us find the problem faster.</p>` },
-    { t: 'Keyboard Shortcuts', st: 1, kw: 'keyboard shortcuts keys hotkeys desktop mac ctrl command option',
-      b: () => `<p>On a computer with a keyboard and mouse you can drive most of Aphrosta without touching the mouse.</p>
-      <h4>Open the full list</h4><p>Press ${kbLabel('mod+Slash')} anywhere, or press ? when you are not typing. You can also open Settings → About → Keyboard Shortcuts. The list only appears on devices with a mouse or trackpad.</p>
-      <h4>Find a shortcut fast</h4><p>The search bar on the shortcut page matches names and keys, so typing a word like copy or sidebar finds it.</p>
-      <h4>Phones and tablets</h4><p>Touch screens do not use shortcuts, and the Keyboard Shortcuts row stays hidden.</p>` },
-    { t: 'Getting Better Answers', st: 1, kw: 'tips better answers prompts quality effort length memory library files',
-      b: `<p>A few habits make replies better without any extra setup.</p>
-      <h4>Say what you want back</h4><p>Name the result you want, such as a table, a short summary or a deck. Say who it is for if that matters.</p>
-      <h4>Give it something to work with</h4><p>Attach the file or paste the text instead of describing it. For things you use again and again, save them in the Library.</p>
-      <h4>Match effort to the job</h4><p>Use a lower Effort for quick questions and a higher one for hard problems. Raise Length only when you need a longer answer.</p>
-      <h4>Let it remember</h4><p>Keep Memory on if you want the assistant to remember your preferences between chats. You can clear it any time in Settings.</p>` }
+  rules: { title: 'Rules & Policies', icon: () => ICONS.stRules, cards: () => [
+    { t: 'Privacy Policy overview', kw: 'privacy policy controller data privacy act philippines',
+      b: `<p>Last updated ${AB_UPDATED}.</p><p>The data controller is ${esc(AB_OWNER)}, contact ${AB_MAIL}. Aphrosta handles personal information in line with the Philippine Data Privacy Act of 2012 (Republic Act No. 10173). Aphrosta is available worldwide, so people in other countries may have extra rights under their own laws.</p>` },
+    { t: 'Information we handle', kw: 'data collected account chats voice usage feedback devices phone',
+      b: `<h4>Account</h4><p>Sign-in details from Google or email and password, handled through Firebase Authentication.</p>
+      <h4>Profile</h4><p>Details you choose to add, such as a username or phone number.</p>
+      <h4>Your content</h4><p>Chats, memories, settings and the provider API keys you save.</p>
+      <h4>Voice and audio</h4><p>When you use voice features, your speech is sent for transcription and your replies are sent to create spoken audio.</p>
+      <h4>Usage and devices</h4><p>Usage records and a device list, so the app can track limits and show where you are signed in.</p>
+      <h4>Feedback</h4><p>Messages you choose to send, which may include basic device information.</p>` },
+    { t: 'How your data is protected', kw: 'encryption vault aes key api keys security',
+      b: `<p>Your chats, memories, settings and saved API keys are encrypted in your browser with AES-GCM and a 256-bit key before they are synced to Firestore. The cloud stores encrypted records. The encryption key is kept on your device and in your Acard, and is not uploaded.</p>
+      <h4>Limits</h4><p>Encryption does not protect data while it is readable in your browser, while it is sent to a provider, or if your device or account is compromised. Keep your device, Acard and key backup secure.</p>` },
+    { t: 'Share Usage and Improve Service', kw: 'share usage improve service training conversations opt out toggle',
+      b: `<h4>Share Usage</h4><p>On by default. It lets memory and usage records sync to your cloud space. Turn it off in Settings, Privacy to keep them on this device.</p>
+      <h4>Improve Service</h4><p>On by default. While it is on, a readable copy of your conversations is stored so the owner can review them and improve Aphrosta and its AI features. This copy is not protected by your encryption key. This applies to all users.</p>
+      <p>Turn Improve Service off in Settings, Privacy at any time. Turning it off stops new copies and deletes the copies already stored.</p>` },
+    { t: 'Who else receives data', kw: 'third party processors providers firebase elevenlabs proxies cdn transfers',
+      b: `<p>Aphrosta depends on outside services, and their own terms and privacy policies apply to what they receive.</p>
+      <h4>Google Firebase</h4><p>Sign-in and cloud storage.</p>
+      <h4>Your AI provider</h4><p>Your messages and files go to the provider you choose, using your key.</p>
+      <h4>ElevenLabs</h4><p>Speech and audio features, through the Aphrosta voice proxy hosted on Cloudflare Workers.</p>
+      <h4>Web tools</h4><p>Page reading uses Jina Reader, AllOrigins and corsproxy.io. Search and data tools may contact DuckDuckGo, Google News, Wikipedia, CoinGecko, Yahoo Finance, Frankfurter and the npm registry.</p>
+      <h4>Content hosts</h4><p>Libraries and icons load from Google, jsDelivr, unpkg and Wikimedia, which can see your IP address.</p>
+      <p>Because these services run in many countries, your data may be processed outside the Philippines.</p>` },
+    { t: 'Your rights and choices', kw: 'rights access correct delete export object retention complaint npc gdpr',
+      b: `<p>Under Philippine law you may have the right to be informed, to access, correct and object to the processing of your data, to erase or block it, and to data portability. Where other laws apply, you may have similar rights.</p>
+      <h4>In the app</h4><p>Settings, Privacy has Export Data, Import Data and Delete Local, and Settings has account actions for deleting your account data.</p>
+      <h4>Retention</h4><p>Your data is kept until you delete it or delete your account.</p>
+      <h4>Requests and complaints</h4><p>Email ${AB_MAIL} for any request. You may also complain to the National Privacy Commission of the Philippines.</p>` },
+    { t: 'Children', kw: 'children minors age 13 parents',
+      b: `<p>Aphrosta is for people aged 13 and over. It is not directed to younger children. Parents or guardians can email us to ask about or delete a child's information.</p>` },
+    { t: 'Browser storage', kw: 'cookies local storage indexeddb tracking',
+      b: `<p>Aphrosta uses your browser's local storage and IndexedDB to keep you signed in and to save settings, drafts, saved keys and encryption keys on your device. It does not use them for advertising.</p>` },
+    { t: 'AI and voice notice', kw: 'ai generated content voice synthetic responsibility emergency',
+      b: `<p>Replies come from AI models run by the providers you choose. They can be wrong, and their safety filters are controlled by those providers. Aphrosta is not a source of professional advice and must not be used for emergencies.</p>
+      <p>Spoken replies use stock computer-generated voices. Aphrosta does not clone real people's voices.</p>` },
+    { t: 'Reporting and legal notices', kw: 'report abuse feedback copyright infringement notice contact',
+      b: `<p>To report content or behaviour that breaks these rules, use Feedback in Settings or email us. Reports are reviewed and access may be removed where needed.</p>
+      <h4>Copyright notices</h4><p>If you believe something in Aphrosta infringes your rights, email ${AB_MAIL} with your contact details, a description of the work and where it appears.</p>${abContact()}` }
+  ] },
+
+  licenses: { title: 'About & Licenses', icon: () => ICONS.stLicense, cards: () => [
+    { t: 'About Aphrosta', kw: 'about aphrosta app what it does version development',
+      b: `<p>Aphrosta is a mobile-first web app for chatting with AI models using your own API keys, with voice, memory, files and a personal library. It is currently in development, so features may change.</p>` },
+    { t: 'Owner and copyright', kw: 'owner copyright rights reserved contact',
+      b: `<p>&copy; 2026 ${esc(AB_OWNER)}. All rights reserved.</p>${abContact()}` },
+    { t: 'Permitted use', kw: 'license use copy permission code content',
+      b: `<p>You may use Aphrosta as a service under the Terms &amp; Conditions. Its code, design and original content may not be copied or republished without written permission. To ask, email ${AB_MAIL}.</p>` },
+    { t: 'Third-party libraries', kw: 'libraries firebase mermaid icons lobe simple icons wikimedia licenses credits',
+      b: `${abItem('Firebase JS SDK 10.12.0', 'Apache-2.0', 'Authentication and Firestore, loaded from Google.')}
+      ${abItem('Mermaid 11.4.1', 'MIT', 'Draws diagrams in replies, loaded from jsDelivr.')}
+      ${abItem('Lobe Icons (static SVG)', 'MIT', 'Groq, Grok, Kimi, Perplexity and OpenRouter logos, loaded from unpkg.')}
+      ${abItem('Icons static SVG by bentwnghk', 'Per source', 'The OpenAI logo, loaded from unpkg under the license in that project.')}
+      ${abItem('Gemini icon (Wikimedia Commons)', 'Per source', 'The Gemini logo, under the terms on its Wikimedia page.')}
+      ${abItem('Simple Icons', 'CC0 1.0', 'The DeepSeek and Claude logos. The icon set is public domain, but the brands remain trademarks of their owners.')}` },
+    { t: 'Third-party services', kw: 'services providers openai anthropic gemini groq deepseek xai moonshot perplexity openrouter elevenlabs firebase',
+      b: `${abItem('AI model providers', 'Service terms', 'OpenAI, Anthropic, Google Gemini, Groq, DeepSeek, xAI, Moonshot, Perplexity, OpenRouter and others in the model picker, used with your own key.')}
+      ${abItem('Firebase', 'Service terms', 'Sign-in and cloud sync.')}
+      ${abItem('ElevenLabs', 'Service terms', 'Speech and audio features through the Aphrosta voice proxy.')}
+      ${abItem('Web reader and data sources', 'Service terms', 'Jina Reader, AllOrigins, corsproxy.io, DuckDuckGo, Google News, Wikipedia, CoinGecko, Yahoo Finance, Frankfurter and the npm registry.')}` },
+    { t: 'Trademarks and independence', kw: 'trademarks affiliation independent endorsement',
+      b: `<p>All provider names and logos are trademarks of their owners and are shown only to identify the provider you connect. Aphrosta is independent and is not affiliated with, endorsed by or sponsored by any of them.</p>` },
+    { t: 'No warranty', kw: 'warranty disclaimer legal advice',
+      b: `<p>Aphrosta is provided as it is and as available. This page is a plain summary and not legal advice. The official terms of each third-party service apply to that service.</p>` }
+  ] },
+
+  help: { title: 'Help & Support', icon: () => ICONS.stHelp, cards: () => [
+    { t: 'Getting started', kw: 'start begin basics settings sign in',
+      b: `<p>Sign in with Google or email, then open Settings to set your theme and text size. Choose a model, add your API key and start chatting.</p>` },
+    { t: 'Connect a model', kw: 'api key model provider setup connect',
+      b: `<p>Open the model picker, choose a provider, then paste an API key from that provider's website and save it. Most key problems come from extra spaces when pasting, no billing set up with the provider, or no access to the chosen model.</p>` },
+    { t: 'Your Acard', kw: 'acard card login key backup',
+      b: `<p>Find Acard in Settings. It makes a PNG that can sign you in and holds your encryption key. Save it somewhere safe and never share it. Use Key Backup in Settings for an extra copy of your key.</p>` },
+    { t: 'Backup and restore', kw: 'backup restore export import delete local data',
+      b: `<p>Settings, Privacy has Export Data to save your data, Import Data to bring it back, and Delete Local to remove data from this device.</p>` },
+    { t: 'Privacy switches', kw: 'privacy share usage improve service mask details',
+      b: `<p>Settings, Privacy lets you control Share Usage, Improve Service and Mask Details. See Rules &amp; Policies for what each one does.</p>` },
+    { t: 'Voice', kw: 'voice microphone speech permission read aloud',
+      b: `<p>Voice input needs microphone permission. If it does not work, allow the microphone in your browser's site settings and close other apps that may be using it.</p>` },
+    { t: 'Troubleshooting', kw: 'troubleshoot problem not working blank stuck reload no reply',
+      b: `<h4>No reply</h4><p>Check your API key, billing with the provider and model access.</p>
+      <h4>Something looks stuck</h4><p>Reload the page. Your settings and chats are saved.</p>
+      <h4>Still stuck</h4><p>Send feedback and say what you were doing when it happened.</p>` },
+    { t: 'Contact and feedback', kw: 'contact feedback support email phone owner',
+      b: `${abContact()}<p>For privacy requests, legal notices or permission requests, please use email.</p><button class="btn-line" type="button" data-ab="feedback">Send feedback</button>` }
+  ] },
+
+  billing: { title: 'Billing & Payment', icon: () => ICONS.stBilling, cards: () => [
+    { t: 'Plans and subscriptions', kw: 'plan subscription price period renew',
+      b: `<p>Some features may need a paid subscription. The price and billing period are shown when you subscribe, and taxes may apply.</p>` },
+    { t: 'How payments work today', kw: 'manual payment email card',
+      b: `<p>Payments are currently arranged manually with the owner by email. Aphrosta does not ask for or store payment card numbers inside the app.</p>` },
+    { t: 'Online payments (planned)', kw: 'stripe online payments card future',
+      b: `<p>Online payments through Stripe are planned for a future version. When they launch, Stripe will process card details under its own terms, and the Terms and Privacy Policy will be updated.</p>` },
+    { t: 'Cancellation and refunds', kw: 'cancel refund no refunds',
+      b: `<p>You can cancel by contacting us, and cancelling stops future charges. All payments are final and non-refundable, including for unused or partial periods, except where the law gives you a right that cannot be waived or where we agree otherwise in writing.</p>` },
+    { t: 'Price changes', kw: 'price change notice',
+      b: `<p>Prices may change. We will give notice before the change applies to your next billing period.</p>` },
+    { t: 'Your AI provider costs', kw: 'api key provider charges byok cost',
+      b: `<p>Because you use your own API keys, the AI providers bill you directly. Those charges are separate from any Aphrosta subscription, and Aphrosta is not responsible for them.</p>` },
+    { t: 'Billing help', kw: 'billing help contact',
+      b: `${abContact()}` }
   ] }
 };
 
-let abBillCache = null;
-const abBillDefault = () => ({ day: '1', cards: [], info: {}, history: [] });
-function abBill() {
-  if (abBillCache) return abBillCache;
-  let raw = {};
-  try { raw = JSON.parse(localStorage.getItem(AB_BILL_LS) || '{}') || {}; } catch (_) {}
-  abBillCache = { ...abBillDefault(), ...raw };
-  return abBillCache;
-}
-function abBillSave() {
-  try { localStorage.setItem(AB_BILL_LS, JSON.stringify(abBillCache)); return true; }
-  catch (_) { toast('Could not save on this device.', 'error'); return false; }
-}
-const abLog = (text) => { const b = abBill(); b.history.unshift({ at: Date.now(), text }); b.history = b.history.slice(0, 40); };
-const abBrand = (n) => (/^4/.test(n) ? 'Visa' : /^(5[1-5]|2[2-7])/.test(n) ? 'Mastercard' : /^3[47]/.test(n) ? 'Amex' : /^6/.test(n) ? 'Discover' : 'Card');
-const abLuhn = (n) => {
-  let s = 0, alt = false;
-  for (let i = n.length - 1; i >= 0; i--) { let d = +n[i]; if (alt) { d *= 2; if (d > 9) d -= 9; } s += d; alt = !alt; }
-  return n.length >= 13 && s % 10 === 0;
-};
-
 function abBodyHtml(key) {
-  return '';
+  const def = AB_PAGES[key];
+  if (!def) return '';
+  return def.cards().map((c, i) => `<section class="ab-card${i === 0 ? ' open' : ''}" data-kw="${esc(((c.t || '') + ' ' + (c.kw || '')).toLowerCase())}">
+    <button class="ab-hd" type="button" data-ab="toggle" aria-expanded="${i === 0}"><span class="ab-t">${esc(c.t)}</span><svg class="ab-chev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+    <div class="ab-bd">${c.b}</div>
+  </section>`).join('');
 }
 
 function abClearMarks(root) {
@@ -16844,13 +16729,13 @@ function abSearch(page) {
 
 function abRender(page) {
   const key = page.dataset.page;
-  page.querySelector('.ab-body').innerHTML = abBodyHtml(key);
+  page.querySelector('.ab-body').innerHTML = abBodyHtml(key) + '<p class="ab-empty" hidden>No results found.</p>';
   abSearch(page);
 }
 
 function openAboutPage(key) {
   const panel = document.getElementById('settings-panel');
-  const def = key === 'billing' ? { title: 'Billing & Payment', icon: () => ICONS.stBilling } : AB_PAGES[key];
+  const def = AB_PAGES[key];
   if (!panel || !def) return;
   panel.querySelector('#about-page')?.remove();
   const wrap = document.createElement('div');
@@ -16881,24 +16766,13 @@ function closeAboutPage() {
 }
 
 document.addEventListener('input', (e) => {
-  const t = e.target;
-  const page = t.closest?.('#about-page');
-  if (!page) return;
-  if (t.matches('.ab-search input')) return abSearch(page);
-  if (t.dataset.abCard === 'num') {
-    const d = t.value.replace(/\D/g, '').slice(0, 19);
-    t.value = d.replace(/(.{4})/g, '$1 ').trim();
-  } else if (t.dataset.abCard === 'exp') {
-    const d = t.value.replace(/\D/g, '').slice(0, 4);
-    t.value = d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}` : d;
-  } else if (t.dataset.abCard === 'cvv') t.value = t.value.replace(/\D/g, '').slice(0, 4);
+  const page = e.target.closest?.('#about-page');
+  if (page && e.target.matches('.ab-search input')) abSearch(page);
 });
 
 document.addEventListener('click', (e) => {
-  const el = e.target.closest?.('#about-page [data-ab]');
+  const el = e.target.closest?.('#about-page [data-ab], .legal-pop [data-ab]');
   if (!el) return;
-  const page = el.closest('#about-page');
-  const b = abBill();
   switch (el.dataset.ab) {
     case 'back': return closeAboutPage();
     case 'toggle': {
@@ -16910,49 +16784,5 @@ document.addEventListener('click', (e) => {
       return;
     }
     case 'feedback': return openFeedback();
-    case 'day':
-      b.day = el.dataset.val; abLog(`Billing date set to the ${b.day === '10' ? '10th' : '1st'}`);
-      if (abBillSave()) { abRender(page); toast('Billing date saved on this device.', 'success', 1800); }
-      return;
-    case 'card-add': {
-      const v = (k) => page.querySelector(`[data-ab-card="${k}"]`).value.trim();
-      const num = v('num').replace(/\s/g, ''), exp = v('exp'), cvv = v('cvv'), name = v('name');
-      const m = /^(\d{2})\/(\d{2})$/.exec(exp);
-      const now = new Date();
-      const expOk = m && +m[1] >= 1 && +m[1] <= 12 && (2000 + +m[2] > now.getFullYear() || (2000 + +m[2] === now.getFullYear() && +m[1] >= now.getMonth() + 1));
-      const bad = (k) => { const i = page.querySelector(`[data-ab-card="${k}"]`); i.classList.add('input-error'); setTimeout(() => i.classList.remove('input-error'), 700); };
-      if (!name) { bad('name'); return toast('Add the name on the card.', 'error'); }
-      if (!abLuhn(num)) { bad('num'); return toast('That card number looks wrong.', 'error'); }
-      if (!expOk) { bad('exp'); return toast('Check the expiry date.', 'error'); }
-      if (cvv.length < 3) { bad('cvv'); return toast('Check the CVV.', 'error'); }
-      b.cards.push({ id: `c${Date.now()}`, brand: abBrand(num), last4: num.slice(-4), exp, name, def: !b.cards.length });
-      abLog(`Added ${abBrand(num)} \u2022\u2022\u2022\u2022 ${num.slice(-4)}`);
-      if (abBillSave()) { abRender(page); toast('Card saved on this device.', 'success', 1800); }
-      return;
-    }
-    case 'card-default':
-      b.cards.forEach((c) => { c.def = c.id === el.dataset.id; });
-      abLog('Default card changed');
-      if (abBillSave()) abRender(page);
-      return;
-    case 'card-del':
-      confirmDialog({ title: 'Remove this card?', message: 'It will be deleted from this device.', confirmLabel: 'Remove', danger: true }).then((yes) => {
-        if (!yes) return;
-        const gone = b.cards.find((c) => c.id === el.dataset.id);
-        b.cards = b.cards.filter((c) => c.id !== el.dataset.id);
-        if (b.cards.length && !b.cards.some((c) => c.def)) b.cards[0].def = true;
-        if (gone) abLog(`Removed ${gone.brand} \u2022\u2022\u2022\u2022 ${gone.last4}`);
-        if (abBillSave()) abRender(page);
-      });
-      return;
-    case 'info-save':
-      page.querySelectorAll('[data-ab-info]').forEach((i) => { b.info[i.dataset.abInfo] = i.value.trim(); });
-      abLog('Billing details updated');
-      if (abBillSave()) { abRender(page); toast('Details saved on this device.', 'success', 1800); }
-      return;
-    case 'hist-clear':
-      b.history = [];
-      if (abBillSave()) abRender(page);
-      return;
   }
 });
