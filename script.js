@@ -1149,7 +1149,7 @@ ICONS.keyOn = ICONS.keyOff.replace('<circle cx="7.5" cy="16.5" r="3.5"/>', '<cir
 
 Object.assign(ICONS, {
   stUsage:       svg('<path d="M4 17a8 8 0 1116 0"/><path d="M12 17l4-5M12 3v2M4.9 6.9l1.4 1.4M19.1 6.9l-1.4 1.4"/>', 16),
-  stCredits:     svg('<circle cx="12" cy="12" r="9"/><path d="M14.5 9.5a3.5 3.5 0 100 5"/>', 16),
+  stCredits:     svg('<circle cx="12" cy="12" r="9"/><path d="M12 7l1.3 3.7L17 12l-3.7 1.3L12 17l-1.3-3.7L7 12l3.7-1.3z"/>', 16),
   stUsageDetail: svg('<path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/>', 16),
   stClose:       svg('<path d="M6 6l12 12M6 18L18 6"/>', 16),  
   stBack:        svg('<path d="M19 12H5M11 6l-6 6 6 6"/>', 16),
@@ -1770,12 +1770,10 @@ let AccountPage = function (user) {
   </div>`;
 };
 
-const creditsResetText = () => {
-  const n = new Date();
-  const r = new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth() + 1, 1));
-  const d = Math.max(1, Math.ceil((r - n) / 864e5));
-  const label = r.toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' });
-  return `Resets ${label} \u00b7 ${d} ${d === 1 ? 'day' : 'days'} left`;
+const creditsView = () => {
+  const limit = 500;
+  const used = Math.min(limit, Math.max(0, Number(settings.creditsUsed) || 0));
+  return { limit, used, left: limit - used, pct: Math.round((used / limit) * 100) };
 };
 
 const UsageLegend = () => MODEL_PROVIDERS.map((p) =>
@@ -1826,16 +1824,19 @@ const SettingsPanel = (user) => `
       <section class="usage-card credits-card" aria-label="Credits">
         <div class="usage-head">
           <span class="usage-title">${ICONS.stCredits}<span>Credits</span></span>
-          <span class="credits-soon">Coming soon</span>
+          <span class="credits-soon">Coming Soon</span>
         </div>
         <div class="usage-figure">
-          <b class="day-total">500</b>
+          <b class="day-total">${creditsView().left}</b>
           <span class="usage-unit">
-            <span class="usage-of">of 500</span>
+            <span class="usage-of">of ${creditsView().limit}</span>
             <span class="token-unit">credits</span>
           </span>
+          <span class="usage-unit credits-used">
+            <span class="usage-of">${creditsView().pct}%</span>
+            <span class="token-unit">used</span>
+          </span>
         </div>
-        <p class="usage-note">${creditsResetText()}. Free plan: 500 credits/month. Unused credits expire.</p>
       </section>
       <section class="usage-card" aria-label="Usage">
         <div class="usage-head">

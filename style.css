@@ -1654,6 +1654,7 @@ button.lib-card-eye.is-off { opacity: 0.55; }
 .usage-title svg { width: 14px; height: 14px; }
 .usage-sub { font-size: calc(11.5px * var(--ts)); color: var(--gray-mid); }
 .usage-card { gap: 8px; }
+.credits-card .credits-used { margin-left: auto; align-items: flex-end; text-align: right; }
 .credits-soon {
   font-size: calc(10.5px * var(--ts));
   font-weight: 600;
