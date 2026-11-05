@@ -1126,8 +1126,6 @@ Object.assign(ICONS, {
   navProjects:   svg('<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 7v6M12 7v10M16 7v3"/>'),
   navAgents:     svg('<rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M7 10l3 2.5L7 15M13 15h4"/>', 16),
   navLibrary:    svg('<path d="M5 18.5A2.5 2.5 0 017.5 16H22"/><path d="M7.5 4H22v18H7.5A2.5 2.5 0 015 19.5v-13A2.5 2.5 0 017.5 4z"/><path d="M9 8h9M9 12h7"/>'),
-  navAutomation: svg('<rect x="3" y="3" width="6" height="6" rx="1.5"/><rect x="15" y="15" width="6" height="6" rx="1.5"/><path d="M9 6h3a3 3 0 013 3v6"/>', 16),
-  navConnectors: svg('<path d="M9 2v6M15 2v6"/><path d="M6 8h12v3a6 6 0 01-12 0z"/><path d="M12 17v5"/>', 16),
   navOperations: svg('<rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M7 10l3 2.5L7 15M13 15h4"/>', 16),
   closeAttach:   svg('<path d="M7 7l10 10M17 7L7 17"/>', 14),
   toolFetch:     svg('<path d="M4 4h16v6H4z"/><path d="M4 14h10M4 18h6"/><path d="M17 15l3 3-3 3"/>', 16),
@@ -4714,499 +4712,12 @@ document.addEventListener('click', async (e) => {
   opsRender();
 });
 
-ICONS.connCode = svg('<path d="M8 7l-5 5 5 5"/><path d="M16 7l5 5-5 5"/><path d="M12 4v16"/>', 16);
-const CONN_PROVIDERS = [
-  { id: 'openmeteo',   name: 'Open-Meteo',   slug: 'openmeteo',         color: '#4aa3ff', ink: false, kw: 'weather|forecast|temperature|rain|humid|wind',
-    blurb: 'Weather and a 3-day forecast for any city. No key needed.', acts: 'weather {"place":"city"}', fields: [] },
-  { id: 'wikipedia',   name: 'Wikipedia',    slug: 'wikipedia',         color: '#ffffff', ink: true,  kw: 'wikipedia|wiki',
-    blurb: 'Looks up article summaries. No key needed.', acts: 'summary {"query":"topic"}', fields: [] },
-  { id: 'github',      name: 'GitHub',       slug: 'github',            color: '#ffffff', ink: true,  kw: 'github|repo|repository|issues?|commits?',
-    blurb: 'Lists repos, open issues and recent commits. Public data works without a token. A token adds private repos and higher limits.',
-    acts: 'repos {"user":"name"} | issues {"repo":"owner/name"} | commits {"repo":"owner/name"}',
-    fields: [
-      { k: 'token', label: 'Personal access token', ph: 'ghp_... (read-only is enough)', secret: true,  req: false },
-      { k: 'user',  label: 'Your GitHub username',  ph: 'octocat',                       secret: false, req: false }
-    ] },
-  { id: 'nasa',        name: 'NASA',         slug: 'nasa',              color: '#e03c31', ink: false, kw: 'nasa|apod|astronomy picture',
-    blurb: 'Astronomy Picture of the Day. Works with the shared DEMO_KEY, or add your own free key from api.nasa.gov.',
-    acts: 'apod {}',
-    fields: [ { k: 'key', label: 'NASA API key', ph: 'Empty = DEMO_KEY', secret: true, req: false } ] },
-  { id: 'dictionary',  name: 'Dictionary',   slug: 'dictionarydotcom',  color: '#38bdf8', ink: false, kw: 'define|definition|meaning of|dictionary',
-    blurb: 'English word definitions. No key needed.', acts: 'define {"word":"word"}', fields: [] },
-  { id: 'currency',    name: 'Currency',     slug: 'wise',              color: '#22c55e', ink: false, kw: 'exchange rate|convert|currency|usd|eur|php|gbp|jpy',
-    blurb: 'Live exchange rates and conversions. No key needed.', acts: 'convert {"from":"USD","to":"PHP","amount":1}', fields: [] },
-  { id: 'coingecko',   name: 'CoinGecko',    slug: 'coingecko',         color: '#8dc63f', ink: false, kw: 'bitcoin|ethereum|crypto|btc|eth|coin price',
-    blurb: 'Crypto price, 24h change and market cap. No key needed.', acts: 'price {"coin":"bitcoin"}', fields: [] },
-  { id: 'hackernews',  name: 'Hacker News',  slug: 'ycombinator',       color: '#ff6600', ink: false, kw: 'hacker ?news',
-    blurb: 'Current top stories. No key needed.', acts: 'top {"count":6}', fields: [] },
-  { id: 'tmdb',        name: 'TMDB Movies',  slug: 'themoviedatabase',  color: '#01b4e4', ink: false, kw: 'movie|film|tmdb',
-    blurb: 'Search movies or see what is trending. Needs a free v3 API key from themoviedb.org/settings/api.',
-    acts: 'search {"query":"title"} | trending {}',
-    fields: [ { k: 'key', label: 'TMDB API key (v3)', ph: 'Paste your key', secret: true, req: true } ] },
-  { id: 'openlibrary', name: 'Open Library', slug: 'internetarchive',   color: '#ffffff', ink: true,  kw: 'book|author|novel|open ?library',
-    blurb: 'Search books and authors. No key needed.', acts: 'search {"query":"title or author"}', fields: [] },
-  { id: 'npm', name: 'npm', slug: 'npm', color: '#cb3837', ink: false, kw: 'npm',
-    blurb: 'Latest version, license and weekly downloads of a package. No key needed.', acts: 'info {"package":"name"}', fields: [] },
-  { id: 'countries', name: 'Countries', slug: 'openstreetmap', color: '#7ebc6f', ink: false, kw: 'capital of|country info|restcountries',
-    blurb: 'Capital, population, area, languages and currency of a country. No key needed.', acts: 'info {"country":"name"}', fields: [] },
-  { id: 'pokemon', name: 'Pokemon', slug: 'pokemon', color: '#ffcb05', ink: false, kw: 'pokemon|pokedex',
-    blurb: 'Types, stats and abilities of a Pokemon. No key needed.', acts: 'info {"name":"pikachu"}', fields: [] },
-  { id: 'earthquakes', name: 'Earthquakes', slug: 'usgs', color: '#ff6b3d', ink: false, kw: 'earthquakes?|quakes?',
-    blurb: 'Significant earthquakes from the USGS this week. No key needed.', acts: 'recent {}', fields: [] },
-  { id: 'holidays', name: 'Holidays', slug: 'googlecalendar', color: '#4285f4', ink: false, kw: 'public holidays?',
-    blurb: 'Upcoming public holidays for a country (2 letter code). No key needed.', acts: 'list {"country":"PH"}', fields: [] },
-  { id: 'trivia', name: 'Trivia', slug: 'opentrivia', color: '#a78bfa', ink: false, kw: 'trivia',
-    blurb: 'A random multiple choice trivia question with the answer. No key needed.', acts: 'random {}', fields: [] },
-  { id: 'jokes', name: 'Jokes', slug: 'jokes', color: '#ffd60a', ink: false, kw: 'joke',
-    blurb: 'A safe random joke. No key needed.', acts: 'random {"category":"Programming"}', fields: [] },
-  { id: 'stackoverflow', name: 'Stack Overflow', slug: 'stackoverflow', color: '#f48024', ink: false, kw: 'stack ?overflow',
-    blurb: 'Searches Stack Overflow questions. No key needed.', acts: 'search {"query":"question"}', fields: [] }
-];
-const connProv = (id) => CONN_PROVIDERS.find((p) => p.id === id) || null;
 
-const connNorm = (s) => String(s || '').toLowerCase().replace(/[^a-z]/g, '');
-function connReady() {
-  connLoad();
-  return connItems.filter((c) => {
-    const pv = connProv(c.provider);
-    return pv && pv.fields.every((f) => !f.req || (c.cfg && c.cfg[f.k]));
-  });
-}
-function connHint(t) {
-  try {
-    return connReady().some((c) => new RegExp('\\b(' + connProv(c.provider).kw + ')', 'i').test(String(t || '')));
-  } catch (_) { return false; }
-}
-function connDoc() {
-  const seen = new Set();
-  const lines = [];
-  connReady().forEach((c) => {
-    if (seen.has(c.provider)) return;
-    seen.add(c.provider);
-    const pv = connProv(c.provider);
-    lines.push(`${pv.id} = ${pv.acts}${c.instruction ? ' [user rule: ' + c.instruction + ']' : ''}`);
-  });
-  return 'connect {"service":"ID","action":"ACTION", ...params} runs a service the user connected in Connections. Use it whenever the question fits one of these. Connected: ' + lines.join(' ; ');
-}
-const cj = async (url, signal, headers) => {
-  const r = await fetch(url, { signal, headers });
-  if (!r.ok) throw new Error('HTTP ' + r.status);
-  return r.json();
-};
-const wmo = (c) => (c === 0 ? 'clear' : c <= 3 ? 'partly cloudy' : c <= 48 ? 'fog' : c <= 57 ? 'drizzle' : c <= 67 ? 'rain' : c <= 77 ? 'snow' : c <= 82 ? 'showers' : c >= 95 ? 'thunderstorm' : 'mixed');
-const CONN_RUN = {
-  async openmeteo(act, a, cfg, sg) {
-    const place = String(a.place || '').trim();
-    if (!place) return 'Error: need "place".';
-    const g = await cj('https://geocoding-api.open-meteo.com/v1/search?count=1&name=' + encodeURIComponent(place), sg);
-    const L = g.results && g.results[0];
-    if (!L) return 'No place found for ' + place;
-    const w = await cj('https://api.open-meteo.com/v1/forecast?latitude=' + L.latitude + '&longitude=' + L.longitude + '&current=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,wind_speed_10m,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=3', sg);
-    const c = w.current, d = w.daily;
-    let s = `${L.name}, ${L.country || ''}: now ${c.temperature_2m}C (feels ${c.apparent_temperature}C), ${wmo(c.weather_code)}, humidity ${c.relative_humidity_2m}%, wind ${c.wind_speed_10m} km/h, rain ${c.precipitation} mm.`;
-    d.time.forEach((t, i) => { s += `\n${t}: ${d.temperature_2m_min[i]} to ${d.temperature_2m_max[i]}C, rain chance ${d.precipitation_probability_max[i]}%`; });
-    return s;
-  },
-  async wikipedia(act, a, cfg, sg) {
-    const q = String(a.query || a.topic || '').trim();
-    if (!q) return 'Error: need "query".';
-    const j = await cj('https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrlimit=1&gsrsearch=' + encodeURIComponent(q) + '&prop=extracts%7Cinfo&exintro=1&explaintext=1&exchars=1100&inprop=url&format=json&origin=*', sg);
-    const pg = Object.values((j.query || {}).pages || {})[0];
-    return pg ? pg.title + '\n' + pg.fullurl + '\n' + String(pg.extract || '').replace(/\s+/g, ' ') : 'No article found for ' + q;
-  },
-  async github(act, a, cfg, sg) {
-    const h = { Accept: 'application/vnd.github+json' };
-    if (cfg.token) h.Authorization = 'Bearer ' + cfg.token;
-    const base = 'https://api.github.com';
-    if (act === 'issues' || act === 'commits') {
-      const repo = String(a.repo || '').trim();
-      if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) return 'Error: need "repo" like owner/name.';
-      if (act === 'issues') {
-        const j = await cj(base + '/repos/' + repo + '/issues?state=open&per_page=8', sg, h);
-        return j.length ? j.map((i) => '#' + i.number + ' ' + i.title).join('\n') : 'No open issues.';
-      }
-      const j = await cj(base + '/repos/' + repo + '/commits?per_page=6', sg, h);
-      return j.map((c) => c.sha.slice(0, 7) + ' ' + String(c.commit.message).split('\n')[0]).join('\n');
-    }
-    const user = String(a.user || cfg.user || '').trim();
-    const u = user ? base + '/users/' + encodeURIComponent(user) + '/repos?sort=updated&per_page=8' : (cfg.token ? base + '/user/repos?sort=updated&per_page=8' : '');
-    if (!u) return 'Error: need a username. Add it in the connection or pass "user".';
-    const j = await cj(u, sg, h);
-    return j.length ? j.map((r) => r.full_name + (r.description ? ' - ' + r.description : '') + ' (' + r.stargazers_count + ' stars)').join('\n') : 'No repos found.';
-  },
-  async nasa(act, a, cfg, sg) {
-    const j = await cj('https://api.nasa.gov/planetary/apod?api_key=' + encodeURIComponent(cfg.key || 'DEMO_KEY'), sg);
-    return j.title + ' (' + j.date + ')\n' + String(j.explanation || '').slice(0, 600) + '\n' + (j.hdurl || j.url || '');
-  },
-  async dictionary(act, a, cfg, sg) {
-    const w = String(a.word || '').trim();
-    if (!w) return 'Error: need "word".';
-    let j;
-    try { j = await cj('https://api.dictionaryapi.dev/api/v2/entries/en/' + encodeURIComponent(w), sg); }
-    catch (e) { if (/404/.test(e.message)) return 'No definition found for ' + w; throw e; }
-    const e0 = j[0];
-    return e0.word + (e0.phonetic ? ' ' + e0.phonetic : '') + '\n' + e0.meanings.slice(0, 3).map((m) => m.partOfSpeech + ': ' + ((m.definitions[0] || {}).definition || '')).join('\n');
-  },
-  async currency(act, a, cfg, sg) {
-    const f = String(a.from || 'USD').toUpperCase();
-    const t = String(a.to || 'EUR').toUpperCase();
-    const n = Number(a.amount || 1);
-    const j = await cj('https://open.er-api.com/v6/latest/' + encodeURIComponent(f), sg);
-    const r = j.rates && j.rates[t];
-    if (!r) return 'Error: unknown currency code.';
-    return n + ' ' + f + ' = ' + (n * r).toFixed(2) + ' ' + t + ' (rate ' + r + ', updated ' + String(j.time_last_update_utc || '').slice(0, 16) + ')';
-  },
-  async coingecko(act, a, cfg, sg) {
-    const q = String(a.coin || '').trim();
-    if (!q) return 'Error: need "coin".';
-    const s = await cj('https://api.coingecko.com/api/v3/search?query=' + encodeURIComponent(q), sg);
-    const c = (s.coins || [])[0];
-    if (!c) return 'No coin found for ' + q;
-    const j = await cj('https://api.coingecko.com/api/v3/simple/price?ids=' + encodeURIComponent(c.id) + '&vs_currencies=usd&include_24hr_change=true&include_market_cap=true', sg);
-    const p = j[c.id] || {};
-    return c.name + ' (' + c.symbol + '): $' + p.usd + ', 24h ' + (p.usd_24h_change != null ? p.usd_24h_change.toFixed(2) + '%' : 'n/a') + ', market cap $' + Math.round(p.usd_market_cap || 0).toLocaleString('en-US');
-  },
-  async hackernews(act, a, cfg, sg) {
-    const n = Math.min(Math.max(parseInt(a.count, 10) || 6, 1), 8);
-    const ids = (await cj('https://hacker-news.firebaseio.com/v0/topstories.json', sg)).slice(0, n);
-    const items = await Promise.all(ids.map((id) => cj('https://hacker-news.firebaseio.com/v0/item/' + id + '.json', sg)));
-    return items.filter(Boolean).map((i, k) => (k + 1) + '. ' + i.title + ' (' + (i.score || 0) + ' pts) ' + (i.url || 'https://news.ycombinator.com/item?id=' + i.id)).join('\n');
-  },
-  async tmdb(act, a, cfg, sg) {
-    const k = encodeURIComponent(cfg.key || '');
-    let j;
-    if (act === 'trending') {
-      j = await cj('https://api.themoviedb.org/3/trending/movie/week?api_key=' + k, sg);
-    } else {
-      const q = String(a.query || '').trim();
-      if (!q) return 'Error: need "query".';
-      j = await cj('https://api.themoviedb.org/3/search/movie?api_key=' + k + '&query=' + encodeURIComponent(q), sg);
-    }
-    const r = (j.results || []).slice(0, 4);
-    return r.length ? r.map((m) => m.title + ' (' + String(m.release_date || '').slice(0, 4) + ') ' + (m.vote_average || 0).toFixed(1) + '/10 - ' + String(m.overview || '').slice(0, 160)).join('\n') : 'No movies found.';
-  },
-  async openlibrary(act, a, cfg, sg) {
-    const q = String(a.query || '').trim();
-    if (!q) return 'Error: need "query".';
-    const j = await cj('https://openlibrary.org/search.json?limit=5&fields=title,author_name,first_publish_year&q=' + encodeURIComponent(q), sg);
-    const d = j.docs || [];
-    return d.length ? d.map((b) => b.title + ' - ' + (b.author_name || ['unknown']).slice(0, 2).join(', ') + (b.first_publish_year ? ' (' + b.first_publish_year + ')' : '')).join('\n') : 'No books found.';
-  },
-  async npm(act, a, cfg, sg) {
-    const p = String(a.package || a.name || '').trim();
-    if (!p) return 'Error: need "package".';
-    const enc = encodeURIComponent(p).replace('%40', '@');
-    const m = await cj('https://registry.npmjs.org/' + enc + '/latest', sg);
-    let dl = '';
-    try { const d = await cj('https://api.npmjs.org/downloads/point/last-week/' + enc, sg); dl = ', ' + d.downloads.toLocaleString('en-US') + ' downloads last week'; } catch (_) {}
-    return m.name + '@' + m.version + (m.description ? ' - ' + m.description : '') + dl + (m.license ? ', license ' + (m.license.type || m.license) : '');
-  },
-  async countries(act, a, cfg, sg) {
-    const q = String(a.country || a.name || '').trim();
-    if (!q) return 'Error: need "country".';
-    let j;
-    try { j = await cj('https://restcountries.com/v3.1/name/' + encodeURIComponent(q) + '?fields=name,capital,population,region,languages,currencies,area', sg); }
-    catch (e) { if (/404/.test(e.message)) return 'No country found for ' + q; throw e; }
-    const c = j[0];
-    return c.name.common + ' (' + c.region + '): capital ' + (c.capital || ['n/a']).join(', ') + ', population ' + c.population.toLocaleString('en-US') + ', area ' + Math.round(c.area || 0).toLocaleString('en-US') + ' km2, languages ' + Object.values(c.languages || {}).join(', ') + ', currencies ' + Object.values(c.currencies || {}).map((x) => x.name).join(', ');
-  },
-  async pokemon(act, a, cfg, sg) {
-    const n = String(a.name || '').trim().toLowerCase();
-    if (!n) return 'Error: need "name".';
-    let j;
-    try { j = await cj('https://pokeapi.co/api/v2/pokemon/' + encodeURIComponent(n), sg); }
-    catch (e) { if (/404/.test(e.message)) return 'No Pokemon found for ' + n; throw e; }
-    return j.name + ' #' + j.id + ': types ' + j.types.map((t) => t.type.name).join('/') + ', height ' + (j.height / 10) + ' m, weight ' + (j.weight / 10) + ' kg, abilities ' + j.abilities.map((x) => x.ability.name).join(', ') + ', stats ' + j.stats.map((s) => s.stat.name + ' ' + s.base_stat).join(', ');
-  },
-  async earthquakes(act, a, cfg, sg) {
-    const j = await cj('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/significant_week.geojson', sg);
-    const f = (j.features || []).slice(0, 6);
-    return f.length ? f.map((x) => 'M' + x.properties.mag + ' ' + x.properties.place + ' (' + new Date(x.properties.time).toISOString().slice(0, 16).replace('T', ' ') + ' UTC)').join('\n') : 'No significant earthquakes this week.';
-  },
-  async holidays(act, a, cfg, sg) {
-    const cc = String(a.country || 'US').trim().toUpperCase().slice(0, 2);
-    const yr = parseInt(a.year, 10) || new Date().getFullYear();
-    const j = await cj('https://date.nager.at/api/v3/PublicHolidays/' + yr + '/' + encodeURIComponent(cc), sg);
-    const today = new Date().toISOString().slice(0, 10);
-    const up = j.filter((h) => h.date >= today).slice(0, 8);
-    return (up.length ? up : j.slice(0, 8)).map((h) => h.date + ' ' + h.name).join('\n');
-  },
-  async trivia(act, a, cfg, sg) {
-    const j = await cj('https://opentdb.com/api.php?amount=1&type=multiple', sg);
-    const q = (j.results || [])[0];
-    if (!q) return 'No trivia available right now.';
-    const d = (s) => { const t = document.createElement('textarea'); t.innerHTML = s; return t.value; };
-    return d(q.category) + ' (' + q.difficulty + '): ' + d(q.question) + '\nOptions: ' + [q.correct_answer, ...q.incorrect_answers].map(d).sort().join(' | ') + '\nAnswer: ' + d(q.correct_answer);
-  },
-  async jokes(act, a, cfg, sg) {
-    const cat = /^(programming|misc|pun|spooky|christmas|any)$/i.test(String(a.category || '')) ? a.category : 'Any';
-    const j = await cj('https://v2.jokeapi.dev/joke/' + cat + '?safe-mode', sg);
-    return j.type === 'twopart' ? j.setup + '\n' + j.delivery : String(j.joke || 'No joke found.');
-  },
-  async stackoverflow(act, a, cfg, sg) {
-    const q = String(a.query || '').trim();
-    if (!q) return 'Error: need "query".';
-    const j = await cj('https://api.stackexchange.com/2.3/search/advanced?order=desc&sort=relevance&pagesize=5&site=stackoverflow&q=' + encodeURIComponent(q), sg);
-    const d = (s) => { const t = document.createElement('textarea'); t.innerHTML = s; return t.value; };
-    const it = j.items || [];
-    return it.length ? it.map((x) => d(x.title) + ' (' + x.score + ' votes, ' + (x.is_answered ? 'answered' : 'open') + ') ' + x.link).join('\n') : 'No questions found.';
-  }
-};
-async function connRun(a) {
-  a = a || {};
-  const want = connNorm(a.service);
-  const ready = connReady();
-  const c = ready.find((x) => x.provider === want || connNorm((connProv(x.provider) || {}).name) === want);
-  const pv = c && connProv(c.provider);
-  if (!pv || !CONN_RUN[pv.id]) {
-    return 'Error: service not connected. Connected: ' + (ready.map((x) => x.provider).join(', ') || 'none') + '.';
-  }
-  const ctl = new AbortController();
-  const timer = setTimeout(() => ctl.abort(), 20000);
-  try {
-    return String(await CONN_RUN[pv.id](String(a.action || '').toLowerCase(), a, c.cfg || {}, ctl.signal)).slice(0, 1400);
-  } catch (e) {
-    const m = e && e.name === 'AbortError' ? 'timed out' : ((e && e.message) || 'network error');
-    return 'Error: ' + pv.name + ' failed (' + m + ').' + (/HTTP 40[13]/.test(m) ? ' Check the key or token in Connections.' : '');
-  } finally { clearTimeout(timer); }
-}
-const connLs = () => (keyScope ? 'aphrosta.conns.' + keyScope : 'aphrosta.conns');
-let connItems = [];
 
-function connLoad() {
-  try {
-    const a = JSON.parse(localStorage.getItem(connLs()) || '[]');
-    connItems = Array.isArray(a) ? a : [];
-  } catch (_) { connItems = []; }
-}
 
-function connSave() {
-  localStorage.setItem(connLs(), JSON.stringify(connItems));
-}
 
-function connLogo(pv) {
-  if (!pv) return ICONS.connCode;
-  return `<img class="conn-logo${pv.ink ? ' ink' : ''}" src="https://cdn.simpleicons.org/${esc(pv.slug)}/${esc(pv.color.slice(1))}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-ltr="${esc(pv.name.charAt(0))}">`;
-}
 
-document.addEventListener('error', (e) => {
-  const im = e.target;
-  if (!im || !im.classList || !im.classList.contains('conn-logo')) return;
-  const s = document.createElement('span');
-  s.className = 'conn-ltr';
-  s.textContent = im.dataset.ltr || '?';
-  im.replaceWith(s);
-}, true);
 
-function connEmptyHtml() {
-  return `<div class="np-empty"><span class="np-empty-ico">${ICONS.navConnectors}</span><h3 class="np-empty-title">Nothing Placed Yet</h3><p class="np-empty-desc">Your connections will show up here.</p></div>`;
-}
-
-function connRender() {
-  const panel = document.getElementById('nav-panel');
-  const body = panel?.querySelector('.np-body');
-  if (!body || panel.getAttribute('aria-label') !== 'Connections') return;
-  if (!connItems.length) {
-    body.classList.remove('lib-list');
-    body.style.maxHeight = '';
-    body.style.overflowY = '';
-    body.innerHTML = connEmptyHtml();
-    return;
-  }
-  body.classList.add('lib-list');
-  body.innerHTML = connItems.slice().sort((a, b) => b.t - a.t).map((c) => {
-    const pv = connProv(c.provider);
-    const ink = (pv && pv.ink) || String(c.color || '').toLowerCase() === '#ffffff';
-    return `
-    <div class="lib-card ops-card conn-card" style="--oc:${esc(opsInk(c.color || OPS_COLORS[0]))};--pc:${esc(ink ? 'var(--fg)' : (c.color || OPS_COLORS[0]))}">
-      <div class="lib-card-top">
-        <h4 class="lib-card-title"><span class="ops-ico">${ICONS.connCode}</span>${esc(c.name)}</h4>
-        <div class="lib-card-act">
-          <button class="icon-btn" type="button" data-conn-open="${esc(c.id)}" aria-label="Edit">${ICONS.pencil}</button>
-          <button class="icon-btn" type="button" data-conn-del="${esc(c.id)}" aria-label="Delete">${ICONS.trash}</button>
-        </div>
-      </div>
-      ${c.description ? `<p class="lib-card-instr">${esc(c.description)}</p>` : ''}
-    </div>`;
-  }).join('');
-  const fitCards = () => {
-    const cs = body.querySelectorAll('.conn-card');
-    if (cs.length <= 9) { body.style.maxHeight = ''; body.style.overflowY = ''; return; }
-    const h = cs[8].offsetTop + cs[8].offsetHeight - cs[0].offsetTop;
-    if (h > 0) { body.style.maxHeight = (h + 8) + 'px'; body.style.overflowY = 'auto'; }
-  };
-  fitCards();
-  requestAnimationFrame(fitCards);
-}
-
-function connRefresh() {
-  connLoad();
-  connRender();
-}
-
-function connOpenEditor(edit) {
-  const cur = { provider: edit?.provider || '', color: edit?.color || OPS_COLORS[0] };
-  const draftId = edit?.id || uid();
-  let autoName = !edit?.name || (connProv(edit.provider)?.name === edit.name);
-  const cfgOld = edit?.cfg || {};
-  const connUsed = new Set(connItems.filter((c) => c.id !== edit?.id).map((c) => c.provider));
-  const rows = CONN_PROVIDERS.filter((pv) => !connUsed.has(pv.id)).map((pv) => `
-    <div class="conn-item${cur.provider === pv.id ? ' open' : ''}" data-conn-item="${esc(pv.id)}" data-q="${esc((pv.name + ' ' + pv.blurb).toLowerCase())}">
-      <button class="conn-row${cur.provider === pv.id ? ' on' : ''}" type="button" data-conn-pick="${esc(pv.id)}" style="--pc:${esc(pv.ink ? 'var(--fg)' : pv.color)}">
-        <span class="conn-tile">${connLogo(pv)}</span>
-        <span class="conn-name">${esc(pv.name)}</span>
-        <span class="conn-go">${ICONS.chevronR}</span>
-      </button>
-      <div class="conn-more">
-        <p class="field-note">${esc(pv.blurb)}</p>
-        ${pv.fields.map((f) => `<label class="lib-lab">${esc(f.label)}${f.req ? '' : ' (optional)'}
-          <input class="lib-in${f.secret ? ' conn-secret' : ''}" data-conn-f="${esc(pv.id)}" data-k="${esc(f.k)}" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="${esc(f.ph)}" value="${esc(edit?.provider === pv.id ? (cfgOld[f.k] || '') : '')}">
-        </label>`).join('')}
-      </div>
-    </div>`).join('');
-  const body = `
-    <div class="ops-ed" style="--oc:${esc(opsInk(cur.color))}">
-      <div class="ops-r1">
-        <label class="lib-lab">Name
-          <input class="lib-in" data-conn="name" maxlength="60" autocomplete="off" placeholder="e.g. My GitHub" value="${esc(edit?.name || '')}">
-        </label>
-        <button class="ops-cc" type="button" data-conn-cc aria-label="Next color">${OPS_I.toggle}</button>
-      </div>
-      <div class="ops-r2">
-        <label class="lib-lab">Description
-          <textarea class="lib-in lib-ta" data-conn="desc" maxlength="300" placeholder="One line about this connection">${esc(edit?.description || '')}</textarea>
-        </label>
-        <label class="lib-lab">Instruction
-          <textarea class="lib-in lib-ta" data-conn="instr" maxlength="300" placeholder="Rules">${esc(edit?.instruction || '')}</textarea>
-        </label>
-      </div>
-      <div class="lib-lab">
-        <div class="conn-wrap">
-          <input class="lib-in conn-search" type="text" data-conn-search autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Search services" aria-label="Search services">
-          <div class="conn-list" data-conn-list>${rows}<p class="field-note conn-none" data-conn-none${rows ? ' hidden' : ''}>${rows ? 'No match.' : 'Every service is already connected.'}</p></div>
-        </div>
-      </div>
-    </div>`;
-  const p = fdOpen(edit ? 'Edit connection' : 'New connection', 'Connections', body,
-    '<button class="fd-pill" type="button" data-fd="conn-save">Save</button>');
-  const ed = p.querySelector('.ops-ed');
-  const nameIn = p.querySelector('[data-conn="name"]');
-  nameIn.addEventListener('input', () => { autoName = false; });
-  p.querySelector('[data-conn-search]')?.addEventListener('input', (ev) => {
-    const q = ev.target.value.trim().toLowerCase();
-    let n = 0;
-    p.querySelectorAll('[data-conn-item]').forEach((it) => {
-      const hit = !q || it.dataset.q.includes(q);
-      it.hidden = !hit;
-      if (hit) n++;
-    });
-    const none = p.querySelector('[data-conn-none]');
-    if (none) none.hidden = n > 0;
-  });
-  p.addEventListener('click', (e) => {
-    const pk = e.target.closest('[data-conn-pick]');
-    if (pk) {
-      const pv = connProv(pk.dataset.connPick);
-      if (!pv) return;
-      cur.provider = pv.id;
-      cur.color = pv.color;
-      ed.style.setProperty('--oc', opsInk(cur.color));
-      p.querySelectorAll('[data-conn-pick]').forEach((b) => b.classList.toggle('on', b === pk));
-      if (autoName || !nameIn.value.trim()) { nameIn.value = pv.name; autoName = true; }
-      const item = pk.closest('[data-conn-item]');
-      const wasOpen = !!item && item.classList.contains('open');
-      p.querySelectorAll('[data-conn-item].open').forEach((x) => x.classList.remove('open'));
-      if (item && !wasOpen) {
-        item.classList.add('open');
-        const lst = item.closest('[data-conn-list]');
-        requestAnimationFrame(() => {
-          if (lst) lst.scrollTop += item.getBoundingClientRect().top - lst.getBoundingClientRect().top - 6;
-        });
-      }
-      return;
-    }
-    if (e.target.closest('[data-conn-cc]')) {
-      cur.color = OPS_COLORS[(OPS_COLORS.indexOf(cur.color) + 1) % OPS_COLORS.length];
-      ed.style.setProperty('--oc', opsInk(cur.color));
-      return;
-    }
-    const b = e.target.closest('[data-fd]');
-    if (!b) return;
-    if (b.dataset.fd === 'close') { fdClose(); return; }
-    if (b.dataset.fd !== 'conn-save') return;
-    const name = nameIn.value.trim();
-    if (!name) { toast('Add a connection name.', 'info', 2000); return; }
-    if (!autoApiOk()) { fdApiToast('connections'); return; }
-    const pvSel = connProv(cur.provider);
-    if (!pvSel) { toast('Pick a service first.', 'info', 2000); return; }
-    const miss = pvSel.fields.find((f) => f.req && !(p.querySelector('[data-conn-f="' + pvSel.id + '"][data-k="' + f.k + '"]')?.value || '').trim());
-    if (miss) {
-      p.querySelector('[data-conn-item="' + pvSel.id + '"]')?.classList.add('open');
-      toast('Add the ' + miss.label + '.', 'info', 2200);
-      return;
-    }
-    const now = Date.now();
-    const rec = {
-      id: draftId, name, description: p.querySelector('[data-conn="desc"]').value.trim(),
-      instruction: p.querySelector('[data-conn="instr"]').value.trim(),
-      provider: cur.provider, cfg: Object.fromEntries([...p.querySelectorAll('[data-conn-f="' + cur.provider + '"]')].map((i) => [i.dataset.k, i.value.trim()])),
-      color: cur.color, created: edit?.created || now, t: now
-    };
-    const prev = connItems.slice();
-    const i = connItems.findIndex((x) => x.id === draftId);
-    if (i >= 0) connItems[i] = rec; else connItems.push(rec);
-    try {
-      connSave();
-      fdClose();
-      connRender();
-      toast(edit ? 'Connection saved.' : 'Connection created.', 'success', 1800);
-    } catch (_) {
-      connItems = prev;
-      toast('Could not save. Storage may be full.');
-    }
-  });
-  if (canAutoFocus()) nameIn.focus();
-}
-
-document.addEventListener('click', (e) => {
-  const b = e.target.closest('[data-conn-open]');
-  if (!b) return;
-  const it = connItems.find((x) => x.id === b.dataset.connOpen);
-  if (it) connOpenEditor(it);
-});
-
-document.addEventListener('click', async (e) => {
-  const b = e.target.closest('[data-conn-del]');
-  if (!b) return;
-  const it = connItems.find((x) => x.id === b.dataset.connDel);
-  if (!it) return;
-  const yes = await confirmDialog({ title: 'Delete connection?', message: `\u201c${it.name}\u201d will be removed from this device.`, confirmLabel: 'Delete', danger: true });
-  if (!yes) return;
-  connItems = connItems.filter((x) => x.id !== it.id);
-  try { connSave(); } catch (_) { toast('Could not delete.'); }
-  connRender();
-});
-
-ICONS.autoCode = svg('<path d="M8 7l-5 5 5 5"/><path d="M16 7l5 5-5 5"/><path d="M10 4l4 16"/>', 16);
-const autoLs = () => (keyScope ? 'aphrosta.autos.' + keyScope : 'aphrosta.autos');
-const AUTO_MIN_MINS = 15;
-const AUTO_DAY_N = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const AUTO_DAY_IDX = { sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6 };
-let autoItems = [];
-let autoScope = null;
-const autoOpenSeen = new Set();
-
-function autoLoad() {
-  autoScope = keyScope;
-  try {
-    const a = JSON.parse(localStorage.getItem(autoLs()) || '[]');
-    autoItems = Array.isArray(a) ? a.filter((x) => x && x.id && x.sc) : [];
-  } catch (_) { autoItems = []; }
-}
-
-function autoSave() {
-  localStorage.setItem(autoLs(), JSON.stringify(autoItems));
-}
 
 function autoApiOk() {
   const prov = MODEL_PROVIDERS.find((p) => p.id === activeModel);
@@ -5215,296 +4726,11 @@ function autoApiOk() {
   return !!(v && v.id && !badModels[badKey(activeModel, v.id)]);
 }
 
-const autoApiToast = () => toast('Add a working API key and pick a model before making automations.', 'info', 3200);
 const fdApiToast = (what) => toast('Add a working API key and pick a model before saving ' + what + '.', 'info', 3200);
 
-function autoParse(text) {
-  const s = String(text || '').toLowerCase().replace(/\b([ap])\.m\.?/g, '$1m');
-  const once = /\b(once|one[- ]time|just one|single time)\b/.test(s);
-  const rep = !once && /\b(every|each|daily|nightly|weekly|hourly|weekdays|weekends|mondays|tuesdays|wednesdays|thursdays|fridays|saturdays|sundays)\b/.test(s);
-  let m = s.match(/\bevery\s+(\d+(?:\.\d+)?)\s*(minutes?|mins?|hours?|hrs?)\b/);
-  if (m) return { kind: 'every', mins: Math.round(parseFloat(m[1]) * (/^h/.test(m[2]) ? 60 : 1)), repeat: true };
-  if (/\bevery\s+hour\b|\bhourly\b/.test(s)) return { kind: 'every', mins: 60, repeat: true };
-  if (/\bevery\s+minute\b/.test(s)) return { kind: 'every', mins: 1, repeat: true };
-  let h = -1;
-  let mi = 0;
-  m = s.match(/\b(\d{1,2})(?::([0-5]\d))?\s*(am|pm)\b/);
-  if (m) {
-    h = parseInt(m[1], 10);
-    mi = m[2] ? parseInt(m[2], 10) : 0;
-    h = (h < 1 || h > 12) ? -1 : (h % 12) + (m[3] === 'pm' ? 12 : 0);
-  } else if ((m = s.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/))) {
-    h = parseInt(m[1], 10);
-    mi = parseInt(m[2], 10);
-  } else if (/\bnoon\b/.test(s)) {
-    h = 12;
-  } else if (/\bmidnight\b/.test(s)) {
-    h = 0;
-  }
-  if (h >= 0) {
-    let days = [];
-    if (/\bweekdays?\b/.test(s)) days = [1, 2, 3, 4, 5];
-    else if (/\bweekends?\b/.test(s)) days = [0, 6];
-    else {
-      const re = /\b(sunday|monday|tuesday|wednesday|thursday|friday|saturday)s?\b/g;
-      let d;
-      while ((d = re.exec(s))) if (!days.includes(AUTO_DAY_IDX[d[1]])) days.push(AUTO_DAY_IDX[d[1]]);
-      days.sort((a, b) => a - b);
-    }
-    return { kind: 'time', h, m: mi, days: days.length ? days : null, repeat: rep };
-  }
-  if (/\b(?:on|at|when|whenever|after|each time|every time)\s+(?:the\s+)?(?:app\s+|aphrosta\s+)?(?:open|opens|opened|launch|launches|start|starts|startup|start-up|load|loads)\b/.test(s)
-    || /\b(?:app|aphrosta)\s+(?:open|opens|opened|launch|launches|starts?)\b/.test(s)
-    || /\bi\s+(?:open|launch|start)\s+(?:the\s+)?(?:app|aphrosta)\b/.test(s)) {
-    return { kind: 'open', repeat: !once };
-  }
-  return null;
-}
 
-function autoNextAt(sc, from) {
-  if (!sc) return null;
-  if (sc.kind === 'every') return from + sc.mins * 60000;
-  if (sc.kind === 'open') return 0;
-  const d = new Date(from);
-  for (let i = 0; i < 9; i++) {
-    const c = new Date(d.getFullYear(), d.getMonth(), d.getDate() + i, sc.h, sc.m, 0, 0);
-    if (c.getTime() > from && (!sc.days || sc.days.includes(c.getDay()))) return c.getTime();
-  }
-  return null;
-}
 
-function autoWhen(sc) {
-  if (sc.kind === 'open') return sc.repeat ? 'Every time the app opens' : 'Next time the app opens';
-  if (sc.kind === 'every') return 'Every ' + (sc.mins % 60 === 0 ? (sc.mins / 60) + ' h' : sc.mins + ' min');
-  const t = new Date(2000, 0, 1, sc.h, sc.m).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-  const wk = sc.days && sc.days.length === 5 && !sc.days.includes(0) && !sc.days.includes(6);
-  const dt = sc.days ? (wk ? 'weekday' : sc.days.map((x) => AUTO_DAY_N[x]).join(', ')) : 'day';
-  if (sc.repeat) return 'Every ' + dt + ' at ' + t;
-  return 'Once at ' + t + (sc.days ? ' on ' + sc.days.map((x) => AUTO_DAY_N[x]).join(', ') : '');
-}
 
-function autoSummary(a) {
-  const w = autoWhen(a.sc);
-  if (a.done) return w + ' \u00b7 finished';
-  if (a.sc.kind === 'open' || !a.next) return w;
-  return w + ' \u00b7 next ' + new Date(a.next).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-}
-
-function autoPrompt(a) {
-  return 'Automation: ' + a.name
-    + '\nThis automation is running now in its own session, so your reply is the output. Follow Core, use Input for what to fetch or use, and deliver what Output asks for.'
-    + '\n\nInput:\n' + a.input
-    + '\n\nCore:\n' + a.core
-    + '\n\nOutput:\n' + a.output
-    + (a.instruction ? '\n\nRules:\n' + a.instruction : '');
-}
-
-function autoEmptyHtml() {
-  return `<div class="np-empty"><span class="np-empty-ico">${ICONS.navAutomation}</span><h3 class="np-empty-title">Nothing Placed Yet</h3><p class="np-empty-desc">Saved flows and routines will show up here.</p></div>`;
-}
-
-function autoRender() {
-  const panel = document.getElementById('nav-panel');
-  const body = panel?.querySelector('.np-body');
-  if (!body || panel.getAttribute('aria-label') !== 'Automations') return;
-  if (!autoItems.length) {
-    body.classList.remove('lib-list');
-    body.style.maxHeight = '';
-    body.style.overflowY = '';
-    body.innerHTML = autoEmptyHtml();
-    return;
-  }
-  body.classList.add('lib-list');
-  body.innerHTML = autoItems.slice().sort((a, b) => b.t - a.t).map((a) => {
-    const ink = String(a.color || '').toLowerCase() === '#ffffff';
-    return `
-    <div class="lib-card ops-card conn-card auto-card" style="--oc:${esc(opsInk(a.color || OPS_COLORS[0]))};--pc:${esc(ink ? 'var(--fg)' : (a.color || OPS_COLORS[0]))}">
-      <div class="lib-card-top">
-        <h4 class="lib-card-title"><span class="ops-ico">${ICONS.autoCode}</span>${esc(a.name)}</h4>
-        <div class="lib-card-act">
-          <button class="icon-btn" type="button" data-auto-open="${esc(a.id)}" aria-label="Edit">${ICONS.pencil}</button>
-          <button class="icon-btn" type="button" data-auto-del="${esc(a.id)}" aria-label="Delete">${ICONS.trash}</button>
-        </div>
-      </div>
-      ${a.description ? `<p class="lib-card-instr">${esc(a.description)}</p>` : ''}
-      <p class="lib-card-instr">${esc(autoSummary(a))}</p>
-    </div>`;
-  }).join('');
-  const fitCards = () => {
-    const cs = body.querySelectorAll('.auto-card');
-    if (cs.length <= 9) { body.style.maxHeight = ''; body.style.overflowY = ''; return; }
-    const h = cs[8].offsetTop + cs[8].offsetHeight - cs[0].offsetTop;
-    if (h > 0) { body.style.maxHeight = (h + 8) + 'px'; body.style.overflowY = 'auto'; }
-  };
-  fitCards();
-  requestAnimationFrame(fitCards);
-}
-
-function autoRefresh() {
-  autoLoad();
-  autoRender();
-}
-
-function autoOpenEditor(edit) {
-  const cur = { color: edit?.color || OPS_COLORS[0] };
-  const draftId = edit?.id || uid();
-  const ta = (k, label, ph) => `<label class="lib-lab" style="flex:1 1 0;min-height:0;margin-top:0">${label}
-        <textarea class="lib-in lib-ta" data-auto="${k}" maxlength="1000" placeholder="${esc(ph)}" style="flex:1 1 0;min-height:0;height:auto;resize:none;padding:9px 10px;font-size:calc(14px * var(--ts))">${esc(edit?.[k] || '')}</textarea>
-      </label>`;
-  const body = `
-    <div class="ops-ed" style="--oc:${esc(opsInk(cur.color))}">
-      <div class="ops-r1">
-        <label class="lib-lab">Name
-          <input class="lib-in" data-auto="name" maxlength="60" autocomplete="off" placeholder="e.g. Morning weather" value="${esc(edit?.name || '')}">
-        </label>
-        <button class="ops-cc" type="button" data-auto-cc aria-label="Next color">${OPS_I.toggle}</button>
-      </div>
-      <div class="ops-r2">
-        <label class="lib-lab">Description
-          <textarea class="lib-in lib-ta" data-auto="desc" maxlength="300" placeholder="One line about this automation">${esc(edit?.description || '')}</textarea>
-        </label>
-        <label class="lib-lab">Instruction
-          <textarea class="lib-in lib-ta" data-auto="instr" maxlength="300" placeholder="Rules">${esc(edit?.instruction || '')}</textarea>
-        </label>
-      </div>
-      <div class="lib-lab">
-        <div class="conn-list auto-io" style="flex:1 1 auto;min-height:228px;max-height:none">
-          ${ta('input', 'Input', 'The trigger and data. e.g. At 10:30am, use the Weather connector.')}
-          ${ta('core', 'Core', 'How the AI should think and what steps to follow.')}
-          ${ta('output', 'Output', 'What to deliver. e.g. A brief summary.')}
-        </div>
-      </div>
-    </div>`;
-  const p = fdOpen(edit ? 'Edit automation' : 'New automation', 'Automations', body,
-    '<button class="fd-pill" type="button" data-fd="auto-save">Save</button>');
-  const ed = p.querySelector('.ops-ed');
-  const nameIn = p.querySelector('[data-auto="name"]');
-  const val = (k) => (p.querySelector('[data-auto="' + k + '"]')?.value || '').trim();
-  p.addEventListener('click', (e) => {
-    if (e.target.closest('[data-auto-cc]')) {
-      cur.color = OPS_COLORS[(OPS_COLORS.indexOf(cur.color) + 1) % OPS_COLORS.length];
-      ed.style.setProperty('--oc', opsInk(cur.color));
-      return;
-    }
-    const b = e.target.closest('[data-fd]');
-    if (!b) return;
-    if (b.dataset.fd === 'close') { fdClose(); return; }
-    if (b.dataset.fd !== 'auto-save') return;
-    const name = val('name');
-    if (!name) { toast('Add an automation name.', 'info', 2000); return; }
-    if (!autoApiOk()) { autoApiToast(); return; }
-    const input = val('input');
-    const core = val('core');
-    const output = val('output');
-    if (!input || !core || !output) { toast('Input, Core and Output are all required.', 'info', 2400); return; }
-    const sc = autoParse(input);
-    if (!sc) { toast('Input needs a trigger, like \u201cat 10:30am\u201d, \u201cevery day at 8am\u201d, \u201cevery 2 hours\u201d or \u201cwhen the app opens\u201d.', 'info', 4200); return; }
-    if (sc.kind === 'every' && sc.mins < AUTO_MIN_MINS) { toast('Repeats must be at least ' + AUTO_MIN_MINS + ' minutes apart.', 'info', 3000); return; }
-    const now = Date.now();
-    const rec = {
-      id: draftId, name, description: val('desc'), instruction: val('instr'),
-      input, core, output, sc, next: autoNextAt(sc, now), done: false,
-      last: edit?.last || 0, runs: edit?.runs || 0,
-      color: cur.color, created: edit?.created || now, t: now
-    };
-    if (sc.kind === 'open') autoOpenSeen.add(draftId);
-    const prev = autoItems.slice();
-    const i = autoItems.findIndex((x) => x.id === draftId);
-    if (i >= 0) autoItems[i] = rec; else autoItems.push(rec);
-    try {
-      autoSave();
-      fdClose();
-      autoRender();
-      toast(edit ? 'Automation saved.' : 'Automation created.', 'success', 1800);
-    } catch (_) {
-      autoItems = prev;
-      toast('Could not save. Storage may be full.');
-    }
-  });
-  if (canAutoFocus()) nameIn.focus();
-}
-
-document.addEventListener('click', (e) => {
-  const b = e.target.closest('[data-auto-open]');
-  if (!b) return;
-  const it = autoItems.find((x) => x.id === b.dataset.autoOpen);
-  if (it) autoOpenEditor(it);
-});
-
-document.addEventListener('click', async (e) => {
-  const b = e.target.closest('[data-auto-del]');
-  if (!b) return;
-  const it = autoItems.find((x) => x.id === b.dataset.autoDel);
-  if (!it) return;
-  const yes = await confirmDialog({ title: 'Delete automation?', message: `\u201c${it.name}\u201d will be removed from this device.`, confirmLabel: 'Delete', danger: true });
-  if (!yes) return;
-  autoItems = autoItems.filter((x) => x.id !== it.id);
-  try { autoSave(); } catch (_) { toast('Could not delete.'); }
-  autoRender();
-});
-
-function autoMark(a) {
-  const now = Date.now();
-  a.last = now;
-  a.runs = (a.runs || 0) + 1;
-  if (a.sc.kind === 'open') {
-    autoOpenSeen.add(a.id);
-    if (!a.sc.repeat) a.done = true;
-  } else if (a.sc.repeat) {
-    a.next = autoNextAt(a.sc, now);
-  } else {
-    a.done = true;
-    a.next = null;
-  }
-}
-
-function autoRun(a) {
-  autoNextMsg = a.name;
-  try {
-    autoMark(a);
-    try { autoSave(); } catch (_) {}
-    autoRender();
-    if (!(currentSession.draft && currentSession.messages.length === 0)) {
-      currentSession = newDraft();
-      chatStick = true;
-      clearDraft();
-      resetNewSessionUi();
-      renderSessionUi();
-      closeSidebarMobile();
-    }
-    Promise.resolve(sendChatMessage(autoPrompt(a))).catch(() => {});
-    toast('Automation \u201c' + a.name + '\u201d started.', 'info', 2400);
-  } finally {
-    autoNextMsg = null;
-  }
-}
-
-function autoCanRun() {
-  if (accountStatusOffline || !accountActive) return false;
-  const lim = dayLimit();
-  if (lim && LimitWindow.used() >= lim) return false;
-  return autoApiOk();
-}
-
-function autoTick() {
-  try {
-    if (!keyScope || chatBusy || document.getElementById('fd-panel')) return;
-    if (autoScope !== keyScope) autoLoad();
-    if (!autoItems.length || !autoCanRun()) return;
-    const inp = q$('.composer-input');
-    if (!inp || String(inp.value || '').trim()) return;
-    const now = Date.now();
-    const due = autoItems
-      .filter((a) => !a.done && (a.sc.kind === 'open' ? !autoOpenSeen.has(a.id) : (a.next && a.next <= now)))
-      .sort((a, b) => (a.next || 0) - (b.next || 0))[0];
-    if (due) autoRun(due);
-  } catch (err) { console.warn('[automations] tick failed', err); }
-}
-setInterval(autoTick, 20000);
-setTimeout(autoTick, 5000);
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') setTimeout(autoTick, 800);
-});
 
 const NAV_PANELS = {
   'nav-projects':   { title: 'Projects',    icon: 'navProjects',   desc: 'Your projects will show up here.' },
@@ -5546,8 +4772,6 @@ function openNavPanel(key) {
   panel.classList.add('open');
   if (key === 'nav-data') libRefresh();
   else if (key === 'nav-operations') opsRefresh();
-  else if (key === 'nav-connectors') connRefresh();
-  else if (key === 'nav-automation') autoRefresh();
   else if (key === 'nav-projects') projRefresh();
   else if (key === 'nav-agent') agRefresh();
 }
@@ -12581,7 +11805,6 @@ function agMsgIco(m) {
   return a ? '<span class="ag-pl-ico" style="background:' + esc(agAvNorm(a.avatar).bg) + '">' + agAvSvg(a.avatar, true) + '</span>' : '<span class="ag-pl-ico" style="background:rgba(127,127,127,.25);font-weight:700;font-size:14px">?</span>';
 }
 const MSG_USER_ICO = svg('<circle cx="12" cy="8" r="3.6"/><path d="M5 20c.8-3.6 3.6-5.4 7-5.4s6.2 1.8 7 5.4"/>', 15);
-const MSG_SYS_ICO = svg('<rect x="6.5" y="6.5" width="11" height="11" rx="2.5"/><path d="M10 10.5h4M10 13.5h4"/><path d="M9.5 3v3.5M14.5 3v3.5M9.5 17.5V21M14.5 17.5V21M3 9.5h3.5M3 14.5h3.5M17.5 9.5H21M17.5 14.5H21"/>', 15);
 const thinkShown = new WeakSet();
 function foldSync(card, text) {
   if (!card) return;
@@ -12602,7 +11825,7 @@ function msgUserSecFrom(uel) {
   const acts = uel.querySelector(':scope > .msg-actions');
   const sec = document.createElement('div');
   sec.className = 'msg-sec msg-sec-user';
-  sec.innerHTML = `<span class="msg-ico msg-user-ico" aria-hidden="true">${uel.dataset.auto ? MSG_SYS_ICO : MSG_USER_ICO}</span><div class="msg-user-col"></div>`;
+  sec.innerHTML = `<span class="msg-ico msg-user-ico" aria-hidden="true">${MSG_USER_ICO}</span><div class="msg-user-col"></div>`;
   const col = sec.querySelector('.msg-user-col');
   [...uel.children].forEach((c) => { if (c !== acts) col.appendChild(c); });
   return { sec, acts };
@@ -12953,7 +12176,6 @@ function msgElRaw(m, i) {
   const el = document.createElement('div');
   el.className = 'msg ' + (m.role === 'user' ? 'msg-user' : 'msg-ai');
   el.dataset.i = i;
-  if (m.auto) el.dataset.auto = '1';
 
   if (m.role === 'user') {
     if (m.attachments?.length) {
@@ -14317,7 +13539,6 @@ function stripUnsupportedParams(body, errText) {
 }
 
 let agentNextHidden = false;
-let autoNextMsg = null;
 const AGENT_MAX_STEPS = 4;
 const SEARCH_ENDPOINT = '';
 
@@ -14330,11 +13551,10 @@ const TOOL_DOCS = {
   compare: 'compare {"a": "...", "b": "..."} compares two numbers (difference and percent change) or two texts (shared and different words)',
   convert: 'convert {"value": 5, "from": "km", "to": "mi"} converts length, mass, volume, temperature (c f k), time and data units',
   timer: 'timer {"seconds": 60, "label": "..."} sets a countdown that alerts the user while the app is open',
-  source_check: 'source_check {"urls": ["https://..."]} rates how trustworthy each link is and blocks unsafe ones',
-  get connect() { return connDoc(); }
+  source_check: 'source_check {"urls": ["https://..."]} rates how trustworthy each link is and blocks unsafe ones'
 };
 
-const enabledAgentTools = () => (!settings.agentTools ? [] : Object.keys(TOOL_DOCS).filter((k) => (k !== 'web_search' && k !== 'fetch_url') && (k !== 'connect' || connReady().length)));
+const enabledAgentTools = () => (!settings.agentTools ? [] : Object.keys(TOOL_DOCS).filter((k) => k !== 'web_search' && k !== 'fetch_url'));
 
 async function readerFetch(target, signal) {
   const tries = [
@@ -14546,12 +13766,6 @@ const AGENT_TOOLS = {
       } else {
         const fast = await fastWebSearch(q, ctl.signal);
         if (fast) return fast;
-        for (const eng of []) {
-          try {
-            const t = await readerFetch(eng + encodeURIComponent(q), ctl.signal);
-            return ('Web results for: ' + q + '\n' + t).slice(0, 3000);
-          } catch (e) { if (e && e.name === 'AbortError') throw e; }
-        }
         const u = 'https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrlimit=5&prop=extracts%7Cinfo&exintro=1&explaintext=1&exchars=450&inprop=url&format=json&origin=*&gsrsearch=' + encodeURIComponent(q);
         const r = await fetch(u, { signal: ctl.signal });
         const j = await r.json();
@@ -14675,9 +13889,7 @@ const AGENT_TOOLS = {
   async current_time() {
     const d = new Date();
     return `${d.toString()} | ISO ${d.toISOString()}`;
-  },
-
-  async connect(args) { return connRun(args); }
+  }
 };
 
 function parseToolCalls(text) {
@@ -14740,7 +13952,7 @@ async function autoResearch(text) {
       out.push(`[tool_result fetch_url ${u}]\n${String(r).slice(0, 2500)}\n[/tool_result]`);
     }
     const isCasual = /^\s*(hi|hello|hey|yo|thanks?|thank you|ok(ay)?|yes|no|lol|bye|good (morning|night|evening))\b[\s!.?,]*$/i.test(t);
-    const wantsSearch = !isCasual && !urls.length && !SKIP_WEB_RE.test(t) && !connHint(t) && !/```/.test(t) && (NEEDS_WEB_RE.test(t) ||
+    const wantsSearch = !isCasual && !urls.length && !SKIP_WEB_RE.test(t) && !/```/.test(t) && (NEEDS_WEB_RE.test(t) ||
       (/\?/.test(t) && t.length > 20) ||
       (t.length > 60 && /\b(who|what|when|where|which|why|how)\b/i.test(t)));
     if (wantsSearch) {
@@ -14848,8 +14060,6 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
     const atts = (attachmentsOverride || []).map((a) => ({ ...a }));
     const hiddenMsg = agentNextHidden;
     agentNextHidden = false;
-    const autoName = autoNextMsg;
-    autoNextMsg = null;
     const shieldTxt = hiddenMsg || !text ? null : Shield.scan(text).code;
     const shieldFile = hiddenMsg ? false : atts.some((a) => a.kind === 'text' && Shield.scan(a.text).hit);
     const shieldCode = shieldTxt || (shieldFile ? 'I02' : null);
@@ -14859,7 +14069,6 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
       t: Date.now(),
       attachments: atts.length ? atts : undefined,
       hidden: hiddenMsg || undefined,
-      auto: autoName ? 1 : undefined,
       shield: shieldCode || undefined
     });
     if (shieldCode) Shield.notify(shieldCode);
@@ -14867,7 +14076,7 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
     if (session.draft) {
       session.draft = false;
       const seed = text || (atts[0]?.name ?? 'Attachment');
-      session.title = autoName ? String(autoName).slice(0, 80) : makeTitle(seed);
+      session.title = makeTitle(seed);
       sessions.push(session);
       clearDraft();
     }
@@ -15764,7 +14973,6 @@ function initShell() {
     else if (action === 'attach') openAttach();
     else if (action === 'inbox') openInbox();
     else if (action === 'archive') openArchive();
-    else if (action === 'nav-worlds') openWorlds();
     else if (action === 'replay-tour') { closeSettings(); setTimeout(() => startOnboarding(true), 350); }
     else if (action === 'upgrade') toast('Paid plans are coming soon.', 'info', 1800);
     else if (NAV_PANELS[action]) openNavPanel(action);
@@ -15775,8 +14983,6 @@ function initShell() {
       else if (npLabel === 'Projects') projOpenSheet();
       else if (npLabel === 'Agents') agOpenSheet(agMode);
       else if (npLabel === 'Operations') opsOpenEditor();
-      else if (npLabel === 'Connections') connOpenEditor();
-      else if (npLabel === 'Automations') autoOpenEditor();
       else soon();
     }
   });
