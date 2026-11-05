@@ -14128,19 +14128,30 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
   setAiState('thinking');
   startStatusRotor();
 
-  pendingToolContext = (isContinue || liveWeb) ? '' : await autoResearch(seedText);
-  libContext = liveLocal ? '' : await libContextFor(seedText).catch((e) => { console.warn('Library lookup failed:', e); return ''; });
+  const preStop = new Promise((r) => { if (myAbort.signal.aborted) r(); else myAbort.signal.addEventListener('abort', () => r(), { once: true }); });
+  const preCap = (p, fb) => Promise.race([
+    Promise.resolve(p).catch((e) => { console.warn('Pre-reply lookup failed:', e); return fb; }),
+    new Promise((r) => setTimeout(() => r(fb), 8000)),
+    preStop.then(() => fb)
+  ]);
+  const prevAiPre = [...session.messages].reverse().find((m) => m.role === 'assistant' && !m.hidden && m !== ai && m.content);
+  const pAuto = preCap((isContinue || liveWeb) ? '' : autoResearch(seedText), '');
+  const pLib = preCap(liveLocal ? '' : libContextFor(seedText), '');
+  const pOps = preCap(liveLocal ? '' : opsContextFor(seedText, prevAiPre ? String(prevAiPre.content) : ''), '');
+  const pFm = preCap((!isContinue && !liveLocal) ? fmPrepare(seedText, session) : null, null);
+  pendingToolContext = await pAuto;
+  libContext = await pLib;
   const sTool = Shield.clean(pendingToolContext);
   const sLib = Shield.clean(libContext);
   pendingToolContext = sTool.text ? Shield.wrap(sTool.text, 'web-or-tool') : '';
   libContext = sLib.text ? Shield.wrap(sLib.text, 'library') : '';
   const prevAi = [...session.messages].reverse().find((m) => m.role === 'assistant' && !m.hidden && m !== ai && m.content);
-  opsContext = liveLocal ? '' : await opsContextFor(seedText, prevAi ? String(prevAi.content) : '').catch((e) => { console.warn('Operations lookup failed:', e); return ''; });
+  opsContext = await pOps;
   const sOps = Shield.clean(opsContext);
   opsContext = sOps.text ? Shield.wrap(sOps.text, 'operations') : '';
   editCtx = '';
   if (!isContinue && !liveLocal) {
-    const fmc = await fmPrepare(seedText, session).catch(() => null);
+    const fmc = await pFm;
     if (fmc) {
       const sFm = Shield.clean(fmc.files);
       if (sFm.hit) Shield.notify('I03');
