@@ -1231,22 +1231,9 @@ mark.sb-hit.is-cur {
 .tk-x.is-rev { color: var(--accent); }
 .tk-x.is-rev .tk-rev { opacity: 1; transform: none; animation: none; }
 .tk-x.is-rev .tk-cls { opacity: 0; animation: none; }
-.tk-txt { order: 1; display: flex; align-items: baseline; justify-content: flex-start; gap: 8px; min-width: 0; margin-right: auto; text-align: left; }
-.tk-code { flex: none; }
-.tk-code { font-weight: 700; letter-spacing: 0.04em; font-variant-numeric: tabular-nums; color: var(--fg); }
-.tk-det { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--gray-mid); }
-.toast.error .tk-code, .toast.success .tk-code { color: var(--fg); }
+.tk-txt { order: 1; min-width: 0; margin-right: auto; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; letter-spacing: 0.02em; color: var(--fg); }
 
 [data-code] { border-radius: 8px; }
-.code-flash { animation: codeFlash 1.3s linear 1; }
-@keyframes codeFlash {
-  0%   { background: rgba(var(--accent-rgb), 0.45); }
-  15%  { background: transparent; }
-  30%  { background: rgba(var(--accent-rgb), 0.45); }
-  45%  { background: transparent; }
-  60%  { background: rgba(var(--accent-rgb), 0.45); }
-  100% { background: transparent; }
-}
 
 @keyframes toast-in  { to { opacity: 1; transform: translateY(0); } }
 @keyframes toast-out { to { opacity: 0; transform: translateY(6px); } }
@@ -2885,6 +2872,8 @@ html[data-status-mode="auto"][data-status="offline"]
 }
 .dialog-btn.ok { background: var(--fg); color: var(--bg); border-color: transparent; }
 .dialog-btn.ok.danger { background: var(--bad); color: #fff; }
+.dialog-btn.ok.mono { background: var(--fg); color: var(--bg); font-weight: 700; border-color: rgba(var(--fg-rgb), 0.9); box-shadow: 0 0 14px rgba(var(--fg-rgb), 0.55), 0 0 34px rgba(var(--fg-rgb), 0.28); }
+.dialog-btn.ok.mono:active { box-shadow: 0 0 8px rgba(var(--fg-rgb), 0.5); }
 .dialog-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .dialog-btn[data-r="reset"] {
