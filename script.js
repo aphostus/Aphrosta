@@ -1638,7 +1638,16 @@ const Sidebar = (user) => `
       <button class="side-btn" type="button" data-action="nav-data">${ICONS.navLibrary}<span>Libraries</span></button>
     </nav>
 
-
+    <div class="side-scroll">
+      <section class="side-section" data-sec="pinned">
+        <div class="side-label"><span>Pinned</span><span data-pin-count>0/3</span></div>
+        <div class="chat-list" data-list="pinned"></div>
+      </section>
+      <section class="side-section" data-sec="chats">
+        <div class="side-label"><span>Chats</span></div>
+        <div class="chat-list" data-list="chats"></div>
+      </section>
+    </div>
 
     <div class="side-foot">
       ${Avatar(user)}
