@@ -16626,6 +16626,28 @@ const AB_PAGES = {
       <h4>Assignment</h4><p>You may not transfer your rights under these Terms. We may transfer ours as part of a handover of the Service, and will respect your rights under the law when doing so.</p>
       <h4>Events beyond control</h4><p>We are not responsible for failure or delay caused by events beyond our reasonable control, such as outages of Providers, networks, power or hosting.</p>
       <h4>Notices</h4><p>We may give notice in the App or by email. You may contact us using the details below.</p>` },
+    { t: 'Legal compliance and lawful requests', kw: 'law compliance court order government request subpoena authorities cybercrime sanctions export',
+      b: `<h4>Following the law</h4><p>You agree to use Aphrosta only in ways that are lawful where you live and in the Philippines. This includes the Cybercrime Prevention Act of 2012 (Republic Act No. 10175), the Data Privacy Act of 2012 (Republic Act No. 10173), the Intellectual Property Code (Republic Act No. 8293) and any other law that applies to you.</p>
+      <h4>Requests from authorities</h4><p>We may keep, preserve or disclose information if a valid court order, warrant, subpoena or other lawful request from a competent authority requires it, or if we reasonably believe it is necessary to protect people, to stop a crime, or to protect our legal rights. We will limit what we share to what the request properly requires, and we will tell you where the law allows it.</p>
+      <h4>Restricted use</h4><p>You may not use Aphrosta if you are barred from doing so by a law, sanction or court order that applies to you, or to use it to break any trade restriction.</p>` },
+    { t: 'Security and responsible reporting', kw: 'security vulnerability bug report hacking testing responsible disclosure unauthorized access',
+      b: `<h4>No unauthorized access</h4><p>You may not probe, scan, attack, overload or try to get around the security of Aphrosta, its accounts, its Acards or the services it depends on, and you may not access data that is not yours.</p>
+      <h4>Reporting a weakness</h4><p>If you find a security problem, please tell us privately using the contact details below and give us a reasonable time to fix it before you tell anyone else. Do not access, change, copy or delete other people's data while testing. Good-faith reports made this way will not be treated as a breach of these Terms.</p>` },
+    { t: 'Feedback and ideas', kw: 'feedback suggestions ideas reports license improve free of charge',
+      b: `<p>If you send us feedback, ideas or suggestions, you agree that we may use them to improve Aphrosta without paying you and without any duty to credit you. This does not give us any right over your own chats, files or personal data beyond what these Terms and the Rules &amp; Policies already say.</p>` },
+    { t: 'Notices and electronic communications', kw: 'notices electronic communications email in-app delivery language written',
+      b: `<h4>How we contact you</h4><p>You agree that we may send notices about your account, these Terms, billing or security by showing them in the App or by sending them to the email linked to your account. A notice is treated as received when it is shown in the App or sent to that email.</p>
+      <h4>How you contact us</h4><p>Legal notices to us must be sent in writing to the email or phone number listed under Contact. Keep your email address up to date so you do not miss a notice.</p>
+      <h4>Language</h4><p>These Terms are written in English. If they are translated, the English version controls when the two differ.</p>` },
+    { t: 'Dispute steps in detail', kw: 'dispute steps mediation arbitration alternative dispute resolution barangay court venue class',
+      b: `<h4>Step 1: talk to us</h4><p>Send a written description of the problem and what you want us to do to the contact details below. We will reply and try to settle it in good faith.</p>
+      <h4>Step 2: mediation or conciliation</h4><p>If we cannot settle within a reasonable time, we both agree to consider mediation or other alternative dispute resolution, as encouraged by the Alternative Dispute Resolution Act of 2004 (Republic Act No. 9285), and any barangay conciliation that Philippine law requires before a case may be filed.</p>
+      <h4>Step 3: the courts</h4><p>If the dispute is still not settled, it may be brought before the proper courts of the Philippines, which will have jurisdiction, unless a mandatory law gives you the right to go to a different court.</p>
+      <h4>Time limits</h4><p>To the extent the law allows, a claim related to Aphrosta should be brought within the period set by the law that applies to that kind of claim, and we ask you to raise any problem promptly so it can be resolved while the facts are fresh.</p>` },
+    { t: 'Consumer rights', kw: 'consumer rights consumer act internet transactions act mandatory protections cannot be waived',
+      b: `<p>Nothing in these Terms removes any right that the law gives you as a consumer and that cannot be waived by contract, including rights under the Consumer Act of the Philippines (Republic Act No. 7394), the Internet Transactions Act of 2023 (Republic Act No. 11967) where it applies, and the Data Privacy Act. Where a part of these Terms conflicts with such a right, the right applies and the rest of the Terms stays in force.</p>` },
+    { t: 'Survival of terms', kw: 'survival survive ending termination clauses continue after account',
+      b: `<p>The parts of these Terms that by their nature should continue after your account ends will continue. These include the sections on ownership and intellectual property, your responsibility for your content, disclaimers, limitation of liability, indemnity, governing law and disputes, and any money you still owe.</p>` },
     { t: 'Contact', kw: 'contact owner email phone legal notice',
       b: `<p>Questions about these Terms:</p>${abContact()}` }
   ] },
@@ -16699,6 +16721,42 @@ const AB_PAGES = {
       <h4>Copyright notices</h4><p>If you believe something in Aphrosta infringes your rights, email ${AB_MAIL} with your contact details, a description of the work, where it appears, and a statement that you are the owner or authorised to act for the owner.</p>
       <h4>Our response</h4><p>We review notices in good faith and may remove or disable access to material while we do.</p>
       <h4>Contact</h4>${abContact()}` },
+    { t: 'Data privacy principles we follow', kw: 'transparency legitimate purpose proportionality principles data privacy act general privacy principles',
+      b: `<p>We try to follow the three general principles of the Data Privacy Act of 2012 (Republic Act No. 10173):</p>
+      <h4>Transparency</h4><p>We tell you in this policy what we collect, why, who receives it and what rights you have, in plain language.</p>
+      <h4>Legitimate purpose</h4><p>We use personal data only for purposes that are stated here and that are not against the law, morals or public policy.</p>
+      <h4>Proportionality</h4><p>We try to collect and keep only what is needed to run Aphrosta, and we do not keep it longer than needed.</p>` },
+    { t: 'Legal grounds for using your data', kw: 'legal basis consent contract legitimate interest legal obligation gdpr section 12 lawful criteria',
+      b: `<p>We use personal data only when at least one lawful ground applies:</p>
+      <h4>Your consent</h4><p>For example when you turn on Share Usage and Improve Service, allow the microphone, or connect your own provider key. You may withdraw consent at any time in Settings. Withdrawing does not undo what was lawfully done before.</p>
+      <h4>To provide the Service</h4><p>We need some data to create your account, sign you in, keep your chats and settings, and deliver features you ask for.</p>
+      <h4>Legitimate interests</h4><p>We may use limited data to keep Aphrosta secure, to prevent abuse, fraud and spam, and to fix errors, where this does not override your rights.</p>
+      <h4>Legal obligation</h4><p>We may use or keep data where a law, court or authority requires it.</p>` },
+    { t: 'Sensitive and special information', kw: 'sensitive personal information health financial government id password do not share medical',
+      b: `<p>The Data Privacy Act treats some information as sensitive, such as health, government-issued identifiers, financial account details, and information about a person's race, beliefs, or legal proceedings. Aphrosta is a general-purpose AI assistant and is not built to store or protect such information. Please do not type or upload it unless you truly need to, and never share passwords, card numbers, one-time codes or your private API keys in a chat. You are responsible for what you choose to enter. If you enter sensitive information about another person, you confirm that you have the right to do so.</p>` },
+    { t: 'Your rights in detail', kw: 'rights informed access rectify erase block object portability damages complaint national privacy commission npc gdpr',
+      b: `<p>Under the Data Privacy Act of 2012 you have these rights, and where the law of another country applies to you (for example the EU or UK GDPR), you may also have equivalent rights there:</p>
+      <h4>Be informed</h4><p>To know if and how your personal data is being handled.</p>
+      <h4>Access</h4><p>To ask for a copy of the personal data we hold about you.</p>
+      <h4>Correct</h4><p>To fix data that is wrong or out of date.</p>
+      <h4>Erase or block</h4><p>To ask us to remove or stop using your data, when it is no longer needed, was unlawfully obtained, or you withdraw consent.</p>
+      <h4>Object</h4><p>To object to processing that rests on consent or on our legitimate interests, including any automated decision about you.</p>
+      <h4>Data portability</h4><p>To get your data in an organized, commonly used format. The backup and export tools in Settings are meant for this.</p>
+      <h4>Damages</h4><p>To claim compensation if you suffered harm from inaccurate, incomplete, outdated, false or unlawfully obtained data, or from a breach of these rules.</p>
+      <h4>Complain</h4><p>To complain to us first, and also to the National Privacy Commission of the Philippines (privacy.gov.ph), or to the data protection authority where you live.</p>
+      <h4>How to use these rights</h4><p>Write to the contact details below. We may ask you to prove who you are so that your data is not given to the wrong person. We aim to reply within a reasonable time, and within any time the law sets. Some requests may be refused where the law allows, for example when it would expose another person's data or when we must keep the data for legal reasons. If so, we will tell you why.</p>` },
+    { t: 'Personal data breach', kw: 'breach notification incident security npc 72 hours notify affected users',
+      b: `<p>If a personal data breach occurs that is likely to give rise to a real risk of serious harm to you, we will follow the Data Privacy Act and the rules of the National Privacy Commission. This includes notifying the Commission and affected users within the time the law sets, currently 72 hours from knowledge of or reasonable belief that the breach happened, and telling you what happened, what data was involved, and what you can do. No system is completely secure, and we cannot promise that a breach will never happen.</p>` },
+    { t: 'Data sharing, sale and advertising', kw: 'sell data advertising marketing profiling third parties never sold ads tracking',
+      b: `<p>We do not sell your personal data. We do not use your chats to show you advertising, and we do not build advertising profiles of you. Data goes to the service providers that are needed to run a feature you use (see Who else receives data), to authorities where the law requires it, or to a successor if Aphrosta is ever transferred, in which case your data would stay protected by these Rules or you would be told of any material change first.</p>` },
+    { t: 'Automated processing and AI output', kw: 'automated decision profiling ai output accuracy human review no legal effect',
+      b: `<p>AI answers are generated automatically and can be wrong, biased or out of date. We do not use Aphrosta to make decisions about you that have legal or similarly significant effects. If you think an AI output about you is inaccurate or harmful, you can report it using the contact details below and ask for it to be reviewed by a person.</p>` },
+    { t: 'Copyright and takedown notices', kw: 'copyright dmca infringement takedown notice counter notice intellectual property complaint repeat infringer',
+      b: `<h4>Respecting rights</h4><p>We respect the rights of authors and creators. Do not upload, share or generate material that infringes someone else's copyright, trademark or other rights.</p>
+      <h4>Sending a notice</h4><p>If you believe content on Aphrosta infringes your rights, send a written notice to the contact details below with: who you are and how to reach you; what work you own; where the content is; a statement that you believe in good faith that the use is not authorized; and a statement that your notice is accurate and that you are the owner or authorized to act for the owner.</p>
+      <h4>What we do</h4><p>We may remove or disable the content, tell the person who posted it, and give them the chance to respond. Accounts that repeatedly infringe may be suspended or closed. Knowingly false notices may expose the sender to legal responsibility.</p>` },
+    { t: 'Law enforcement and emergencies', kw: 'law enforcement emergency imminent harm safety request police',
+      b: `<p>Aphrosta is not an emergency service. If you or someone else is in danger, contact your local emergency number right away. We may share the minimum necessary information with the proper authorities if we believe in good faith that there is a serious and imminent risk to life or safety, or if a valid legal process requires it.</p>` },
     { t: 'Changes to these Rules', kw: 'changes updates policy notice',
       b: `<p>We may update these Rules &amp; Policies. The current version and its date are always in the App. If a change is significant, we will tell you in the App or by email where the law requires it.</p>` }
   ] },
@@ -16732,6 +16790,22 @@ const AB_PAGES = {
       ${abItem('Web reader and data sources', 'Service terms', 'Jina Reader, AllOrigins, corsproxy.io, DuckDuckGo, Google News, Wikipedia, CoinGecko, Yahoo Finance, Frankfurter and the npm registry.')}` },
     { t: 'Trademarks and independence', kw: 'trademarks affiliation independent endorsement',
       b: `<p>All provider names and logos are trademarks of their owners and are shown only to identify the Provider you connect. Aphrosta is independent and is not affiliated with, endorsed by or sponsored by any of them.</p>` },
+    { t: 'What the license covers', kw: 'license scope grant revocable non exclusive personal reservation rights',
+      b: `<p>We give you a limited, personal, non-exclusive, non-transferable and revocable license to use Aphrosta for its intended purpose, under the Terms &amp; Conditions. This is a license to use, not a sale. All rights not clearly given to you are reserved by the Owner.</p>` },
+    { t: 'Restrictions', kw: 'restrictions reverse engineer copy resell scrape remove notices competing',
+      b: `<p>Unless the law gives you the right or we have agreed in writing, you may not copy, modify, resell, rent, sublicense or distribute Aphrosta; reverse engineer, decompile or try to extract its source code or its models of operation; scrape or automatically harvest it at scale; remove or hide any copyright, trademark or license notice; or use it to build a competing product or to train a model.</p>` },
+    { t: 'Your content and generated output', kw: 'user content ownership outputs generated license rights responsibility',
+      b: `<p>You keep the rights you already have in what you write and upload. You give us only the limited permission needed to store, process and show it to you in order to run Aphrosta. AI-generated output may be similar to output given to others, may not be protected by copyright in every country, and may include material that infringes the rights of others without anyone intending it. You are responsible for checking and for how you use it.</p>` },
+    { t: 'Open-source notices', kw: 'open source notices mit apache bsd isc license text attribution copyleft',
+      b: `<p>Aphrosta may include open-source software, fonts and icons that are provided under their own licenses, such as MIT, Apache 2.0, BSD or ISC. Their copyright notices and license terms stay with their authors and apply to their parts only. Nothing here limits the rights those licenses give you over those parts. If you need the full license text of a component, or believe a notice is missing, contact us and we will provide or correct it.</p>` },
+    { t: 'Third-party content and links', kw: 'third party content links websites sources external responsibility',
+      b: `<p>Aphrosta may show links, search results, images or content from other parties. We do not control and are not responsible for them, and your use of them is under their own terms and privacy policies. A link is not an endorsement.</p>` },
+    { t: 'Accessibility and feedback', kw: 'accessibility feedback problems contact improve report',
+      b: `<p>We want Aphrosta to be usable by as many people as possible. If something is hard to use, or you spot incorrect legal or license information in this section, please tell us using the contact details below.</p>${abContact()}` },
+    { t: 'Trademarks and independence', kw: 'trademarks affiliation independent endorsement',
+      b: `<p>All provider names and logos are trademarks of their owners and are shown only to identify the Provider you connect. Aphrosta is independent and is not affiliated with, endorsed by or sponsored by any of them.</p>` },
+    { t: 'Limits of this page', kw: 'limits not legal advice summary governing law philippines',
+      b: `<p>This page is a plain summary of how Aphrosta and the software in it may be used. It is not legal advice and does not replace the Terms &amp; Conditions or the Rules &amp; Policies. If this page and the Terms differ, the Terms control. It is governed by the laws of the Republic of the Philippines.</p>` },
     { t: 'No warranty', kw: 'warranty disclaimer legal advice',
       b: `<p>Aphrosta is provided as it is and as available. This page is a plain summary and not legal advice. The official terms of each third-party service apply to that service.</p>` }
   ] },
@@ -16809,6 +16883,27 @@ const AB_PAGES = {
       b: `<p>Because you use your own API keys, the AI providers bill you directly. Those charges are separate from any Aphrosta subscription, and Aphrosta is not responsible for them.</p>` },
     { t: 'Non-payment and suspension', kw: 'unpaid suspension access stop',
       b: `<p>If a paid subscription is not paid, we may limit or remove paid features. Your data stays under the Rules &amp; Policies, and you can still export it.</p>` },
+    { t: 'Taxes and currency', kw: 'taxes vat currency php conversion fees bank charges',
+      b: `<p>Unless we say otherwise, prices are stated for the period shown and may or may not include taxes. Where tax such as value-added tax applies, it will be shown before you pay or added as the law requires. Your bank, card issuer or payment provider may charge currency conversion or transfer fees, which are your responsibility and not ours.</p>` },
+    { t: 'Free trials and promotions', kw: 'free trial promotion discount coupon code offer limit abuse',
+      b: `<p>Free periods, discounts and promotional codes are offered on the conditions shown with them. They may be limited to one per person, cannot be exchanged for cash, and may be withdrawn if they are abused. When a free period ends, the normal price applies only if you have clearly agreed to it.</p>` },
+    { t: 'Automatic renewal', kw: 'auto renew recurring renewal reminder cancel before renewal',
+      b: `<p>A subscription renews only if it was shown to you as renewing when you subscribed. Before you pay, we will state the price, the length of the period and how to cancel. Cancel before the renewal date to avoid the next charge. Where the law requires a reminder before renewal, we will send one.</p>` },
+    { t: 'Refund rules in detail', kw: 'refund eligibility duplicate charge not delivered consumer law request timeline',
+      b: `<h4>When we may refund</h4><p>We may refund you where you were charged twice, charged an amount you did not agree to, or charged for paid features that were not delivered because of our fault.</p>
+      <h4>How to ask</h4><p>Write to the billing contact below with the date, the amount, the way you paid and a short description of the problem. Send it as soon as you notice the issue.</p>
+      <h4>How refunds are paid</h4><p>An approved refund goes back to the way you paid where possible. Fees charged by your bank or payment provider may not be returned.</p>
+      <h4>Your legal rights</h4><p>Our refund rules do not limit any refund or remedy that Philippine consumer law gives you and that cannot be waived.</p>` },
+    { t: 'Chargebacks', kw: 'chargeback bank dispute card issuer reverse payment contact first',
+      b: `<p>Please contact us before you start a chargeback or a payment dispute with your bank, so we can fix the problem quickly. If a chargeback is filed for a payment that was valid, we may suspend paid features until it is resolved.</p>` },
+    { t: 'Payment security', kw: 'payment security card details stored pci never share scam phishing receipts',
+      b: `<p>Aphrosta does not ask for your full card number, PIN or one-time code in a chat. When online payments launch, card details will be handled by the payment provider and not stored by us. Be careful of scams: we will only contact you about payments from the contact details listed on this page. If someone else asks you to pay on our behalf, check with us first.</p>` },
+    { t: 'Taxes, receipts and your records', kw: 'receipt invoice tax records keep proof personal business',
+      b: `<p>Keep your receipts and proofs of payment. If you need an invoice for personal or business records, ask the billing contact below and tell us the name and details you want shown. You are responsible for your own tax reporting.</p>` },
+    { t: 'Payment data and privacy', kw: 'payment data privacy retention records legal obligation accounting',
+      b: `<p>We keep the payment records we need, such as the date, amount, plan, reference number and the name or email used, to run billing, answer disputes and meet accounting and legal duties. They are handled under the Rules &amp; Policies and kept only as long as needed or as the law requires.</p>` },
+    { t: 'Governing law for billing', kw: 'billing governing law philippines courts dispute settle',
+      b: `<p>Billing matters are governed by the laws of the Republic of the Philippines and by the Terms &amp; Conditions, including the dispute steps in them. Mandatory consumer protections where you live are not affected.</p>` },
     { t: 'Billing help', kw: 'billing help contact',
       b: `${abContact()}` }
   ] }
