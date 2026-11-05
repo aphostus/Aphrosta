@@ -1154,7 +1154,6 @@ Object.assign(ICONS, {
   stBack:        svg('<path d="M19 12H5M11 6l-6 6 6 6"/>', 16),
   stReset:       svg('<path d="M4 12a8 8 0 108-8H8"/><path d="M11 1L8 4l3 3"/>', 16),
   stAcard:       svg('<rect x="2.5" y="5" width="19" height="14" rx="3"/><circle cx="8.5" cy="11" r="2"/><path d="M5.8 16c.5-1.3 1.5-1.9 2.7-1.9s2.2.6 2.7 1.9M14 10h4.5M14 13.5h3"/>', 16),
-  stTutorial:    svg('<path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11.5V16c0 1.5 3 3 6 3s6-1.5 6-3v-4.5"/><path d="M22 9v6"/>', 16),
   stAppearance:  svg('<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 000 18z"/>', 16),
   stLanguage:    svg('<path d="M4 5h9M8.5 3v2M6 5c.5 3 3 6 6.5 7.5M12 5c-.8 3.5-3.5 6.5-7.5 8.5"/><path d="M12 20l4-9 4 9M13.5 17h5"/>', 16),
   stSounds:      svg('<path d="M9 18V5l11-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/>', 16),
@@ -1659,9 +1658,8 @@ let ThemeSection = () => Section('theme', 'Theme', [
 
 const ResetGroup = () => Section('reset', 'Defaults', [
   LinkRow('reset-defaults', ICONS.stReset, 'Default', { act: 'reset-defaults' }),
-  LinkRow('tutorial', ICONS.stTutorial, 'Tutorial', { act: 'tutorial' }),
   LinkRow('acard', ICONS.stAcard, 'Acard', { act: 'acard' })
-], 3);
+], 2);
 
 const memListHtml = () => (settings.memoryNotes?.length
   ? settings.memoryNotes.map((n, i) => `<div class="mem-item"><span title="${esc(n)}">${esc(n)}</span><button type="button" data-act="mem-del" data-i="${i}">Delete</button></div>`).join('')
@@ -4923,7 +4921,6 @@ function onSettingsClick(e) {
     case 'about-terms': case 'about-rules': case 'about-licenses': case 'about-help': case 'about-billing': case 'about-shortcuts':
       return openAboutPage(act.slice(6));
     case 'voice-test':    return testVoice();
-    case 'tutorial':      closeSettings(); setTimeout(() => startOnboarding(true), 350); return;
     case 'el-voices': { const p = document.querySelector('[data-el-panel]'); if (p) p.hidden = !p.hidden; return; }
     case 'avatar-remove': setSetting('avatar', ''); toast('Profile photo removed.', 'success', 1800); return;
     case 'export-data':   return exportData();
@@ -12158,7 +12155,7 @@ document.addEventListener('click', (e) => {
     if (!nav) build();
     const a = document.activeElement;
     const typing = !!a && a.matches?.('input, textarea, select, [contenteditable="true"]');
-    const popup = !!document.querySelector('.dialog-scrim, .fd-panel, .tour, .sidebar.open, .settings-panel.open, .nav-panel.open');
+    const popup = !!document.querySelector('.dialog-scrim, .fd-panel, .sidebar.open, .settings-panel.open, .nav-panel.open');
     const tall = s.scrollHeight - s.clientHeight > 120;
     const still = Date.now() - lastMove >= 1000;
     const show = still && tall && !typing && !popup && !chatBusy && !document.hidden
@@ -14973,7 +14970,6 @@ function initShell() {
     else if (action === 'attach') openAttach();
     else if (action === 'inbox') openInbox();
     else if (action === 'archive') openArchive();
-    else if (action === 'replay-tour') { closeSettings(); setTimeout(() => startOnboarding(true), 350); }
     else if (action === 'upgrade') toast('Paid plans are coming soon.', 'info', 1800);
     else if (NAV_PANELS[action]) openNavPanel(action);
     else if (action === 'nav-close') closeNavPanel();
@@ -15145,126 +15141,6 @@ function locked() {
   if (!chatBusy) return false;
   toast('Stop the response before changing model.', 'info');
   return true;
-}
-
-const TOUR_LS_BASE = 'aph.tour.v1';
-const tourKey = () => TOUR_LS_BASE + '.' + (auth?.currentUser?.uid || 'anon');
-
-function maybeStartOnboarding() {
-  setTimeout(() => {
-    if (document.querySelector('.dialog-scrim')) return;
-    startOnboarding(false);
-  }, 900);
-}
-
-function startOnboarding(force = false) {
-  if (document.querySelector('.tour, .tut')) return;
-  if (!force) { try { if (localStorage.getItem(tourKey())) return; } catch (_) {} }
-  playTutorial();
-}
-
-function tutIcon(n) {
-  const p = (d, f) => `<svg viewBox="0 0 24 24" width="18" height="18" ${f ? 'fill="currentColor"' : 'fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"'}><path d="${d}"/></svg>`;
-  return { play: p('M8 5l11 7-11 7z', 1), pause: p('M7 5h4v14H7zM13 5h4v14h-4z', 1), prev: p('M15 5l-7 7 7 7'), next: p('M9 5l7 7-7 7'), x: p('M6 6l12 12M18 6L6 18') }[n];
-}
-
-function tutScenes() {
-  const hero = (S) => { S.innerHTML = `<div class="tut-hero">${aphMark({ animated: true })}</div>`; };
-
-  const ic = (n) => (typeof ICONS !== 'undefined' && ICONS[n]) || '';
-
-  const list = [
-    { ch: 'Welcome', ms: 6000, t: `Welcome to ${APP_NAME}`, x: 'A short film of everything the app can do. Sit back, or use the arrows to jump around.', b: hero },
-
-
-  ];
-
-
-  return list;
-}
-
-function playTutorial() {
-  if (document.querySelector('.tut')) return;
-  const reduce = document.documentElement.dataset.motion === 'reduce';
-  const scenes = tutScenes();
-  const root = document.createElement('div');
-  root.className = 'tut';
-  root.setAttribute('role', 'dialog');
-  root.setAttribute('aria-modal', 'true');
-  root.setAttribute('aria-label', 'Tutorial');
-  root.innerHTML = `<div class="tut-bars">${scenes.map(() => '<i><b></b></i>').join('')}</div>
-    <div class="tut-top"><span class="tut-ch"></span><button class="tut-x" type="button" aria-label="Close tutorial">${tutIcon('x')}</button></div>
-    <div class="tut-stage"></div>
-    <div class="tut-cap"><h3></h3><p></p></div>
-    <div class="tut-ctl">
-      <button class="tut-prev" type="button" aria-label="Previous">${tutIcon('prev')}</button>
-      <button class="tut-pp" type="button" aria-label="Pause">${tutIcon('pause')}</button>
-      <button class="tut-nxt" type="button" aria-label="Next">${tutIcon('next')}</button>
-    </div>`;
-  document.body.appendChild(root);
-
-  const $ = (s) => root.querySelector(s);
-  const stage = $('.tut-stage'), cap = $('.tut-cap'), pp = $('.tut-pp');
-  const segs = [...root.querySelectorAll('.tut-bars i')];
-  let idx = -1, el = 0, dur = 1, paused = false, alive = true, queue = [];
-  const at = (ms, fn) => { if (reduce) fn(); else queue.push({ ms, fn, done: false }); };
-
-  const finish = () => {
-    if (!alive) return;
-    alive = false;
-    clearInterval(timer);
-    document.removeEventListener('keydown', onKey, true);
-    root.classList.add('leaving');
-    setTimeout(() => root.remove(), reduce ? 0 : 260);
-    try { localStorage.setItem(tourKey(), '1'); } catch (_) {}
-  };
-
-  const go = (n) => {
-    if (!alive) return;
-    if (n >= scenes.length) return finish();
-    idx = Math.max(0, n);
-    const s = scenes[idx];
-    queue = []; el = 0; dur = reduce ? 9000 : s.ms;
-    stage.innerHTML = '';
-    s.b(stage, at);
-    segs.forEach((g, k) => { g.firstChild.style.width = k < idx ? '100%' : '0%'; });
-    $('.tut-ch').textContent = s.ch;
-    cap.querySelector('h3').textContent = s.t;
-    cap.querySelector('p').textContent = s.x;
-    cap.classList.remove('in');
-    void cap.offsetWidth;
-    cap.classList.add('in');
-  };
-
-  const setPause = (v) => {
-    paused = v;
-    root.classList.toggle('paused', v);
-    pp.innerHTML = tutIcon(v ? 'play' : 'pause');
-    pp.setAttribute('aria-label', v ? 'Play' : 'Pause');
-  };
-
-  const timer = setInterval(() => {
-    if (paused || !alive) return;
-    el += 80;
-    for (const q of queue) if (!q.done && el >= q.ms) { q.done = true; try { q.fn(); } catch (_) {} }
-    segs[idx].firstChild.style.width = Math.min(100, (el / dur) * 100) + '%';
-    if (el >= dur) go(idx + 1);
-  }, 80);
-
-  const onKey = (e) => {
-    if (e.key === 'Escape') { e.stopPropagation(); finish(); }
-    else if (e.key === 'ArrowRight') { e.stopPropagation(); go(idx + 1); }
-    else if (e.key === 'ArrowLeft') { e.stopPropagation(); go(idx - 1); }
-    else if (e.key === ' ') { e.preventDefault(); e.stopPropagation(); setPause(!paused); }
-  };
-
-  $('.tut-x').addEventListener('click', finish);
-  $('.tut-prev').addEventListener('click', () => go(idx - 1));
-  $('.tut-nxt').addEventListener('click', () => go(idx + 1));
-  pp.addEventListener('click', () => setPause(!paused));
-  stage.addEventListener('click', () => setPause(!paused));
-  document.addEventListener('keydown', onKey, true);
-  go(0);
 }
 
 function renderHome(user) {
@@ -15775,20 +15651,80 @@ function introStart() {
 
 const ACARD_ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="3"/><circle cx="8.5" cy="11" r="2"/><path d="M5.8 16c.5-1.3 1.5-1.9 2.7-1.9s2.2.6 2.7 1.9M14 10h4.5M14 13.5h3"/></svg>';
 const ACARD_INFO = ['Always keep this card safe and secure', 'and do not let anyone touch it.'];
-const acEnc = (o) => 'APH1.' + btoa(unescape(encodeURIComponent(JSON.stringify(o))));
+const acEnc = (o) => 'APH2.' + btoa(unescape(encodeURIComponent(JSON.stringify(o))));
 const acDec = (s) => JSON.parse(decodeURIComponent(escape(atob(String(s).slice(5)))));
 const acB64 = (u8) => btoa(String.fromCharCode(...u8)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
-function acLoad(src) {
-  return new Promise((ok, no) => {
-    const s = document.createElement('script');
-    s.src = src; s.onload = ok; s.onerror = () => no(new Error('lib'));
-    document.head.appendChild(s);
-  });
+const AC_FRAME = 2048, AC_M = 64;
+function acBits(n) {
+  let a = 0x9e3779b1, w = 0, left = 0;
+  const out = new Uint8Array(n);
+  for (let i = 0; i < n; i++) {
+    if (!left) {
+      a = (a + 0x6d2b79f5) >>> 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      w = (t ^ (t >>> 14)) >>> 0;
+      left = 32;
+    }
+    out[i] = w & 1; w >>>= 1; left--;
+  }
+  return out;
 }
-async function acLibs() {
-  if (!window.qrcode) await acLoad('https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js');
-  if (!window.jsQR) await acLoad('https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js');
+function acCrc(u) {
+  let c = -1;
+  for (let i = 0; i < u.length; i++) {
+    c ^= u[i];
+    for (let k = 0; k < 8; k++) c = (c >>> 1) ^ (0xedb88320 & -(c & 1));
+  }
+  return (~c) >>> 0;
+}
+function acHide(c, text) {
+  const d = new TextEncoder().encode(text);
+  if (d.length > AC_FRAME - 10) throw new Error('card data too large');
+  const f = new Uint8Array(AC_FRAME), crc = acCrc(d);
+  f.set([0x41, 0x50, 0x48, 0x32, d.length >> 8, d.length & 255, crc >>> 24, (crc >>> 16) & 255, (crc >>> 8) & 255, crc & 255]);
+  f.set(d, 10);
+  const W = c.width, H = c.height, FB = AC_FRAME * 8;
+  const x = c.getContext('2d');
+  const img = x.getImageData(0, 0, W, H), px = img.data;
+  const ws = acBits((W - AC_M * 2) * (H - AC_M * 2) * 3);
+  let j = 0;
+  for (let y = AC_M; y < H - AC_M; y++) {
+    for (let k = AC_M; k < W - AC_M; k++) {
+      const o = (y * W + k) * 4;
+      for (let ch = 0; ch < 3; ch++, j++) {
+        const b = j % FB;
+        px[o + ch] = (px[o + ch] & 254) | (((f[b >> 3] >> (7 - (b & 7))) & 1) ^ ws[j]);
+      }
+    }
+  }
+  x.putImageData(img, 0, 0);
+}
+function acReveal(px, W, H) {
+  if (W !== 1600 || H !== 800) return null;
+  const FB = AC_FRAME * 8;
+  const ws = acBits((W - AC_M * 2) * (H - AC_M * 2) * 3);
+  const one = new Uint16Array(FB), all = new Uint16Array(FB);
+  let j = 0;
+  for (let y = AC_M; y < H - AC_M; y++) {
+    for (let k = AC_M; k < W - AC_M; k++) {
+      const o = (y * W + k) * 4;
+      for (let ch = 0; ch < 3; ch++, j++) {
+        const b = j % FB;
+        one[b] += (px[o + ch] & 1) ^ ws[j];
+        all[b]++;
+      }
+    }
+  }
+  const f = new Uint8Array(AC_FRAME);
+  for (let b = 0; b < FB; b++) if (one[b] * 2 > all[b]) f[b >> 3] |= 1 << (7 - (b & 7));
+  if (f[0] !== 0x41 || f[1] !== 0x50 || f[2] !== 0x48 || f[3] !== 0x32) return null;
+  const n = (f[4] << 8) | f[5];
+  if (n > AC_FRAME - 10) return null;
+  const d = f.slice(10, 10 + n);
+  if (acCrc(d) !== (((f[6] << 24) | (f[7] << 16) | (f[8] << 8) | f[9]) >>> 0)) return null;
+  return new TextDecoder().decode(d);
 }
 async function acId(uid) {
   const h = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('aphrosta:' + uid)));
@@ -15817,66 +15753,131 @@ function acRound(x, px, py, w, h, r) {
   x.arcTo(px, py, px + w, py, r);
   x.closePath();
 }
+function acSpaced(x, s, px, py, gap, right) {
+  const ch = [...s], ws = ch.map((t) => x.measureText(t).width);
+  const tot = ws.reduce((a, b) => a + b, 0) + gap * (ch.length - 1);
+  let cx = right ? px - tot : px;
+  ch.forEach((t, i) => { x.fillText(t, cx, py); cx += ws[i] + gap; });
+  return tot;
+}
+function acChip(x, px, py) {
+  const w = 190, h = 144;
+  const g = x.createLinearGradient(px, py, px + w, py + h);
+  g.addColorStop(0, '#f7e6ac'); g.addColorStop(0.45, '#c79a3b'); g.addColorStop(1, '#f2db92');
+  x.fillStyle = g; acRound(x, px, py, w, h, 24); x.fill();
+  const gl = x.createLinearGradient(px, py, px, py + h * 0.55);
+  gl.addColorStop(0, 'rgba(255,255,255,0.45)'); gl.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = gl; acRound(x, px, py, w, h, 24); x.fill();
+  x.strokeStyle = 'rgba(86,56,8,0.6)'; x.lineWidth = 3;
+  acRound(x, px + 1.5, py + 1.5, w - 3, h - 3, 23); x.stroke();
+  x.beginPath();
+  x.moveTo(px, py + h / 2); x.lineTo(px + 62, py + h / 2);
+  x.moveTo(px + w - 62, py + h / 2); x.lineTo(px + w, py + h / 2);
+  x.moveTo(px + 62, py); x.lineTo(px + 62, py + h);
+  x.moveTo(px + w - 62, py); x.lineTo(px + w - 62, py + h);
+  x.stroke();
+  acRound(x, px + 62, py + 36, w - 124, h - 72, 14); x.stroke();
+}
+function acWaves(x, cx, cy, col) {
+  x.strokeStyle = col; x.lineWidth = 8; x.lineCap = 'round';
+  for (let i = 1; i <= 4; i++) {
+    x.beginPath(); x.arc(cx - 34, cy, 16 + i * 17, -0.62, 0.62); x.stroke();
+  }
+  x.lineCap = 'butt';
+}
 async function acDraw(color, id, text) {
   const W = 1600, H = 800, dark = color !== 'white';
   const c = document.createElement('canvas');
   c.width = W; c.height = H;
-  const x = c.getContext('2d');
+  const x = c.getContext('2d', { willReadFrequently: true });
   const g = x.createLinearGradient(W * 0.3, 0, W * 0.7, H);
-  if (dark) { g.addColorStop(0, '#4a4a52'); g.addColorStop(0.45, '#17171b'); g.addColorStop(1, '#000000'); }
-  else { g.addColorStop(0, '#ffffff'); g.addColorStop(0.45, '#d9d9de'); g.addColorStop(1, '#8e8e96'); }
+  if (dark) { g.addColorStop(0, '#45454d'); g.addColorStop(0.45, '#15151a'); g.addColorStop(1, '#000000'); }
+  else { g.addColorStop(0, '#ffffff'); g.addColorStop(0.45, '#dcdce1'); g.addColorStop(1, '#9a9aa2'); }
   x.fillStyle = g;
   acRound(x, 0, 0, W, H, 56); x.fill();
   x.save(); acRound(x, 0, 0, W, H, 56); x.clip();
-  const sh = x.createRadialGradient(W * 0.28, H * 0.12, 10, W * 0.28, H * 0.12, 900);
-  sh.addColorStop(0, dark ? 'rgba(255,255,255,0.30)' : 'rgba(255,255,255,0.95)');
+  for (let i = 0; i < 30; i++) {
+    x.beginPath();
+    for (let s = 0; s <= W; s += 16) {
+      const y = H * 0.5 + i * 11 + Math.sin(s / 140 + i * 0.32) * 38 + Math.sin(s / 52 - i * 0.2) * 9;
+      if (s) x.lineTo(s, y); else x.moveTo(s, y);
+    }
+    x.strokeStyle = dark ? 'rgba(255,255,255,0.035)' : 'rgba(0,0,0,0.05)';
+    x.lineWidth = 2; x.stroke();
+  }
+  const sh = x.createRadialGradient(W * 0.25, H * 0.08, 10, W * 0.25, H * 0.08, 950);
+  sh.addColorStop(0, dark ? 'rgba(255,255,255,0.26)' : 'rgba(255,255,255,0.95)');
   sh.addColorStop(1, 'rgba(255,255,255,0)');
   x.fillStyle = sh; x.fillRect(0, 0, W, H);
+  const band = x.createLinearGradient(W * 0.55, 0, W * 0.95, H);
+  band.addColorStop(0, 'rgba(255,255,255,0)');
+  band.addColorStop(0.5, dark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.45)');
+  band.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = band; x.fillRect(0, 0, W, H);
   const bs = x.createLinearGradient(0, H * 0.55, 0, H);
   bs.addColorStop(0, 'rgba(0,0,0,0)');
-  bs.addColorStop(1, dark ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.25)');
+  bs.addColorStop(1, dark ? 'rgba(0,0,0,0.55)' : 'rgba(0,0,0,0.2)');
   x.fillStyle = bs; x.fillRect(0, 0, W, H);
-  x.fillStyle = 'rgba(255,255,255,0.45)'; x.fillRect(60, 3, W - 120, 3);
+  x.fillStyle = 'rgba(255,255,255,0.5)'; x.fillRect(70, 3, W - 140, 3);
   x.restore();
   const eg = x.createLinearGradient(0, 0, W, H);
-  eg.addColorStop(0, dark ? '#9a9aa2' : '#ffffff');
-  eg.addColorStop(0.5, dark ? '#2c2c32' : '#9a9aa2');
-  eg.addColorStop(1, dark ? '#74747c' : '#6c6c74');
+  eg.addColorStop(0, dark ? '#a4a4ac' : '#ffffff');
+  eg.addColorStop(0.5, dark ? '#2a2a30' : '#9a9aa2');
+  eg.addColorStop(1, dark ? '#7a7a82' : '#6c6c74');
   x.lineWidth = 4; x.strokeStyle = eg;
   acRound(x, 2, 2, W - 4, H - 4, 54); x.stroke();
+  x.lineWidth = 1.5; x.strokeStyle = dark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.08)';
+  acRound(x, 14, 14, W - 28, H - 28, 44); x.stroke();
+
   const logo = await new Promise((r) => { const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = 'Materials/Public/images/Logo.png'; });
-  if (logo) x.drawImage(logo, 80, 80, 120, 120);
-  x.textBaseline = 'middle'; x.textAlign = 'left';
-  x.fillStyle = dark ? '#f5f5f7' : '#0b0b0c';
-  x.font = '700 92px ui-monospace, Menlo, Consolas, monospace';
-  x.fillText(id, 230, 140);
-  x.fillStyle = dark ? '#8e8e93' : '#6e6e73';
-  x.font = '500 34px system-ui, -apple-system, sans-serif';
-  ACARD_INFO.forEach((ln, i) => x.fillText(ln, 230, 245 + i * 46));
-  const q = window.qrcode(0, 'M');
-  q.addData(text); q.make();
-  const n = q.getModuleCount(), size = 300, cell = Math.floor(size / (n + 4));
-  const span = cell * (n + 4);
-  const qx = W - 80 - span, qy = H - 80 - span;
-  if (dark) { x.fillStyle = '#f4f4f6'; acRound(x, qx - 14, qy - 14, span + 28, span + 28, 22); x.fill(); }
-  x.fillStyle = '#000000';
-  for (let r = 0; r < n; r++) for (let k = 0; k < n; k++) if (q.isDark(r, k)) x.fillRect(qx + (k + 2) * cell, qy + (r + 2) * cell, cell, cell);
+  if (logo) x.drawImage(logo, 84, 76, 104, 104);
+  const ink = dark ? '#f4f4f6' : '#0b0b0c', dim = dark ? 'rgba(235,235,245,0.55)' : 'rgba(20,20,25,0.55)';
+  x.textBaseline = 'alphabetic'; x.textAlign = 'left';
+  x.fillStyle = ink; x.font = '600 46px system-ui, -apple-system, sans-serif';
+  acSpaced(x, 'APHROSTA', 214, 134, 18);
+  x.fillStyle = dim; x.font = '500 24px system-ui, -apple-system, sans-serif';
+  acSpaced(x, 'ACARD', 214, 176, 14);
+  acWaves(x, W - 120, 128, dim);
+  acChip(x, 84, 290);
+
+  x.font = '600 84px ui-monospace, Menlo, Consolas, monospace';
+  const ng = x.createLinearGradient(0, 470, 0, 540);
+  if (dark) { ng.addColorStop(0, '#f6f6f8'); ng.addColorStop(1, '#a2a2ab'); }
+  else { ng.addColorStop(0, '#2b2b30'); ng.addColorStop(1, '#09090a'); }
+  let nx = 84;
+  String(id).split('-').forEach((grp) => {
+    x.fillStyle = dark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.85)';
+    acSpaced(x, grp, nx + 2, 534, 10);
+    x.fillStyle = ng;
+    nx += acSpaced(x, grp, nx, 531, 10) + 62;
+  });
+
+  const rl = x.createLinearGradient(84, 0, W - 84, 0);
+  rl.addColorStop(0, dark ? 'rgba(255,255,255,0.28)' : 'rgba(0,0,0,0.25)');
+  rl.addColorStop(1, 'rgba(128,128,128,0)');
+  x.fillStyle = rl; x.fillRect(84, 596, W - 168, 2);
+  x.fillStyle = dim; x.font = '500 28px system-ui, -apple-system, sans-serif';
+  ACARD_INFO.forEach((ln, i) => x.fillText(ln, 84, 654 + i * 44));
+  x.font = '600 24px system-ui, -apple-system, sans-serif';
+  acSpaced(x, 'PRIVATE ACCESS', W - 84, 698, 12, true);
+
+  acHide(c, text);
   return c;
 }
 async function acSignIn(file) {
   if (!file) return;
   try {
     toastMute = true;
-    await acLibs();
-    const bmp = await createImageBitmap(file);
+    const raw = { colorSpaceConversion: 'none', premultiplyAlpha: 'none' };
+    const bmp = await createImageBitmap(file, raw).catch(() => createImageBitmap(file));
     const c = document.createElement('canvas');
     c.width = bmp.width; c.height = bmp.height;
-    const x = c.getContext('2d');
+    const x = c.getContext('2d', { willReadFrequently: true });
     x.drawImage(bmp, 0, 0);
     const d = x.getImageData(0, 0, c.width, c.height);
-    const r = window.jsQR(d.data, d.width, d.height);
-    if (!r || !String(r.data).startsWith('APH1.')) { hideLoader(); acShake(); return; }
-    const p = acDec(r.data);
+    const txt = acReveal(d.data, d.width, d.height);
+    if (!txt || !txt.startsWith('APH2.')) { hideLoader(); acShake(); return; }
+    const p = acDec(txt);
     if (!p.e || !p.p || !p.u || !p.k) throw new Error('bad card');
     showLoader();
     await Vault.importKey(p.u, p.k);
@@ -15940,13 +15941,12 @@ const Acard = (() => {
 
       + '<div class="ac-seg"><button type="button" data-ac-c="white">White</button><button type="button" data-ac-c="black">Black</button></div>'
       + '<button class="ac-dl" type="button" data-ac-dl>Download</button>'
-      + '<p class="ac-note">This card holds your login and encryption key. Anyone with it can open your account. Never share it to anyone.</p></div>';
+      + '<p class="ac-note">This card holds your login and encryption key. Anyone with it can open your account. Never share it to anyone. Keep the PNG exactly as saved: screenshots, resizing or compressing it will stop it from working.</p></div>';
     ov = d;
     document.body.appendChild(ov);
     ov.addEventListener('click', onClick);
     try {
       if (!user.email) throw new Error('no email');
-      await acLibs();
       const p = await acCred(user);
       const k = await Vault.exportKey(user.uid);
       pack = { id: await acId(user.uid), base: { e: user.email, p, u: user.uid, k } };
@@ -16188,7 +16188,6 @@ async function boot() {
       applyProfile();
       refreshStorage();
       updateAccountBanner();
-      maybeStartOnboarding();
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
       clearTimeout(loaderSafety);
       hideLoader();
@@ -16353,36 +16352,51 @@ async function kbCopyMine() {
   else toast('Couldn\u2019t copy.');
 }
 
+const kbLast = (a) => kbBtns(a).pop();
+function kbMsgAct(a, none) {
+  const b = kbLast(a);
+  if (!b) { toast(none, 'info', 1600); return; }
+  if (chatBusy) { toast('Wait for the reply to finish.', 'info', 1600); return; }
+  onMessageAction(b);
+}
+
 const KB_SHORTCUTS = [
   { g: 'Chat', t: 'New session', k: 'mod+shift+KeyO', run: () => newSession() },
-  { g: 'Chat', t: 'Focus the message box', k: 'shift+Escape', any: true, run: () => kbInput()?.focus() },
-  { g: 'Chat', t: 'Focus the message box (not typing)', k: 'Slash', lbl: '/', run: () => kbInput()?.focus() },
-  { g: 'Chat', t: 'Send (even if Enter Sends is off)', k: 'mod+Enter',
+  { g: 'Chat', t: 'Focus the message box', k: 'Slash', lbl: '/ or ' + kbLabel('shift+Escape'), run: () => kbInput()?.focus() },
+  { g: 'Chat', t: 'Focus the message box (while typing)', k: 'shift+Escape', any: true, hide: true, run: () => kbInput()?.focus() },
+  { g: 'Chat', t: 'Send the message', k: 'mod+Enter',
     when: (e) => e.target === kbInput() && !settings.enterSends && !chatBusy && !!kbInput().value.trim(),
     run: () => q$('.send-btn')?.click() },
+  { g: 'Chat', t: 'Send with Enter (when turned on in Settings)', k: 'Enter', lbl: 'Enter', info: true, run: () => {} },
+  { g: 'Chat', t: 'New line in the message box', k: 'shift+Enter', lbl: KB_MAC ? '\u21e7Enter' : 'Shift + Enter', info: true, run: () => {} },
   { g: 'Chat', t: 'Stop the reply', k: 'mod+Period', run: () => { if (chatBusy) stopGeneration(); } },
   { g: 'Chat', t: 'Regenerate or retry the reply', k: 'alt+KeyR', run: kbRegen },
-  { g: 'Chat', t: 'Continue the reply', k: 'alt+KeyC', run: kbContinue },
+  { g: 'Chat', t: 'Continue an unfinished reply', k: 'alt+KeyC', run: kbContinue },
   { g: 'Chat', t: 'Edit your last message (box empty)', k: 'ArrowUp', lbl: '\u2191',
     when: (e) => e.target === kbInput() && !kbInput().value, run: kbEditLast },
   { g: 'Chat', t: 'Copy the last reply', k: 'mod+shift+KeyC', run: kbCopyReply },
   { g: 'Chat', t: 'Copy the last code block', k: 'mod+shift+Semicolon', run: kbCopyCode },
-  { g: 'Chat', t: 'Read the last reply aloud / stop', k: 'alt+KeyS', run: kbReadAloud },
-  { g: 'Chat', t: 'Attach files', k: 'mod+KeyU', run: () => openAttach() },
-  { g: 'Chat', t: 'Switch voice and text input', k: 'alt+KeyV', run: kbVoice },
-  { g: 'Chat', t: 'Open or close the thinking view', k: 'alt+KeyT', run: () => kbClickSel('[data-action="agent"]') },
   { g: 'Chat', t: 'Copy your last message', k: 'alt+shift+KeyC', run: kbCopyMine },
+  { g: 'Chat', t: 'Mark the last reply as good', k: 'alt+KeyG', run: () => kbMsgAct('like', 'No reply to rate yet.') },
+  { g: 'Chat', t: 'Mark the last reply as bad', k: 'alt+shift+KeyG', run: () => kbMsgAct('dislike', 'No reply to rate yet.') },
+  { g: 'Chat', t: 'Branch from the last reply', k: 'alt+KeyN', run: () => kbMsgAct('branch', 'No reply to branch from yet.') },
+  { g: 'Chat', t: 'Read the last reply aloud or stop', k: 'alt+KeyS', run: kbReadAloud },
+  { g: 'Chat', t: 'Attach files', k: 'mod+KeyU', run: () => openAttach() },
+  { g: 'Chat', t: 'Switch between voice and text', k: 'alt+KeyV', run: kbVoice },
+  { g: 'Chat', t: 'Show or hide the thinking panel', k: 'alt+KeyT', run: () => kbClickSel('[data-action="agent"]') },
   { g: 'Chat', t: 'Clear the message box', k: 'alt+KeyL', run: kbClearBox },
 
   { g: 'Navigate', t: 'Search sessions', k: 'mod+KeyK', run: kbSearch },
   { g: 'Navigate', t: 'Show or hide the sidebar', k: 'mod+shift+KeyS', run: () => toggleSidebar() },
   { g: 'Navigate', t: 'Previous session', k: 'alt+ArrowUp', run: () => kbStep(-1) },
   { g: 'Navigate', t: 'Next session', k: 'alt+ArrowDown', run: () => kbStep(1) },
-  { g: 'Navigate', t: 'Open Agents', k: 'alt+Digit2', run: () => kbClickSel('[data-action="nav-agent"]') },
-  { g: 'Navigate', t: 'Open Library', k: 'alt+Digit3', run: () => kbClickSel('[data-action="nav-data"]') },
-  { g: 'Navigate', t: 'Open Projects', k: 'alt+Digit4', run: () => kbClickSel('[data-action="nav-projects"]') },
   { g: 'Navigate', t: 'Go to the newest session', k: 'alt+shift+ArrowUp', run: () => kbEdgeSession(true) },
   { g: 'Navigate', t: 'Go to the oldest session', k: 'alt+shift+ArrowDown', run: () => kbEdgeSession(false) },
+  { g: 'Navigate', t: 'Open Projects', k: 'alt+shift+Digit1', run: () => kbClickSel('[data-action="nav-projects"]') },
+  { g: 'Navigate', t: 'Open Agents', k: 'alt+shift+Digit2', run: () => kbClickSel('[data-action="nav-agent"]') },
+  { g: 'Navigate', t: 'Open Libraries', k: 'alt+shift+Digit3', run: () => kbClickSel('[data-action="nav-data"]') },
+  { g: 'Navigate', t: 'Open the Inbox', k: 'alt+KeyI', run: () => openInbox() },
+  { g: 'Navigate', t: 'Open the Archive', k: 'alt+shift+KeyA', run: () => openArchive() },
   { g: 'Navigate', t: 'Jump to the top of the chat', k: 'mod+Home', when: (e) => !kbTyping(e.target), run: () => kbScroll(true) },
   { g: 'Navigate', t: 'Jump to the latest message', k: 'mod+End', when: (e) => !kbTyping(e.target), run: () => kbScroll(false) },
 
@@ -16392,14 +16406,15 @@ const KB_SHORTCUTS = [
 
   { g: 'Sessions', t: 'Pin or unpin this session', k: 'alt+KeyP', run: () => kbSessionOp(togglePin) },
   { g: 'Sessions', t: 'Rename this session', k: 'F2', run: () => kbSessionOp(renameSession) },
+  { g: 'Sessions', t: 'Duplicate this session', k: 'alt+shift+KeyD', run: () => kbSessionOp(duplicateSession) },
   { g: 'Sessions', t: 'Delete this session', k: 'mod+shift+Backspace', run: () => kbSessionOp(deleteSession) },
 
   { g: 'App', t: 'Open or close Settings', k: 'mod+Comma', run: kbToggleSettings },
-  { g: 'App', t: 'Show this shortcut list', k: 'mod+Slash', run: kbToggleShortcuts },
-  { g: 'App', t: 'Show this shortcut list (not typing)', k: 'shift+Slash', lbl: '?', run: kbToggleShortcuts },
+  { g: 'App', t: 'Show this shortcut list', k: 'mod+Slash', lbl: kbLabel('mod+Slash') + ' or ?', run: kbToggleShortcuts },
+  { g: 'App', t: 'Show this shortcut list (while not typing)', k: 'shift+Slash', lbl: '?', hide: true, run: kbToggleShortcuts },
   { g: 'App', t: 'Open Help and Support', k: 'alt+shift+KeyH', run: () => kbOpenAbout('help') },
   { g: 'App', t: 'Send feedback', k: 'alt+shift+KeyF', run: () => openFeedback() },
-  { g: 'App', t: 'Close menus and stop speech', k: 'Escape', lbl: 'Esc', info: true, run: () => {} }
+  { g: 'App', t: 'Close menus, Settings and the sidebar, and stop speech', k: 'Escape', lbl: 'Esc', info: true, run: () => {} }
 ];
 
 function kbClickSel(sel) { q$(sel)?.click(); }
@@ -16419,29 +16434,36 @@ const kbKey = (s) => { const k = kbParse(s); return [k.mod && 'mod', k.alt && 'a
 })();
 
 const KB_GROUPS = ['Chat', 'Navigate', 'Models', 'Sessions', 'App'];
+const kbCaps = (txt) => {
+  const mods = KB_MAC ? txt.match(/^[\u2325\u21e7\u2318]*/)[0] : '';
+  const parts = KB_MAC ? [...mods, txt.slice(mods.length)] : txt.split(' + ');
+  return parts.filter(Boolean).map((p) => `<kbd>${esc(p)}</kbd>`).join('');
+};
+const kbCombo = (s) => (s.lbl || kbLabel(s.k)).split(' or ').map((t) => kbCaps(t.trim())).join('<i>or</i>');
+const kbRow = (s) => `<div class="kb-row"><span>${esc(s.t)}</span><span class="kb-keys">${kbCombo(s)}</span></div>`;
 const kbCards = () => [
   { t: 'About shortcuts', st: 1, kw: 'keyboard shortcuts keys hotkeys desktop mac ctrl command option',
     b: `<p>Shortcuts work on computers with a keyboard and mouse. ${KB_MAC ? '\u2318 is Command, \u2325 is Option and \u21e7 is Shift.' : 'On a Mac, Ctrl becomes \u2318 and Alt becomes \u2325.'} They pause while a popup is open. Keys without Ctrl or Alt only work when you are not typing.</p>` },
   { t: 'Most used', st: 1, kw: 'most used popular favourites quick start top',
-    b: `<h4>Most used</h4>` + KB_SHORTCUTS.filter((s) => KB_TOP.includes(s.k)).map((s) => `<div class="ab-kv"><span>${esc(s.t)}</span><b>${esc(s.lbl || kbLabel(s.k))}</b></div>`).join('') },
+    b: `<h4>Most used</h4>` + KB_SHORTCUTS.filter((s) => KB_TOP.includes(s.k)).map(kbRow).join('') },
   ...KB_GROUPS.map((g) => {
-    const rows = KB_SHORTCUTS.filter((s) => s.g === g);
+    const rows = KB_SHORTCUTS.filter((s) => s.g === g && !s.hide);
     return {
       t: g, st: 1, kw: `${g} ` + rows.map((s) => s.t + ' ' + (s.lbl || kbLabel(s.k))).join(' '),
-      b: `<h4>${esc(g)}</h4>` + rows.map((s) => `<div class="ab-kv"><span>${esc(s.t)}</span><b>${esc(s.lbl || kbLabel(s.k))}</b></div>`).join('')
+      b: `<h4>${esc(g)}</h4>` + rows.map(kbRow).join('')
     };
   }),
   { t: 'Tips and conflicts', st: 1, kw: 'tips conflicts browser not working extension typing help feedback',
     b: `<h4>Open this list</h4><p>Press ${esc(kbLabel('mod+Slash'))} anywhere, or ? when you are not typing.</p>
     <h4>When a key does nothing</h4><p>Some browsers keep keys like Ctrl + T, Ctrl + W and Ctrl + N for themselves, so Aphrosta avoids them. If a shortcut still does nothing, another app or a browser extension may be using the same keys.</p>
-    <h4>Typing safely</h4><p>Plain keys such as / and ? only work when no text box is focused, so they never get in the way of what you type.</p>
+    <h4>Typing safely</h4><p>Plain keys such as / and ? only work when no text box is focused, so they never get in the way of what you type. ${esc(kbLabel('shift+Escape'))} jumps back to the message box from anywhere.</p>
     <h4>Need more help?</h4><p>Press ${esc(kbLabel('alt+shift+KeyH'))} for Help and Support, or ${esc(kbLabel('alt+shift+KeyF'))} to send feedback.</p>` }
 ];
 
 document.addEventListener('keydown', (e) => {
   if (!kbOn() || e.isComposing || !e.code) return;
   if (!q$('.composer')) return;
-  if (document.querySelector('.dialog-scrim, .tour')) return;
+  if (document.querySelector('.dialog-scrim')) return;
   const mod = e.ctrlKey || e.metaKey;
   for (const s of KB_SHORTCUTS) {
     if (s.info) continue;
@@ -16577,7 +16599,6 @@ const AB_PAGES = {
       ${abLic('messages and rich text', 'All rights reserved', 'The message bubbles, action buttons, and the rich-text renderer that turns markdown, tables, task lists, callouts, math and file cards into clean HTML.')}
       ${abLic('composer and pill', 'All rights reserved', 'The textarea, attach tray, word-state pill, token meter, live speech wave and the resize handle.')}
       ${abLic('thinking panel', 'All rights reserved', 'The collapsible thought panel that streams reasoning, plans and task lists while a reply is being written.')}
-      ${abLic('onboarding tour', 'All rights reserved', 'The step-by-step spotlight tour with keyboard support and reduced-motion handling.')}
       ${abLic('accessibility tree', 'All rights reserved', 'The ARIA labels, focus traps, keyboard navigation, and screen-reader announcements built into every component.')}
       ${abLic('motion engine', 'All rights reserved', 'The spring animations, staggered reveals, and the reduced-motion fallbacks driven by CSS variables and data attributes.')}` },
 
@@ -16609,8 +16630,7 @@ const AB_PAGES = {
       ${abLic('ElevenLabs voice', 'All rights reserved', 'The text-to-speech and speech-to-text integration, the sealed key loader, and the chunked playback pipeline. The ElevenLabs service itself stays under the own terms of ElevenLabs.')}
       ${abLic('bundled font fallbacks', 'All rights reserved', 'The named fallback font stacks (Inter, Roboto, Nunito, Montserrat and others) used when a device does not ship with the system font. Only the font names appear in the stack; the actual font files follow their own licenses and are not owned by Aphrosta.')}
       ${abLic('file export helpers', 'All rights reserved', 'The JSON export and import flow, the file download helper and the CSV escape rules.')}
-      ${abLic('sound effects and music', 'All rights reserved', 'The small synthesised tap, send, done and error sounds, plus the background music scheduler that plays from the bundled audio folder.')}
-      ${abLic('onboarding tour', 'All rights reserved', 'The step-by-step spotlight tour with keyboard support and reduced-motion handling.')}` },
+      ${abLic('sound effects and music', 'All rights reserved', 'The small synthesised tap, send, done and error sounds, plus the background music scheduler that plays from the bundled audio folder.')}` },
 
     { t: 'Third-Party Libraries', st: 1, kw: 'third party libraries firebase mermaid icons lobehub simple icons apache mit cc0 open source credits',
       b: `<p>Aphrosta loads these libraries at run time. They are not copied into the app code, and each one keeps the license its authors chose. Everything else in Aphrosta is hand-written.</p>
@@ -16637,8 +16657,7 @@ const AB_PAGES = {
   help: { title: 'Help & Support', icon: () => ICONS.stHelp, cards: [
     { t: 'Getting Started', st: 1, kw: 'start first time basics',
       b: `<p>Open Settings to change your text size, theme, and account details. Use the search bar on each page to find what you need quickly. Your changes save automatically.</p>
-      <h4>Making it yours</h4><p>You can pick your accent color, choose a font, change the text size, and toggle off animations from the Settings panel.</p>
-      <h4>Replay Tour</h4><p>Try the Replay Tour button under Settings → Tailorship if you want the first-run guide again.</p>` },
+      <h4>Making it yours</h4><p>You can pick your accent color, choose a font, change the text size, and toggle off animations from the Settings panel.</p>` },
     { t: 'Connecting a Model', st: 1, kw: 'api key model provider setup',
       b: `<p>Tap the model button at the top of the chat. Pick a provider, tap Get your API key, sign in there, create a key, then paste it back into Aphrosta and tap Save.</p>
       <h4>Common Issues</h4><p>Most key problems are one of three things: no billing set up on the provider, the key was copied with extra spaces, or the provider has no access to that specific model.</p>
