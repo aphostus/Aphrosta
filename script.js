@@ -14074,7 +14074,7 @@ const SERIES_CAPS = {
 
 const DEFAULT_CAP = 4096;
 const capFor = (v) => MODEL_CAPS[v.id] || SERIES_CAPS[v.series] || DEFAULT_CAP;
-const EFFORT_FRAC = { minima: 0.10, low: 0.25, medium: 0.50, high: 0.75, maxima: 0.90 };
+const EFFORT_FRAC = { minima: 0.05, low: 0.25, medium: 0.50, high: 0.75, maxima: 0.95 };
 
 const rateLearn = (() => { try { return JSON.parse(localStorage.getItem('rateLearn') || '{}'); } catch (_) { return {}; } })();
 function learnRate(pid, id, lim) {
@@ -14084,14 +14084,12 @@ function learnRate(pid, id, lim) {
 
 function tokenCeiling(pid, variant) {
   const cap = capFor(variant);
-  const hard = Math.floor(cap * 0.9);
+  const hard = Math.floor(cap * 0.95);
   let ceil = Math.floor(cap * (EFFORT_FRAC[activeEffort] ?? 0.5));
-  if (variant.reasoning) ceil = Math.max(ceil, Math.min(16384, hard));
-  else ceil = Math.max(ceil, Math.min(Math.round(answerBudget() * 2.5), hard));
+  if (!variant.reasoning) ceil = Math.max(ceil, Math.min(Math.round(answerBudget() * 2.5), hard));
   const learned = rateLearn[pid + '|' + variant.id];
   const learnedCap = learned ? Math.max(512, Math.floor(learned * 0.45)) : Infinity;
-  const groqCap = { minima: 6000, low: 8000, medium: 12000, high: 16000 }[activeEffort] || hard;
-  return Math.max(256, Math.min(ceil, hard, learnedCap, pid === 'groq' ? groqCap : hard));
+  return Math.max(256, Math.min(ceil, hard, learnedCap));
 }
 
 let systemPrompt = function () {
