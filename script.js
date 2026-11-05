@@ -1057,6 +1057,7 @@ function setAiState(next) {
   const composer = appEl?.querySelector('.composer');
   if (!composer) return;
   composer.dataset.aiState = next;
+  composer.__thinkStep?.(next);
   composer.__syncIdle?.();
   composer.__syncState?.();
 }
@@ -6157,10 +6158,15 @@ const Composer = () => `
               Thought
             </span>
             <span class="think-model"></span>
+            <span class="think-time"></span>
+            <button class="think-btn" type="button" data-think-act="pause" hidden>Pause</button>
+            <button class="think-btn" type="button" data-think-act="cancel" hidden>Stop</button>
+            <button class="think-btn is-go" type="button" data-think-act="continue" hidden>Continue</button>
             <button class="think-close" type="button" data-action="think-close" aria-label="Close thinking">
               ${ICONS.close}
             </button>
           </div>
+          <div class="think-steps" hidden></div>
           <div class="think-plan" hidden></div>
           <div class="think-body"></div>
         </div>
@@ -8030,6 +8036,46 @@ function initComposer() {
   };
   const resetReveal = () => { flushReveal(); thinkText.data = ''; };
 
+  const thinkStepsEl = thinkPanel.querySelector('.think-steps');
+  const thinkTimeEl = thinkPanel.querySelector('.think-time');
+  const thinkBtn = (a) => thinkPanel.querySelector('[data-think-act="' + a + '"]');
+  let steps = [];
+  const renderSteps = () => {
+    thinkStepsEl.hidden = !steps.length;
+    thinkStepsEl.innerHTML = steps.map((s) => '<span class="think-step ' + (s.done ? 'is-done' : 'is-active') + '">' + s.label + '</span>').join('');
+  };
+  composer.__thinkStep = (st) => {
+    if (st === 'idle') { steps.forEach((s) => { s.done = true; }); renderSteps(); return; }
+    if (!chatBusy) return;
+    const label = ((AI_STATES[st] && AI_STATES[st].label) || '').replace('\u2026', '');
+    if (!label) return;
+    const last = steps[steps.length - 1];
+    if (last && last.key === st) return;
+    steps.forEach((s) => { s.done = true; });
+    steps.push({ key: st, label, done: false });
+    if (steps.length > 8) steps.shift();
+    renderSteps();
+  };
+  const syncThinkTime = () => {
+    const ai = currentThinkAi();
+    if (!ai || !ai.thinkStarted || !sameThinkModel(ai)) { thinkTimeEl.textContent = ''; return; }
+    const ms = (chatBusy && !ai.thinkMs) ? Date.now() - ai.thinkStarted : ai.thinkMs;
+    thinkTimeEl.textContent = Math.max(0, Math.round(ms / 1000)) + 's';
+  };
+  const syncThinkBtns = () => {
+    const ai = currentThinkAi();
+    const mine = !!ai && sameThinkModel(ai);
+    const live = chatBusy && mine;
+    const cut = !chatBusy && mine && !!ai.thinkCut;
+    thinkBtn('pause').hidden = !live;
+    thinkBtn('cancel').hidden = !live;
+    thinkBtn('continue').hidden = !cut;
+    thinkBtn('pause').textContent = thinkPaused ? 'Resume' : 'Pause';
+    thinkPanel.classList.toggle('is-paused', thinkPaused && live);
+    syncThinkTime();
+  };
+  setInterval(() => { if (thinkOpen) syncThinkBtns(); }, 1000);
+
   const syncThink = () => {
     const ai = currentThinkAi();
     syncPlan(ai);
@@ -8041,6 +8087,7 @@ function initComposer() {
       agentBtn.dataset.thinking = '0';
       lastThinkId = '';
       lastReasoningLen = 0;
+      syncThinkBtns();
       return;
     }
 
@@ -8071,6 +8118,7 @@ function initComposer() {
     composer.classList.toggle('has-think', hasText && chatBusy);
     composer.classList.toggle('think-recorded', hasText);
     agentBtn.dataset.thinking = (hasText && thinkSeenId !== thinkId) ? '1' : '0';
+    syncThinkBtns();
   };
 
   const setThinkOpen = (on) => {
@@ -8106,7 +8154,14 @@ function initComposer() {
     };
     tick();
   };
+  composer.__showThinkCut = () => { setThinkOpen(true); syncThink(); syncThinkBtns(); };
+  composer.__thinkAct = (act) => {
+    if (act === 'pause') { thinkPaused = !thinkPaused; syncThinkBtns(); return; }
+    if (act === 'cancel') { thinkPaused = false; if (chatBusy) stopGeneration(); return; }
+    if (act === 'continue' && !chatBusy) { sendChatMessage('', true, null, true); }
+  };
   composer.__resetThink = () => {
+    thinkPaused = false; steps = []; renderSteps();
     setThinkOpen(false);
     resetReveal();
     thinkModelEl.textContent = '';
@@ -8804,6 +8859,12 @@ function initComposer() {
   }, true);
 
   composer.addEventListener('click', (e) => {
+    const thinkAct = e.target.closest('[data-think-act]');
+    if (thinkAct) {
+      e.stopPropagation();
+      composer.__thinkAct?.(thinkAct.dataset.thinkAct);
+      return;
+    }
     if (e.target.closest('[data-action="think-close"]')) {
       e.stopPropagation();
       setThinkOpen(false);
@@ -10168,6 +10229,7 @@ let sessions = loadSessions();
 let currentSession = loadDraft() || newDraft();
 let sessionQuery = '';
 let chatAbort = null;
+let thinkPaused = false;
 let chatStick = true;
 let sessionsBound = false;
 let pendingResend = null;
@@ -13209,7 +13271,6 @@ function resetNewSessionUi() {
 }
 
 function newSession() {
-  if (chatBusy) { toast('Stop the response before switching sessions.', 'info'); return; }
   if (currentSession.draft && currentSession.messages.length === 0) {
     toast('You\u2019re already in a new session.', 'info', 1800);
     closeSidebarMobile();
@@ -13226,7 +13287,6 @@ function newSession() {
 }
 
 function openSession(id) {
-  if (chatBusy) { toast('Stop the response before switching sessions.', 'info'); return; }
   const s = sessions.find((x) => x.id === id);
   if (!s) return;
   if (sessLocked(s)) { sessPwShow(id, 'unlock'); return; }
@@ -14757,11 +14817,12 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
     regen = true;
   }
 
-  let existingContent = '';
+  let existingContent = '', resumeReasoning = '';
   if (isContinue) {
     const lastMsg = session.messages[session.messages.length - 1];
     if (lastMsg && lastMsg.role === 'assistant') {
-      existingContent = lastMsg.content || '';
+      existingContent = lastMsg.__empty ? '' : (lastMsg.content || '');
+      if (lastMsg.thinkCut && lastMsg.reasoning) resumeReasoning = lastMsg.reasoning;
     }
   }
 
@@ -14818,7 +14879,7 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
 
   const ai = {
     role: 'assistant', content: existingContent, provider: pid, model: variant.id, effort: activeEffort, t: Date.now(),
-    reasoning: '', thinkWanted: needsThinking(seedText, pid, variant),
+    reasoning: resumeReasoning ? resumeReasoning + '\n\n' : '', thinkWanted: needsThinking(seedText, pid, variant),
     thinkStarted: 0, thinkMs: 0, thinkId: uid(), thinkModel: pid, thinkVariant: variant.id
   };
   session.messages.push(ai);
@@ -14856,6 +14917,9 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
   if (existingContent) {
     messages.push({ role: 'user', content: 'Your previous message was cut off. Output ONLY the exact next characters to seamlessly continue that exact text, without repeating anything from before, and without any meta-commentary.' });
   }
+  if (resumeReasoning) {
+    messages.push({ role: 'user', content: 'Your thinking was cut off. Notes so far:\n' + resumeReasoning.slice(-1800) + '\n\nDo not repeat them. Finish thinking in a few lines, then give the final answer.' });
+  }
   pendingToolContext = '';
   const wantStream = settings.streaming !== false;
   let usage = null, error = null, raf = 0, first = true, lastTick = 0, streamErr = '';
@@ -14869,7 +14933,7 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
     const nowT = performance.now();
     if (nowT - lastPaintAt < 70) { raf = requestAnimationFrame(paint); return; }
     lastPaintAt = nowT;
-    if (ai.content !== lastPaintContent && !Live.isOn()) {
+    if (session === currentSession && ai.content !== lastPaintContent && !Live.isOn()) {
       lastPaintContent = ai.content;
       const body = q$('#messages .msg:last-child .msg-body');
       if (body) {
@@ -14947,6 +15011,7 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
       const decoder = new TextDecoder();
       let buffer = '';
       while (true) {
+        while (thinkPaused && !myAbort.signal.aborted) await new Promise((ok) => setTimeout(ok, 150));
         const { value, done } = await reader.read();
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
@@ -14970,7 +15035,7 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
             }
             const rDelta = adapter.readReasoningDelta?.(p) || '';
             if (rDelta) {
-              if (!ai.thinkStarted) { ai.thinkStarted = Date.now(); composerRef?.__openThink?.(); sfx('think'); haptic(8); }
+              if (!ai.thinkStarted) { ai.thinkStarted = Date.now(); if (session === currentSession) composerRef?.__openThink?.(); sfx('think'); haptic(8); }
               ai.thinkWanted = true;
               ai.reasoning += rDelta;
               if (!raf) raf = requestAnimationFrame(paint);
@@ -15021,6 +15086,8 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
     if (!error && ai.content && !ai.__empty && !ai.__failed) {
       try { const g = Shield.out(ai.content); if (g.hit) { ai.content = g.text; Shield.notify('I06'); } } catch (_) {}
     }
+    ai.thinkCut = !!(ai.reasoning && (ai.__empty || (ai.__failed && !String(ai.content || '').trim())));
+    thinkPaused = false;
     ai.status = replyStatus(ai, finishReason, aborted, !!error, usage, pid, variant);
     session.updated = Date.now();
     persistSessions();
@@ -15030,10 +15097,13 @@ let sendChatMessage = async function (text, regen = false, attachmentsOverride =
     syncSessionControls();
     renderSessionUi();
     refreshTokenMeter();
-    scrollDown(true);
+    if (session === currentSession) scrollDown(true);
+    else if (!aborted) toast('Reply ready in ' + (session.title || 'another chat'), 'info', 3500);
     if (!error && !aborted && ai.content && !ai.__failed) setTimeout(() => agentAfterReply(ai, session), 300);
 
-    if (ai.reasoning && ai.reasoning.length > 0) {
+    if (ai.thinkCut && session === currentSession) {
+      composerRef?.__showThinkCut?.();
+    } else if (ai.reasoning && ai.reasoning.length > 0) {
       composerRef?.__closeThink?.();
     }
 

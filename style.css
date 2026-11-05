@@ -3228,6 +3228,73 @@ html[data-motion="reduce"] .think-panel { transition: none; }
 }
 
 .think-panel { contain: layout paint; }
+
+.think-time {
+  flex-shrink: 0;
+  font-size: calc(10.5px * var(--ts));
+  font-variant-numeric: tabular-nums;
+  color: var(--gray-mid);
+}
+.think-btn {
+  flex-shrink: 0;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: 7px;
+  font-size: calc(11px * var(--ts));
+  font-weight: 600;
+  color: var(--gray-light);
+  background: var(--glass-bg-hover);
+  border: 1px solid var(--glass-border);
+}
+.think-btn[hidden] { display: none; }
+.think-btn:hover { color: var(--fg); }
+.think-btn.is-go { color: var(--bg); background: var(--accent); border-color: transparent; }
+.think-steps {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 12px 0;
+}
+.think-steps[hidden] { display: none; }
+.think-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  font-size: calc(10.5px * var(--ts));
+  color: var(--gray-mid);
+}
+.think-step::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.think-step.is-active { color: var(--fg); }
+.think-step.is-active::before {
+  background: var(--accent);
+  animation: statusDot 1.4s var(--ease-smooth) infinite;
+}
+.think-step.is-done::before {
+  content: "\2713";
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  background: none;
+  font-size: 9px;
+}
+.think-panel.is-paused .think-dot { animation-play-state: paused; opacity: 0.45; }
+.think-panel.is-paused .think-title::after {
+  content: "paused";
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
+  color: var(--gray-mid);
+}
 .composer.think-anim {
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
