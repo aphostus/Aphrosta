@@ -3014,7 +3014,8 @@ html[data-status="offline"] .account-card .avatar {
   grid-template-rows: 1fr; opacity: 1; margin-bottom: 0;
   border-color: var(--glass-border); pointer-events: auto;
 }
-.think-inner { min-height: 0; overflow: hidden; display: flex; flex-direction: column; height: min(30vh, 240px); }
+.think-inner { min-height: 0; overflow: hidden; display: flex; flex-direction: column; max-height: min(38vh, 300px); }
+.think-panel.is-open .think-inner { height: min(30vh, 240px); }
 html[data-motion="reduce"] .think-panel { transition: none; }
 
 .think-head {
