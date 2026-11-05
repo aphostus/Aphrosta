@@ -15760,15 +15760,16 @@ function acSpaced(x, s, px, py, gap, right) {
   ch.forEach((t, i) => { x.fillText(t, cx, py); cx += ws[i] + gap; });
   return tot;
 }
-function acChip(x, px, py) {
+function acChip(x, px, py, dark) {
   const w = 190, h = 144;
   const g = x.createLinearGradient(px, py, px + w, py + h);
-  g.addColorStop(0, '#f7e6ac'); g.addColorStop(0.45, '#c79a3b'); g.addColorStop(1, '#f2db92');
+  if (dark) { g.addColorStop(0, '#ffffff'); g.addColorStop(0.5, '#b4b4bd'); g.addColorStop(1, '#f1f1f4'); }
+  else { g.addColorStop(0, '#3c3c42'); g.addColorStop(0.5, '#050506'); g.addColorStop(1, '#2c2c31'); }
   x.fillStyle = g; acRound(x, px, py, w, h, 24); x.fill();
   const gl = x.createLinearGradient(px, py, px, py + h * 0.55);
-  gl.addColorStop(0, 'rgba(255,255,255,0.45)'); gl.addColorStop(1, 'rgba(255,255,255,0)');
+  gl.addColorStop(0, dark ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.2)'); gl.addColorStop(1, 'rgba(255,255,255,0)');
   x.fillStyle = gl; acRound(x, px, py, w, h, 24); x.fill();
-  x.strokeStyle = 'rgba(86,56,8,0.6)'; x.lineWidth = 3;
+  x.strokeStyle = dark ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.4)'; x.lineWidth = 3;
   acRound(x, px + 1.5, py + 1.5, w - 3, h - 3, 23); x.stroke();
   x.beginPath();
   x.moveTo(px, py + h / 2); x.lineTo(px + 62, py + h / 2);
@@ -15778,12 +15779,15 @@ function acChip(x, px, py) {
   x.stroke();
   acRound(x, px + 62, py + 36, w - 124, h - 72, 14); x.stroke();
 }
-function acWaves(x, cx, cy, col) {
-  x.strokeStyle = col; x.lineWidth = 8; x.lineCap = 'round';
-  for (let i = 1; i <= 4; i++) {
-    x.beginPath(); x.arc(cx - 34, cy, 16 + i * 17, -0.62, 0.62); x.stroke();
+function acGlyph(x, px, py, dark) {
+  const gap = 30;
+  for (let r = 0; r < 3; r++) {
+    for (let k = 0; k < 3; k++) {
+      const t = (r + k) / 4;
+      x.fillStyle = (dark ? 'rgba(235,235,245,' : 'rgba(20,20,25,') + (0.85 - t * 0.6).toFixed(2) + ')';
+      x.beginPath(); x.arc(px + k * gap, py + r * gap, 9 - t * 4, 0, Math.PI * 2); x.fill();
+    }
   }
-  x.lineCap = 'butt';
 }
 async function acDraw(color, id, text) {
   const W = 1600, H = 800, dark = color !== 'white';
@@ -15837,8 +15841,8 @@ async function acDraw(color, id, text) {
   acSpaced(x, 'APHROSTA', 214, 134, 18);
   x.fillStyle = dim; x.font = '500 24px system-ui, -apple-system, sans-serif';
   acSpaced(x, 'ACARD', 214, 176, 14);
-  acWaves(x, W - 120, 128, dim);
-  acChip(x, 84, 290);
+  acGlyph(x, W - 150, 84, dark);
+  acChip(x, 84, 290, dark);
 
   x.font = '600 84px ui-monospace, Menlo, Consolas, monospace';
   const ng = x.createLinearGradient(0, 470, 0, 540);
@@ -15859,7 +15863,7 @@ async function acDraw(color, id, text) {
   x.fillStyle = dim; x.font = '500 28px system-ui, -apple-system, sans-serif';
   ACARD_INFO.forEach((ln, i) => x.fillText(ln, 84, 654 + i * 44));
   x.font = '600 24px system-ui, -apple-system, sans-serif';
-  acSpaced(x, 'PRIVATE ACCESS', W - 84, 698, 12, true);
+  acSpaced(x, 'ACCESS', W - 84, 698, 12, true);
 
   acHide(c, text);
   return c;
