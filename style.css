@@ -3249,6 +3249,20 @@ html[data-motion="reduce"] .think-panel { transition: none; }
 .think-btn[hidden] { display: none; }
 .think-btn:hover { color: var(--fg); }
 .think-btn.is-go { color: var(--bg); background: var(--accent); border-color: transparent; }
+.think-circle {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  color: var(--gray-light);
+  background: var(--glass-bg-hover);
+  border: 1px solid var(--glass-border);
+}
+.think-circle[hidden] { display: none; }
+.think-circle:hover { color: var(--fg); }
 .think-steps {
   flex-shrink: 0;
   display: flex;

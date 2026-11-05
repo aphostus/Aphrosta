@@ -6159,7 +6159,7 @@ const Composer = () => `
             </span>
             <span class="think-model"></span>
             <span class="think-time"></span>
-            <button class="think-btn" type="button" data-think-act="pause" hidden>Pause</button>
+            <button class="think-circle" type="button" data-think-act="pause" aria-label="Pause thinking" hidden></button>
             <button class="think-btn" type="button" data-think-act="cancel" hidden>Stop</button>
             <button class="think-btn is-go" type="button" data-think-act="continue" hidden>Continue</button>
             <button class="think-close" type="button" data-action="think-close" aria-label="Close thinking">
@@ -8065,12 +8065,17 @@ function initComposer() {
   const syncThinkBtns = () => {
     const ai = currentThinkAi();
     const mine = !!ai && sameThinkModel(ai);
-    const live = chatBusy && mine;
+    const live = chatBusy && mine && aiState !== 'composing' && aiState !== 'finalizing';
     const cut = !chatBusy && mine && !!ai.thinkCut;
-    thinkBtn('pause').hidden = !live;
+    const pb = thinkBtn('pause');
+    pb.hidden = !live;
+    if (pb.dataset.s !== String(thinkPaused)) {
+      pb.dataset.s = String(thinkPaused);
+      pb.innerHTML = thinkPaused ? svg('<path d="M8 5l11 7-11 7z"/>', 14) : svg('<path d="M9 5v14M15 5v14"/>', 14);
+      pb.setAttribute('aria-label', thinkPaused ? 'Resume thinking' : 'Pause thinking');
+    }
     thinkBtn('cancel').hidden = !live;
     thinkBtn('continue').hidden = !cut;
-    thinkBtn('pause').textContent = thinkPaused ? 'Resume' : 'Pause';
     thinkPanel.classList.toggle('is-paused', thinkPaused && live);
     syncThinkTime();
   };
