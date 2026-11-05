@@ -1,6 +1,3 @@
-/* ============================================================
-   APHROSTA — script.js
-   ============================================================ */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
@@ -60,7 +57,6 @@ setPersistence(auth, browserLocalPersistence).catch((err) => {
 
 let appEl = null;
 
-/* ---------- EFFORT LEVELS ---------- */
 const EFFORT_LEVELS = [
   { id: 'minima', name: 'Minima', note: 'Efficient', desc: 'Fastest. Short answers, very little thinking.' },
   { id: 'low',    name: 'Low', desc: 'Quick answers with light thinking.' },
@@ -70,7 +66,6 @@ const EFFORT_LEVELS = [
 ];
 const DEFAULT_EFFORT = 'medium';
 
-/* ---------- STATE ---------- */
 let currentUser = null;
 let activeModel = null;
 let apiKeys = {};
@@ -82,7 +77,6 @@ const ACTIVE_EFFORT_LS = 'aphrosta.activeEffort';
 const DRAFT_LS = 'aphrosta.draft';
 const ACCOUNT_ACTIVE_LS = 'aphrosta.accountActive';
 
-/* ---------- PER-USER API KEYS ---------- */
 let keyScope = '';
 const keysLs  = () => (keyScope ? `${API_KEYS_LS}.${keyScope}`    : null);
 const modelLs = () => (keyScope ? `${ACTIVE_MODEL_LS}.${keyScope}` : null);
@@ -153,8 +147,6 @@ function persistVariants() {
   Cloud.queueSettings();
 }
 
-/* ---------- SETTINGS STATE ---------- */
-/* ---------- ELEVENLABS (voice) ---------- */
 const EL_VOICES = [
   { id: 'adam', name: 'Adam', g: 'm', v: 'adam' },
   { id: 'josh', name: 'Josh', g: 'm', v: 'josh' },
@@ -164,10 +156,7 @@ const EL_VOICES = [
   { id: 'elli', name: 'Elli', g: 'f', v: 'elli' }
 ];
 
-/* EL-SEAL-BEGIN */
-/* EL-SEAL-END */
 
-/* ---------- ElevenLabs voice (through the Aphrosta proxy, users never enter a key) ---------- */
 const EL_API = 'https://pluthos.aphostus-org.workers.dev';
 async function elFetch(path, opts = {}) {
   const u = auth.currentUser;
@@ -189,7 +178,6 @@ async function elStt(blob, name, lang) {
   const j = await r.json();
   return String(j.text || '').trim();
 }
-/* ElevenLabs returns no word timestamps: estimate them from the decoded audio length */
 async function elAudioDur(buf) {
   try {
     const AC = window.AudioContext || window.webkitAudioContext;
@@ -240,7 +228,6 @@ const APPEARANCES = [
   { id: 'system', name: 'System' }
 ];
 
-/* Auto: light from 6am to 6pm, dark from 6pm to 6am */
 function autoTheme() {
   const h = new Date().getHours();
   return h >= 6 && h < 18 ? 'light' : 'dark';
@@ -316,7 +303,6 @@ const LANGUAGES = [
 
 const PREVIEW_VERSIONS = ['1.01', '1.02', '1.03', '1.04', '1.05'].map((v) => ({ id: v, name: v }));
 
-/* ---------- NEW: skill / prompt constants ---------- */
 const FENCE = '\u0060\u0060\u0060';
 
 const LINE_HEIGHTS = [
@@ -454,7 +440,7 @@ function loadSettings() {
   s.tokenWindowMins = Math.min(1440, Math.max(1, Math.round(+s.tokenWindowMins) || 1440));
   s.version = '1.00';
   if (!raw.memInit) { s.memoryLong = s.memoryShort = s.saveSessions = true; s.memInit = true; }
-  s.saveSessions = true; /* Save Sessions toggle was removed, so sessions always load and save */
+  s.saveSessions = true;
   if (!raw.cwInit) { s.codeWrap = true; s.cwInit = true; }
   return s;
 }
@@ -530,7 +516,6 @@ function saveSettings() {
 const byId = (list, id) => list.find((x) => x.id === id) || list[0];
 const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
-/* ---------- HAPTIC ---------- */
 let _hapticSwitch = null;
 const haptic = (pattern = 12) => {
   if (!settings.haptics) return;
@@ -644,7 +629,6 @@ function setSetting(key, value) {
 systemLight?.addEventListener?.('change', () => {
   if (settings.appearance === 'system') applySettings();
 });
-/* Auto mode: switch at 6am / 6pm without a reload; also keeps the sign-in page in step */
 setInterval(() => {
   const t = autoTheme();
   if (settings.appearance === 'auto' && document.documentElement.dataset.theme !== t) applySettings();
@@ -824,9 +808,6 @@ function toast(message, type = 'error', duration = 5000, undo = null) {
   setTimeout(dismiss, 5000);
 }
 
-/* ---------- ERROR CODES ----------
-   Letter = area, number = problem. Popups end with (A01), the console shows [A01].
-   Every code here is listed on Help & Support > Error Codes, so keep both in step. */
 const ERR_CATS = {
   A: 'Account and sign-in',
   B: 'Cloud sync and devices',
@@ -938,13 +919,6 @@ const ERR_CODES = {
   N05: ['Visibility changed', 'An item was hidden from or shown to the AI.'],
   I05: ['System prompt request blocked', 'Your message asked the AI to reveal its hidden instructions. The request was removed and the AI answers with a harmless decoy.']
 };
-/* ---------- PROMPT-INJECTION SHIELD ----------
-   Codes I01 to I05 are listed on Help & Support > Error Codes.
-   Layers: 1) hardened rules in the system prompt
-           2) scan and redact what the user types
-           3) scan and redact files, library items, web and tool results
-           4) decoy alert, so a flagged message gets a harmless fake reply
-           5) flagged text is never saved to memory */
 const Shield = (() => {
   const INVIS = /[\u00AD\u034F\u061C\u115F\u1160\u17B4\u17B5\u180E\u200B-\u200F\u202A-\u202E\u2060-\u206F\u3164\uFEFF\u{E0000}-\u{E007F}]/gu;
   const HOMO = { '\u0430': 'a', '\u0435': 'e', '\u043E': 'o', '\u0440': 'p', '\u0441': 'c', '\u0445': 'x', '\u0443': 'y', '\u0456': 'i', '\u0455': 's', '\u03BF': 'o', '\u03B9': 'i', '\u03B1': 'a', '\u03B5': 'e' };
@@ -1228,11 +1202,8 @@ const ICONS = {
   pause:    svg('<rect x="6" y="5" width="4" height="14" rx="1.2"/><rect x="14" y="5" width="4" height="14" rx="1.2"/>', 20),
   play:     svg('<path d="M8 5.2v13.6a.7.7 0 001.07.6l10.6-6.8a.7.7 0 000-1.2L9.07 4.6A.7.7 0 008 5.2z"/>', 20),
   search:   svg('<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>', 16),
-  teamShare: svg('<circle cx="9" cy="8" r="3"/><path d="M3 20v-1a5 5 0 015-5h2a5 5 0 015 5v1"/><circle cx="17.5" cy="9" r="2.4"/><path d="M17 14.2a4 4 0 014 3.8v1.5"/>', 18),
   chevL:    svg('<path d="M15 6l-6 6 6 6"/>', 14),
-  loadIn:   svg('<path d="M12 4v11M7 11l5 5 5-5M5 20h14"/>', 16),
   lock:     svg('<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/>', 16),
-  globe:    svg('<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18"/>', 16),
   folder:   svg('<path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>'),
   inbox14:  svg('<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/>', 14),
   memory:   svg('<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>'),
@@ -1253,10 +1224,8 @@ const ICONS = {
   settings: svg('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.6 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>'),
   switchAcct: svg('<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0111-4.6"/><path d="M22 14h-6l2-2M16 18h6l-2 2"/>', 16),
   back:     svg('<path d="M15 6l-6 6 6 6"/>', 18),
-  card:     svg('<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>', 16),
   link:     svg('<path d="M10 13a5 5 0 007.5.5l3-3a5 5 0 00-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 00-7.5-.5l-3 3a5 5 0 007 7l1.7-1.7"/>', 16),
   alert:    svg('<circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/>', 14),
-  okc:      svg('<circle cx="12" cy="12" r="10"/><path d="M8 12.5l3 3 5-6"/>', 14),
 };
 
 Object.assign(ICONS, {
@@ -1280,11 +1249,9 @@ ICONS.ioUp = svg('<path d="M12 20V9"/><path d="M7 13l5-5 5 5"/><path d="M5 4h14"
 ICONS.ioDown = svg('<path d="M12 4v11"/><path d="M7 11l5 5 5-5"/><path d="M5 20h14"/>', 18);
 ICONS.book = svg('<path d="M12 7v14"/><path d="M3 18a1 1 0 01-1-1V4a1 1 0 011-1h5a4 4 0 014 4 4 4 0 014-4h5a1 1 0 011 1v13a1 1 0 01-1 1h-6a3 3 0 00-3 3 3 3 0 00-3-3z"/>', 15);
 
-/* ---------- NEW ICONS (Fix 4) ---------- */
 Object.assign(ICONS, {
 });
 
-/* ---------- UNIQUE ICONS (one per spot, no shared copies) ---------- */
 Object.assign(ICONS, {
   navWorlds:     svg('<circle cx="12" cy="12" r="11"/><circle class="wrld-ring" cx="12" cy="12" r="7" pathLength="24" stroke-dasharray="3 3"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/>', 28),
   navProjects:   svg('<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 7v6M12 7v10M16 7v3"/>'),
@@ -1308,14 +1275,12 @@ Object.assign(ICONS, {
   cardRemove:    svg('<circle cx="12" cy="12" r="9"/><path d="M8 12h8"/>', 16),
   renameChat:    svg('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/>', 15)
 });
-/* fix identical-drawing clones */
 ICONS.newChat = svg('<path d="M21 12a8 8 0 01-8 8H4l2.5-3.5A8 8 0 1121 12z"/><path d="M12 9v6M9 12h6"/>');
 ICONS.closeLg = svg('<circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/>', 20);
 ICONS.unlock = svg('<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7.5a4 4 0 017.46-2"/>', 16);
 ICONS.keyOff = svg('<circle cx="7.5" cy="16.5" r="3.5"/><path d="M10 14l9.5-9.5M15 9l3 3M17.5 6.5l2.5 2.5"/>', 16);
 ICONS.keyOn = ICONS.keyOff.replace('<circle cx="7.5" cy="16.5" r="3.5"/>', '<circle cx="7.5" cy="16.5" r="3.5" fill="currentColor"/>');
 
-/* ---------- SETTINGS ICONS (one unique drawing per spot, uniform 16px; chevrons 14px) ---------- */
 Object.assign(ICONS, {
   stUsage:       svg('<path d="M4 17a8 8 0 1116 0"/><path d="M12 17l4-5M12 3v2M4.9 6.9l1.4 1.4M19.1 6.9l-1.4 1.4"/>', 16),
   stUsageDetail: svg('<path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/>', 16),
@@ -1363,13 +1328,11 @@ Object.assign(ICONS, {
   stChevLink:    svg('<path d="M8 16L16 8M9 8h7v7"/>', 14),
   stChevAcct:    svg('<path d="M8 5l7 7-7 7"/>', 14)
 });
-ICONS.infoSm  = svg('<path d="M4 4h16v12H8l-4 4z"/><path d="M12 8v3M12 13h.01"/>', 14);
 delete ICONS.memory; delete ICONS.pen;
 ICONS.bellOn = svg('<path d="M6 9a6 6 0 0112 0c0 5 2 6 2 7H4c0-1 2-2 2-7z"/><path d="M10 20a2 2 0 004 0"/>', 16);
 ICONS.bellOff = svg('<path d="M6 9a6 6 0 0112 0c0 5 2 6 2 7H4c0-1 2-2 2-7z"/><path d="M10 20a2 2 0 004 0"/><path d="M3 3l18 18"/>', 16);
 ICONS.branchTree = svg('<path d="M12 21v-7"/><path d="M12 14c0-3-5-3-5-7"/><path d="M12 14c0-3 5-3 5-7"/><circle cx="7" cy="5" r="2"/><circle cx="17" cy="5" r="2"/>', 15);
 
-/* ---------- BRAND MARK ---------- */
 let _amN = 0;
 function aphMark({ animated = false, cls = '', ink = 'currentColor', eye = 'var(--bg)', bg = '' } = {}) {
   const id = `am${++_amN}`;
@@ -1404,7 +1367,6 @@ function updateFavicon() {
   } catch (_) {}
 })();
 
-/* ---------- MODEL PROVIDERS ---------- */
 const MODEL_PROVIDERS = [
   { id: 'groq',       name: 'Groq',       keysUrl: 'https://console.groq.com/keys',
     logo: `<img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/groq.svg" alt="" class="provider-logo-img">` },
@@ -1534,7 +1496,6 @@ const PROVIDER_API = {
   }
 };
 
-/* ---------- API PRICING ---------- */
 const FREE_TIER = {
   groq: ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'qwen/qwen3.8-27b', 'openai/gpt-oss-safeguard-20b'],
   gemini: ['gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite']
@@ -1602,7 +1563,6 @@ function getInitial(user) {
 
 const estTokens = (s) => Math.ceil(new Blob([s || '']).size / 4);
 
-/* ---------- SCREEN PARTS ---------- */
 let Avatar = (user, cls = '') => {
   const src = settings.avatar || user.photoURL;
   return src
@@ -1692,7 +1652,6 @@ const Welcome = () => `
   </section>
 `;
 
-/* ---------- SETTINGS UI ---------- */
 const SUM = {
   appearance: () => byId(APPEARANCES, settings.appearance).name,
   language:   () => (settings.langIn === settings.langOut ? byId(LANGUAGES, settings.langIn).name : `${byId(LANGUAGES, settings.langIn).name} \u2192 ${byId(LANGUAGES, settings.langOut).name}`),
@@ -1749,8 +1708,6 @@ const Chips = (key, opts, selected, { toggle = false, lead = '' } = {}) => `
     ${lead}
     ${opts.map((o) => `<button class="chip ${o.id === selected ? 'on' : ''}" type="button" data-seg="${key}" data-val="${o.id}"${toggle ? ' data-toggle="1"' : ''}${o.style ? ` style="${o.style}"` : ''}>${esc(o.name)}</button>`).join('')}
   </div>`;
-
-const Select = (value) => `<button class="select" type="button"><span class="select-val">${esc(value)}</span>${ICONS.chevron}</button>`;
 
 const Field = (label, control, { inline = false, stat = false } = {}) => `
   <div class="field ${inline ? 'field-inline' : ''} ${stat ? 'is-static' : ''}">
@@ -1853,7 +1810,6 @@ let AssistanceSection = () => Section('assistance', 'Assistance', [
   Item('memory', ICONS.stMemory, 'Memory',
     SubSwitch('Long-Term', 'memoryLong') + SubSwitch('Short-Term', 'memoryShort') +
     '<button class="btn-line" type="button" data-act="clear-memory">Forget</button>'),
-
 
 
   ToggleRow('warnings', ICONS.stWarnings, 'Popups', 'warnOn'),
@@ -2052,10 +2008,6 @@ const SettingsPanel = (user) => `
 
 const soon = () => toast('Coming soon.', 'info', 1800);
 
-/* ---------- LIBRARY (memory-efficient) ----------
-   Metadata stays in memory. File text is split into parts and stored in
-   IndexedDB. Per message the AI gets: a tiny index of every item, plus only
-   the few best-matching parts, capped by LIB_BUDGET characters. */
 const LIB_MAX_BYTES = 8 * 1024 * 1024;
 const LIB_MAX_TOTAL = 25 * 1024 * 1024;
 const LIB_MAX_FILES = 10;
@@ -2415,7 +2367,6 @@ document.addEventListener('click', async (e) => {
   toast(nowHidden ? 'Hidden: only you can see this.' : 'Visible: the AI can see this.', 'info', 1600);
 });
 
-/* ---------- PROJECTS: popup + list (same design as Libraries, holds sessions) ---------- */
 const PROJ_LS = 'aphrosta.projects';
 let projItems = [];
 const projSave = () => lsSet(PROJ_LS, projItems);
@@ -2483,7 +2434,6 @@ function closeProjSheet() {
   setTimeout(() => el.remove(), 250);
 }
 
-/* second popup: list of sessions to tick */
 function projOpenPicker(selected, onDone) {
   document.getElementById('proj-pick-scrim')?.remove();
   const chats = projChats();
@@ -2660,7 +2610,6 @@ document.addEventListener('click', (e) => {
   toast(nowHidden ? 'Hidden: only you can see this.' : 'Visible: the AI can see this.', 'info', 1600);
 });
 
-/* ---------- AGENTS: Group / Agent toggle (same design as Libraries + Projects) ---------- */
 const AG_LS = 'aphrosta.agents';
 let agData = { groups: [], agents: [] };
 let agMode = 'group';
@@ -2837,7 +2786,6 @@ function agRefresh() {
   agRender();
 }
 
-/* ---------- AGENTS: play / pause + shared discussion ---------- */
 const AG_PLAY_LS = 'aphrosta.agPlay';
 const AG_TURNS = { minima: 2, low: 3, medium: 4, high: 5, maxima: 6 };
 const AG_PLAY_ICO = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
@@ -3087,7 +3035,6 @@ async function agDiscuss(text, atts) {
   }
 }
 
-/* ---------- @AGENT MENTIONS (sandbox text) ---------- */
 const agNameRe = (list) => list.map((m) => m.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
 
 function agMentionList(getList) {
@@ -3109,7 +3056,6 @@ function agMentionHtml(text, list) {
   return out + esc(text.slice(last)) + '\u200b';
 }
 
-/* a line that is one mention becomes (@Name: instruction) */
 function agMentionFmt(text, list) {
   if (!list.length || !text) return text;
   const one = new RegExp('^([ \\t]*)(\\()?@(' + agNameRe(list) + ')(?![\\p{L}\\p{N}_])[ \\t]*:?[ \\t]*(.*)$', 'iu');
@@ -3148,7 +3094,6 @@ function agHlAll(root, getList) {
   });
 }
 
-/* sandbox popup: many code files, each file has many parts. Default file is a .txt */
 function agOpenSandbox(title, sb, onSave, base = 'agent.txt', mentions = () => []) {
   document.getElementById('ag-sb-scrim')?.remove();
   const work = JSON.parse(JSON.stringify(sb));
@@ -3287,7 +3232,6 @@ function agOpenSandbox(title, sb, onSave, base = 'agent.txt', mentions = () => [
   });
 }
 
-/* ---------- AGENT AVATAR ---------- */
 const AG_SHUF = svg('<path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/>', 16);
 const AG_RESET = svg('<path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/>', 16);
 const AG_AV_SHAPES = ['circle', 'square', 'triangle', 'star', 'hexagon', 'heart', 'diamond', 'pentagon', 'cross', 'blob'];
@@ -3978,7 +3922,6 @@ document.addEventListener('click', (e) => {
   }
 });
 
-/* ---------- OPERATIONS: storage + project list + popup shell (Patch 1-2) ---------- */
 const OPS_NEW_ICONS = {
   op01: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
   op02: '<path d="M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z"/>',
@@ -4248,7 +4191,6 @@ async function opsRefresh() {
   opsRender();
 }
 
-/* ---------- OPERATIONS: file tree + eye per file/folder (Patch 3) ---------- */
 const opsOpenDirs = new Set();
 
 async function opsTreeInit(panel, project) {
@@ -4303,7 +4245,6 @@ async function opsTreeInit(panel, project) {
   };
   const drawBar = () => { if (barEl) { barEl.innerHTML = barHtml(); navPaint(); } };
 
-  /* select without re-rendering rows, so a held finger keeps its element */
   const paintSel = () => {
     box.classList.toggle('selmode', selSet.size > 0);
     box.querySelectorAll('.ops-row').forEach((r) => {
@@ -4351,7 +4292,6 @@ async function opsTreeInit(panel, project) {
     });
   };
 
-  /* ---------- find and replace across all files (Patch 6) ---------- */
   const qEl = panel.querySelector('[data-ops-q]');
   const rEl = panel.querySelector('[data-ops-r]');
   const cntEl = panel.querySelector('[data-ops-count]');
@@ -4507,7 +4447,6 @@ async function opsTreeInit(panel, project) {
     if (e.target.closest('[data-ops-undo]')) undoReplace();
   });
 
-  /* one button: tap = run, long press = This / All / Undo */
   const goBtn = panel.querySelector('[data-ops-go]');
   const GO = {
     this: { i: OPS_I.sThis, t: 'Replace this match' },
@@ -4532,7 +4471,7 @@ async function opsTreeInit(panel, project) {
         goLong = true;
         goMode = goMode === 'this' ? 'all' : goMode === 'all' ? 'undo' : 'this';
         goDraw();
-        if (navigator.vibrate) { try { navigator.vibrate(15); } catch (_) { /* no haptics */ } }
+        if (navigator.vibrate) { try { navigator.vibrate(15); } catch (_) {  } }
       }, 450);
     });
     ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => goBtn.addEventListener(ev, goStop));
@@ -4560,7 +4499,6 @@ async function opsTreeInit(panel, project) {
     } catch (_) { toast('Could not save. Storage may be full. (E06)'); }
   };
 
-  /* (<)(>): step search matches when a pill has input or focus, otherwise walk folders */
   const fwdStack = [];
   const searchOn = () => !!((qEl && qEl.value) || (rEl && rEl.value) || document.activeElement === qEl || document.activeElement === rEl);
   const fwdOk = () => { const n = byId(fwdStack[fwdStack.length - 1]); return !!(sel && n && n.parent === sel); };
@@ -4587,7 +4525,6 @@ async function opsTreeInit(panel, project) {
     return `${base} (${k})${ext}`;
   };
 
-  /* move or copy items into a folder (dest '' = project root) */
   const moveItems = async (ids, dest, mode) => {
     const top = ids.map(byId).filter(Boolean);
     if (!top.length) return false;
@@ -4641,7 +4578,6 @@ async function opsTreeInit(panel, project) {
     await sync();
   };
 
-  /* long press selects, then drag onto a folder or a path chip to move */
   let pt = null;
   let drag = null;
   let ghost = null;
@@ -4727,7 +4663,7 @@ async function opsTreeInit(panel, project) {
       pt.long = true;
       selSet.add(id);
       paintSel();
-      if (navigator.vibrate) { try { navigator.vibrate(12); } catch (_) { /* no haptics */ } }
+      if (navigator.vibrate) { try { navigator.vibrate(12); } catch (_) {  } }
     }, 420);
     document.addEventListener('pointermove', onMove);
     document.addEventListener('pointerup', onUp);
@@ -4915,7 +4851,6 @@ document.addEventListener('click', async (e) => {
   opsRender();
 });
 
-/* ---------- CONNECTIONS: cards + provider list ---------- */
 ICONS.connCode = svg('<path d="M8 7l-5 5 5 5"/><path d="M16 7l5 5-5 5"/><path d="M12 4v16"/>', 16);
 const CONN_PROVIDERS = [
   { id: 'openmeteo',   name: 'Open-Meteo',   slug: 'openmeteo',         color: '#4aa3ff', ink: false, kw: 'weather|forecast|temperature|rain|humid|wind',
@@ -4966,7 +4901,6 @@ const CONN_PROVIDERS = [
 ];
 const connProv = (id) => CONN_PROVIDERS.find((p) => p.id === id) || null;
 
-/* ---- connection engine start ---- */
 const connNorm = (s) => String(s || '').toLowerCase().replace(/[^a-z]/g, '');
 function connReady() {
   connLoad();
@@ -5173,7 +5107,6 @@ async function connRun(a) {
     return 'Error: ' + pv.name + ' failed (' + m + ').' + (/HTTP 40[13]/.test(m) ? ' Check the key or token in Connections.' : '');
   } finally { clearTimeout(timer); }
 }
-/* ---- connection engine end ---- */
 const connLs = () => (keyScope ? 'aphrosta.conns.' + keyScope : 'aphrosta.conns');
 let connItems = [];
 
@@ -5391,7 +5324,6 @@ document.addEventListener('click', async (e) => {
   connRender();
 });
 
-/* ---------- AUTOMATIONS ---------- */
 ICONS.autoCode = svg('<path d="M8 7l-5 5 5 5"/><path d="M16 7l5 5-5 5"/><path d="M10 4l4 16"/>', 16);
 const autoLs = () => (keyScope ? 'aphrosta.autos.' + keyScope : 'aphrosta.autos');
 const AUTO_MIN_MINS = 15;
@@ -5423,7 +5355,6 @@ function autoApiOk() {
 const autoApiToast = () => toast('Add a working API key and pick a model before making automations. (D03)', 'info', 3200);
 const fdApiToast = (what) => toast('Add a working API key and pick a model before saving ' + what + '. (D03)', 'info', 3200);
 
-/* Reads the trigger out of the Input text. Returns null when no trigger is found. */
 function autoParse(text) {
   const s = String(text || '').toLowerCase().replace(/\b([ap])\.m\.?/g, '$1m');
   const once = /\b(once|one[- ]time|just one|single time)\b/.test(s);
@@ -5712,7 +5643,6 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') setTimeout(autoTick, 800);
 });
 
-/* ---------- NAV SIDE PANEL (Alpha placeholder) ---------- */
 const NAV_PANELS = {
   'nav-projects':   { title: 'Projects',    icon: 'navProjects',   desc: 'Your projects will show up here.' },
   'nav-agent':      { title: 'Agents',      icon: 'navAgents',     desc: 'Your agents will show up here.' },
@@ -5763,7 +5693,6 @@ function closeNavPanel() {
   document.getElementById('nav-panel')?.classList.remove('open');
 }
 
-/* ---------- INBOX ---------- */
 const FD_I = {
   info:  svg('<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>', 16),
   err:   svg('<circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/>', 16),
@@ -6283,8 +6212,6 @@ function openUsagePopup() {
   const pct = (n) => (total ? Math.round((n / total) * 100) : 0);
   const modelName = (pid, mid) => PROVIDER_API[pid]?.models.find((m) => m.id === mid)?.name || mid;
   const used = MODEL_PROVIDERS.filter((p) => by[p.id] > 0);
-
-  const bar = '';
   const rows = used.map((p) => {
     const mods = Object.entries(d.models[p.id] || {}).sort((a, b) => b[1] - a[1])
       .map(([mid, n]) => `<div class="usage-model"><span>${esc(modelName(p.id, mid))}</span><span>${fmtTokens(n)}</span></div>`).join('');
@@ -6441,7 +6368,6 @@ const HomeScreen = (user) => `
 const maskEmail = (e = '') => e.replace(/^(.).*(@.*)$/, '$1•••$2');
 const maskPhone = (p = '') => (p.length > 4 ? '•'.repeat(p.length - 4) + p.slice(-4) : '••••');
 const phoneDigits = (v = '') => String(v).replace(/\D/g, '').replace(/^0+/, '');
-/* keeps one full international number (+63 9XX...) beside phone + phoneCc so the cloud copy is complete */
 function syncPhoneFull() {
   const full = settings.phone ? `${settings.phoneCc || ''}${settings.phone}` : '';
   if ((settings.phoneFull || '') !== full) setSetting('phoneFull', full);
@@ -6498,7 +6424,6 @@ document.addEventListener('focusout', (e) => {
   }
 });
 
-/* save a valid phone number while typing, so closing the panel never loses it */
 let phoneTimer = 0;
 document.addEventListener('input', (e) => {
   const t = e.target;
@@ -6532,7 +6457,6 @@ function handleAvatar(file, input) {
   img.src = url;
 }
 
-/* ---------- VOICE ---------- */
 const SPEEDS = [{ id: 'slow', name: 'Slow' }, { id: 'normal', name: 'Normal' }, { id: 'fast', name: 'Fast' }];
 const PITCHES = [{ id: 'low', name: 'Low' }, { id: 'normal', name: 'Normal' }, { id: 'high', name: 'High' }];
 
@@ -6559,7 +6483,6 @@ function cleanForSpeech(text) {
     .trim();
 }
 
-/* ---------- SPEECH FOLLOW: underline spoken word, auto-scroll, grow collapsed card ---------- */
 const SpkFollow = (() => {
   const ok = !!(window.CSS && CSS.highlights && window.Highlight);
   const norm = (w) => String(w).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
@@ -6679,7 +6602,6 @@ const SpkFollow = (() => {
     raf = requestAnimationFrame(loop);
   }
 
-  /* fallback for voices with no word events (Android Google voices): estimate by time, self-calibrating */
   function est(base, txt, rate) {
     const ws = String(txt).match(/\S+/g) || [];
     const cum = [];
@@ -6862,7 +6784,6 @@ async function elSpeak(text, btn = null) {
     }
   }
 }
-/* Live mode: speak sentence by sentence while the reply is still being written, gapless (two audio elements swap) */
 function elSpeakStream() {
   stopSpeaking();
   const gen = speakGen;
@@ -6974,7 +6895,6 @@ function unlockSpeech() {
   document.addEventListener(ev, unlockSpeech, { passive: true })
 );
 
-/* ---------- DEVICES & LOCATION ---------- */
 const deviceId = (() => {
   let id = null;
   try { id = localStorage.getItem('aphrosta.deviceId'); } catch (_) {}
@@ -7100,7 +7020,6 @@ function detectLocation() {
   );
 }
 
-/* ---------- PERMISSIONS ---------- */
 let permSummary = 'Check';
 const PERMS = [
   { id: 'microphone', label: 'Microphone', note: 'Voice input', q: 'microphone',
@@ -7165,7 +7084,7 @@ const permAsk = (p) => Promise.race([
 async function togglePerm(id, want) {
   const p = PERMS.find((x) => x.id === id);
   if (!p) return;
-  if (permBusy.has(id)) { permBusy.set(id, want); return; } /* spam-safe: remember the latest tap, run it after */
+  if (permBusy.has(id)) { permBusy.set(id, want); return; }
   permBusy.set(id, want);
   try {
     let cur;
@@ -7191,7 +7110,6 @@ async function togglePerm(id, want) {
 
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshPermissions(); });
 
-/* ---------- STORAGE / PRIVACY ---------- */
 const bytesOf = (s) => new Blob([s]).size;
 
 function lsBreakdown() {
@@ -7248,7 +7166,7 @@ async function clearCache() {
   refreshStorage();
 }
 
-const FB_COOLDOWN_MS = 60 * 60 * 1000; /* 1 feedback per hour, stops Firestore spam */
+const FB_COOLDOWN_MS = 60 * 60 * 1000;
 const FB_LAST_LS = 'aphrosta.feedbackLast';
 const FB_ERR_LS = 'aphrosta.feedbackErrors';
 function fbCooldownLeft() {
@@ -7256,7 +7174,6 @@ function fbCooldownLeft() {
   return Math.max(0, last + FB_COOLDOWN_MS - Date.now());
 }
 
-/* error log: keeps the last 20 failures on this device and prints them to the console */
 function fbErrors() {
   try { const l = JSON.parse(localStorage.getItem(FB_ERR_LS) || '[]'); return Array.isArray(l) ? l : []; } catch (_) { return []; }
 }
@@ -7301,7 +7218,6 @@ function openFeedback() {
   const errNote = scrim.querySelector('.fb-err');
   let busy = false;
 
-  /* the dialog always opens; only the composer is locked while the 1 hour limit runs */
   const applyLock = () => {
     const wait = fbCooldownLeft();
     const locked = wait > 0;
@@ -7471,7 +7387,6 @@ function exportData() {
   toast('Data exported.', 'success', 1800);
 }
 
-/* ---------- COUNTRY CODES ---------- */
 const PHONE_CC = [
   ['PH', '+63'], ['US', '+1'], ['CA', '+1'], ['GB', '+44'], ['AU', '+61'], ['NZ', '+64'], ['SG', '+65'],
   ['MY', '+60'], ['ID', '+62'], ['TH', '+66'], ['VN', '+84'], ['JP', '+81'], ['KR', '+82'], ['CN', '+86'],
@@ -7480,7 +7395,6 @@ const PHONE_CC = [
 ];
 const ccOptions = () => PHONE_CC.map(([c, d]) => `<option value="${d}" ${d === settings.phoneCc ? 'selected' : ''}>${c} ${d}</option>`).join('');
 
-/* ---------- DICTIONARY ---------- */
 const KNOWN_KEY = 'aphrosta.knownWords';
 const knownKey = (lang) => (lang === 'en' ? KNOWN_KEY : `${KNOWN_KEY}.${lang}`);
 const dictionary = { words: new Set(), ready: true, started: true, lang: 'en' };
@@ -7621,7 +7535,6 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') Cloud.flush();
 });
 
-/* ---------- ATTACHMENTS ---------- */
 
 const ATTACH_MAX = 4;
 const ATTACH_TEXT_EXT = /\.(txt|md|markdown|json|csv|tsv|log|xml|yml|yaml|toml|ini|html|htm|css|js|mjs|ts|jsx|tsx|py|java|c|h|cpp|cs|go|rs|rb|php|sh|sql)$/i;
@@ -7725,7 +7638,6 @@ function openAttach() {
   q$('.attach-input')?.click();
 }
 
-/* ---------- LIVE MODE (long press the brain on the composer) ---------- */
 const Live = (() => {
   let root = null, active = false, tok = 0;
   let stream = null, ctx = null, an = null, buf = null, timer = 0, rec = null, seg = null;
@@ -7806,7 +7718,6 @@ const Live = (() => {
     if (calm && root.dataset.emo !== 'sleepy' && Date.now() - lastAct > 25000) setState('listening', 'sleepy');
   };
 
-  /* ---- microphone: hands-free, cuts a segment after a pause ---- */
   const micOpen = async () => {
     if (stream) return true;
     let s;
@@ -7900,7 +7811,6 @@ const Live = (() => {
     }
   };
 
-  /* ---- ElevenLabs speech to text ---- */
   const transcribe = async (blob, ms) => {
     const my = tok;
     if (!paused && ms > 1500) setState('thinking', 'neutral');
@@ -7942,7 +7852,6 @@ const Live = (() => {
     }
   };
 
-  /* ---- one conversation turn: send through the normal chat, wait, speak ---- */
   const callsOf = (m) => { try { return parseToolCalls(m.content || '').length; } catch (_) { return 0; } };
 
   const say = async (m, my) => {
@@ -8048,7 +7957,6 @@ const Live = (() => {
     await turn(t, my);
   };
 
-  /* ---- screen ---- */
   const onKey = (e) => { if (e.key === 'Escape') close(); };
 
   const build = () => {
@@ -8171,7 +8079,6 @@ const Live = (() => {
   return { open, close, isOn: () => active };
 })();
 
-/* ---------- COMPOSER BEHAVIOUR ---------- */
 function initComposer() {
   const wrap = appEl.querySelector('.composer-wrap');
   const composer = appEl.querySelector('.composer');
@@ -8462,7 +8369,6 @@ function initComposer() {
     }
   };
 
-  /* ElevenLabs speech-to-text: record a segment, then send it to Scribe */
   const el = { stream: null, rec: null, ctx: null, an: null, buf: null, timer: 0, seg: null, quiet: 0, busy: 0, bad: false };
 
   const elTranscribe = async (blob) => {
@@ -8766,7 +8672,6 @@ function initComposer() {
     submit();
   });
 
-  /* long press on the switch button: 0.5s glow + Chat icon, 2.5s new session */
   let lpGlowT = 0, lpFireT = 0, lpGlowed = false, lpSuppress = false;
   const lpReset = () => {
     clearTimeout(lpGlowT);
@@ -8853,7 +8758,6 @@ function initComposer() {
     animateHeight(from, target);
   };
 
-  /* long press the brain (0.6s): live mode */
   let liveT = 0, liveFired = false;
   const liveClear = () => { clearTimeout(liveT); liveT = 0; agentBtn.classList.remove('lp-live'); };
   agentBtn.addEventListener('pointerdown', (e) => {
@@ -8891,7 +8795,6 @@ function initComposer() {
     setAgent(!agentOn);
   });
 
-  /* drag the resize handle 10% below the base height: composer fades + slides away */
   const HIDE_RATIO = 0.9;
   let cmpHidden = false;
   let hideTapAt = 0;
@@ -8984,7 +8887,6 @@ function initComposer() {
     attachInput.value = '';
   });
 
-  /* long press on attach: 0.5s glow + trash icon, 2.5s clears the composer */
   const clearComposer = () => {
     input.value = '';
     input.style.height = '';
@@ -9097,10 +8999,6 @@ function onViewportChange() {
     const root = document.documentElement;
 
     if (vv && vv.height > 0) {
-      /*
-       * Do not let a temporary mobile selection/context-menu resize
-       * collapse the whole application into a split-screen layout.
-       */
       const layoutHeight = Math.max(
         document.documentElement.clientHeight || 0,
         window.innerHeight || 0
@@ -9127,9 +9025,6 @@ function onViewportChange() {
 window.addEventListener('resize', onViewportChange);
 window.visualViewport?.addEventListener('resize', onViewportChange);
 
-/* ============================================================
-   RECORDERS · SESSIONS · CHAT ENGINE · MODEL PICKER
-   ============================================================ */
 const MAX_PINS = 3;
 const TOKEN_REC_LS = 'aphrosta.rec.tokens';
 const MSG_REC_LS = 'aphrosta.rec.messages';
@@ -9141,7 +9036,6 @@ const q$ = (sel) => appEl?.querySelector(sel);
 let lockInit = {};
 try { lockInit = JSON.parse(localStorage.getItem(LOCK_INIT_LS) || '{}') || {}; } catch (_) { lockInit = {}; }
 
-/* ---------- LIMIT WINDOW ---------- */
 const LIMIT_WIN_LS = 'aphrosta.limitWindow';
 const LimitWindow = {
   d: lsGet(LIMIT_WIN_LS, {}),
@@ -9178,7 +9072,6 @@ const LimitWindow = {
   endsAt() { const w = this.roll(); return w.start ? w.start + this.lenMs() : 0; }
 };
 
-/* ---------- TOKEN RECORDER ---------- */
 const TokenRecorder = (() => {
   const data = lsGet(TOKEN_REC_LS, { batches: {}, entries: [] });
   if (!data.batches) data.batches = {};
@@ -9308,11 +9201,6 @@ const TokenRecorder = (() => {
   };
 })();
 
-/* ---------- MEMORY SYSTEMS (silent): DMS / MDS / SLS ----------
-   DMS  Dimensional Memory System  - facts with dimensions (kind, topic, project, scope, weight) + relations
-   MDS  Memory Database System     - scoped storage (chat / project / global), short + long retention, Firestore sync
-   SLS  State Logtracker System    - compact log of what happened / is happening / is next
-   No UI except Settings > Assistance > Memory Systems. Zero extra API calls. */
 function memSysStat() {
   try { return MemSys.stat(); } catch (_) { return ''; }
 }
@@ -9433,7 +9321,7 @@ const MemSys = (() => {
       const snap = await getDoc(ref());
       if (snap.exists()) {
         const c = await Vault.open(who, snap.data() || {});
-        if (!c) return; /* locked with another device's key: leave it alone */
+        if (!c) return;
         st.gone = [...new Set([...(st.gone || []), ...(c.gone || [])])].slice(-LIM.gone);
         st.cut = Math.max(st.cut || 0, +c.cut || 0);
         const byId = new Map(st.mem.map((m) => [m.i, m]));
@@ -9473,7 +9361,6 @@ const MemSys = (() => {
     st = { mem: [], log: [], ch: {}, gone: [], cut: 0 };
   }
 
-  /* DMS: add or reinforce a fact, then link it to related facts */
   function add(x, kd, o = {}) {
     x = String(x || '').trim().replace(/\s+/g, ' ').slice(0, 160);
     const k = keyOf(x);
@@ -9509,7 +9396,6 @@ const MemSys = (() => {
 
   const allowed = (m, sid) => (m.sc === 'c' ? settings.memoryShort && m.s === sid : settings.memoryLong);
 
-  /* DMS: rank by topic overlap, project, weight, practical use (hits), recency; then pull one hop of relations */
   function recall(text, sid) {
     const q = new Set(toks(text));
     const pj = st.ch[sid]?.pj || '';
@@ -9542,7 +9428,6 @@ const MemSys = (() => {
     return out;
   }
 
-  /* called once per real user message */
   function observe(text, session) {
     try {
       if (!text || !session) return;
@@ -9573,7 +9458,6 @@ const MemSys = (() => {
     } catch (_) {}
   }
 
-  /* SLS: one compact event per call */
   function sls(e) {
     try {
       if (!settings.memSls) return;
@@ -9603,7 +9487,6 @@ const MemSys = (() => {
     return `State log: ${bits.join(', ')}. Now: ${tool ? 'continuing after a tool result' : 'answering the latest message'}. Next: ${tool ? 'give the final answer' : 'user reply'}.`;
   }
 
-  /* extra system-prompt lines (kept tiny) */
   function prompt({ tool } = {}) {
     try {
       ensure();
@@ -9753,9 +9636,7 @@ function refreshTokenMeter() {
   }
 }
 
-/* ---------- VAULT (private cloud: data is encrypted on this device before it leaves) ---------- */
 const Vault = (() => {
-  /* the key is stored under "aphkey." and NOT "aphrosta." so Delete Local and sign-out never erase it */
   const keyLs = (u) => 'aphkey.' + u;
   const b64 = (u8) => {
     let s = '';
@@ -9765,7 +9646,6 @@ const Vault = (() => {
   const unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
   let cached = null, cachedUid = null, bakSig = '';
 
-  /* spare copy of the key in IndexedDB (this device only, never the cloud) */
   const idb = () => new Promise((res, rej) => {
     const r = indexedDB.open('aphkeys', 1);
     r.onupgradeneeded = () => r.result.createObjectStore('k');
@@ -9793,12 +9673,11 @@ const Vault = (() => {
     let raw = null;
     try { raw = localStorage.getItem(keyLs(uid)); } catch (_) {}
     if (!raw) {
-      raw = await idbGet(uid); /* the spare copy kept by Auto backup, if there is one */
+      raw = await idbGet(uid);
       if (raw) { try { localStorage.setItem(keyLs(uid), raw); } catch (_) {} }
     }
     if (!raw) {
       raw = b64(crypto.getRandomValues(new Uint8Array(32)));
-      /* throws if storage is blocked, so nothing is ever encrypted with a key we cannot keep */
       localStorage.setItem(keyLs(uid), raw);
     }
     cached = await crypto.subtle.importKey('raw', unb64(raw), 'AES-GCM', false, ['encrypt', 'decrypt']);
@@ -9815,7 +9694,6 @@ const Vault = (() => {
     return { _e: 1, iv: b64(iv), ct: b64(new Uint8Array(ct)) };
   }
 
-  /* returns the readable object, the same object for old plain docs, or null when this device cannot read it */
   async function open(uid, data) {
     if (!sealed(data)) return data;
     try {
@@ -9853,14 +9731,12 @@ const Vault = (() => {
   return { seal, open, sealed, exportKey, importKey, backup, dropBackup };
 })();
 
-/* ---------- KEY BACKUP (card at the top of Settings) ---------- */
 const KeyBackup = (() => {
   let timer = 0;
   const me = () => (typeof currentUser !== 'undefined' && currentUser ? currentUser.uid : null);
   const card = () => document.querySelector('.key-card');
   const input = () => card()?.querySelector('[data-key-input]');
 
-  /* Auto: any click, change or key press refreshes the spare copy (only when the key changed) */
   function schedule() {
     clearTimeout(timer);
     if (settings.keyAuto === false || !me()) return;
@@ -9911,7 +9787,7 @@ const KeyBackup = (() => {
     eyeBtn.setAttribute('aria-label', 'Show key');
     try {
       const k = await Vault.exportKey(me());
-      if (!box.hidden) field.value = k; /* ignore it if the box was closed while loading */
+      if (!box.hidden) field.value = k;
     } catch (_) { box.hidden = true; toast('Could not read the key on this device.', 'error', 3000); }
   }
 
@@ -9920,7 +9796,6 @@ const KeyBackup = (() => {
     if (!field) return;
     const show = field.dataset.masked === '1';
     field.dataset.masked = show ? '0' : '1';
-    /* swap by hiding, not by replacing the icon: a removed icon looks like an outside tap and closes Settings */
     btn.querySelector('[data-eye-on]').hidden = !show;
     btn.querySelector('[data-eye-off]').hidden = show;
     btn.setAttribute('aria-pressed', String(show));
@@ -9969,16 +9844,15 @@ const KeyBackup = (() => {
   return { toggled, open, eye, copy, restore, paint };
 })();
 
-/* ---------- CLOUD ---------- */
 const CLOUD_UID_LS = 'aphrosta.cloudUid';
 const Cloud = (() => {
   let uid = null, ready = false;
   const known = new Set();
   const synced = new Map();
   const usageQ = new Map();
-  const shared = new Map(); /* session id -> signature of the readable copy kept for Improve Service */
+  const shared = new Map();
   let improveClean = false;
-  let blockSettings = false; /* cloud settings are locked with another device's key: never overwrite them */
+  let blockSettings = false;
   let tSettings = 0, tSessions = 0, tUsage = 0;
   let settingsDirty = false, sessionsDirty = false;
   let tRetry = 0, initSeq = 0;
@@ -10035,11 +9909,6 @@ const Cloud = (() => {
       await setDoc(docOf('data', 'settings'), await Vault.seal(uid, clean({
         settings: scrubSettings(),
 
-        /*
-         * API keys are included inside the encrypted vault payload.
-         * They are never stored as readable Firestore fields.
-         * The encryption key itself remains separate.
-         */
         apiKeys: { ...apiKeys },
 
         effort: activeEffort,
@@ -10047,10 +9916,6 @@ const Cloud = (() => {
         modelVariants,
         knownWords: collectKnownWords(),
 
-        /*
-         * These values are useful when the browser's site data is deleted
-         * and the vault is later restored with the encryption key.
-         */
         accountActive,
         updated: +localStorage.getItem(SETTINGS_TS_LS) || Date.now()
       })));
@@ -10067,7 +9932,6 @@ const Cloud = (() => {
         let { draft, ...body } = x;
         body = clean(body);
         body.messages = body.messages.map(({ attachments, ...m }) => m);
-        /* encrypted text is about 1/3 bigger, so keep the plain size under ~740 KB to stay inside Firestore's 1 MB limit */
         const size = () => new TextEncoder().encode(JSON.stringify(body)).length;
         while (size() > 740000 && body.messages.length > 2) body.messages.shift();
         return body;
@@ -10092,7 +9956,6 @@ const Cloud = (() => {
     } catch (err) { sessionsDirty = true; warn(err); retry(); }
   }
 
-  /* Improve Service: ON saves a readable copy of this user's chats in users/{uid}/improve. OFF deletes that copy. */
   async function syncImprove(live, bodyOf) {
     if (settings.privTrain) {
       const ids = new Set(live.map((x) => x.id));
@@ -10253,17 +10116,13 @@ const Cloud = (() => {
           } else {
             try { localStorage.removeItem('aphrosta.lockNoted'); } catch (_) {}
           }
-          if (c && !Vault.sealed(rawS)) settingsDirty = true; /* old plain copy: it is saved back encrypted */
+          if (c && !Vault.sealed(rawS)) settingsDirty = true;
           if (c && ((c.updated || 0) > localTs || otherAccount)) {
             pushBack = false;
             try {
               if (c.settings) {
                 const incoming = { ...c.settings };
 
-                /*
-                 * The cloud copy can intentionally omit private profile fields when
-                 * Share Usage is disabled. Do not erase this device's own phone number.
-                 */
                 if (!otherAccount && !incoming.phone && settings.phone) {
                   incoming.phone = settings.phone;
                   incoming.phoneCc = settings.phoneCc;
@@ -10273,11 +10132,6 @@ const Cloud = (() => {
                 localStorage.setItem(SETTINGS_LS, JSON.stringify(incoming));
               }
 
-              /*
-               * API keys are restored only when the encrypted cloud record contains them.
-               * This keeps compatibility with older records created before API-key backup
-               * was added.
-               */
               if (c.apiKeys && typeof c.apiKeys === 'object' && !Array.isArray(c.apiKeys)) {
                 const restoredKeys = {};
 
@@ -10330,9 +10184,6 @@ const Cloud = (() => {
 
             settings = loadSettings();
 
-            /*
-             * Reload API keys from the restored encrypted payload.
-             */
             loadApiKeys();
 
             const sv = localStorage.getItem(ACTIVE_EFFORT_LS);
@@ -10348,9 +10199,6 @@ const Cloud = (() => {
               modelVariants = {};
             }
 
-            /*
-             * Only restore the active model if its API key was restored too.
-             */
             if (c.activeModel && apiKeys[c.activeModel]) {
               activeModel = c.activeModel;
 
@@ -10384,7 +10232,6 @@ const Cloud = (() => {
             const c = await Vault.open(uid, rawD);
             if (!c || !Array.isArray(c.messages)) continue;
             known.add(d.id);
-            /* old plain docs stay unmarked so they are saved back encrypted */
             const mark = (v) => { if (Vault.sealed(rawD)) synced.set(d.id, v); };
             const mineS = sessions.find((x) => x.id === d.id);
             if (!mineS) { sessions.push({ ...c, id: d.id }); mark(sig(c)); changed = true; }
@@ -10413,7 +10260,6 @@ const Cloud = (() => {
           const rawU = d.data();
           const u = await Vault.open(uid, rawU);
           if (!u) continue;
-          /* old plain record: save it back encrypted */
           if (!Vault.sealed(rawU)) { try { await setDoc(d.ref, await Vault.seal(uid, u)); } catch (_) {} }
           if (u.provider && u.model && PROVIDER_API[u.provider]) {
             TokenRecorder.merge(u.provider, u.model, u.period, u.used || 0, u.keyId);
@@ -10441,7 +10287,6 @@ const Cloud = (() => {
 })();
 window.aphrostaDiag = () => Cloud.diagnose();
 
-/* ---------- SESSION STATE ---------- */
 function loadSessions() {
   if (!settings.saveSessions) return [];
   const l = lsGet(SESSIONS_LS, []);
@@ -10465,7 +10310,6 @@ let chatStick = true;
 let sessionsBound = false;
 let pendingResend = null;
 
-/* ---------- SEARCH BAR + CHAT SHARE ---------- */
 var sbHits = [], sbIdx = -1, sbQuery = '', sbTimer = 0, sbMig = 0, sbLastTop = 0;
 var pubSig = new Map(), pubTimer = 0;
 const SB_LEN = 30;
@@ -10480,7 +10324,6 @@ function sbMakeCode() {
   return c;
 }
 
-/* the chat ID is made once per chat and kept for good (always SB_LEN characters) */
 function sbCode(s) {
   if (!s.shareCode || s.shareCode.length !== SB_LEN) {
     if (s.shareCode) { pubDrop(s); pubSig.delete(s.id); }
@@ -10512,8 +10355,6 @@ function sbClear() {
   sbIdx = -1;
 }
 
-/* mode: 0 = no scroll, 1 = instant, 2 = smooth slide */
-/* search auto-opens a folded card for its match, and folds it again when search moves on */
 const sbAuto = new Set();
 function sbFold(card, open) {
   const tg = card.querySelector('.msg-sec-main > .msg-body, .msg-sec-main > .msg-bubble');
@@ -10592,7 +10433,6 @@ function sbStep(d) {
   sbUi();
 }
 
-/* the copy button always copies. Editing the ID (even 1 character) switches the panel to scan mode. */
 function sbFoldInert(bar) {
   const load = bar.dataset.load === '1';
   bar.querySelectorAll('.sbx-fold').forEach((el) => {
@@ -10617,7 +10457,6 @@ function sbCodeMode() {
   }
 }
 
-/* when the typed ID belongs to a password-protected session, the password box opens and takes the full row */
 var sbProbeSeq = 0, sbProbeT = 0, sbProbed = { code: '', pw: false, t: 0 };
 function sbPwRestore(bar) {
   if (bar.dataset.pwCleared !== '1') return;
@@ -10713,7 +10552,6 @@ function sbTogglePanel() {
   sbSetPanel(bar.dataset.open !== '1');
 }
 
-/* pinned: the bar never hides while scrolling. It never opens the panel. */
 function sbSetPin(on) {
   const bar = q$('.sbar');
   const btn = bar?.querySelector('.sbar-share');
@@ -10732,7 +10570,7 @@ function sbSetPin(on) {
   q$('.sbar-wrap')?.classList.remove('is-hidden');
 }
 
-var sbLongTimer = 0, sbLongAt = 0;
+var sbLongTimer = 0;
 function sbLongCancel() { clearTimeout(sbLongTimer); sbLongTimer = 0; }
 document.addEventListener('pointerdown', (e) => {
   const btn = e.target.closest && e.target.closest('.sbar-share');
@@ -10742,7 +10580,6 @@ document.addEventListener('pointerdown', (e) => {
   sbLongTimer = setTimeout(() => {
     sbLongTimer = 0;
     if (q$('.sbar')?.dataset.open === '1') return;
-    sbLongAt = Date.now();
     const bar = q$('.sbar');
     if (navigator.vibrate) { try { navigator.vibrate(12); } catch (_) {} }
     sbSetPin(bar?.dataset.pin !== '1');
@@ -10755,9 +10592,7 @@ document.addEventListener('pointerdown', (e) => {
 document.addEventListener('contextmenu', (e) => {
   if (e.target.closest && e.target.closest('.sbar-share')) e.preventDefault();
 }, true);
-/* pin is only changed by a long press on the people icon */
 
-/* public copy lives in the top level "shared" collection, readable by any signed-in user */
 function pubBody(s) {
   const msgs = s.messages
     .filter((m) => !m.hidden && !m.pubHide && (m.role === 'user' || m.role === 'assistant') && (m.content || (m.pw && m.pw.ct)))
@@ -10774,7 +10609,6 @@ async function pubPushOne(s, force) {
   pubSig.set(s.id, sg);
 }
 
-/* one chat failing must not block the others, so errors are kept per chat */
 async function pubPush(force) {
   if (!currentUser) return;
   for (const s of new Set([...sessions, currentSession])) {
@@ -10790,65 +10624,6 @@ function pubQueue() {
 
 function pubDrop(s) {
   if (s && s.sharePub && s.shareCode && currentUser) deleteDoc(doc(db, 'shared', s.shareCode)).catch(() => {});
-}
-
-function sbShareErr(err) {
-  const c = err?.code || '';
-  if (c === 'permission-denied') return 'Sharing is blocked by the Firestore rules for the "shared" collection. (permission-denied)';
-  if (c === 'unavailable' || c === 'deadline-exceeded' || /network|offline/i.test(String(err?.message || ''))) return 'Could not reach the server. Check your connection.';
-  if (c === 'unauthenticated') return 'Your sign-in expired. Sign in again to share.';
-  if (c === 'invalid-argument' || c === 'resource-exhausted') return 'This chat is too large to share.';
-  return `Could not update sharing${c ? ` (${c})` : ''}.`;
-}
-
-var sbBusy = false;
-
-async function sbSetPublic(on) {
-  const s = currentSession;
-  if (!currentUser) { toast('Sign in to share chats.', 'info'); return; }
-  if (on === !!s.sharePub) return;
-  if (sbBusy) return;
-  if (on && !s.messages.length) { toast('Send a message first, then make it public.', 'info'); return; }
-  if (on) {
-    toast(
-      'Warning: this conversation will be readable by anyone with its chat ID.',
-      'info',
-      4200
-    );
-  }
-
-  toast('Please wait, applying changes.', 'info', 2200);
-  sbBusy = true;
-  const code = sbCode(s);
-  try {
-    if (on) {
-      /* collision check is best effort: a read refused for a missing doc must not block sharing */
-      try {
-        const ex = await getDoc(doc(db, 'shared', code));
-        if (ex.exists() && ex.data().owner !== currentUser.uid) s.shareCode = sbMakeCode();
-      } catch (e) { console.warn('[share] id check skipped', e?.code); }
-      s.sharePub = true;
-      await pubPushOne(s, true);
-      persistSessions();
-      toast('Public. Anyone with this ID can open a copy.', 'success', 2200);
-    } else {
-      s.sharePub = false;
-      persistSessions();
-      try { await deleteDoc(doc(db, 'shared', s.shareCode || code)); }
-      catch (e) { console.warn('[share] delete failed', e?.code); throw e; }
-      pubSig.delete(s.id);
-      toast('Private again. Only you can see this chat.', 'success', 2200);
-    }
-  } catch (err) {
-    console.error('[share] update failed', err?.code, err);
-    s.sharePub = !on;
-    persistSessions();
-    toast(sbShareErr(err), 'error', 3600);
-  } finally {
-    sbBusy = false;
-  }
-  sbSyncShare();
-  renderMessages();
 }
 
 async function sbLoad() {
@@ -10892,7 +10667,6 @@ async function sbLoad() {
   }
 }
 
-/* ---------- SESSION ACCESS OPTIONS (emails, phones, expiry, password, uses) ---------- */
 const SBX_MASK = '\u2022\u2022\u2022\u2022\u2022';
 const sbxLocal = (ms) => new Date(ms - new Date(ms).getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 const sbxDigits = (v) => String(v || '').replace(/\D/g, '').replace(/^0+/, '');
@@ -10954,65 +10728,6 @@ document.addEventListener('change', (e) => {
   if (t && t.dataset && t.dataset.sbx === 'exp') t.dataset.empty = t.value ? '' : '1';
 });
 
-function sbxParse() {
-  const bar = q$('.sbar');
-  const el = (k) => bar.querySelector('[data-sbx="' + k + '"]');
-  const v = (k) => (el(k) ? el(k).value : '');
-  const emails = [...new Set(v('emails').split(/[,\s;]+/).map((x) => x.trim().toLowerCase()).filter(Boolean))];
-  if (emails.some((x) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x))) return { error: 'One of the emails looks wrong.' };
-  const phones = [...new Set(v('phones').split(',').map((x) => sbxDigits(x.replace(/[\[\]]/g, ''))).filter(Boolean))];
-  if (phones.some((p) => p.length < 6 || p.length > 15)) return { error: 'Phones need 6 to 15 digits, like [9171234567].' };
-  let exp = 0;
-  if (v('exp')) {
-    exp = new Date(v('exp')).getTime();
-    if (!(exp >= Date.now() + 540000)) return { error: 'Expiry must be at least 10 minutes from now.' };
-  }
-  const p = el('pw');
-  let pw = null;
-  if (p && p.dataset.kept === '1' && p.value === SBX_MASK) pw = 'keep';
-  else if (p && p.value) {
-    if (p.value.length !== 5) return { error: 'Password must be exactly 5 characters.' };
-    pw = p.value;
-  }
-  const mv = v('max').trim();
-  const max = mv ? parseInt(mv, 10) : 0;
-  if (mv && !(max >= 1)) return { error: 'Uses must be 1 or more.' };
-  return { emails, phones, exp, pw, max };
-}
-
-async function sbInitiate() {
-  const s = currentSession;
-  if (!currentUser) { toast('Sign in to share chats.', 'info'); return; }
-  if (!s.messages.length) { toast('Send a message first, then initiate.', 'info'); return; }
-  if (sbBusy) return;
-  const r = sbxParse();
-  if (r.error) { toast(r.error, 'info', 2800); return; }
-  let pwRec = null;
-  if (r.pw === 'keep') pwRec = (s.shareOpts && s.shareOpts.pw) || null;
-  else if (r.pw) {
-    try {
-      const salt = sbMakeCode().slice(0, 12);
-      pwRec = { s: salt, h: await sbxHash(r.pw, salt) };
-    } catch (_) { toast('Password lock needs https or localhost.', 'error', 3000); return; }
-  }
-  s.shareOpts = { emails: r.emails, phones: r.phones, exp: r.exp, max: r.max, pw: pwRec };
-  if (!s.orderAt) s.orderAt = s.updated;
-  s.updated = Date.now();
-  persistSessions();
-  const bar = q$('.sbar');
-  if (bar) delete bar.dataset.sbxDirty;
-  try {
-    if (!s.sharePub) await sbSetPublic(true);
-    else { toast('Please wait, applying changes.', 'info', 1800); await pubPushOne(s, true); }
-    if (!s.sharePub || !s.shareCode) return;
-    await setDoc(doc(db, 'shared', s.shareCode), { access: { used: 0 } }, { merge: true });
-    toast('Session initiated with your limits.', 'success', 2200);
-  } catch (err) {
-    toast(sbShareErr(err), 'error', 3600);
-  }
-  sbSyncShare();
-}
-
 async function sbGate(d, code, pwIn) {
   const a = d.access;
   if (!a) return true;
@@ -11038,32 +10753,6 @@ async function sbGate(d, code, pwIn) {
   }
   if (a.max && (a.used || 0) >= a.max) { toast('This chat has reached its access limit.', 'info', 3200); return false; }
   return true;
-}
-
-async function sbRegen() {
-  const s = currentSession;
-  if (sbBusy) return;
-  sbBusy = true;
-  try {
-    const old = s.shareCode;
-    /* the old ID is deleted from the cloud first, so it stops working the moment a new one exists */
-    if (old && currentUser) {
-      try { await deleteDoc(doc(db, 'shared', old)); }
-      catch (e) { if (s.sharePub) throw e; }
-    }
-    pubSig.delete(s.id);
-    s.shareCode = sbMakeCode();
-    if (!s.draft) persistSessions();
-    if (s.sharePub && s.messages.length) await pubPushOne(s, true);
-    toast('New chat ID created.', 'success', 1800);
-  } catch (err) {
-    toast(sbShareErr(err), 'error', 3600);
-  } finally {
-    sbBusy = false;
-  }
-  const f = q$('.sbar-code');
-  if (f && s === currentSession) f.value = s.shareCode || '';
-  sbSyncShare();
 }
 
 function sbAction(action) {
@@ -11097,7 +10786,6 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-/* the search ends when the input loses focus for real, or you tap outside the bar */
 function sbEnd() {
   const inp = q$('.sbar-input');
   clearTimeout(sbTimer);
@@ -11119,7 +10807,6 @@ document.addEventListener('focusout', (e) => {
   setTimeout(() => { if (Date.now() - sbTap > 600 && document.activeElement !== t) sbEnd(); }, 150);
 }, true);
 
-/* hide the bar when scrolling down, bring it back when scrolling up */
 document.addEventListener('scroll', (e) => {
   const st = e.target;
   if (!st || !st.classList || !st.classList.contains('stage')) return;
@@ -11132,11 +10819,6 @@ document.addEventListener('scroll', (e) => {
   const d = top - sbLastTop;
   sbLastTop = top;
 
-  /*
-   * The bar stays put for the whole time a search is in use: while there is a
-   * query, text in the box, or the box has focus. It only auto-hides again
-   * once the search has ended (tap outside the bar) or was never started.
-   */
   const sbInp = bar.querySelector('.sbar-input');
   const searching = !!sbQuery || (sbInp && sbInp.value.trim() !== '') || bar.contains(document.activeElement);
   const pinned = bar.dataset.pin === '1' || searching;
@@ -11144,10 +10826,6 @@ document.addEventListener('scroll', (e) => {
   if (pinned || top < 24 || d < -4) {
     wrap.classList.remove('is-hidden');
   } else if (d > 4) {
-    /*
-     * A non-pinned bar must not retain an open/on panel state
-     * while it is collapsed by scrolling.
-     */
     bar.dataset.open = '0';
     bar.querySelector('.sbar-share')?.setAttribute('aria-expanded', 'false');
     bar.querySelector('.sbar-panel')?.toggleAttribute('inert', true);
@@ -11227,8 +10905,7 @@ const fileKind = (f) => FILE_KIND[(f.ext || '').toLowerCase()] || 'code';
 const fileCardHtml = (f, i, extra) =>
   `<button class="file-card file-card--${fileKind(f)}${extra ? ' is-extra' : ''}" type="button" data-fi="${i}" aria-label="Open ${esc(f.name)}"><span class="file-card-ico">${ICONS.cardFile}</span><span class="file-card-meta"><span class="file-card-name">${esc(f.name)}</span><span class="file-card-sub">${esc((f.ext || f.lang || 'text').toUpperCase())} \u00b7 ${f.lines} lines</span></span></button>`;
 
-/* ---------- CHART CARDS (crypto / currencies / stocks) ---------- */
-const CHART_PROXY = ''; // optional CORS proxy prefix for stock data, e.g. 'https://YOUR-WORKER.workers.dev/?url='
+const CHART_PROXY = '';
 const CHART_CRYPTO = { bitcoin: 'bitcoin', btc: 'bitcoin', ethereum: 'ethereum', eth: 'ethereum', solana: 'solana', sol: 'solana', dogecoin: 'dogecoin', doge: 'dogecoin', xrp: 'ripple', ripple: 'ripple', bnb: 'binancecoin', cardano: 'cardano', ada: 'cardano', litecoin: 'litecoin', ltc: 'litecoin' };
 const CHART_NAMES = { bitcoin: 'Bitcoin', ethereum: 'Ethereum', solana: 'Solana', dogecoin: 'Dogecoin', ripple: 'XRP', binancecoin: 'BNB', cardano: 'Cardano', litecoin: 'Litecoin' };
 const CHART_FX = new Set(['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY', 'INR', 'MXN', 'BRL', 'KRW', 'SEK', 'NOK', 'NZD', 'SGD', 'HKD', 'TRY', 'ZAR', 'PLN']);
@@ -11445,7 +11122,6 @@ function chartCardHtml(raw) {
   if (document.body) go(); else document.addEventListener('DOMContentLoaded', go);
 })();
 
-/* ---- Mermaid diagrams: lazy-loaded, themed, copy / SVG / fullscreen zoom ---- */
 const MMD_SRC = 'https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js';
 const mmdCache = new Map();
 let mmdLoading = null;
@@ -11462,7 +11138,7 @@ function mmdIsLight() {
       const n = parseInt(h, 16);
       return ((n >> 16) * 299 + ((n >> 8) & 255) * 587 + (n & 255) * 114) / 1000 > 140;
     }
-  } catch (e) { /* fall through */ }
+  } catch (e) {  }
   return document.documentElement.getAttribute('data-theme') === 'light';
 }
 
@@ -11685,7 +11361,6 @@ const chartScrubEnd = () => document.querySelectorAll('.chart-card').forEach(cha
 document.addEventListener('pointerup', chartScrubEnd);
 document.addEventListener('pointercancel', chartScrubEnd);
 
-/* ---------- FILE EDIT MEMORY (AI edits saved files by line, no full rewrite) ---------- */
 let editCtx = '';
 
 function fmCollect(skipMsg) {
@@ -11734,7 +11409,6 @@ function fmNumbered(code, q, budget) {
   return out.join('\n');
 }
 
-/* ---------- FILE STORE: library files + attachments (exact original text, own IndexedDB) ---------- */
 let fmBases = new Map();
 let fmDbP = null;
 const FM_MAX = 400000;
@@ -12005,7 +11679,6 @@ function editApply(ai) {
   }
 }
 
-/* ---------- RICH TEXT RENDERER ---------- */
 const GREEK = { alpha: 'α', beta: 'β', gamma: 'γ', delta: 'δ', theta: 'θ', lambda: 'λ', mu: 'μ', pi: 'π', sigma: 'σ', phi: 'φ', omega: 'ω', Delta: 'Δ', Sigma: 'Σ', Omega: 'Ω' };
 const MATH_SYM = { times: '×', cdot: '·', div: '÷', pm: '±', le: '≤', ge: '≥', ne: '≠', approx: '≈', infty: '∞', to: '→', rightarrow: '→', leftarrow: '←', sum: '∑', int: '∫', partial: '∂', degree: '°' };
 
@@ -12494,7 +12167,6 @@ function openFileViewer(f, onSave) {
   document.body.appendChild(scrim);
 }
 
-/* ---------- REAL FILE BUILDERS (docx, xlsx, pptx, pdf, zip) ---------- */
 const BX_BINARY = new Set(['docx', 'xlsx', 'pptx', 'pdf', 'zip']);
 const BX_XML = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
 const BX_CT = 'application/vnd.openxmlformats-officedocument.';
@@ -12853,7 +12525,6 @@ function onFileCard(card) {
 
 const statusHTML = () => `<span class="aph-avatar" role="status" aria-label="Loading response">${aphMark({ animated: true })}</span>`;
 
-/* ---------- PLAN / TASK EXTRACTION (shown in Thought, hidden from reply) ---------- */
 const TASK_LINE_RE = /^\s*[-*+]\s+\[( |x|X|~)\]\s+/;
 function splitPlanParts(text) {
   const src = String(text || '');
@@ -12946,7 +12617,6 @@ function cardsEl(cards) {
   return d;
 }
 
-/* ---------- MESSAGE CARDS (glass sections, fold, scroll arrows) ---------- */
 const FOLD_CHARS = 1500;
 const tokShort = (n) => (n < 1000
   ? '~' + n + 'T'
@@ -13007,7 +12677,6 @@ function msgUserSecFrom(uel) {
   return { sec, acts };
 }
 
-/* ---------- PUBLIC CARD CONTROLS + PASSWORD LOCK ---------- */
 const pwOpen = new WeakSet();
 const pwPlain = new WeakMap();
 const PW_ITER = 150000;
@@ -13049,7 +12718,6 @@ async function pwOpenAll(pass, msgs) {
 }
 
 function pwDecorate(card, m, i, pu) {
-  /* key button shows in every session; the lock button only when public */
   const ids = pu ? [pu.i, i] : [i];
   card.dataset.ids = ids.join(',');
   const msgs = pwMsgs(card);
@@ -13307,7 +12975,6 @@ document.addEventListener('click', (e) => {
   }
 });
 
-/* up / down arrows: only on a still screen, no typing, no popups */
 (function scrollNav() {
   let nav = null;
   let lastMove = Date.now();
@@ -13481,7 +13148,6 @@ function sessionItem(s) {
   </div>${sessPwRowHtml(s)}`;
 }
 
-/* ---------- SESSION KEY (password lock on the left panel) ---------- */
 const sessOpen = new Set();
 let sessPw = null;
 const sessLocked = (s) => !!(s.lock && !sessOpen.has(s.id));
@@ -13741,9 +13407,7 @@ async function renameSession(id) {
   renderSessionList();
 }
 
-/* Copy a whole session exactly as it is displayed (hidden context and failed replies left out) */
 
-/* Long press any chat, then drag to reorder. Drag past the list: bottom = download JSON, top = replace from JSON. */
 function bindPinDrag() {
   let timer = 0, drag = null, down = null, x0 = 0, y0 = 0, swallow = false, curList = null, ioZone = null;
   const ioShow = (on) => document.getElementById('sidebar')?.classList.toggle('io-drag', on);
@@ -13846,7 +13510,6 @@ function bindPinDrag() {
   }, true);
 }
 
-/* Duplicate a session into a brand new one (the old Copy button) */
 function duplicateSession(id) {
   const s = sessions.find((x) => x.id === id) || (currentSession.id === id ? currentSession : null);
   if (!s) return;
@@ -13868,7 +13531,6 @@ function duplicateSession(id) {
   if (!chatBusy) openSession(copy.id);
 }
 
-/* ---------- Session JSON export / import ---------- */
 const IO_TYPE = 'aphrosta.session';
 const IO_VER = 1;
 const IO_MAX = 8 * 1024 * 1024;
@@ -13876,7 +13538,6 @@ const IO_MAX_MSGS = 5000;
 
 const ioName = (t) => String(t || 'session').replace(/[^\w-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40) || 'session';
 
-/* download one session: password locked and never-public messages are left out */
 function exportSession(id) {
   const s = sessions.find((x) => x.id === id) || (currentSession.id === id ? currentSession : null);
   if (!s) return;
@@ -13904,7 +13565,6 @@ function exportSession(id) {
   toast(`Downloaded \u201c${s.title}\u201d${skipped ? ` (${skipped} locked skipped)` : ''}.`, 'success', 2200);
 }
 
-/* check the file shape and rebuild clean message objects (nothing unknown gets through) */
 function ioParse(text) {
   let d;
   try { d = JSON.parse(text); } catch (_) { return { error: 'That file is not valid JSON.' }; }
@@ -13939,7 +13599,6 @@ function ioParse(text) {
   return { title, messages };
 }
 
-/* open the file picker, read the file, hand the text to cb */
 function ioPickFile(cb) {
   const inp = document.createElement('input');
   inp.type = 'file';
@@ -13959,7 +13618,6 @@ function ioPickFile(cb) {
   inp.click();
 }
 
-/* overshoot up: replace this session with the file (always private afterwards) */
 function ioApplyReplace(id, text) {
   const s = sessions.find((x) => x.id === id);
   if (!s) return;
@@ -13976,7 +13634,6 @@ function ioApplyReplace(id, text) {
   toast('Session replaced from file. It is private.', 'success', 2400);
 }
 
-/* long press Make Session: import the file as a new private session */
 function ioApplyNew(text) {
   if (chatBusy) { toast('Stop the response before switching sessions. (D06)', 'info'); return; }
   const r = ioParse(text);
@@ -13995,7 +13652,6 @@ function ioApplyNew(text) {
   toast('Session imported. It is private.', 'success', 2200);
 }
 
-/* hold Make Session 0.5s (buzz), then let go: the file picker opens (a picker needs the release tap) */
 function bindMakeSessionImport() {
   let timer = 0, armed = false, x0 = 0, y0 = 0, swallow = false;
   const btn = () => q$('[data-action="new-chat"]');
@@ -14044,7 +13700,6 @@ function bindMakeSessionImport() {
   }, true);
 }
 
-/* Archive: unpin, hide from the side menu, keep it in the Archive drawer */
 function archiveSession(id) {
   const s = sessions.find((x) => x.id === id);
   if (!s) return;
@@ -14066,7 +13721,6 @@ function restoreSession(id) {
   toast('Session restored.', 'success', 1800);
 }
 
-/* "120kT | 153.3Kb | 20 Cd" = tokens estimate | storage | message cards */
 function sessionStats(s) {
   const cards = s.messages.filter((m) => !m.hidden && !m.__empty && !m.__failed).length;
   const tok = s.messages.reduce((n, m) => n + estTokens(String(m.content || '')), 0);
@@ -14076,7 +13730,6 @@ function sessionStats(s) {
   return `${t} | ${b} | ${cards} Cd`;
 }
 
-/* Locked session: shake + buzz instead of running the gesture */
 function lockShake(el) {
   if (el) {
     try {
@@ -14095,7 +13748,6 @@ function lockShake(el) {
   try { navigator.vibrate?.(30); } catch (_) {}
 }
 
-/* Swipe a session: left = archive, right = stats (stays until you tap or ~4.5s) */
 function bindSwipe() {
   let it = null, slide = null, x0 = 0, y0 = 0, dx = 0, mode = 0, w = 0, openEl = null, timer = 0, swallow = false;
   const held = () => { swallow = true; setTimeout(() => { swallow = false; }, 350); };
@@ -14191,7 +13843,6 @@ function bindSwipe() {
   }, true);
 }
 
-/* Archive drawer (same popup size as the Inbox) */
 function archRow(s) {
   const day = new Date(s.archivedAt || s.updated).toLocaleDateString([], { month: 'short', day: 'numeric' });
   return `<div class="fd-card arch-row" data-id="${esc(s.id)}">
@@ -14226,7 +13877,6 @@ function openArchive() {
   });
   renderArchive();
 }
-
 
 
 async function deleteSession(id) {
@@ -14348,7 +13998,6 @@ async function onMessageAction(btn) {
   }
 }
 
-/* Branch: new blank-looking session; the chat up to this reply stays as hidden context (the AI's memory) */
 function branchFrom(i) {
   if (chatBusy) { toast('Stop the response before branching. (D06)', 'info'); return; }
   const src = currentSession.messages.slice(0, i + 1).filter((m) => !m.__failed && !m.__empty);
@@ -14733,11 +14382,10 @@ function stripUnsupportedParams(body, errText) {
   return changed ? out : null;
 }
 
-/* ---------- Agent engine ---------- */
 let agentNextHidden = false;
 let autoNextMsg = null;
 const AGENT_MAX_STEPS = 4;
-const SEARCH_ENDPOINT = ''; // Set to 'https://YOUR-SEARX-HOST/search' to use SearXNG instead of Wikipedia
+const SEARCH_ENDPOINT = '';
 
 const TOOL_DOCS = {
   web_search: 'web_search {"query": "..."} searches the web for current information',
@@ -15196,7 +14844,6 @@ async function agentAfterReply(ai, session) {
   sendChatMessage(results.join('\n\n') + '\n\nContinue the task using these results.');
 }
 
-/* Continue-reply helpers */
 function contSep(existing, delta) {
   if (!existing || !delta) return '';
   if (/\s$/.test(existing) || /^\s/.test(delta)) return '';
@@ -15707,7 +15354,6 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') syncMusic();
 });
 
-/* ---------- MODEL PICKER POPUP ---------- */
 const canAutoFocus = () => window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 
 function openModelPicker() {
@@ -16158,7 +15804,6 @@ function initShell() {
     if (!btn) return;
     const action = btn.dataset.action;
 
-    /* Stop active reply voice before opening menus or side panels. */
     if (action === 'menu' || action === 'settings' || NAV_PANELS[action]) {
       stopSpeaking();
     }
@@ -16352,19 +15997,8 @@ function locked() {
   return true;
 }
 
-/* ---------- ONBOARDING TOUR ---------- */
 const TOUR_LS_BASE = 'aph.tour.v1';
 const tourKey = () => TOUR_LS_BASE + '.' + (auth?.currentUser?.uid || 'anon');
-const TOUR_STEPS = [
-  { title: `Welcome to ${APP_NAME}`, text: 'A quick tour of the basics. You can skip it any time.' },
-  { sel: '[data-action="model-select"]', title: 'Add an API key first', text: 'Open the model menu, pick a provider, tap Get your API key, paste it and Save. Aphrosta runs on your own key.' },
-  { sel: '[data-action="model-select"]', title: 'Pick a model', text: 'Once a key is saved, switch providers and models from here any time.' },
-  { sel: '[data-action="effort-select"]', title: 'Set the effort', text: 'Minima is fastest. Maxima thinks longest and uses more tokens. Medium suits most chats.' },
-  { sel: '.composer', title: 'Ask anything', text: 'Type, speak, or attach files. Ask for a deck, a document or a spreadsheet and it arrives as a file card.' },
-  { sel: '.agent-btn', title: 'Watch it think', text: 'Tap to follow the reasoning and the agent’s steps as they stream in.' },
-  { sel: '[data-action="menu"]', title: 'Your sessions', text: 'Chats, agents and tools live in the sidebar.', sidebar: true },
-  { sel: '[data-action="settings"]', title: 'Make it yours', text: 'Themes, fonts, rich-text options and Tailorship.', sidebar: true }
-];
 
 function maybeStartOnboarding() {
   setTimeout(() => {
@@ -16379,115 +16013,18 @@ function startOnboarding(force = false) {
   playTutorial();
 }
 
-/* ---------- TUTORIAL FILM (auto-playing, sandboxed demo, nothing saved) ---------- */
-const TUT_HINTS = [
-  { k: 'drag', t: 'Reorder your sessions', x: 'Hold any chat until it lifts, then drag it up or down to reorder.' },
-  { k: 'zone', t: 'Export and import by dragging', x: 'Keep dragging past the list. Bottom downloads a JSON copy, top replaces from a JSON file.' },
-  { k: 'swipe', t: 'Swipe a chat', x: 'Swipe right to see its stats. Swipe left to archive it.' },
-  { k: 'hold', b: 'Make Session', t: 'Hold Make Session', x: 'Hold for half a second until it buzzes, then let go. Pick a JSON file and it imports as a new private session.' },
-  { k: 'hold', b: 'Send', t: 'Hold the send button', x: 'With an empty box, hold it. It glows with a Chat icon at 0.5s and opens a new session at 2.5s.' },
-  { k: 'hold', b: 'Brain', t: 'Hold the brain', x: 'Hold for about 0.6 seconds to open Live mode and talk hands-free.' },
-  { k: 'hold', b: 'Attach', t: 'Hold attach', x: 'Hold for half a second and a trash icon glows. Keep holding to 2.5s and the whole composer is cleared.' },
-  { k: 'resize', t: 'Resize or hide the composer', x: 'Drag the grip to resize the input. Pull it well below its smallest height and the composer slides away. Double-tap the screen to bring it back.' },
-  { k: 'hold', b: 'People', t: 'Hold the people icon', x: 'In the session bar, hold the people icon to pin or unpin the team-share panel.' },
-  { k: 'ops', t: 'Move files in Operations', x: 'Hold a file or folder to select it, then tap Move. Open the folder you want and tap Paste here. Copy works the same way.' }
-];
-
 function tutIcon(n) {
   const p = (d, f) => `<svg viewBox="0 0 24 24" width="18" height="18" ${f ? 'fill="currentColor"' : 'fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"'}><path d="${d}"/></svg>`;
   return { play: p('M8 5l11 7-11 7z', 1), pause: p('M7 5h4v14H7zM13 5h4v14h-4z', 1), prev: p('M15 5l-7 7 7 7'), next: p('M9 5l7 7-7 7'), x: p('M6 6l12 12M18 6L6 18') }[n];
 }
 
-function tutHoldBtn(name, f) {
-  const ico = (n) => (typeof ICONS !== 'undefined' && ICONS[n]) || '';
-  const map = { Brain: 'brain', Attach: 'attach', Send: 'switch', People: 'teamShare' };
-  if (name === 'Make Session') return `<div class="tut-hb tut-hb-wide"><span class="tut-hbi">${ico('newChat')}<span>Make Session</span></span><em></em>${f}</div>`;
-  return `<div class="tut-hb tut-hb-ico" aria-label="${name}"><span class="tut-hbi">${ico(map[name] || 'brain')}</span><em></em>${f}</div>`;
-}
-
-function tutHintDemo(h) {
-  const f = '<i class="tut-finger"></i>';
-  const row = (t, c = '') => `<div class="tut-r ${c}">${t}${c ? f : ''}</div>`;
-  let inner = '';
-  if (h.k === 'drag') inner = row('Chat one') + row('Chat two', 'mv') + row('Chat three');
-  else if (h.k === 'zone') inner = '<div class="tut-zone">Replace from JSON</div>' + row('Chat one') + row('Chat two', 'mv dn') + '<div class="tut-zone">Download JSON</div>';
-  else if (h.k === 'swipe') inner = `<div class="tut-sw"><span class="l">Stats</span><span class="r">Archive</span><div class="tut-r sw">Chat two${f}</div></div>`;
-  else if (h.k === 'hold') inner = tutHoldBtn(h.b, f);
-  else if (h.k === 'resize') inner = `<div class="tut-rz"><i class="tut-grip">${f}</i><div class="tut-rzbox">Message</div></div>`;
-  else if (h.k === 'ops') inner = '<div class="tut-r">src</div><div class="tut-r tut-selrow">script.js</div><div class="tut-obs ops-bar"><div class="tut-ob a"><span class="ops-hint">1 selected</span><button class="ops-tb" type="button" tabindex="-1">Copy</button><button class="ops-tb mv" type="button" tabindex="-1">Move</button><button class="ops-tb" type="button" tabindex="-1">Delete</button></div><div class="tut-ob b"><span class="ops-hint">Moving 1 item</span><button class="ops-tb mv" type="button" tabindex="-1">Paste here</button></div></div>';
-  return `<div class="tut-demo2">${inner}</div>`;
-}
-
 function tutScenes() {
-  const Q = (S, k) => S.querySelector(`[data-k="${k}"]`);
-  const typeTo = (at, node, txt, t0, gap) => {
-    for (let n = 0; n < txt.length; n++) at(t0 + n * gap, () => { node.textContent = txt.slice(0, n + 1); });
-  };
-  const cycle = (S, at, sel, list, t0, gap, tag) => list.forEach((v, n) => at(t0 + n * gap, () => {
-    S.querySelectorAll(sel).forEach((e, k) => e.classList.toggle('hl', k === n));
-    if (tag) Q(S, 'tag').textContent = tag[n];
-  }));
   const hero = (S) => { S.innerHTML = `<div class="tut-hero">${aphMark({ animated: true })}</div>`; };
 
   const ic = (n) => (typeof ICONS !== 'undefined' && ICONS[n]) || '';
-  const clr = (n) => (typeof OPS_COLORS !== 'undefined' ? OPS_COLORS[n % OPS_COLORS.length] : '#0a84ff');
-  const ink = (c) => (typeof opsInk === 'function' ? opsInk(c) : c);
-  const avs = (o) => { try { return agAvSvg(o, true); } catch (_) { return ''; } };
-  const bnr = () => { try { return agBnSvg(agBnNorm({})); } catch (_) { return ic('navAgents'); } };
-  const ui = (h, c = '') => `<div class="tut-ui ${c}">${h}</div>`;
   const ib = (k, i, c = '') => `<button class="icon-btn ${c}" type="button" tabindex="-1" data-k="${k}">${i}</button>`;
-  const head = (title, icon, tog = '') => `<div class="np-head"><div class="np-bar"><span class="np-ico">${ic(icon)}</span><h2 class="np-title">${title}</h2>${ib('pl', ic('plus'))}${ib('cl', ic('stClose'))}</div><label class="np-search">${ic('search')}<input type="search" placeholder="Search ${title}" tabindex="-1" readonly></label>${tog}</div>`;
-  const card = (k, icon, title, meta, instr, acts, extra = '', cls = '', col = 0) => `<div class="lib-card ops-card ${cls}" data-k="${k}" style="--oc:${ink(clr(col))}"><div class="lib-card-top"><h4 class="lib-card-title">${icon ? `<span class="ops-ico">${icon}</span>` : ''}${title}</h4><div class="lib-card-act">${acts}</div></div>${meta ? `<p class="lib-card-meta">${meta}</p>` : ''}${instr ? `<p class="lib-card-instr">${instr}</p>` : ''}${extra}</div>`;
   const edt = ib('ed', ic('pencil')) + ib('dl', ic('trash'));
-  const eyeB = (k) => ib(k, ic('eye'), 'lib-card-eye');
   const WV = (typeof WAVE_BARS !== 'undefined' ? WAVE_BARS : '');
-  const tkn = (n) => (typeof fmtTokens === 'function' ? fmtTokens(n) : String(n));
-  const cmp = (c = '') => `<div class="composer is-idle tut-real ${c}" data-mode="text" data-k="cp">
-    <button class="resize-handle" type="button" tabindex="-1" data-k="gr">${ic('grip')}</button>
-    <div class="think-panel" data-k="tp"><div class="think-inner"><div class="think-head"><span class="think-title"><span class="think-dot"></span>Thought</span><span class="think-model">Groq · GPT-OSS 120B</span><button class="think-close" type="button" tabindex="-1" data-k="tx">${ic('close')}</button></div><div class="think-plan" data-k="pn" hidden></div><div class="think-body" data-k="tb"></div></div></div>
-    <textarea class="composer-input" rows="1" placeholder="Message..." readonly tabindex="-1" data-k="in"></textarea>
-    <div class="composer-bar">
-      <button class="agent-btn" type="button" tabindex="-1" data-k="br"><span class="agent-icon agent-icon-robot">${ic('brain')}</span><span class="agent-icon agent-icon-x">${ic('closeLg')}</span><span class="agent-icon agent-icon-pause">${ic('pause')}</span><span class="agent-icon agent-icon-play">${ic('play')}</span></button>
-      <div class="composer-pill" data-k="pill"><div class="word-blocks" data-k="wb"></div><div class="idle-ring"><span class="token-meter"><span class="token-text"><b class="token-used" data-k="tk">${tkn(1240)}</b><span class="token-unit">tokens</span></span></span></div><div class="state-label"></div><div class="wave">${WV}</div></div>
-      <div class="composer-spacer"></div>
-      <button class="attach-btn" type="button" tabindex="-1" data-k="at"><span class="attach-ico-main">${ic('attach')}</span><span class="attach-ico-trash">${ic('trash')}</span></button>
-      <button class="send-btn" type="button" tabindex="-1" data-k="snd"><span class="send-icon send-icon-switch">${ic('switch')}</span><span class="send-icon send-icon-chat">${ic('newChat')}</span><span class="send-icon send-icon-go">${ic('rocket')}</span><span class="send-icon send-icon-stop"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><rect x="1" y="1" width="12" height="12" rx="2.5" fill="currentColor"/></svg></span></button>
-    </div></div>`;
-  const syncBlocks = (wb, v) => {
-    const w = v.trim().split(/\s+/).filter(Boolean);
-    const open = !/\s$/.test(v);
-    while (wb.children.length < w.length) { const s = document.createElement('span'); s.className = 'word-block'; s.dataset.state = 'typing'; wb.appendChild(s); }
-    while (wb.children.length > w.length) wb.lastChild.remove();
-    [...wb.children].forEach((b, k) => {
-      const st = open && k === w.length - 1 ? 'typing' : 'known';
-      if (b.dataset.state !== st) b.dataset.state = st;
-      const px = Math.min(28, 8 + w[k].length * 3) + 'px';
-      if (b.style.width !== px) b.style.width = px;
-    });
-  };
-  const typeIn = (S, at, txt, t0, gap) => {
-    let t = t0;
-    for (let n = 0; n < txt.length; n++) {
-      t += gap * (0.75 + Math.random() * 0.7) + (txt[n] === ' ' ? gap * 0.8 : 0);
-      const v = txt.slice(0, n + 1);
-      at(Math.round(t), () => {
-        Q(S, 'in').value = v; Q(S, 'cp').classList.remove('is-idle'); Q(S, 'snd').classList.add('has-text'); syncBlocks(Q(S, 'wb'), v);
-      });
-    }
-    at(Math.round(t + 300), () => { const wb = Q(S, 'wb'); if (wb) wb.querySelectorAll('.word-block').forEach((b) => { b.dataset.state = 'known'; }); });
-    return t;
-  };
-  const clearIn = (S) => { Q(S, 'in').value = ''; Q(S, 'cp').classList.add('is-idle'); Q(S, 'snd').classList.remove('has-text'); Q(S, 'wb').innerHTML = ''; };
-  const msgCard = (userTxt, hideEnd, older) => {
-    const pv = (typeof MODEL_PROVIDERS !== 'undefined' && MODEL_PROVIDERS[0]) || { logo: '' };
-    const stamp = typeof msgStamp === 'function' ? msgStamp(Date.now() - 86400000) : '';
-    const uico = typeof MSG_USER_ICO !== 'undefined' ? MSG_USER_ICO : '';
-    const ab = (k, i) => `<button class="msg-act" type="button" tabindex="-1" data-k="${k}">${ic(i)}</button>`;
-    const hd = hideEnd ? ' style="display:none"' : '';
-    return `<div class="msg msg-ai"><div class="msg-card"><div class="msg-sec msg-sec-user"><span class="msg-ico msg-user-ico">${uico}</span><div class="msg-user-col"><div class="msg-bubble">${userTxt}</div></div></div><div class="msg-sec msg-sec-main"><div class="msg-body" data-k="ans"></div></div><div class="msg-actions msg-sec msg-sec-act" data-k="acts"${hd}>${ab('m-copy', 'copy')}${ab('m-voice', 'volume')}${ab('m-branch', 'branchTree')}${ab('m-like', 'thumbUp')}${ab('m-dislike', 'thumbDown')}${older ? ab('m-think', 'book') : ab('m-regen', 'regen')}${ab('m-edit', 'pencil')}<span class="msg-ico msg-prov">${pv.logo}</span></div><div class="msg-sec msg-sec-foot" data-k="ft"${hd}><span class="msg-meta"><span class="msg-time" data-k="f-time">${stamp}</span><span class="msg-model" data-k="f-model">GPT-OSS 120B</span></span><span class="msg-tok" data-k="f-tok">Minima ~8T</span></div></div></div>`;
-  };
-  const body = (h) => `<div class="np-body lib-list" data-k="bd">${h}</div>`;
-  const tagEl = '<div class="tut-tag" data-k="tag"></div>';
 
   const list = [
     { ch: 'Welcome', ms: 6000, t: `Welcome to ${APP_NAME}`, x: 'A short film of everything the app can do. Sit back, or use the arrows to jump around.', b: hero },
@@ -16695,7 +16232,6 @@ function renderSigningIn() {
   }, 8000);
 }
 
-/* ---------- INTRO AVATAR (sign-in screen) ---------- */
 const INTRO_WORKER = 'https://hidden-thunder-9380.aphostus-org.workers.dev';
 const INTRO_GREET = 'Hi there, welcome to Aphrosta! Let us talk about it. Ready?';
 
@@ -16742,7 +16278,6 @@ function introStart() {
   const root = document.querySelector('.intro-live');
   if (!root || root.dataset.on) return;
   root.dataset.on = '1';
-  /* avatar-only mode: random state every 1s, no input, no voice */
   {
     const scr0 = root.closest('.signin-screen');
     const card0 = scr0.querySelector('.signin-card');
@@ -16790,7 +16325,6 @@ function introStart() {
   const LABEL = { listening: 'Listening', hearing: 'Listening', thinking: 'Thinking\u2026', speaking: '' };
   let paused = false, started = false, tok = 0, ampT = 0, glanceT = 0, watchT = 0, lastAct = Date.now(), pend = null, flashT = 0, cardH = 150, asked = '';
 
-  /* ---- daily trial limit: 10 non-Aphrosta + 50 Aphrosta messages per day (device, local midnight) ---- */
   const QK = 'aphrosta.introQuota', LIM_A = 50, LIM_O = 10;
   const dayKey = () => { const n = new Date(); return n.getFullYear() + '-' + (n.getMonth() + 1) + '-' + n.getDate(); };
   const quota = () => {
@@ -16869,7 +16403,6 @@ function introStart() {
   };
   const ampOff = () => { clearInterval(ampT); ampT = 0; root.style.setProperty('--amp', '0'); };
 
-  /* ---- voice in: the browser's own speech recognition (no server, no key) ---- */
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   let rec = null, listening = false, micDenied = !SR, quietN = 0;
   const stopListen = () => {
@@ -17088,13 +16621,11 @@ function introStart() {
   if (spent()) setDead();
   else {
     setTimeout(() => { if (root.isConnected && !started) greet(); }, 500);
-    /* browsers may block autoplay audio: the first touch/key anywhere starts the greeting */
     const wake = () => { if (root.isConnected && !started && !spent()) greet(); };
     ['pointerdown', 'keydown', 'touchend'].forEach((ev) => document.addEventListener(ev, wake, { once: true, passive: true }));
   }
 }
 
-/* ---------- ACARD: portable account card (PNG with QR login + encryption key) ---------- */
 const ACARD_ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="3"/><circle cx="8.5" cy="11" r="2"/><path d="M5.8 16c.5-1.3 1.5-1.9 2.7-1.9s2.2.6 2.7 1.9M14 10h4.5M14 13.5h3"/></svg>';
 const ACARD_INFO = ['Always keep this card safe and secure', 'and do not let anyone touch it.'];
 const acEnc = (o) => 'APH1.' + btoa(unescape(encodeURIComponent(JSON.stringify(o))));
@@ -17119,7 +16650,6 @@ async function acId(uid) {
   for (let i = 0; i < 12; i++) s += A[h[i] % 32];
   return 'APH-' + s.slice(0, 4) + '-' + s.slice(4, 8) + '-' + s.slice(8, 12);
 }
-/* the login key: a random password linked to the Google account (needs Email/Password enabled in Firebase) */
 async function acCred(user) {
   const k = 'aphrosta.acardpw.' + user.uid;
   let pw = '';
@@ -17204,7 +16734,6 @@ async function acSignIn(file) {
     showLoader();
     await Vault.importKey(p.u, p.k);
     await signInWithEmailAndPassword(auth, p.e, p.p);
-    // Acard sign-in is silent: the loader stays up until the app is rendered.
     setTimeout(() => { try { setSetting('acardColor', p.c === 'white' ? 'white' : 'black'); } catch (_) {} }, 3500);
   } catch (err) {
     console.error('[ACARD] sign-in failed:', err?.code || err?.message);
@@ -17308,7 +16837,6 @@ const Acard = (() => {
   return { open, wireAuth };
 })();
 
-/* ---------- Auth page legal popups (same popup as Worlds) ---------- */
 function openAuthLegal(key) {
   const def = AB_PAGES[key];
   if (!def) return;
@@ -17365,9 +16893,8 @@ function showSignInButton() {
   };
 }
 
-/* ---------- Lock helpers (Fix 1) ---------- */
 const lockKey = (email) => String(email || '').toLowerCase().replace(/[^\w.@-]/g, '_');
-const LOCK_LS = 'lockedAccounts.v1'; // deliberately NOT prefixed "aphrosta." so wipeLocal and destruct never clear it
+const LOCK_LS = 'lockedAccounts.v1';
 function readLocalLocks() {
   try { return JSON.parse(localStorage.getItem(LOCK_LS) || '{}') || {}; } catch (_) { return {}; }
 }
@@ -17375,7 +16902,6 @@ function writeLocalLock(ek, type) {
   if (!ek) return;
   try { const m = readLocalLocks(); m[ek] = type; localStorage.setItem(LOCK_LS, JSON.stringify(m)); } catch (_) {}
 }
-// type: 'abandoned' | 'blocked'. Throws if the lock could not be saved AND verified.
 async function lockAccount(type) {
   const user = currentUser;
   const ek = lockKey(user?.email);
@@ -17539,7 +17065,6 @@ if (document.readyState === 'loading') {
 } else {
   boot();
 }
-/* ---------- KEYBOARD SHORTCUTS (desktop only) ---------- */
 const KB_MAC = /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent || '');
 const kbOn = () => window.matchMedia('(pointer: fine)').matches;
 const kbTyping = (t) => !!t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
@@ -17734,7 +17259,6 @@ function kbClickSel(sel) { q$(sel)?.click(); }
 
 const KB_TOP = ['mod+KeyK', 'mod+shift+KeyO', 'alt+KeyM', 'alt+KeyR', 'mod+shift+KeyC', 'mod+Slash'];
 
-/* conflict check: warns in the console about one key used twice, or a key the browser keeps for itself */
 const KB_RESERVED = ['mod+KeyT', 'mod+KeyW', 'mod+KeyN', 'mod+KeyR', 'mod+KeyL', 'mod+KeyP', 'mod+KeyF', 'mod+KeyD', 'mod+KeyS', 'mod+KeyO', 'mod+KeyH', 'mod+KeyJ', 'mod+KeyQ', 'mod+shift+KeyT', 'mod+shift+KeyN', 'mod+shift+KeyW', 'alt+ArrowLeft', 'alt+ArrowRight', 'F5', 'F11', 'F12'];
 const kbKey = (s) => { const k = kbParse(s); return [k.mod && 'mod', k.alt && 'alt', k.shift && 'shift', k.code].filter(Boolean).join('+'); };
 (function kbConflictCheck() {
@@ -17785,9 +17309,7 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-/* ---------- ABOUT PAGES (Terms, Rules, Licenses, Help, Billing) ---------- */
-const AB_BILL_LS = 'aphrosta.billing'; /* local only: never synced to Firebase */
-const abP = (t) => `<p>${t}</p>`;
+const AB_BILL_LS = 'aphrosta.billing';
 
 
 const abTextCard = (title, tagline, desc, sub, desc2) => ({
@@ -18047,7 +17569,6 @@ const AB_PAGES = {
   ] }
 };
 
-/* ----- billing storage (localStorage + in-memory cache) ----- */
 let abBillCache = null;
 const abBillDefault = () => ({ day: '1', cards: [], info: {}, history: [] });
 function abBill() {
@@ -18062,69 +17583,15 @@ function abBillSave() {
   catch (_) { toast('Could not save on this device. (E06)', 'error'); return false; }
 }
 const abLog = (text) => { const b = abBill(); b.history.unshift({ at: Date.now(), text }); b.history = b.history.slice(0, 40); };
-const AB_DAYS = [{ id: '1', name: 'Every 1st' }, { id: '10', name: 'Every 10th' }];
 const abBrand = (n) => (/^4/.test(n) ? 'Visa' : /^(5[1-5]|2[2-7])/.test(n) ? 'Mastercard' : /^3[47]/.test(n) ? 'Amex' : /^6/.test(n) ? 'Discover' : 'Card');
 const abLuhn = (n) => {
   let s = 0, alt = false;
   for (let i = n.length - 1; i >= 0; i--) { let d = +n[i]; if (alt) { d *= 2; if (d > 9) d -= 9; } s += d; alt = !alt; }
   return n.length >= 13 && s % 10 === 0;
 };
-const abDate = (t) => new Date(t).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-
-function abBillingCards() {
-  const b = abBill(), inf = b.info || {};
-  const now = new Date(), dd = +b.day === 10 ? 10 : 1;
-  const nextDue = new Date(now.getFullYear(), now.getMonth(), dd);
-  if (nextDue < new Date(now.getFullYear(), now.getMonth(), now.getDate())) nextDue.setMonth(nextDue.getMonth() + 1);
-  const field = (label, key, ph, type = 'text') => `<label class="ab-field"><span>${label}</span><input class="ab-input" type="${type}" data-ab-info="${key}" placeholder="${ph}" value="${esc(inf[key] || '')}" autocomplete="off"></label>`;
-  const cards = b.cards.length
-    ? b.cards.map((c) => `<div class="ab-pay">
-        <span class="ab-brand">${ICONS.card}</span>
-        <span class="ab-pay-meta"><b>${esc(c.brand)} \u2022\u2022\u2022\u2022 ${esc(c.last4)}</b><small>${esc(c.name || 'Card')} \u00b7 exp ${esc(c.exp)}</small></span>
-        ${c.def ? '<em class="ab-pill">Default</em>' : `<button class="ab-mini" type="button" data-ab="card-default" data-id="${c.id}">Set default</button>`}
-        <button class="ab-mini danger" type="button" data-ab="card-del" data-id="${c.id}" aria-label="Remove card">${ICONS.cardRemove}</button>
-      </div>`).join('')
-    : '<p class="ab-muted">No cards saved yet.</p>';
-  const hist = b.history.length
-    ? b.history.map((h) => `<div class="ab-kv"><span>${esc(h.text)}</span><b>${esc(abDate(h.at))}</b></div>`).join('') + '<button class="btn-line danger" type="button" data-ab="hist-clear">Clear history</button>'
-    : '<p class="ab-muted">Nothing here yet. Changes to your plan and cards show up here.</p>';
-  return [
-    { t: 'Billing date', st: 1, kw: 'billing date monthly day 1st 10th next', b: `
-      <div class="ab-field"><span>Billing date</span>
-        <div class="chips">${AB_DAYS.map((d) => `<button class="chip ${d.id === String(b.day) ? 'on' : ''}" type="button" data-ab="day" data-val="${d.id}">${d.name}</button>`).join('')}</div>
-      </div>
-      <p class="ab-muted">Local demo only: this screen does not charge your card, process payments, or create a subscription. Do not enter real card details. Date shown: ${esc(abDate(nextDue))}.</p>` },
-    { t: 'Payment methods', st: 1, kw: 'card visa mastercard payment', b: `
-      ${cards}
-      <div class="ab-form">
-        ${field('Name on card', 'x', 'Full name').replace('data-ab-info="x"', 'data-ab-card="name"')}
-        <label class="ab-field"><span>Card number</span><input class="ab-input" data-ab-card="num" inputmode="numeric" maxlength="23" placeholder="1234 5678 9012 3456" autocomplete="off"></label>
-        <div class="ab-row2">
-          <label class="ab-field"><span>Expiry</span><input class="ab-input" data-ab-card="exp" inputmode="numeric" maxlength="5" placeholder="MM/YY" autocomplete="off"></label>
-          <label class="ab-field"><span>CVV</span><input class="ab-input" data-ab-card="cvv" inputmode="numeric" maxlength="4" placeholder="123" type="password" autocomplete="off"></label>
-        </div>
-        <button class="ab-btn" type="button" data-ab="card-add">Save card</button>
-        <p class="ab-muted">Only the brand, last 4 digits, expiry and name are kept, on this device. The full number and CVV are never stored.</p>
-      </div>` },
-    { t: 'Billing details', st: 1, kw: 'name email address city country tax', b: `
-      ${field('Full name', 'name', 'Your name')}${field('Email', 'email', 'you@example.com', 'email')}${field('Address', 'address', 'Street and number')}
-      <div class="ab-row2">${field('City', 'city', 'City')}${field('Country', 'country', 'Country')}</div>
-      ${field('Tax ID (optional)', 'tax', 'Optional')}
-      <button class="ab-btn" type="button" data-ab="info-save">Save details</button>` },
-    { t: 'Billing history', st: 1, kw: 'invoice receipt history', b: hist },
-    { t: 'Local only', st: 1, kw: 'privacy storage firebase', b: abP('Everything on this page is saved in this device\u2019s local storage and is never sent to the cloud. Clearing local data removes it.') }
-  ];
-}
-
-function abCardHtml(c) {
-  const body = typeof c.b === 'function' ? c.b() : c.b;
-  return `<section class="ab-card open static" data-kw="${esc((c.kw || '').toLowerCase())}">
-    <div class="ab-card-body"><div class="ab-card-inner"><div class="ab-card-content">${body}</div></div></div>
-  </section>`;
-}
 
 function abBodyHtml(key) {
-  return ''; /* About pages are emptied for now (rework coming) */
+  return '';
 }
 
 function abClearMarks(root) {
