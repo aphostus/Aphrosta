@@ -5382,8 +5382,6 @@ function openUsagePopup() {
 }
 
 const UPG_PLANS = [
-  { name: 'Free', cr: ['10C', '0C', '0C'], pr: ['$0', '$0', '$0'],
-    info: 'Chat with text only using the Palsath model, with 500Mb of storage and no custom agents.' },
   { name: 'Standard', cr: ['40C', '310C', '1250C'], pr: ['$0.57', '$2.73', '$10.00'],
     info: 'Use the Yasthra model with images, video, sound and music as inputs and outputs, plus 10Gb of storage and up to 10 agents.' },
   { name: 'Premium', cr: ['130C', '935C', '3750C'], pr: ['$1.29', '$7.73', '$30.00'],
