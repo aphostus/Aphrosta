@@ -5390,6 +5390,40 @@ const UPG_PLANS = [
     info: 'Get the Zasthra, Yasthra and Xasthra models with full image, video, sound and music support, 50Gb of storage and up to 50 agents.' }
 ];
 
+const UPG_MIN = 1, UPG_MAX = 100000, UPG_RATE = 95;
+const UPG_CHAT = [['Palsath', 0.05, 0.25], ['Galsath', 0.50, 0.70], ['Yasthra', 0.10, 0.30], ['Xasthra', 0.15, 0.35], ['Zasthra', 0.20, 0.40]];
+const UPG_ICO = {
+  star: svg('<path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/>', 18),
+  chat: svg('<path d="M21 12a8 8 0 01-11.6 7.1L4 20l1-4.6A8 8 0 1121 12z"/>', 16),
+  tts: svg('<path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 010 7M19 5a10 10 0 010 14"/>', 16),
+  stt: svg('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/>', 16),
+  img: svg('<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M21 16l-5-5-8 8"/>', 16),
+  vid: svg('<rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3z"/>', 16),
+  mus: svg('<path d="M9 18V5l11-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/>', 16),
+  snd: svg('<path d="M3 12h2M7 8v8M11 5v14M15 9v6M19 11v2"/>', 16),
+  sto: svg('<ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/>', 16),
+  agt: svg('<rect x="5" y="8" width="14" height="11" rx="3"/><path d="M12 4v4M9 13h.01M15 13h.01"/>', 16)
+};
+const upgNum = (n) => (n >= 1e6 ? (Math.round(n / 1e5) / 10) + 'M' : Math.floor(n).toLocaleString('en-US'));
+const upgDec = (n) => (n >= 100 ? Math.floor(n).toLocaleString('en-US') : String(Math.floor(n * 10) / 10));
+
+function upgCalc(usd) {
+  const c = Math.floor(usd * UPG_RATE);
+  const rows = UPG_CHAT.map(([n, lo, hi]) => ({ i: 'chat', t: n, s: 'Sessions by effort level', v: upgNum(c / hi) + ' \u2013 ' + upgNum(c / lo) }));
+  rows.push(
+    { i: 'tts', t: 'Text to Speech', s: 'Characters', v: upgNum((c / 15) * 1000) },
+    { i: 'stt', t: 'Speech to Text', s: 'Hours', v: upgDec(c / 80) },
+    { i: 'img', t: 'Image Gen', s: 'Images', v: upgNum(c / 10) },
+    { i: 'vid', t: 'Video Gen', s: 'Minutes', v: upgDec(c / 10) },
+    { i: 'mus', t: 'Music Gen', s: 'Tracks', v: upgNum(c / 25) },
+    { i: 'snd', t: 'Sound Gen', s: 'Minutes', v: upgDec(c / 15) },
+    { i: 'sto', t: 'Storage & Training', s: 'Gb, file attachments included', v: upgDec(c / 50) },
+    { i: 'agt', t: 'Agents', s: 'At $0.50 each', v: upgNum(usd / 0.5) }
+  );
+  return { c, rows };
+}
+const upgRow = (r) => `<div class="upg-brow"><span class="upg-bico">${UPG_ICO[r.i]}</span><div class="upg-btxt"><b>${r.t}</b><span>${r.s}</span></div><b class="upg-bval">${r.v}</b></div>`;
+
 function openUpgradePopup() {
   if (document.querySelector('.upg-block')) return;
   document.getElementById('sidebar')?.classList.remove('open');
@@ -5418,6 +5452,24 @@ function openUpgradePopup() {
     <div class="upg-seg" role="tablist">${TABS.map((x, i) => `<button type="button" role="tab" data-upg-per="${i}" class="${i === tab ? 'on' : ''}">${x[1]}</button>`).join('')}</div>
     <div class="upg-scroll">
       <div class="upg-plans">${UPG_PLANS.map(planCard).join('')}</div>
+      <div class="upg-custom" style="display:none">
+        <section class="upg-ben">
+          <div class="upg-ben-head">
+            <span class="upg-ben-ico">${UPG_ICO.star}</span>
+            <div class="upg-ben-txt"><b>What you get</b><span>Estimated from your amount</span></div>
+          </div>
+          <div class="upg-ben-list" data-upg-list></div>
+        </section>
+        <section class="upg-buy">
+          <div class="upg-buy-row">
+            <button class="upg-step" type="button" data-upg-step="-1" aria-label="Decrease amount">\u2212</button>
+            <label class="upg-amt"><span>$</span><input data-upg-amt type="text" inputmode="decimal" autocomplete="off" value="1" aria-label="Amount in dollars"></label>
+            <button class="upg-step" type="button" data-upg-step="1" aria-label="Increase amount">+</button>
+          </div>
+          <div class="upg-buy-cr">You get <b data-upg-credits>95C</b></div>
+          <p class="upg-note">Minimum $1, and $1 = 95C. Credits are shared, so each estimate shows your whole amount spent on that item alone.</p>
+        </section>
+      </div>
     </div>
   </section>`;
 
@@ -5437,6 +5489,8 @@ function openUpgradePopup() {
   const paint = () => {
     const plansEl = block.querySelector('.upg-plans');
     if (plansEl) plansEl.style.display = showPlans() ? '' : 'none';
+    const cuEl = block.querySelector('.upg-custom');
+    if (cuEl) cuEl.style.display = tab === 0 ? '' : 'none';
     block.querySelectorAll('.upg-card').forEach((c, i) => {
       const p = UPG_PLANS[i];
       c.querySelector('[data-cr]').textContent = p.cr[pi()];
@@ -5445,6 +5499,26 @@ function openUpgradePopup() {
     });
     block.querySelectorAll('[data-upg-per]').forEach((b) => b.classList.toggle('on', +b.dataset.upgPer === tab));
   };
+
+  const cInput = block.querySelector('[data-upg-amt]');
+  const cList = block.querySelector('[data-upg-list]');
+  const cCred = block.querySelector('[data-upg-credits]');
+  let amt = UPG_MIN;
+  const clampAmt = (v) => Math.min(UPG_MAX, Math.max(UPG_MIN, v));
+  const readAmt = () => { const v = parseFloat(cInput.value); return Number.isFinite(v) ? clampAmt(v) : UPG_MIN; };
+  const showAmt = () => { cInput.value = String(Math.round(amt * 100) / 100); };
+  const paintCustom = () => {
+    const r = upgCalc(amt);
+    cCred.textContent = r.c.toLocaleString('en-US') + 'C';
+    cList.innerHTML = r.rows.map(upgRow).join('');
+  };
+  cInput.addEventListener('input', () => {
+    cInput.value = cInput.value.replace(/[^0-9.]/g, '').replace(/^(\d*\.?\d{0,2}).*$/, '$1');
+    amt = readAmt();
+    paintCustom();
+  });
+  cInput.addEventListener('blur', () => { amt = readAmt(); showAmt(); paintCustom(); });
+  paintCustom();
 
   const onKey = (e) => {
     if (pop.contains(e.target) && e.key !== 'Escape' && e.key !== 'Tab') return;
@@ -5463,6 +5537,14 @@ function openUpgradePopup() {
     e.stopPropagation();
     const per = e.target.closest('[data-upg-per]');
     if (per) { tab = +per.dataset.upgPer; paint(); return; }
+    const stp = e.target.closest('[data-upg-step]');
+    if (stp) {
+      const v = readAmt();
+      amt = clampAmt(+stp.dataset.upgStep > 0 ? Math.floor(v) + 1 : Math.ceil(v) - 1);
+      showAmt();
+      paintCustom();
+      return;
+    }
     if (e.target.closest('[data-upg-x]')) done();
   });
   document.addEventListener('keydown', onKey, true);
