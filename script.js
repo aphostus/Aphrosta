@@ -5456,7 +5456,7 @@ function openUpgradePopup() {
         <section class="upg-ben">
           <div class="upg-ben-head">
             <span class="upg-ben-ico">${UPG_ICO.star}</span>
-            <div class="upg-ben-txt"><b>What you get</b><span>Estimated from your amount</span></div>
+            <div class="upg-ben-txt"><b data-upg-credits>Credits: 95C</b><span>Estimated from your amount</span></div>
           </div>
           <div class="upg-ben-list" data-upg-list></div>
         </section>
@@ -5466,14 +5466,14 @@ function openUpgradePopup() {
             <label class="upg-amt"><span>$</span><input data-upg-amt type="text" inputmode="decimal" autocomplete="off" value="1" aria-label="Amount in dollars"></label>
             <button class="upg-step" type="button" data-upg-step="1" aria-label="Increase amount">+</button>
           </div>
-          <div class="upg-buy-cr">You get <b data-upg-credits>95C</b></div>
-          <p class="upg-note">Minimum $1, and $1 = 95C. Credits are shared, so each estimate shows your whole amount spent on that item alone.</p>
+          <p class="upg-note" data-upg-note></p>
         </section>
       </div>
     </div>
   </section>`;
 
   const pop = block.querySelector('.upg-pop');
+  let popH = 0, popTop = 0;
   const vis = (el) => el && el.getClientRects().length > 0;
   const place = () => {
     const tb = document.querySelector('.topbar');
@@ -5482,8 +5482,22 @@ function openUpgradePopup() {
     let top = vis(tb) ? tb.getBoundingClientRect().bottom : 60;
     if (vis(sb)) top = Math.max(top, sb.getBoundingClientRect().bottom);
     const bottom = vis(cm) ? window.innerHeight - cm.getBoundingClientRect().top : 140;
-    pop.style.top = Math.round(top + 12) + 'px';
-    pop.style.bottom = Math.round(bottom + 12) + 'px';
+    const kb = !!cInput && document.activeElement === cInput;
+    if (!kb || !popH) {
+      popTop = top + 12;
+      popH = Math.max(0, window.innerHeight - (top + 12) - (bottom + 12));
+      pop.style.height = '';
+      pop.style.top = Math.round(top + 12) + 'px';
+      pop.style.bottom = Math.round(bottom + 12) + 'px';
+      return;
+    }
+    const vv = window.visualViewport;
+    const vh = vv ? vv.height : window.innerHeight;
+    const vt = vv ? vv.offsetTop : 0;
+    const h = Math.min(popH, vh - 16);
+    pop.style.height = h + 'px';
+    pop.style.bottom = 'auto';
+    pop.style.top = Math.round(vt + Math.max(8, Math.min(popTop, vh - h - 8))) + 'px';
   };
 
   const paint = () => {
@@ -5503,21 +5517,25 @@ function openUpgradePopup() {
   const cInput = block.querySelector('[data-upg-amt]');
   const cList = block.querySelector('[data-upg-list]');
   const cCred = block.querySelector('[data-upg-credits]');
+  const cNote = block.querySelector('[data-upg-note]');
   let amt = UPG_MIN;
   const clampAmt = (v) => Math.min(UPG_MAX, Math.max(UPG_MIN, v));
   const readAmt = () => { const v = parseFloat(cInput.value); return Number.isFinite(v) ? clampAmt(v) : UPG_MIN; };
   const showAmt = () => { cInput.value = String(Math.round(amt * 100) / 100); };
   const paintCustom = () => {
     const r = upgCalc(amt);
-    cCred.textContent = r.c.toLocaleString('en-US') + 'C';
-    cList.innerHTML = r.rows.map(upgRow).join('');
+    cCred.textContent = 'Credits: ' + r.c.toLocaleString('en-US') + 'C';
+    cList.innerHTML = r.rows.slice(0, 5).map(upgRow).join('');
+    cNote.textContent = `Minimum $1, and $1 = 95C. Credits are shared, so each estimate shows your whole amount spent on that item alone. Images ${upgNum(r.c / 10)}, Videos ${upgDec(r.c / 10)} minute(s), Storage ${upgDec(r.c / 50)}Gb, Music ${upgDec(r.c / 25)} minute(s), Sounds ${upgDec(r.c / 15)}, Agents ${upgNum(amt / 0.5)} and much more AI output/input capabilities.`;
   };
   cInput.addEventListener('input', () => {
     cInput.value = cInput.value.replace(/[^0-9.]/g, '').replace(/^(\d*\.?\d{0,2}).*$/, '$1');
     amt = readAmt();
     paintCustom();
   });
-  cInput.addEventListener('blur', () => { amt = readAmt(); showAmt(); paintCustom(); });
+  cInput.addEventListener('blur', () => { amt = readAmt(); showAmt(); paintCustom(); setTimeout(place, 150); });
+  cInput.addEventListener('focus', () => { setTimeout(place, 120); setTimeout(place, 400); });
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', place);
   paintCustom();
 
   const onKey = (e) => {
@@ -5529,6 +5547,7 @@ function openUpgradePopup() {
   const done = () => {
     document.removeEventListener('keydown', onKey, true);
     window.removeEventListener('resize', place);
+    if (window.visualViewport) window.visualViewport.removeEventListener('resize', place);
     block.classList.add('closing');
     setTimeout(() => block.remove(), 180);
   };

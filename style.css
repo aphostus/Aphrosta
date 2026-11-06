@@ -445,12 +445,12 @@ html.has-vv #app-shell { height: var(--app-h); }
 .upg-amt input { width: 100%; max-width: 120px; min-width: 0; font-size: calc(18px * var(--ts)); font-weight: 700; color: var(--fg); background: transparent; border: 0; outline: 0; text-align: left; font-family: inherit; }
 .upg-buy-cr { font-size: calc(12px * var(--ts)); color: var(--gray-mid); text-align: center; }
 .upg-buy-cr b { color: var(--fg); }
-.upg-note { margin: 0; font-size: calc(12px * var(--ts)); line-height: 1.45; color: var(--gray-mid); text-align: center; }
+.upg-note { margin: 0; font-size: calc(10px * var(--ts)); line-height: 1.35; color: var(--gray-mid); text-align: center; }
 @media (max-height: 700px) {
   .upg-custom { gap: 6px; }
   .upg-ben, .upg-buy { padding: 8px 10px; gap: 6px; }
   .upg-brow { padding: 5px 0; }
-  .upg-note { font-size: calc(11px * var(--ts)); line-height: 1.35; }
+  .upg-note { font-size: calc(9.5px * var(--ts)); line-height: 1.3; }
 }
 .upg-name { font-size: calc(14px * var(--ts)); font-weight: 700; color: var(--fg); }
 
