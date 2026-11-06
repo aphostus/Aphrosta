@@ -1772,9 +1772,9 @@ let AccountPage = function (user) {
 };
 
 const creditsView = () => {
-  const limit = 500;
+  const limit = 0;
   const used = Math.min(limit, Math.max(0, Number(settings.creditsUsed) || 0));
-  return { limit, used, left: limit - used, pct: Math.round((used / limit) * 100) };
+  return { limit, used, left: limit - used, pct: limit ? Math.round((used / limit) * 100) : 0 };
 };
 
 const UsageLegend = () => MODEL_PROVIDERS.map((p) =>
@@ -5433,10 +5433,11 @@ function openUpgradePopup() {
 
   const TABS = [['custom', 'Custom'], ['day', 'Daily', 'per day'], ['week', 'Week', 'per week'], ['month', 'Month', 'per month'], ['year', 'Yearly', 'per year']];
   let tab = 3;
+  let sel = null;
   const pi = () => Math.min(4, Math.max(1, tab)) - 1;
   const showPlans = () => tab >= 1 && tab <= 4;
 
-  const planCard = (p) => `<div class="upg-card">
+  const planCard = (p) => `<div class="upg-card" data-upg-card="${UPG_PLANS.indexOf(p)}">
     <div class="upg-card-head"><span class="upg-name">${p.name}</span><span class="upg-cr" data-cr>${p.cr[pi()]}</span></div>
     <div class="upg-money"><b data-pr>${p.pr[pi()]}</b><span data-per>${TABS[pi() + 1][2]}</span></div>
     <p class="upg-info">${p.info}</p>
@@ -5447,7 +5448,10 @@ function openUpgradePopup() {
   block.innerHTML = `<section class="upg-pop" role="dialog" aria-modal="true" aria-label="Subscriptions">
     <div class="upg-head">
       <h3 class="upg-title">Subscriptions</h3>
-      <button class="icon-btn upg-x" type="button" data-upg-x aria-label="Close">${ICONS.close}</button>
+      <div class="upg-head-r">
+        <button class="upg-buy-btn" type="button" data-upg-buy>Purchase</button>
+        <button class="icon-btn upg-x" type="button" data-upg-x aria-label="Close">${ICONS.close}</button>
+      </div>
     </div>
     <div class="upg-seg" role="tablist">${TABS.map((x, i) => `<button type="button" role="tab" data-upg-per="${i}" class="${i === tab ? 'on' : ''}">${x[1]}</button>`).join('')}</div>
     <div class="upg-scroll">
@@ -5511,7 +5515,15 @@ function openUpgradePopup() {
       c.querySelector('[data-pr]').textContent = p.pr[pi()];
       c.querySelector('[data-per]').textContent = TABS[pi() + 1][2];
     });
-    block.querySelectorAll('[data-upg-per]').forEach((b) => b.classList.toggle('on', +b.dataset.upgPer === tab));
+    block.querySelectorAll('[data-upg-per]').forEach((b) => {
+      b.classList.toggle('on', +b.dataset.upgPer === tab);
+      b.classList.toggle('has', !!sel && sel.t === +b.dataset.upgPer);
+    });
+    block.querySelectorAll('.upg-card').forEach((c, i) => {
+      const on = !!sel && sel.p === i && sel.t === tab;
+      c.classList.toggle('on', on);
+      c.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
   };
 
   const cInput = block.querySelector('[data-upg-amt]');
@@ -5520,16 +5532,28 @@ function openUpgradePopup() {
   const cNote = block.querySelector('[data-upg-note]');
   let amt = UPG_MIN;
   const clampAmt = (v) => Math.min(UPG_MAX, Math.max(UPG_MIN, v));
-  const readAmt = () => { const v = parseFloat(cInput.value); return Number.isFinite(v) ? clampAmt(v) : UPG_MIN; };
-  const showAmt = () => { cInput.value = String(Math.round(amt * 100) / 100); };
+  const fmtAmt = (s) => {
+    const m = String(s).replace(/[^0-9.]/g, '').match(/^(\d*)(?:\.(\d{0,2}))?/);
+    let ip = m[1].replace(/^0+(?=\d)/, '');
+    let dp = m[2];
+    if ((parseFloat(ip + '.' + (dp || '0')) || 0) > UPG_MAX) { ip = String(UPG_MAX); dp = undefined; }
+    return ip.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (dp !== undefined ? '.' + dp : '');
+  };
+  const readAmt = () => { const v = parseFloat(cInput.value.replace(/,/g, '')); return Number.isFinite(v) ? clampAmt(v) : UPG_MIN; };
+  const showAmt = () => { cInput.value = fmtAmt(String(Math.round(amt * 100) / 100)); };
   const paintCustom = () => {
     const r = upgCalc(amt);
     cCred.textContent = 'Credits: ' + r.c.toLocaleString('en-US') + 'C';
     cList.innerHTML = r.rows.slice(0, 5).map(upgRow).join('');
-    cNote.textContent = `Minimum $1, and $1 = 95C. Credits are shared, so each estimate shows your whole amount spent on that item alone. Images ${upgNum(r.c / 10)}, Videos ${upgDec(r.c / 10)} minute(s), Storage ${upgDec(r.c / 50)}Gb, Music ${upgDec(r.c / 25)} minute(s), Sounds ${upgDec(r.c / 15)}, Agents ${upgNum(amt / 0.5)} and much more AI output/input capabilities.`;
+    cNote.innerHTML = `Minimum $1, maximum $100,000, and $1 = 95C. Credits are shared, so each estimate shows your whole amount spent on that item alone. <b>Images</b> ${upgNum(r.c / 10)}, <b>Videos</b> ${upgDec(r.c / 10)} minute(s), <b>Storage</b> ${upgDec(r.c / 50)}Gb, <b>Music</b> ${upgDec(r.c / 25)} minute(s), <b>Sounds</b> ${upgDec(r.c / 15)}, <b>Agents</b> ${upgNum(amt / 0.5)} and much more AI output/input capabilities.`;
   };
   cInput.addEventListener('input', () => {
-    cInput.value = cInput.value.replace(/[^0-9.]/g, '').replace(/^(\d*\.?\d{0,2}).*$/, '$1');
+    const caret = cInput.selectionStart || 0;
+    const keep = cInput.value.slice(0, caret).replace(/[^0-9.]/g, '').length;
+    cInput.value = fmtAmt(cInput.value);
+    let seen = 0, np = 0;
+    while (np < cInput.value.length && seen < keep) { if (cInput.value[np] !== ',') seen++; np++; }
+    try { cInput.setSelectionRange(np, np); } catch (e) {}
     amt = readAmt();
     paintCustom();
   });
@@ -5555,7 +5579,14 @@ function openUpgradePopup() {
   block.addEventListener('click', (e) => {
     e.stopPropagation();
     const per = e.target.closest('[data-upg-per]');
-    if (per) { tab = +per.dataset.upgPer; paint(); return; }
+    if (per) { tab = +per.dataset.upgPer; if (tab === 0) sel = null; paint(); return; }
+    const crd = e.target.closest('[data-upg-card]');
+    if (crd && showPlans()) {
+      const k = +crd.dataset.upgCard;
+      sel = (sel && sel.p === k && sel.t === tab) ? null : { p: k, t: tab };
+      paint();
+      return;
+    }
     const stp = e.target.closest('[data-upg-step]');
     if (stp) {
       const v = readAmt();
