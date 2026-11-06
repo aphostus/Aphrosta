@@ -1478,7 +1478,7 @@ const Sidebar = (user) => `
       ${Avatar(user)}
       <div class="profile-meta">
         <span class="profile-name">${esc(user.displayName || 'User')}</span>
-        <span class="profile-plan${planInfo().paid ? ' is-paid' : ''}" data-plan-label>${esc(planInfo().label)} plan</span>
+        <span class="profile-plan${planInfo().paid ? ' is-paid' : ''}" data-plan-label>${esc(planInfo().label)} plan${acctDbg ? ' \u00b7 ' + esc(acctDbg) : ''}</span>
       </div>
       <button class="fd-ic arch-btn" type="button" data-action="archive" aria-label="Archive" title="Archive">${ICONS.archive}</button>
       <button class="pill-btn" type="button" data-action="upgrade">Upgrade</button>
@@ -5432,7 +5432,8 @@ async function acctSync() {
   const pend = list.filter((p) => p.status === 'pending').sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
   acctQueue = pend ? { id: pend.id, verifyAt: pend.verifyAt || 0 } : null;
   const ready = list.filter((p) => p.status === 'success' && !p.applied).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))[0];
-  acctDbg = list.length + ' receipt(s), ' + list.filter((p) => p.status === 'success').length + ' success';
+  acctDbg = list.length + ' receipt(s), ' + list.filter((p) => p.status === 'success').length + ' success' + (ready ? ', trying ...' + String(ready.id).slice(-6) + ' (' + ready.membership + ' ' + ready.period + ')' : ', none to apply');
+  acctPaint();
   if (ready) await acctApply(ready);
 }
 
@@ -5455,9 +5456,9 @@ async function acctApply(p) {
     await b.commit();
   } catch (e) {
     console.warn('[payments] apply failed', e && e.code || e);
-    acctDbg = 'apply error: ' + (e && e.code || 'unknown');
+    acctDbg = 'apply error: ' + (e && e.code || 'unknown') + ' on ...' + String(p.id).slice(-6);
     acctPaint();
-    toast('Could not activate your plan. Try again soon.', 'error', 3000);
+    toast('Activation failed: ' + (e && e.code || 'unknown') + ' | ' + String(e && e.message || '').slice(0, 90), 'error', 15000);
     return;
   }
   acct = { loaded: true, membership: data.membership, credits: data.credits, used: data.creditsUsed, expiresAt: data.expiresAt };
