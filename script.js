@@ -1475,7 +1475,7 @@ const Sidebar = (user) => `
       ${Avatar(user)}
       <div class="profile-meta">
         <span class="profile-name">${esc(user.displayName || 'User')}</span>
-        <span class="profile-plan">Free plan</span>
+        <span class="profile-plan${planInfo().paid ? ' is-paid' : ''}" data-plan-label>${esc(planInfo().label)} plan</span>
       </div>
       <button class="fd-ic arch-btn" type="button" data-action="archive" aria-label="Archive" title="Archive">${ICONS.archive}</button>
       <button class="pill-btn" type="button" data-action="upgrade">Upgrade</button>
@@ -1772,8 +1772,8 @@ let AccountPage = function (user) {
 };
 
 const creditsView = () => {
-  const limit = 0;
-  const used = Math.min(limit, Math.max(0, Number(settings.creditsUsed) || 0));
+  const limit = planInfo().credits;
+  const used = Math.min(limit, Math.max(0, Number(acct.used) || 0));
   return { limit, used, left: limit - used, pct: limit ? Math.round((used / limit) * 100) : 0 };
 };
 
@@ -5381,6 +5381,173 @@ function openUsagePopup() {
   document.body.appendChild(scrim);
 }
 
+/* ===== Membership, credits and limits (accounts/{uid} is edited by you in the Firebase console) ===== */
+const ACCT_TIERS = {
+  none:      { label: 'Free',      models: ['palsath'], media: false, agents: 0,  gb: 0 },
+  standard:  { label: 'Standard',  models: ['palsath', 'yasthra'], media: true, agents: 10, gb: 10 },
+  premium:   { label: 'Premium',   models: ['palsath', 'yasthra', 'xasthra'], media: true, agents: 25, gb: 25 },
+  exclusive: { label: 'Exclusive', models: ['palsath', 'yasthra', 'xasthra', 'zasthra'], media: true, agents: 50, gb: 50 }
+};
+const ACCT_FREE_BYTES = 500 * 1024 * 1024;
+let acct = { loaded: false, membership: 'None', credits: 0, used: 0, expiresAt: 0 };
+let acctTimer = 0, acctSig = '', leadTimer = 0, leadSig = '';
+const leadDismissed = new Set();
+
+const acctExpired = () => acct.expiresAt > 0 && Date.now() >= acct.expiresAt;
+
+function planInfo() {
+  const m = String(acct.membership || 'None').toLowerCase();
+  const credits = Math.max(0, Number(acct.credits) || 0);
+  let t = ACCT_TIERS[m];
+  if (m === 'custom' && credits > 0) {
+    t = { label: 'Custom', models: ['palsath', 'yasthra', 'xasthra', 'zasthra'], media: true, agents: Math.floor(credits / UPG_RATE / 0.5), gb: credits / 50 };
+  }
+  if (!t || m === 'none' || acctExpired()) t = ACCT_TIERS.none;
+  const paid = t !== ACCT_TIERS.none;
+  const used = Math.max(0, Number(acct.used) || 0);
+  return Object.assign({}, t, {
+    paid,
+    credits: paid ? credits : 0,
+    left: paid ? Math.max(0, credits - used) : 0,
+    bytes: paid ? Math.round(t.gb * 1024 * 1024 * 1024) : ACCT_FREE_BYTES
+  });
+}
+
+const planCanModel = (id) => planInfo().models.includes(String(id || '').toLowerCase());
+const planCanMedia = () => planInfo().media;
+
+async function acctLoad() {
+  if (!currentUser) return;
+  try {
+    const snap = await getDoc(doc(db, 'accounts', currentUser.uid));
+    if (snap.exists()) {
+      const d = snap.data();
+      const ex = d.expiresAt && d.expiresAt.toMillis ? d.expiresAt.toMillis() : Number(d.expiresAt) || 0;
+      acct = { loaded: true, membership: String(d.membership || 'None'), credits: Number(d.credits) || 0, used: Number(d.creditsUsed) || 0, expiresAt: ex };
+    } else {
+      await upgEnsureAccount();
+      acct.loaded = true;
+    }
+  } catch (e) { console.warn('[account] load failed', e && e.code || e); }
+  acctPaint();
+}
+
+function acctStart() {
+  clearInterval(acctTimer);
+  clearInterval(leadTimer);
+  acct = { loaded: false, membership: 'None', credits: 0, used: 0, expiresAt: 0 };
+  acctSig = '';
+  leadSig = '';
+  acctLoad();
+  acctTimer = setInterval(acctLoad, 60000);
+  leadTimer = setInterval(leadTick, 700);
+}
+
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') acctLoad(); });
+
+function acctPaint() {
+  const p = planInfo();
+  document.querySelectorAll('[data-plan-label]').forEach((el) => {
+    el.textContent = p.label + ' plan';
+    el.classList.toggle('is-paid', p.paid);
+  });
+  const cc = document.querySelector('.credits-card');
+  if (cc) {
+    const v = creditsView();
+    const ofs = cc.querySelectorAll('.usage-of');
+    const tot = cc.querySelector('.day-total');
+    if (tot) tot.textContent = v.left;
+    if (ofs[0]) ofs[0].textContent = 'of ' + v.limit;
+    if (ofs[1]) ofs[1].textContent = v.pct + '%';
+  }
+  const sig = p.label + '|' + p.left + '|' + p.bytes;
+  if (sig !== acctSig) {
+    acctSig = sig;
+    if (document.querySelector('[data-storage-cap]')) { try { refreshStorage(); } catch (_) {} }
+  }
+  leadTick();
+}
+
+function acctAgentOk() {
+  const p = planInfo();
+  if (!agData.groups.length && !agData.agents.length) agLoad();
+  if (agData.agents.length < p.agents) return true;
+  toast(p.paid ? 'Agent limit reached (' + p.agents + ') on the ' + p.label + ' plan.' : 'Agents need a paid plan.', 'info', 2800);
+  openUpgradePopup();
+  return false;
+}
+
+function acctModelOk(id) {
+  const p = planInfo();
+  if (!planCanModel(id)) {
+    toast('That model needs a higher plan.', 'info', 2800);
+    openUpgradePopup();
+    return false;
+  }
+  if (p.paid && p.left <= 0) {
+    toast('Out of credits. Top up to continue.', 'info', 2800);
+    openUpgradePopup();
+    return false;
+  }
+  return true;
+}
+
+async function acctSpend(n) {
+  n = Number(n) || 0;
+  if (n <= 0 || !currentUser) return true;
+  const p = planInfo();
+  if (!p.paid || p.left < n) { toast('Out of credits. Top up to continue.', 'info', 2800); openUpgradePopup(); return false; }
+  acct.used = (Number(acct.used) || 0) + n;
+  try {
+    await setDoc(doc(db, 'accounts', currentUser.uid), { creditsUsed: increment(n), updatedAt: Date.now() }, { merge: true });
+  } catch (e) {
+    acct.used -= n;
+    toast('Could not use credits. Try again.', 'error', 2500);
+    return false;
+  }
+  acctPaint();
+  return true;
+}
+
+function leadWanted() {
+  if (!acct.loaded || !currentUser || !currentSession) return null;
+  const empty = !(currentSession.messages && currentSession.messages.length);
+  if (!empty || leadDismissed.has(currentSession.id)) return null;
+  const p = planInfo();
+  if (!p.paid) return 'free';
+  if (p.credits > 0 && p.left <= p.credits * 0.2) return 'low';
+  return null;
+}
+
+function leadTick() {
+  const wrap = appEl && appEl.querySelector('.composer-wrap');
+  if (!wrap) return;
+  const kind = leadWanted();
+  const sig = kind ? kind + ':' + currentSession.id : '';
+  const cur = wrap.querySelector('.lead-pop');
+  if (sig === leadSig && !!cur === !!kind) return;
+  leadSig = sig;
+  if (!kind) {
+    if (cur) { cur.classList.add('leaving'); setTimeout(() => cur.remove(), 220); }
+    return;
+  }
+  if (cur) cur.remove();
+  const p = planInfo();
+  const el = document.createElement('div');
+  el.className = 'lead-pop';
+  el.dataset.kind = kind;
+  el.innerHTML = `<div class="lead-txt"><b>${kind === 'low' ? 'Credits running low' : 'Go further with a plan'}</b><span>${kind === 'low' ? esc(p.left.toLocaleString('en-US')) + 'C left on your ' + esc(p.label) + ' plan.' : 'Unlock agents, more models and media with Standard, Premium or Exclusive.'}</span></div><button class="lead-go" type="button" data-lead-go>${kind === 'low' ? 'Top up' : 'Upgrade'}</button><button class="lead-x" type="button" data-lead-x aria-label="Dismiss">${ICONS.close}</button>`;
+  wrap.prepend(el);
+}
+
+document.addEventListener('click', (e) => {
+  if (e.target.closest('[data-lead-go]')) { openUpgradePopup(); return; }
+  if (e.target.closest('[data-lead-x]')) {
+    if (currentSession) leadDismissed.add(currentSession.id);
+    leadTick();
+  }
+});
+
 const UPG_PLANS = [
   { name: 'Standard', cr: ['40C', '310C', '1,250C', '16,500C'], pr: ['$0.57', '$2.73', '$10.00', '$110.00'],
     info: 'Use the Yasthra model with images, video, sound and music as inputs and outputs, plus 10Gb of storage and up to 10 agents.' },
@@ -6621,11 +6788,11 @@ async function refreshStorage() {
   const known = b.sessions + b.settings + b.other;
   const cache = Math.max(0, est - known);
   const total = known + cache;
-  const MAX = 500 * 1024 * 1024;
+  const MAX = planInfo().bytes;
   storageSummary = fmtBytes(total);
   document.querySelectorAll('[data-storage-bar]').forEach((el) => { el.style.width = (total ? Math.max(total / MAX * 100, 1.5) : 0).toFixed(2) + '%'; });
   document.querySelectorAll('[data-storage-used]').forEach((el) => { el.textContent = `${fmtBytes(total)} used`; });
-  document.querySelectorAll('[data-storage-cap]').forEach((el) => { el.textContent = 'Max 500 MB'; });
+  document.querySelectorAll('[data-storage-cap]').forEach((el) => { el.textContent = 'Max ' + fmtBytes(MAX); });
   document.querySelectorAll('[data-storage-break]').forEach((el) => {
     el.innerHTML = [
       ['Sessions', `${b.chats} chats \u00b7 ${b.msgs} msgs \u00b7 ${fmtBytes(b.sessions)}`],
@@ -15379,7 +15546,7 @@ function initShell() {
       const npLabel = document.getElementById('nav-panel')?.getAttribute('aria-label');
       if (npLabel === 'Libraries') openLibSheet();
       else if (npLabel === 'Projects') projOpenSheet();
-      else if (npLabel === 'Agents') agOpenSheet(agMode);
+      else if (npLabel === 'Agents') { if (agMode !== 'agent' || acctAgentOk()) agOpenSheet(agMode); }
       else if (npLabel === 'Operations') opsOpenEditor();
       else soon();
     }
@@ -16614,6 +16781,7 @@ async function boot() {
       registerDevice(user);
 
       renderHome(user);
+      acctStart();
       loadDictionary(settings.langIn);
       applyProfile();
       refreshStorage();
