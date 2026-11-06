@@ -25,7 +25,10 @@ import {
   deleteDoc,
   collection,
   getDocs,
-  increment
+  increment,
+  query,
+  where,
+  writeBatch
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -5416,7 +5419,55 @@ function planInfo() {
 const planCanModel = (id) => planInfo().models.includes(String(id || '').toLowerCase());
 const planCanMedia = () => planInfo().media;
 
-async function acctLoad() {
+let acctQueue = null;
+let acctDbg = '';
+
+async function acctSync() {
+  if (!currentUser) return;
+  let list = [];
+  try {
+    const qs = await getDocs(query(collection(db, 'payments'), where('uid', '==', currentUser.uid)));
+    list = qs.docs.map((d) => Object.assign({ id: d.id }, d.data()));
+  } catch (e) { console.warn('[payments] sync failed', e && e.code || e); acctDbg = 'sync error: ' + (e && e.code || 'unknown'); acctPaint(); return; }
+  const pend = list.filter((p) => p.status === 'pending').sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
+  acctQueue = pend ? { id: pend.id, verifyAt: pend.verifyAt || 0 } : null;
+  const ready = list.filter((p) => p.status === 'success' && !p.applied).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))[0];
+  acctDbg = list.length + ' receipt(s), ' + list.filter((p) => p.status === 'success').length + ' success';
+  if (ready) await acctApply(ready);
+}
+
+async function acctApply(p) {
+  const isCustom = p.membership === 'Custom';
+  const carry = isCustom && String(acct.membership).toLowerCase() === 'custom';
+  const dur = { daily: 864e5, weekly: 6048e5, monthly: 2592e6, yearly: 31536e6 }[p.period] || 0;
+  const data = {
+    membership: p.membership,
+    credits: (carry ? acct.credits : 0) + (Number(p.credits) || 0),
+    creditsUsed: carry ? acct.used : 0,
+    expiresAt: isCustom ? 0 : Date.now() + dur,
+    payId: p.id,
+    updatedAt: Date.now()
+  };
+  try {
+    const b = writeBatch(db);
+    b.set(doc(db, 'accounts', currentUser.uid), data, { merge: true });
+    b.update(doc(db, 'payments', p.id), { applied: true });
+    await b.commit();
+  } catch (e) {
+    console.warn('[payments] apply failed', e && e.code || e);
+    acctDbg = 'apply error: ' + (e && e.code || 'unknown');
+    acctPaint();
+    toast('Could not activate your plan. Try again soon.', 'error', 3000);
+    return;
+  }
+  acct = { loaded: true, membership: data.membership, credits: data.credits, used: data.creditsUsed, expiresAt: data.expiresAt };
+  acctQueue = null;
+  acctDbg = '';
+  document.querySelector('.upg-block [data-upg-x]')?.click();
+  toast('Plan activated.', 'success', 2500);
+}
+
+async function acctLoad(full) {
   if (!currentUser) return;
   try {
     const snap = await getDoc(doc(db, 'accounts', currentUser.uid));
@@ -5429,6 +5480,7 @@ async function acctLoad() {
       acct.loaded = true;
     }
   } catch (e) { console.warn('[account] load failed', e && e.code || e); }
+  if (full !== false || acctQueue) await acctSync();
   acctPaint();
 }
 
@@ -5438,8 +5490,9 @@ function acctStart() {
   acct = { loaded: false, membership: 'None', credits: 0, used: 0, expiresAt: 0 };
   acctSig = '';
   leadSig = '';
+  acctQueue = null;
   acctLoad();
-  acctTimer = setInterval(acctLoad, 60000);
+  acctTimer = setInterval(() => acctLoad(false), 60000);
   leadTimer = setInterval(leadTick, 700);
 }
 
@@ -5448,7 +5501,7 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 function acctPaint() {
   const p = planInfo();
   document.querySelectorAll('[data-plan-label]').forEach((el) => {
-    el.textContent = p.label + ' plan';
+    el.textContent = p.label + ' plan' + (acctDbg ? ' \u00b7 ' + acctDbg : '');
     el.classList.toggle('is-paid', p.paid);
   });
   const cc = document.querySelector('.credits-card');
@@ -5830,6 +5883,7 @@ function openUpgradePopup() {
       toast(err && err.message === 'signin' ? 'Sign in to pay.' : 'Could not send your payment' + (err && err.code ? ' (' + err.code + ')' : '') + '. Try again.', 'error', 3000);
       return;
     }
+    acctQueue = { verifyAt: back };
     showWait(back);
   };
 
@@ -5895,6 +5949,7 @@ function openUpgradePopup() {
   });
   pop.addEventListener('focusin', () => { setTimeout(place, 120); setTimeout(place, 400); });
   pop.addEventListener('focusout', () => setTimeout(place, 150));
+  if (acctQueue) showWait(acctQueue.verifyAt || Date.now());
   document.body.appendChild(block);
   place();
   pop.querySelector('[data-upg-x]').focus({ preventScroll: true });
