@@ -5382,11 +5382,11 @@ function openUsagePopup() {
 }
 
 const UPG_PLANS = [
-  { name: 'Standard', cr: ['40C', '310C', '1250C'], pr: ['$0.57', '$2.73', '$10.00'],
+  { name: 'Standard', cr: ['40C', '310C', '1250C', '16500C'], pr: ['$0.57', '$2.73', '$10.00', '$110.00'],
     info: 'Use the Yasthra model with images, video, sound and music as inputs and outputs, plus 10Gb of storage and up to 10 agents.' },
-  { name: 'Premium', cr: ['130C', '935C', '3750C'], pr: ['$1.29', '$7.73', '$30.00'],
+  { name: 'Premium', cr: ['130C', '935C', '3750C', '49500C'], pr: ['$1.29', '$7.73', '$30.00', '$330.00'],
     info: 'Switch between the Xasthra and Yasthra models with full image, video, sound and music support, 25Gb of storage and up to 25 agents.' },
-  { name: 'Exclusive', cr: ['230C', '1625C', '6500C'], pr: ['$2.02', '$12.75', '$50.00'],
+  { name: 'Exclusive', cr: ['230C', '1625C', '6500C', '85800C'], pr: ['$2.02', '$12.75', '$50.00', '$550.00'],
     info: 'Get the Zasthra, Yasthra and Xasthra models with full image, video, sound and music support, 50Gb of storage and up to 50 agents.' }
 ];
 
@@ -5397,10 +5397,10 @@ function openUpgradePopup() {
   closeEffortMenu();
   if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
 
-  const TABS = [['custom', 'Custom'], ['day', 'Daily', 'per day'], ['week', 'Week', 'per week'], ['month', 'Month', 'per month'], ['org', 'Organization']];
+  const TABS = [['custom', 'Custom'], ['day', 'Daily', 'per day'], ['week', 'Week', 'per week'], ['month', 'Month', 'per month'], ['year', 'Yearly', 'per year']];
   let tab = 3;
-  const pi = () => Math.min(3, Math.max(1, tab)) - 1;
-  const showPlans = () => tab >= 1 && tab <= 3;
+  const pi = () => Math.min(4, Math.max(1, tab)) - 1;
+  const showPlans = () => tab >= 1 && tab <= 4;
 
   const planCard = (p) => `<div class="upg-card">
     <div class="upg-card-head"><span class="upg-name">${p.name}</span><span class="upg-cr" data-cr>${p.cr[pi()]}</span></div>
