@@ -5621,13 +5621,13 @@ function openUpgradePopup() {
         <div class="upg-pay-top">
           <div class="upg-pay-logos">
             <img class="upg-payer" src="Materials/Public/images/Payer.png" alt="">
-            <div class="upg-gc">${UPG_GCASH}</div>
+            
           </div>
-          <div class="upg-pay-amt"><b>${esc(pay.money)}</b><em>Php ${(pay.usd * UPG_PHP).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</em><span>${esc(pay.show)}</span></div>
+          <div class="upg-pay-amt"><div class="upg-gc">${UPG_GCASH}</div><b>${esc(pay.money)}</b><em>Php ${(pay.usd * UPG_PHP).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</em><span>${esc(pay.show)}</span></div>
         </div>
         <p class="upg-pay-note">Send exactly <b>${esc(pay.money)}</b> to GCash account <b>${esc(UPG_PAY_TO.name)}</b>${UPG_PAY_TO.number ? ' (' + esc(UPG_PAY_TO.number) + ')' : ''}, then enter your payment details below so we can verify it. Oversending is not refundable.</p>
-        <input class="upg-in" data-pay-num type="tel" inputmode="numeric" autocomplete="off" placeholder="+63 000 000 0000" aria-label="Your GCash number">
-        <input class="upg-in" data-pay-name type="text" autocomplete="off" placeholder="Account name" aria-label="Account name">
+        <div class="upg-pay-row"><input class="upg-in" data-pay-num type="tel" inputmode="numeric" autocomplete="off" placeholder="+63 000 000 0000" aria-label="Your GCash number">
+        <input class="upg-in" data-pay-name type="text" autocomplete="off" placeholder="Account name" aria-label="Account name"></div>
         <label class="upg-in-t"><span>Time sent</span><input data-pay-time type="datetime-local" max="${nowDT()}" aria-label="Time sent"></label>
       </div>
       <div class="upg-pay-foot"><button class="upg-confirm" type="button" data-upg-confirm>Confirm</button></div>
