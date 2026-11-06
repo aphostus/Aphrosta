@@ -462,12 +462,12 @@ html.has-vv #app-shell { height: var(--app-h); }
 .upg-pay-top { display: flex; align-items: center; gap: 14px; padding: 4px 2px; }
 .upg-pay-logos { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; flex-shrink: 0; }
 .upg-payer { width: 96px; height: 96px; object-fit: contain; border-radius: 14px; }
-.upg-gc { width: 96px; height: 28px; overflow: hidden; }
-.upg-gc svg { display: block; }
-.upg-pay-amt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.upg-pay-amt b { font-size: calc(30px * var(--ts)); font-weight: 700; color: var(--fg); line-height: 1.1; }
+.upg-gc { width: 70px; height: 20px; overflow: hidden; margin-bottom: 2px; }
+.upg-gc svg { display: block; width: 100%; height: 100%; }
+.upg-pay-amt { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.upg-pay-amt b { font-size: calc(26px * var(--ts)); font-weight: 700; color: var(--fg); line-height: 1.1; }
 .upg-pay-amt span { font-size: calc(12px * var(--ts)); color: var(--gray-mid); }
-.upg-pay-amt em { font-style: normal; font-size: calc(16px * var(--ts)); font-weight: 600; color: var(--fg); }
+.upg-pay-amt em { font-style: normal; font-size: calc(13px * var(--ts)); font-weight: 500; color: var(--gray-light); }
 .upg-pay-note { margin: auto 0 0; font-size: calc(12px * var(--ts)); line-height: 1.5; color: var(--gray-light); }
 .upg-pay-note b { color: var(--fg); font-weight: 700; }
 .upg-pay-row { display: flex; gap: 8px; flex-shrink: 0; }
