@@ -5482,7 +5482,6 @@ function openUpgradePopup() {
     <div class="upg-head">
       <div class="upg-head-l"><h3 class="upg-title">Subscriptions</h3><span class="upg-sub">Get more of Aphrosta</span></div>
       <div class="upg-head-r">
-        <button class="upg-stripe" type="button" data-upg-stripe aria-label="Pay with Stripe">${UPG_STRIPE}<span>Stripe</span></button>
         <button class="upg-buy-btn" type="button" data-upg-buy>Purchase</button>
         <button class="icon-btn upg-x" type="button" data-upg-x aria-label="Close">${ICONS.close}</button>
       </div>
@@ -5603,7 +5602,7 @@ function openUpgradePopup() {
   const nowDT = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') + 'T' + nowHM(); };
   const headHtml = (title, sub, back) => `<div class="upg-head">
       <div class="upg-head-l"><h3 class="upg-title">${title}</h3><span class="upg-sub">${sub}</span></div>
-      <div class="upg-head-r">${back ? `<button class="icon-btn upg-x" type="button" data-upg-back data-upg-x aria-label="Back">${ICONS.back}</button>` : `<button class="icon-btn upg-x" type="button" data-upg-x aria-label="Close">${ICONS.close}</button>`}</div>
+      <div class="upg-head-r">${back ? `<button class="upg-stripe" type="button" data-upg-stripe aria-label="Pay with Stripe">${UPG_STRIPE}<span>Stripe</span></button><button class="icon-btn upg-x" type="button" data-upg-back data-upg-x aria-label="Back">${ICONS.back}</button>` : `<button class="icon-btn upg-x" type="button" data-upg-x aria-label="Close">${ICONS.close}</button>`}</div>
     </div>`;
   let pay = null;
   const showPay = () => {
