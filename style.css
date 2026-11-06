@@ -402,8 +402,8 @@ html.has-vv #app-shell { height: var(--app-h); }
 .upg-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 2px 0 6px; }
 .upg-title { margin: 0; font-size: calc(16px * var(--ts)); font-weight: 700; color: var(--fg); }
 .upg-x { background: var(--glass-bg-hover); border-radius: var(--radius-pill); color: var(--fg); }
-.upg-seg { display: flex; gap: 4px; padding: 3px; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--radius-pill); flex-shrink: 0; }
-.upg-seg button { flex: 1; padding: 7px 0; font-size: calc(12px * var(--ts)); font-weight: 600; color: var(--gray-mid); border-radius: var(--radius-pill); transition: background 0.2s var(--ease-smooth), color 0.2s var(--ease-smooth); }
+.upg-seg { display: flex; gap: 2px; padding: 3px; overflow: hidden; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--radius-pill); flex-shrink: 0; }
+.upg-seg button { flex: 1 1 auto; min-width: 0; padding: 7px 3px; font-size: calc(10.5px * var(--ts)); font-weight: 600; white-space: nowrap; text-align: center; color: var(--gray-mid); border-radius: var(--radius-pill); transition: background 0.2s var(--ease-smooth), color 0.2s var(--ease-smooth); }
 .upg-seg button.on { background: var(--fg); color: var(--bg); }
 .upg-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; display: flex; flex-direction: column; gap: 10px; padding: 0 0 14px; scrollbar-width: none; }
 .upg-scroll::-webkit-scrollbar { display: none; }

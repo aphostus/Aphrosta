@@ -5382,18 +5382,14 @@ function openUsagePopup() {
 }
 
 const UPG_PLANS = [
-  { name: 'Free', per: true, cr: ['10C', '0C', '0C'], pr: ['$0', '$0', '$0'],
+  { name: 'Free', cr: ['10C', '0C', '0C'], pr: ['$0', '$0', '$0'],
     info: 'Chat with text only using the Palsath model, with 500Mb of storage and no custom agents.' },
-  { name: 'Standard', per: true, cr: ['40C', '310C', '1250C'], pr: ['$0.57', '$2.73', '$10.00'],
+  { name: 'Standard', cr: ['40C', '310C', '1250C'], pr: ['$0.57', '$2.73', '$10.00'],
     info: 'Use the Yasthra model with images, video, sound and music as inputs and outputs, plus 10Gb of storage and up to 10 agents.' },
-  { name: 'Premium', per: true, cr: ['130C', '935C', '3750C'], pr: ['$1.29', '$7.73', '$30.00'],
+  { name: 'Premium', cr: ['130C', '935C', '3750C'], pr: ['$1.29', '$7.73', '$30.00'],
     info: 'Switch between the Xasthra and Yasthra models with full image, video, sound and music support, 25Gb of storage and up to 25 agents.' },
-  { name: 'Exclusive', per: true, cr: ['230C', '1625C', '6500C'], pr: ['$2.02', '$12.75', '$50.00'],
-    info: 'Get the Zasthra, Yasthra and Xasthra models with full image, video, sound and music support, 50Gb of storage and up to 50 agents.' },
-  { name: 'Custom', per: false, cr: ['Unknown', 'Unknown', 'Unknown'], pr: ['$1 = 100C', '$1 = 100C', '$1 = 100C'],
-    info: 'Pay as you go at $1 per 100C with image, video, sound and music support and agents at $0.50 each; models and storage are not decided yet.' },
-  { name: 'Organization', per: false, cr: ['Unknown', 'Unknown', 'Unknown'], pr: ['Contract', 'Contract', 'Contract'],
-    info: 'A contract plan with the complete model set plus Galsath, complete Labstack inputs and outputs, uncapped storage and agents through Labstack.' }
+  { name: 'Exclusive', cr: ['230C', '1625C', '6500C'], pr: ['$2.02', '$12.75', '$50.00'],
+    info: 'Get the Zasthra, Yasthra and Xasthra models with full image, video, sound and music support, 50Gb of storage and up to 50 agents.' }
 ];
 
 function openUpgradePopup() {
@@ -5403,23 +5399,25 @@ function openUpgradePopup() {
   closeEffortMenu();
   if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
 
-  const PERIODS = [['day', 'Daily', 'per day'], ['week', 'Week', 'per week'], ['month', 'Month', 'per month']];
-  let period = 2;
+  const TABS = [['custom', 'Custom'], ['day', 'Daily', 'per day'], ['week', 'Week', 'per week'], ['month', 'Month', 'per month'], ['org', 'Organization']];
+  let tab = 3;
+  const pi = () => Math.min(3, Math.max(1, tab)) - 1;
+  const showPlans = () => tab >= 1 && tab <= 3;
 
   const planCard = (p) => `<div class="upg-card">
-    <div class="upg-card-head"><span class="upg-name">${p.name}</span><span class="upg-cr" data-cr>${p.cr[period]}</span></div>
-    <div class="upg-money"><b data-pr>${p.pr[period]}</b><span data-per>${p.per ? PERIODS[period][2] : ''}</span></div>
+    <div class="upg-card-head"><span class="upg-name">${p.name}</span><span class="upg-cr" data-cr>${p.cr[pi()]}</span></div>
+    <div class="upg-money"><b data-pr>${p.pr[pi()]}</b><span data-per>${TABS[pi() + 1][2]}</span></div>
     <p class="upg-info">${p.info}</p>
   </div>`;
 
   const block = document.createElement('div');
   block.className = 'upg-block';
-  block.innerHTML = `<section class="upg-pop" role="dialog" aria-modal="true" aria-label="Upgrade">
+  block.innerHTML = `<section class="upg-pop" role="dialog" aria-modal="true" aria-label="Subscriptions">
     <div class="upg-head">
-      <h3 class="upg-title">Upgrade</h3>
+      <h3 class="upg-title">Subscriptions</h3>
       <button class="icon-btn upg-x" type="button" data-upg-x aria-label="Close">${ICONS.close}</button>
     </div>
-    <div class="upg-seg" role="tablist">${PERIODS.map((x, i) => `<button type="button" role="tab" data-upg-per="${i}" class="${i === period ? 'on' : ''}">${x[1]}</button>`).join('')}</div>
+    <div class="upg-seg" role="tablist">${TABS.map((x, i) => `<button type="button" role="tab" data-upg-per="${i}" class="${i === tab ? 'on' : ''}">${x[1]}</button>`).join('')}</div>
     <div class="upg-scroll">
       <div class="upg-plans">${UPG_PLANS.map(planCard).join('')}</div>
     </div>
@@ -5439,13 +5437,15 @@ function openUpgradePopup() {
   };
 
   const paint = () => {
+    const plansEl = block.querySelector('.upg-plans');
+    if (plansEl) plansEl.style.display = showPlans() ? '' : 'none';
     block.querySelectorAll('.upg-card').forEach((c, i) => {
       const p = UPG_PLANS[i];
-      c.querySelector('[data-cr]').textContent = p.cr[period];
-      c.querySelector('[data-pr]').textContent = p.pr[period];
-      c.querySelector('[data-per]').textContent = p.per ? PERIODS[period][2] : '';
+      c.querySelector('[data-cr]').textContent = p.cr[pi()];
+      c.querySelector('[data-pr]').textContent = p.pr[pi()];
+      c.querySelector('[data-per]').textContent = TABS[pi() + 1][2];
     });
-    block.querySelectorAll('[data-upg-per]').forEach((b) => b.classList.toggle('on', +b.dataset.upgPer === period));
+    block.querySelectorAll('[data-upg-per]').forEach((b) => b.classList.toggle('on', +b.dataset.upgPer === tab));
   };
 
   const onKey = (e) => {
@@ -5464,7 +5464,7 @@ function openUpgradePopup() {
   block.addEventListener('click', (e) => {
     e.stopPropagation();
     const per = e.target.closest('[data-upg-per]');
-    if (per) { period = +per.dataset.upgPer; paint(); return; }
+    if (per) { tab = +per.dataset.upgPer; paint(); return; }
     if (e.target.closest('[data-upg-x]')) done();
   });
   document.addEventListener('keydown', onKey, true);
