@@ -5381,6 +5381,116 @@ function openUsagePopup() {
   document.body.appendChild(scrim);
 }
 
+const UPG_PLANS = [
+  { name: 'Free', price: '$0', cr: ['10C', '0C', '0C'], models: 'Palsath', inp: 'Texts Only', out: 'Texts Only', store: '500Mb', agents: 'None' },
+  { name: 'Standard', price: '$10', cr: ['40C', '310C', '1250C'], models: 'Yasthra', inp: 'Binary + Image, Video, Sound & Music', out: 'Binary + Image, Video, Sound & Music', store: '10Gb', agents: '10' },
+  { name: 'Premium', price: '$30', cr: ['130C', '935C', '3750C'], models: 'Xasthra, Yasthra', inp: 'Binary + Image, Video, Sound & Music', out: 'Binary + Image, Video, Sound & Music', store: '25Gb', agents: '25' },
+  { name: 'Exclusive', price: '$50', cr: ['230C', '1625C', '6500C'], models: 'Zasthra, Yasthra, Xasthra', inp: 'Binary + Image, Video, Sound & Music', out: 'Binary + Image, Video, Sound & Music', store: '50Gb', agents: '50' },
+  { name: 'Custom', price: '$1 = 100C', cr: ['Unknown', 'Unknown', 'Unknown'], models: 'Unknown', inp: 'Binary + Image, Video, Sound & Music', out: 'Binary + Image, Video, Sound & Music', store: 'Unknown', agents: '$0.50/each' },
+  { name: 'Organization', price: 'Contract', cr: ['Unknown', 'Unknown', 'Unknown'], models: 'Complete + Galsath', inp: 'Complete + Labstack', out: 'Complete + Labstack', store: 'Uncapped', agents: 'Complete + Labstack' }
+];
+const UPG_USAGE = [
+  { name: 'Text to Speech', by: 'Elevenlabs', cost: '$0.04/1kChr', before: '4C/1kChr', after: '15C/1kChr' },
+  { name: 'Speech to Text', by: 'Elevenlabs', cost: '$0.22/hr', before: '22C/hr', after: '80C/1hr' },
+  { name: 'Image Gen', by: 'Grok XSI', cost: '$0.05/each', before: '5C/each', after: '10C/each' },
+  { name: 'Video Gen', by: 'Grok XSI', cost: '$0.05/min', before: '5C/min', after: '10C/min' },
+  { name: 'Music Gen', by: 'Elevenlabs', cost: '$0.15/each', before: '15C/each', after: '25C/each' },
+  { name: 'Sound Gen', by: 'Elevenlabs', cost: '$0.03/min', before: '3C/min', after: '15C/min' },
+  { name: 'Storage & Training', by: 'Aphrosta', cost: '$0.25/Gb', before: '25C/Gb', after: '50C/Gb' }
+];
+
+function openUpgradePopup() {
+  if (document.querySelector('.upg-block')) return;
+  document.getElementById('sidebar')?.classList.remove('open');
+  closeModelMenu();
+  closeEffortMenu();
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+
+  const PERIODS = [['day', 'Daily', 'per day'], ['week', 'Week', 'per week'], ['month', 'Month', 'per month']];
+  let period = 2;
+
+  const planCard = (p) => `<div class="upg-card">
+    <div class="upg-card-head"><span class="upg-name">${p.name}</span><span class="upg-price">${p.price}</span></div>
+    <div class="upg-credits"><b data-cr>${p.cr[period]}</b><span data-per>${PERIODS[period][2]}</span></div>
+    <div class="upg-rows">
+      <div><span>Models</span><b>${p.models}</b></div>
+      <div><span>Inputs</span><b>${p.inp}</b></div>
+      <div><span>Outputs</span><b>${p.out}</b></div>
+      <div><span>Storage</span><b>${p.store}</b></div>
+      <div><span>Agents</span><b>${p.agents}</b></div>
+    </div>
+  </div>`;
+  const usageRow = (u) => `<div class="upg-use">
+    <div class="upg-use-head"><span class="upg-name">${u.name}</span><span class="upg-by">${u.by}</span></div>
+    <div class="upg-use-grid">
+      <div><span>Cost</span><b>${u.cost}</b></div>
+      <div><span>Before</span><b>${u.before}</b></div>
+      <div><span>After</span><b>${u.after}</b></div>
+    </div>
+  </div>`;
+
+  const block = document.createElement('div');
+  block.className = 'upg-block';
+  block.innerHTML = `<section class="upg-pop" role="dialog" aria-modal="true" aria-label="Upgrade">
+    <div class="upg-head">
+      <h3 class="upg-title">Upgrade</h3>
+      <button class="icon-btn upg-x" type="button" data-upg-x aria-label="Close">${ICONS.close}</button>
+    </div>
+    <div class="upg-seg" role="tablist">${PERIODS.map((x, i) => `<button type="button" role="tab" data-upg-per="${i}" class="${i === period ? 'on' : ''}">${x[1]}</button>`).join('')}</div>
+    <div class="upg-scroll">
+      <div class="upg-plans">${UPG_PLANS.map(planCard).join('')}</div>
+      <h4 class="upg-sec">Usage pricing</h4>
+      <div class="upg-uses">${UPG_USAGE.map(usageRow).join('')}</div>
+    </div>
+  </section>`;
+
+  const pop = block.querySelector('.upg-pop');
+  const vis = (el) => el && el.getClientRects().length > 0;
+  const place = () => {
+    const tb = document.querySelector('.topbar');
+    const sb = document.querySelector('.sbar');
+    const cm = document.querySelector('.composer-wrap .composer') || document.querySelector('.composer-wrap');
+    let top = vis(tb) ? tb.getBoundingClientRect().bottom : 60;
+    if (vis(sb)) top = Math.max(top, sb.getBoundingClientRect().bottom);
+    const bottom = vis(cm) ? window.innerHeight - cm.getBoundingClientRect().top : 140;
+    pop.style.top = Math.round(top + 12) + 'px';
+    pop.style.bottom = Math.round(bottom + 12) + 'px';
+  };
+
+  const paint = () => {
+    block.querySelectorAll('.upg-card').forEach((c, i) => {
+      c.querySelector('[data-cr]').textContent = UPG_PLANS[i].cr[period];
+      c.querySelector('[data-per]').textContent = UPG_PLANS[i].cr[period] === 'Unknown' ? '' : PERIODS[period][2];
+    });
+    block.querySelectorAll('[data-upg-per]').forEach((b) => b.classList.toggle('on', +b.dataset.upgPer === period));
+  };
+
+  const onKey = (e) => {
+    if (pop.contains(e.target) && e.key !== 'Escape' && e.key !== 'Tab') return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.key === 'Tab') pop.querySelector('[data-upg-x]').focus();
+  };
+  const done = () => {
+    document.removeEventListener('keydown', onKey, true);
+    window.removeEventListener('resize', place);
+    block.classList.add('closing');
+    setTimeout(() => block.remove(), 180);
+  };
+
+  block.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const per = e.target.closest('[data-upg-per]');
+    if (per) { period = +per.dataset.upgPer; paint(); return; }
+    if (e.target.closest('[data-upg-x]')) done();
+  });
+  document.addEventListener('keydown', onKey, true);
+  window.addEventListener('resize', place);
+  document.body.appendChild(block);
+  place();
+  pop.querySelector('[data-upg-x]').focus({ preventScroll: true });
+}
+
 function paintUsageCard() {
   const card = document.querySelector('.usage-card');
   if (!card) return;
@@ -15020,7 +15130,7 @@ function initShell() {
     else if (action === 'attach') openAttach();
     else if (action === 'inbox') openInbox();
     else if (action === 'archive') openArchive();
-    else if (action === 'upgrade') toast('Paid plans are coming soon.', 'info', 1800);
+    else if (action === 'upgrade') openUpgradePopup();
     else if (NAV_PANELS[action]) openNavPanel(action);
     else if (action === 'nav-close') closeNavPanel();
     else if (action === 'nav-plus') {
