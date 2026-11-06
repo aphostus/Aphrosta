@@ -5524,6 +5524,8 @@ function openUpgradePopup() {
       c.classList.toggle('on', on);
       c.setAttribute('aria-pressed', on ? 'true' : 'false');
     });
+    const buyBtn = block.querySelector('[data-upg-buy]');
+    if (buyBtn) buyBtn.classList.toggle('show', tab === 0 || !!sel);
   };
 
   const cInput = block.querySelector('[data-upg-amt]');
