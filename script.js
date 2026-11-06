@@ -5390,7 +5390,8 @@ const UPG_PLANS = [
     info: 'Get the Zasthra, Yasthra and Xasthra models with full image, video, sound and music support, 50Gb of storage and up to 50 agents.' }
 ];
 
-const UPG_MIN = 1, UPG_MAX = 100000, UPG_RATE = 95;
+const UPG_MIN = 1, UPG_MAX = 800, UPG_RATE = 95;
+const UPG_STRIPE = `<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect width="24" height="24" rx="6" fill="#635bff"/><path d="M11.2 9.1c0-.6.5-.8 1.3-.8 1.2 0 2.6.4 3.8 1V6c-1.3-.5-2.5-.7-3.8-.7-3.1 0-5.1 1.600-5.1 4.300 0 4.200 5.800 3.500 5.800 5.300 0 .7-.6.9-1.500.9-1.300 0-3-.5-4.300-1.300v3.400c1.500.6 2.900.9 4.300.9 3.200 0 5.300-1.600 5.300-4.300 0-4.500-5.800-3.700-5.800-5.400z" fill="#fff"/></svg>`;
 const UPG_CHAT = [['Palsath', 0.05, 0.25], ['Galsath', 0.50, 0.70], ['Yasthra', 0.10, 0.30], ['Xasthra', 0.15, 0.35], ['Zasthra', 0.20, 0.40]];
 const UPG_ICO = {
   star: svg('<path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/>', 18),
@@ -5481,6 +5482,7 @@ function openUpgradePopup() {
     <div class="upg-head">
       <div class="upg-head-l"><h3 class="upg-title">Subscriptions</h3><span class="upg-sub">Get more of Aphrosta</span></div>
       <div class="upg-head-r">
+        <button class="upg-stripe" type="button" data-upg-stripe aria-label="Pay with Stripe">${UPG_STRIPE}<span>Stripe</span></button>
         <button class="upg-buy-btn" type="button" data-upg-buy>Purchase</button>
         <button class="icon-btn upg-x" type="button" data-upg-x aria-label="Close">${ICONS.close}</button>
       </div>
@@ -5580,7 +5582,7 @@ function openUpgradePopup() {
     const r = upgCalc(amt);
     cCred.textContent = 'Credits: ' + r.c.toLocaleString('en-US') + 'C';
     cList.innerHTML = r.rows.slice(0, 5).map(upgRow).join('');
-    cNote.innerHTML = `Minimum $1, maximum $100,000, and $1 = 95C. Credits are shared, so each estimate shows your whole amount spent on that item alone. <b>Images</b> ${upgNum(r.c / 10)}, <b>Videos</b> ${upgDec(r.c / 10)} minute(s), <b>Storage</b> ${upgDec(r.c / 50)}Gb, <b>Music</b> ${upgDec(r.c / 25)} minute(s), <b>Sounds</b> ${upgDec(r.c / 15)}, <b>Agents</b> ${upgNum(amt / 0.5)} and much more AI output/input capabilities.`;
+    cNote.innerHTML = `Minimum $1, maximum $800, and $1 = 95C. Credits are shared, so each estimate shows your whole amount spent on that item alone. <b>Images</b> ${upgNum(r.c / 10)}, <b>Videos</b> ${upgDec(r.c / 10)} minute(s), <b>Storage</b> ${upgDec(r.c / 50)}Gb, <b>Music</b> ${upgDec(r.c / 25)} minute(s), <b>Sounds</b> ${upgDec(r.c / 15)}, <b>Agents</b> ${upgNum(amt / 0.5)} and much more AI output/input capabilities.`;
   };
   cInput.addEventListener('input', () => {
     const caret = cInput.selectionStart || 0;
@@ -5655,11 +5657,11 @@ function openUpgradePopup() {
       await upgSendPayment({
         createdAt: created, verifyAt: back, price: pay.money, amountUsd: pay.usd, credits: pay.credits,
         membership: pay.membership, period: pay.period, label: pay.label,
-        senderNumber: num, senderName: nm, sentTime: tm.slice(11), sentDate: tm.slice(0, 10)
+        senderNumber: num, senderName: nm, sentTime: tm.slice(11)
       });
     } catch (err) {
       btn.disabled = false;
-      toast(err && err.message === 'signin' ? 'Sign in to pay.' : 'Could not send your payment. Try again.', 'error', 3000);
+      toast(err && err.message === 'signin' ? 'Sign in to pay.' : 'Could not send your payment' + (err && err.code ? ' (' + err.code + ')' : '') + '. Try again.', 'error', 3000);
       return;
     }
     showWait(back);
@@ -5698,6 +5700,7 @@ function openUpgradePopup() {
       paintCustom();
       return;
     }
+    if (e.target.closest('[data-upg-stripe]')) { toast('Stripe is not available yet.', 'error', 3000); return; }
     if (e.target.closest('[data-upg-buy]')) { showPay(); return; }
     const cf = e.target.closest('[data-upg-confirm]');
     if (cf) { doConfirm(cf); return; }

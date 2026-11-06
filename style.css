@@ -493,6 +493,8 @@ html.has-vv #app-shell { height: var(--app-h); }
 @keyframes hgBot { 0% { transform: scaleY(0); } 85%, 100% { transform: scaleY(1); } }
 @keyframes hgStr { 0%, 2% { opacity: 0; } 5%, 80% { opacity: 1; } 85%, 100% { opacity: 0; } }
 .upg-buy-btn { min-width: 104px; height: 36px; padding: 0 20px; font-size: calc(13px * var(--ts)); font-weight: 700; color: var(--fg); background: var(--glass-bg-hover); border: 1px solid var(--fg); border-radius: var(--radius-pill); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); opacity: 0; transform: scale(0.8); visibility: hidden; pointer-events: none; transition: opacity 0.25s var(--ease-smooth), transform 0.35s var(--ease-spring), visibility 0s linear 0.35s; }
+.upg-stripe { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px 0 8px; font-size: calc(13px * var(--ts)); font-weight: 700; color: var(--fg); background: var(--glass-bg-hover); border-radius: var(--radius-pill); flex-shrink: 0; }
+.upg-stripe svg { display: block; width: 20px; height: 20px; }
 .upg-buy-btn.show { opacity: 1; transform: none; visibility: visible; pointer-events: auto; transition: opacity 0.25s var(--ease-smooth), transform 0.35s var(--ease-spring), visibility 0s; }
 .upg-note b { font-weight: 700; color: var(--fg); }
 .upg-card { cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background 0.25s var(--ease-smooth), border-color 0.25s var(--ease-smooth), box-shadow 0.25s var(--ease-smooth); }
