@@ -5424,8 +5424,39 @@ function upgCalc(usd) {
 }
 const upgRow = (r) => `<div class="upg-brow"><span class="upg-bico">${UPG_ICO[r.i]}</span><div class="upg-btxt"><b>${r.t}</b><span>${r.s}</span></div><b class="upg-bval">${r.v}</b></div>`;
 
+const UPG_PAY_TO = { name: 'Aphostus', number: '' };
+const UPG_PERIODS = ['Daily', 'Weekly', 'Monthly', 'Yearly'];
+const UPG_GCASH = `<svg viewBox="0 0 96 28" width="96" height="28" aria-hidden="true"><circle cx="14" cy="14" r="13" fill="#0a6cff"/><path d="M20.5 10A7.5 7.5 0 1 0 21.5 14.5H14.5" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/><text x="34" y="21" font-family="system-ui, sans-serif" font-size="19" font-weight="800" fill="#0a6cff">GCash</text></svg>`;
+const UPG_HOURGLASS = `<svg class="upg-hg" viewBox="0 0 64 80" fill="currentColor" aria-hidden="true"><path d="M14 6h36M14 74h36M18 6c0 18 9 24 14 34-5 10-14 16-14 34M46 6c0 18-9 24-14 34 5 10 14 16 14 34" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path class="hg-top" d="M21 10h22c-1 10-7 17-11 22-4-5-10-12-11-22z"/><line class="hg-str" x1="32" y1="34" x2="32" y2="70" stroke="currentColor" stroke-width="1.5"/><path class="hg-bot" d="M21 70h22c-1-10-7-17-11-22-4 5-10 12-11 22z"/></svg>`;
+const upgClock = (ms) => {
+  const d = new Date(ms);
+  let h = d.getHours();
+  const m = String(d.getMinutes()).padStart(2, '0');
+  const ap = h >= 12 ? 'pm' : 'am';
+  h = h % 12 || 12;
+  return h + ':' + m + ap;
+};
+async function upgEnsureAccount() {
+  if (!currentUser) return;
+  try {
+    const ref = doc(db, 'accounts', currentUser.uid);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) {
+      await setDoc(ref, { uid: currentUser.uid, credits: 0, membership: 'None', createdAt: Date.now(), updatedAt: Date.now() });
+    }
+  } catch (e) { console.warn('[account] ensure failed', e && e.code || e); }
+}
+async function upgSendPayment(rec) {
+  if (!currentUser) throw new Error('signin');
+  await upgEnsureAccount();
+  const id = currentUser.uid + '_' + rec.createdAt;
+  await setDoc(doc(db, 'payments', id), Object.assign({ uid: currentUser.uid, status: 'pending' }, rec));
+  return id;
+}
+
 function openUpgradePopup() {
   if (document.querySelector('.upg-block')) return;
+  upgEnsureAccount();
   document.getElementById('sidebar')?.classList.remove('open');
   closeModelMenu();
   closeEffortMenu();
@@ -5447,7 +5478,7 @@ function openUpgradePopup() {
   block.className = 'upg-block';
   block.innerHTML = `<section class="upg-pop" role="dialog" aria-modal="true" aria-label="Subscriptions">
     <div class="upg-head">
-      <h3 class="upg-title">Subscriptions</h3>
+      <div class="upg-head-l"><h3 class="upg-title">Subscriptions</h3><span class="upg-sub">Get more of Aphrosta</span></div>
       <div class="upg-head-r">
         <button class="upg-buy-btn" type="button" data-upg-buy>Purchase</button>
         <button class="icon-btn upg-x" type="button" data-upg-x aria-label="Close">${ICONS.close}</button>
@@ -5486,7 +5517,8 @@ function openUpgradePopup() {
     let top = vis(tb) ? tb.getBoundingClientRect().bottom : 60;
     if (vis(sb)) top = Math.max(top, sb.getBoundingClientRect().bottom);
     const bottom = vis(cm) ? window.innerHeight - cm.getBoundingClientRect().top : 140;
-    const kb = !!cInput && document.activeElement === cInput;
+    const ae = document.activeElement;
+    const kb = !!ae && pop.contains(ae) && ae.tagName === 'INPUT';
     if (!kb || !popH) {
       popTop = top + 12;
       popH = Math.max(0, window.innerHeight - (top + 12) - (bottom + 12));
@@ -5564,6 +5596,71 @@ function openUpgradePopup() {
   if (window.visualViewport) window.visualViewport.addEventListener('resize', place);
   paintCustom();
 
+  const nowHM = () => { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+  const headHtml = (title, sub) => `<div class="upg-head">
+      <div class="upg-head-l"><h3 class="upg-title">${title}</h3><span class="upg-sub">${sub}</span></div>
+      <div class="upg-head-r"><button class="icon-btn upg-x" type="button" data-upg-x aria-label="Close">${ICONS.close}</button></div>
+    </div>`;
+  let pay = null;
+  const showPay = () => {
+    if (tab === 0) {
+      const usd = Math.round(amt * 100) / 100;
+      pay = { money: '$' + usd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), label: 'Custom', usd, credits: Math.floor(usd * UPG_RATE), membership: 'Custom', period: 'custom' };
+    } else if (sel) {
+      const p = UPG_PLANS[sel.p], k = sel.t - 1;
+      pay = { money: p.pr[k], label: UPG_PERIODS[k] + ' | ' + p.name, usd: parseFloat(p.pr[k].replace(/[^0-9.]/g, '')), credits: parseInt(p.cr[k].replace(/[^0-9]/g, ''), 10), membership: p.name, period: UPG_PERIODS[k].toLowerCase() };
+    } else return;
+    pop.setAttribute('aria-label', 'Payment');
+    pop.innerHTML = `${headHtml('Payment', 'Pay manually without hassle')}
+    <div class="upg-pay">
+      <div class="upg-pay-body">
+        <div class="upg-pay-top">
+          <div class="upg-pay-logos">
+            <img class="upg-payer" src="Materials/Public/images/Payer.png" alt="">
+            <div class="upg-gc">${UPG_GCASH}</div>
+          </div>
+          <div class="upg-pay-amt"><b>${esc(pay.money)}</b><span>${esc(pay.label)}</span></div>
+        </div>
+        <p class="upg-pay-note">Send exactly <b>${esc(pay.money)}</b> to GCash account <b>${esc(UPG_PAY_TO.name)}</b>${UPG_PAY_TO.number ? ' (' + esc(UPG_PAY_TO.number) + ')' : ''}, then enter your payment details below so we can verify it. Oversending is not refundable.</p>
+        <input class="upg-in" data-pay-num type="tel" inputmode="numeric" autocomplete="off" placeholder="Your GCash number" aria-label="Your GCash number">
+        <input class="upg-in" data-pay-name type="text" autocomplete="off" placeholder="Account name" aria-label="Account name">
+        <label class="upg-in-t"><span>Time sent</span><input data-pay-time type="time" max="${nowHM()}" aria-label="Time sent"></label>
+      </div>
+      <div class="upg-pay-foot"><button class="upg-confirm" type="button" data-upg-confirm>Confirm</button></div>
+    </div>`;
+    place();
+  };
+  const showWait = (back) => {
+    pop.setAttribute('aria-label', 'Waiting');
+    pop.innerHTML = `${headHtml('Waiting', 'Verifying your payment')}
+    <div class="upg-wait">${UPG_HOURGLASS}<p class="upg-wait-t">Comeback: <b>${upgClock(back)}</b></p></div>`;
+    place();
+  };
+  const doConfirm = async (btn) => {
+    const num = block.querySelector('[data-pay-num]').value.replace(/\D/g, '');
+    const nm = block.querySelector('[data-pay-name]').value.trim().replace(/\s+/g, ' ');
+    const tm = block.querySelector('[data-pay-time]').value;
+    if (num.length < 10 || num.length > 13) { toast('Enter your GCash number.', 'error', 2500); return; }
+    if (nm.length < 2) { toast('Enter your account name.', 'error', 2500); return; }
+    if (!tm) { toast('Enter the time you sent the payment.', 'error', 2500); return; }
+    if (tm > nowHM()) { toast('Time must be now or earlier.', 'error', 2500); return; }
+    btn.disabled = true;
+    const created = Date.now();
+    const back = created + 10 * 60 * 1000;
+    try {
+      await upgSendPayment({
+        createdAt: created, verifyAt: back, price: pay.money, amountUsd: pay.usd, credits: pay.credits,
+        membership: pay.membership, period: pay.period, label: pay.label,
+        senderNumber: num, senderName: nm, sentTime: tm
+      });
+    } catch (err) {
+      btn.disabled = false;
+      toast(err && err.message === 'signin' ? 'Sign in to pay.' : 'Could not send your payment. Try again.', 'error', 3000);
+      return;
+    }
+    showWait(back);
+  };
+
   const onKey = (e) => {
     if (pop.contains(e.target) && e.key !== 'Escape' && e.key !== 'Tab') return;
     e.preventDefault();
@@ -5597,10 +5694,15 @@ function openUpgradePopup() {
       paintCustom();
       return;
     }
+    if (e.target.closest('[data-upg-buy]')) { showPay(); return; }
+    const cf = e.target.closest('[data-upg-confirm]');
+    if (cf) { doConfirm(cf); return; }
     if (e.target.closest('[data-upg-x]')) done();
   });
   document.addEventListener('keydown', onKey, true);
   window.addEventListener('resize', place);
+  pop.addEventListener('focusin', () => { setTimeout(place, 120); setTimeout(place, 400); });
+  pop.addEventListener('focusout', () => setTimeout(place, 150));
   document.body.appendChild(block);
   place();
   pop.querySelector('[data-upg-x]').focus({ preventScroll: true });
