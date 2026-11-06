@@ -407,23 +407,15 @@ html.has-vv #app-shell { height: var(--app-h); }
 .upg-seg button.on { background: var(--fg); color: var(--bg); }
 .upg-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; display: flex; flex-direction: column; gap: 10px; padding: 0 0 14px; scrollbar-width: none; }
 .upg-scroll::-webkit-scrollbar { display: none; }
-.upg-plans, .upg-uses { display: flex; flex-direction: column; gap: 10px; }
-.upg-card, .upg-use { padding: 12px; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 16px; }
-.upg-card-head, .upg-use-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.upg-plans { display: flex; flex-direction: column; gap: 10px; }
+.upg-card { padding: 12px; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 16px; }
+.upg-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.upg-cr { padding: 3px 10px; font-size: calc(12px * var(--ts)); font-weight: 600; color: var(--gray-light); background: var(--glass-bg-hover); border-radius: var(--radius-pill); }
+.upg-money { display: flex; align-items: baseline; gap: 6px; margin: 8px 0; }
+.upg-money b { font-size: calc(24px * var(--ts)); font-weight: 700; color: var(--fg); }
+.upg-money span { font-size: calc(11px * var(--ts)); color: var(--gray-mid); }
+.upg-info { margin: 0; padding-top: 10px; border-top: 1px solid var(--glass-border); font-size: calc(12.5px * var(--ts)); line-height: 1.5; color: var(--gray-light); }
 .upg-name { font-size: calc(14px * var(--ts)); font-weight: 700; color: var(--fg); }
-.upg-price { font-size: calc(13px * var(--ts)); font-weight: 600; color: var(--gray-light); }
-.upg-by { font-size: calc(11px * var(--ts)); color: var(--gray-mid); }
-.upg-credits { display: flex; align-items: baseline; gap: 6px; margin: 6px 0 8px; }
-.upg-credits b { font-size: calc(22px * var(--ts)); font-weight: 700; color: var(--fg); }
-.upg-credits span { font-size: calc(11px * var(--ts)); color: var(--gray-mid); }
-.upg-rows { display: flex; flex-direction: column; gap: 5px; padding-top: 8px; border-top: 1px solid var(--glass-border); }
-.upg-rows > div { display: flex; justify-content: space-between; gap: 12px; font-size: calc(12px * var(--ts)); }
-.upg-rows span, .upg-use-grid span { color: var(--gray-mid); flex-shrink: 0; }
-.upg-rows b { font-weight: 500; color: var(--gray-light); text-align: right; }
-.upg-sec { margin: 6px 4px 0; font-size: calc(12px * var(--ts)); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--gray-mid); }
-.upg-use-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; font-size: calc(12px * var(--ts)); }
-.upg-use-grid > div { display: flex; flex-direction: column; gap: 2px; }
-.upg-use-grid b { font-weight: 600; color: var(--gray-light); }
 
 .side-scroll {
   flex: 1;

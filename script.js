@@ -5382,21 +5382,18 @@ function openUsagePopup() {
 }
 
 const UPG_PLANS = [
-  { name: 'Free', price: '$0', cr: ['10C', '0C', '0C'], models: 'Palsath', inp: 'Texts Only', out: 'Texts Only', store: '500Mb', agents: 'None' },
-  { name: 'Standard', price: '$10', cr: ['40C', '310C', '1250C'], models: 'Yasthra', inp: 'Binary + Image, Video, Sound & Music', out: 'Binary + Image, Video, Sound & Music', store: '10Gb', agents: '10' },
-  { name: 'Premium', price: '$30', cr: ['130C', '935C', '3750C'], models: 'Xasthra, Yasthra', inp: 'Binary + Image, Video, Sound & Music', out: 'Binary + Image, Video, Sound & Music', store: '25Gb', agents: '25' },
-  { name: 'Exclusive', price: '$50', cr: ['230C', '1625C', '6500C'], models: 'Zasthra, Yasthra, Xasthra', inp: 'Binary + Image, Video, Sound & Music', out: 'Binary + Image, Video, Sound & Music', store: '50Gb', agents: '50' },
-  { name: 'Custom', price: '$1 = 100C', cr: ['Unknown', 'Unknown', 'Unknown'], models: 'Unknown', inp: 'Binary + Image, Video, Sound & Music', out: 'Binary + Image, Video, Sound & Music', store: 'Unknown', agents: '$0.50/each' },
-  { name: 'Organization', price: 'Contract', cr: ['Unknown', 'Unknown', 'Unknown'], models: 'Complete + Galsath', inp: 'Complete + Labstack', out: 'Complete + Labstack', store: 'Uncapped', agents: 'Complete + Labstack' }
-];
-const UPG_USAGE = [
-  { name: 'Text to Speech', by: 'Elevenlabs', cost: '$0.04/1kChr', before: '4C/1kChr', after: '15C/1kChr' },
-  { name: 'Speech to Text', by: 'Elevenlabs', cost: '$0.22/hr', before: '22C/hr', after: '80C/1hr' },
-  { name: 'Image Gen', by: 'Grok XSI', cost: '$0.05/each', before: '5C/each', after: '10C/each' },
-  { name: 'Video Gen', by: 'Grok XSI', cost: '$0.05/min', before: '5C/min', after: '10C/min' },
-  { name: 'Music Gen', by: 'Elevenlabs', cost: '$0.15/each', before: '15C/each', after: '25C/each' },
-  { name: 'Sound Gen', by: 'Elevenlabs', cost: '$0.03/min', before: '3C/min', after: '15C/min' },
-  { name: 'Storage & Training', by: 'Aphrosta', cost: '$0.25/Gb', before: '25C/Gb', after: '50C/Gb' }
+  { name: 'Free', per: true, cr: ['10C', '0C', '0C'], pr: ['$0', '$0', '$0'],
+    info: 'Chat with text only using the Palsath model, with 500Mb of storage and no custom agents.' },
+  { name: 'Standard', per: true, cr: ['40C', '310C', '1250C'], pr: ['$0.57', '$2.73', '$10.00'],
+    info: 'Use the Yasthra model with images, video, sound and music as inputs and outputs, plus 10Gb of storage and up to 10 agents.' },
+  { name: 'Premium', per: true, cr: ['130C', '935C', '3750C'], pr: ['$1.29', '$7.73', '$30.00'],
+    info: 'Switch between the Xasthra and Yasthra models with full image, video, sound and music support, 25Gb of storage and up to 25 agents.' },
+  { name: 'Exclusive', per: true, cr: ['230C', '1625C', '6500C'], pr: ['$2.02', '$12.75', '$50.00'],
+    info: 'Get the Zasthra, Yasthra and Xasthra models with full image, video, sound and music support, 50Gb of storage and up to 50 agents.' },
+  { name: 'Custom', per: false, cr: ['Unknown', 'Unknown', 'Unknown'], pr: ['$1 = 100C', '$1 = 100C', '$1 = 100C'],
+    info: 'Pay as you go at $1 per 100C with image, video, sound and music support and agents at $0.50 each; models and storage are not decided yet.' },
+  { name: 'Organization', per: false, cr: ['Unknown', 'Unknown', 'Unknown'], pr: ['Contract', 'Contract', 'Contract'],
+    info: 'A contract plan with the complete model set plus Galsath, complete Labstack inputs and outputs, uncapped storage and agents through Labstack.' }
 ];
 
 function openUpgradePopup() {
@@ -5410,23 +5407,9 @@ function openUpgradePopup() {
   let period = 2;
 
   const planCard = (p) => `<div class="upg-card">
-    <div class="upg-card-head"><span class="upg-name">${p.name}</span><span class="upg-price">${p.price}</span></div>
-    <div class="upg-credits"><b data-cr>${p.cr[period]}</b><span data-per>${PERIODS[period][2]}</span></div>
-    <div class="upg-rows">
-      <div><span>Models</span><b>${p.models}</b></div>
-      <div><span>Inputs</span><b>${p.inp}</b></div>
-      <div><span>Outputs</span><b>${p.out}</b></div>
-      <div><span>Storage</span><b>${p.store}</b></div>
-      <div><span>Agents</span><b>${p.agents}</b></div>
-    </div>
-  </div>`;
-  const usageRow = (u) => `<div class="upg-use">
-    <div class="upg-use-head"><span class="upg-name">${u.name}</span><span class="upg-by">${u.by}</span></div>
-    <div class="upg-use-grid">
-      <div><span>Cost</span><b>${u.cost}</b></div>
-      <div><span>Before</span><b>${u.before}</b></div>
-      <div><span>After</span><b>${u.after}</b></div>
-    </div>
+    <div class="upg-card-head"><span class="upg-name">${p.name}</span><span class="upg-cr" data-cr>${p.cr[period]}</span></div>
+    <div class="upg-money"><b data-pr>${p.pr[period]}</b><span data-per>${p.per ? PERIODS[period][2] : ''}</span></div>
+    <p class="upg-info">${p.info}</p>
   </div>`;
 
   const block = document.createElement('div');
@@ -5439,8 +5422,6 @@ function openUpgradePopup() {
     <div class="upg-seg" role="tablist">${PERIODS.map((x, i) => `<button type="button" role="tab" data-upg-per="${i}" class="${i === period ? 'on' : ''}">${x[1]}</button>`).join('')}</div>
     <div class="upg-scroll">
       <div class="upg-plans">${UPG_PLANS.map(planCard).join('')}</div>
-      <h4 class="upg-sec">Usage pricing</h4>
-      <div class="upg-uses">${UPG_USAGE.map(usageRow).join('')}</div>
     </div>
   </section>`;
 
@@ -5459,8 +5440,10 @@ function openUpgradePopup() {
 
   const paint = () => {
     block.querySelectorAll('.upg-card').forEach((c, i) => {
-      c.querySelector('[data-cr]').textContent = UPG_PLANS[i].cr[period];
-      c.querySelector('[data-per]').textContent = UPG_PLANS[i].cr[period] === 'Unknown' ? '' : PERIODS[period][2];
+      const p = UPG_PLANS[i];
+      c.querySelector('[data-cr]').textContent = p.cr[period];
+      c.querySelector('[data-pr]').textContent = p.pr[period];
+      c.querySelector('[data-per]').textContent = p.per ? PERIODS[period][2] : '';
     });
     block.querySelectorAll('[data-upg-per]').forEach((b) => b.classList.toggle('on', +b.dataset.upgPer === period));
   };
