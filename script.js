@@ -5428,7 +5428,7 @@ const upgRow = (r) => `<div class="upg-brow"><span class="upg-bico">${UPG_ICO[r.
 const UPG_PAY_TO = { name: 'Aphostus', number: '' };
 const UPG_PHP = 60;
 const UPG_PERIODS = ['Daily', 'Weekly', 'Monthly', 'Yearly'];
-const UPG_GCASH = `<svg viewBox="0 0 96 28" width="96" height="28" aria-hidden="true"><circle cx="14" cy="14" r="13" fill="#0a6cff"/><path d="M20.5 10A7.5 7.5 0 1 0 21.5 14.5H14.5" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/><text x="34" y="21" font-family="system-ui, sans-serif" font-size="19" font-weight="800" fill="#0a6cff">GCash</text></svg>`;
+const UPG_GCASH = `<svg viewBox="0 0 64 28" width="64" height="28" preserveAspectRatio="xMinYMid meet" aria-hidden="true"><text x="0" y="21" font-family="system-ui, sans-serif" font-size="19" font-weight="800" fill="#0a6cff">GCash</text></svg>`;
 const UPG_HOURGLASS = `<svg class="upg-hg" viewBox="0 0 64 80" fill="currentColor" aria-hidden="true"><path d="M14 6h36M14 74h36M18 6c0 18 9 24 14 34-5 10-14 16-14 34M46 6c0 18-9 24-14 34 5 10 14 16 14 34" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path class="hg-top" d="M21 10h22c-1 10-7 17-11 22-4-5-10-12-11-22z"/><line class="hg-str" x1="32" y1="34" x2="32" y2="70" stroke="currentColor" stroke-width="1.5"/><path class="hg-bot" d="M21 70h22c-1-10-7-17-11-22-4 5-10 12-11 22z"/></svg>`;
 const upgClock = (ms) => {
   const d = new Date(ms);
