@@ -5425,6 +5425,7 @@ function upgCalc(usd) {
 const upgRow = (r) => `<div class="upg-brow"><span class="upg-bico">${UPG_ICO[r.i]}</span><div class="upg-btxt"><b>${r.t}</b><span>${r.s}</span></div><b class="upg-bval">${r.v}</b></div>`;
 
 const UPG_PAY_TO = { name: 'Aphostus', number: '' };
+const UPG_PHP = 60;
 const UPG_PERIODS = ['Daily', 'Weekly', 'Monthly', 'Yearly'];
 const UPG_GCASH = `<svg viewBox="0 0 96 28" width="96" height="28" aria-hidden="true"><circle cx="14" cy="14" r="13" fill="#0a6cff"/><path d="M20.5 10A7.5 7.5 0 1 0 21.5 14.5H14.5" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/><text x="34" y="21" font-family="system-ui, sans-serif" font-size="19" font-weight="800" fill="#0a6cff">GCash</text></svg>`;
 const UPG_HOURGLASS = `<svg class="upg-hg" viewBox="0 0 64 80" fill="currentColor" aria-hidden="true"><path d="M14 6h36M14 74h36M18 6c0 18 9 24 14 34-5 10-14 16-14 34M46 6c0 18-9 24-14 34 5 10 14 16 14 34" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path class="hg-top" d="M21 10h22c-1 10-7 17-11 22-4-5-10-12-11-22z"/><line class="hg-str" x1="32" y1="34" x2="32" y2="70" stroke="currentColor" stroke-width="1.5"/><path class="hg-bot" d="M21 70h22c-1-10-7-17-11-22-4 5-10 12-11 22z"/></svg>`;
@@ -5597,21 +5598,24 @@ function openUpgradePopup() {
   paintCustom();
 
   const nowHM = () => { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
-  const headHtml = (title, sub) => `<div class="upg-head">
+  const nowDT = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') + 'T' + nowHM(); };
+  const headHtml = (title, sub, back) => `<div class="upg-head">
       <div class="upg-head-l"><h3 class="upg-title">${title}</h3><span class="upg-sub">${sub}</span></div>
-      <div class="upg-head-r"><button class="icon-btn upg-x" type="button" data-upg-x aria-label="Close">${ICONS.close}</button></div>
+      <div class="upg-head-r">${back ? `<button class="icon-btn upg-x" type="button" data-upg-back data-upg-x aria-label="Back">${ICONS.back}</button>` : `<button class="icon-btn upg-x" type="button" data-upg-x aria-label="Close">${ICONS.close}</button>`}</div>
     </div>`;
   let pay = null;
   const showPay = () => {
     if (tab === 0) {
       const usd = Math.round(amt * 100) / 100;
-      pay = { money: '$' + usd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), label: 'Custom', usd, credits: Math.floor(usd * UPG_RATE), membership: 'Custom', period: 'custom' };
+      pay = { money: '$' + usd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), label: 'Custom', show: 'Custom', usd, credits: Math.floor(usd * UPG_RATE), membership: 'Custom', period: 'custom' };
     } else if (sel) {
       const p = UPG_PLANS[sel.p], k = sel.t - 1;
-      pay = { money: p.pr[k], label: UPG_PERIODS[k] + ' | ' + p.name, usd: parseFloat(p.pr[k].replace(/[^0-9.]/g, '')), credits: parseInt(p.cr[k].replace(/[^0-9]/g, ''), 10), membership: p.name, period: UPG_PERIODS[k].toLowerCase() };
+      pay = { money: p.pr[k], label: UPG_PERIODS[k] + ' | ' + p.name, show: UPG_PERIODS[k] + ' ' + p.name, usd: parseFloat(p.pr[k].replace(/[^0-9.]/g, '')), credits: parseInt(p.cr[k].replace(/[^0-9]/g, ''), 10), membership: p.name, period: UPG_PERIODS[k].toLowerCase() };
     } else return;
     pop.setAttribute('aria-label', 'Payment');
-    pop.innerHTML = `${headHtml('Payment', 'Pay manually without hassle')}
+    pop._plan = document.createDocumentFragment();
+    while (pop.firstChild) pop._plan.appendChild(pop.firstChild);
+    pop.innerHTML = `${headHtml('Payment', 'Pay manually without hassle', true)}
     <div class="upg-pay">
       <div class="upg-pay-body">
         <div class="upg-pay-top">
@@ -5619,12 +5623,12 @@ function openUpgradePopup() {
             <img class="upg-payer" src="Materials/Public/images/Payer.png" alt="">
             <div class="upg-gc">${UPG_GCASH}</div>
           </div>
-          <div class="upg-pay-amt"><b>${esc(pay.money)}</b><span>${esc(pay.label)}</span></div>
+          <div class="upg-pay-amt"><b>${esc(pay.money)}</b><em>Php ${(pay.usd * UPG_PHP).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</em><span>${esc(pay.show)}</span></div>
         </div>
         <p class="upg-pay-note">Send exactly <b>${esc(pay.money)}</b> to GCash account <b>${esc(UPG_PAY_TO.name)}</b>${UPG_PAY_TO.number ? ' (' + esc(UPG_PAY_TO.number) + ')' : ''}, then enter your payment details below so we can verify it. Oversending is not refundable.</p>
-        <input class="upg-in" data-pay-num type="tel" inputmode="numeric" autocomplete="off" placeholder="Your GCash number" aria-label="Your GCash number">
+        <input class="upg-in" data-pay-num type="tel" inputmode="numeric" autocomplete="off" placeholder="+63 000 000 0000" aria-label="Your GCash number">
         <input class="upg-in" data-pay-name type="text" autocomplete="off" placeholder="Account name" aria-label="Account name">
-        <label class="upg-in-t"><span>Time sent</span><input data-pay-time type="time" max="${nowHM()}" aria-label="Time sent"></label>
+        <label class="upg-in-t"><span>Time sent</span><input data-pay-time type="datetime-local" max="${nowDT()}" aria-label="Time sent"></label>
       </div>
       <div class="upg-pay-foot"><button class="upg-confirm" type="button" data-upg-confirm>Confirm</button></div>
     </div>`;
@@ -5640,10 +5644,10 @@ function openUpgradePopup() {
     const num = block.querySelector('[data-pay-num]').value.replace(/\D/g, '');
     const nm = block.querySelector('[data-pay-name]').value.trim().replace(/\s+/g, ' ');
     const tm = block.querySelector('[data-pay-time]').value;
-    if (num.length < 10 || num.length > 13) { toast('Enter your GCash number.', 'error', 2500); return; }
+    if (num.length !== 12) { toast('Enter your GCash number.', 'error', 2500); return; }
     if (nm.length < 2) { toast('Enter your account name.', 'error', 2500); return; }
     if (!tm) { toast('Enter the time you sent the payment.', 'error', 2500); return; }
-    if (tm > nowHM()) { toast('Time must be now or earlier.', 'error', 2500); return; }
+    if (tm > nowDT()) { toast('Time must be now or earlier.', 'error', 2500); return; }
     btn.disabled = true;
     const created = Date.now();
     const back = created + 10 * 60 * 1000;
@@ -5651,7 +5655,7 @@ function openUpgradePopup() {
       await upgSendPayment({
         createdAt: created, verifyAt: back, price: pay.money, amountUsd: pay.usd, credits: pay.credits,
         membership: pay.membership, period: pay.period, label: pay.label,
-        senderNumber: num, senderName: nm, sentTime: tm
+        senderNumber: num, senderName: nm, sentTime: tm.slice(11), sentDate: tm.slice(0, 10)
       });
     } catch (err) {
       btn.disabled = false;
@@ -5697,10 +5701,29 @@ function openUpgradePopup() {
     if (e.target.closest('[data-upg-buy]')) { showPay(); return; }
     const cf = e.target.closest('[data-upg-confirm]');
     if (cf) { doConfirm(cf); return; }
+    if (e.target.closest('[data-upg-back]')) {
+      if (pop._plan) { pop.innerHTML = ''; pop.appendChild(pop._plan); pop._plan = null; pop.setAttribute('aria-label', 'Subscriptions'); paint(); place(); }
+      return;
+    }
     if (e.target.closest('[data-upg-x]')) done();
   });
   document.addEventListener('keydown', onKey, true);
   window.addEventListener('resize', place);
+  block.addEventListener('input', (e) => {
+    const t = e.target;
+    if (!t.matches) return;
+    if (t.matches('[data-pay-num]')) {
+      let d = t.value.replace(/\D/g, '');
+      if (d.startsWith('63')) d = d.slice(2);
+      d = d.replace(/^0+/, '').slice(0, 10);
+      let v = d ? '+63 ' + d.slice(0, 3) : '';
+      if (d.length > 3) v += ' ' + d.slice(3, 6);
+      if (d.length > 6) v += ' ' + d.slice(6);
+      t.value = v;
+    } else if (t.matches('[data-pay-time]') && t.value > nowDT()) {
+      t.value = nowDT();
+    }
+  });
   pop.addEventListener('focusin', () => { setTimeout(place, 120); setTimeout(place, 400); });
   pop.addEventListener('focusout', () => setTimeout(place, 150));
   document.body.appendChild(block);
