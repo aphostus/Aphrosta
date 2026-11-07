@@ -1893,6 +1893,158 @@ const SettingsPanel = (user) => `
   </aside>
 `;
 
+/* ===== Owner payment review (long press Switch in Settings) ===== */
+const PAY_ADMINS = ['aphostus.org@gmail.com', 'y0zqno@gmail.com'];
+const isPayAdmin = () => !!(currentUser && currentUser.emailVerified && currentUser.email && PAY_ADMINS.includes(String(currentUser.email).toLowerCase()));
+const PAY_DUR = { daily: 864e5, weekly: 6048e5, monthly: 2592e6, yearly: 31536e6 };
+
+function payExpect(p) {
+  if (p.membership === 'Custom') {
+    const usd = Math.round(Number(p.amountUsd) * 100) / 100;
+    if (!(usd >= UPG_MIN && usd <= UPG_MAX)) return null;
+    return { usd, credits: Math.floor(usd * UPG_RATE) };
+  }
+  const pi = UPG_PLANS.findIndex((x) => x.name === p.membership);
+  const k = UPG_PERIODS.findIndex((x) => x.toLowerCase() === p.period);
+  if (pi < 0 || k < 0) return null;
+  const pl = UPG_PLANS[pi];
+  return { usd: parseFloat(pl.pr[k].replace(/[^0-9.]/g, '')), credits: parseInt(pl.cr[k].replace(/[^0-9]/g, ''), 10) };
+}
+
+function payCardHtml(p) {
+  const ex = payExpect(p);
+  const bad = !ex || Number(p.credits) !== ex.credits || Math.abs(Number(p.amountUsd) - ex.usd) > 0.01;
+  const row = (k, v) => `<span class="fd-card-sub" style="overflow-wrap:anywhere"><b>${k}:</b> ${esc(v)}</span>`;
+  const php = ex ? (ex.usd * UPG_PHP).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '?';
+  return `<div class="fd-card" data-pay="${esc(p.id)}"><span class="fd-card-main">
+    <span class="fd-card-text">${esc(p.label || p.membership)} \u00b7 ${esc(p.price || '')}</span>
+    ${row('Plan', (p.membership || '?') + ' / ' + (p.period || '?'))}
+    ${row('Expected', ex ? ex.credits + 'C for $' + ex.usd + ' (Php ' + php + ')' : 'invalid plan data')}
+    ${row('Credits in record', String(p.credits))}
+    ${row('Account name', p.senderName || '?')}
+    ${row('GCash number', p.senderNumber ? '+' + p.senderNumber : '?')}
+    ${row('Time sent', p.sentTime || '?')}
+    ${row('Submitted', p.createdAt ? new Date(p.createdAt).toLocaleString() : '?')}
+    ${row('User ID', p.uid || '?')}
+    ${row('Payment ID', p.id)}
+    ${bad ? '<span class="fd-card-sub" style="color:var(--bad)">Warning: the record does not match the price table. Approving uses the expected credits.</span>' : ''}
+    <span style="display:flex;gap:8px;margin-top:8px">
+      <button class="fd-pill" type="button" data-fd="pay-ok" data-id="${esc(p.id)}">Approve</button>
+      <button class="fd-pill" type="button" data-fd="pay-no" data-id="${esc(p.id)}">Reject</button>
+    </span>
+  </span></div>`;
+}
+
+async function payAdminLoad() {
+  const box = document.querySelector('[data-pay-list]');
+  if (!box || !isPayAdmin()) return;
+  box.innerHTML = '<p class="field-note">Loading\u2026</p>';
+  try {
+    const qs = await getDocs(query(collection(db, 'payments'), where('status', '==', 'pending')));
+    const list = qs.docs.map((d) => Object.assign({ id: d.id }, d.data())).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    const sub = document.querySelector('[data-fd-sub]');
+    if (sub) sub.textContent = list.length ? list.length + ' pending' : 'Nothing pending';
+    box.innerHTML = list.length
+      ? list.map(payCardHtml).join('')
+      : `<div class="fd-empty"><span class="fd-empty-ico">${ICONS.stBilling}</span><h3>All clear</h3><p>No payments waiting for review.</p></div>`;
+  } catch (e) {
+    box.innerHTML = '<p class="field-note">Could not load: ' + esc((e && e.code) || 'error') + '</p>';
+  }
+}
+
+async function payDecide(id, ok, btn) {
+  if (!isPayAdmin() || !id) return;
+  btn.disabled = true;
+  try {
+    const pref = doc(db, 'payments', id);
+    const ps = await getDoc(pref);
+    if (!ps.exists() || ps.data().status !== 'pending') { toast('Already handled.', 'info', 2200); return; }
+    const p = Object.assign({ id }, ps.data());
+    const ex = payExpect(p);
+    if (ok && !ex) { toast('Invalid plan data in this payment. Reject it.', 'error', 4000); return; }
+    const yes = await confirmDialog({
+      title: ok ? 'Approve payment?' : 'Reject payment?',
+      message: (p.label || p.membership) + '\n' + p.price + '\nFrom: ' + (p.senderName || '?') + '\nCredits: ' + (ex ? ex.credits : '?'),
+      confirmLabel: ok ? 'Approve' : 'Reject',
+      danger: !ok
+    });
+    if (!yes) return;
+    const who = String(currentUser.email).toLowerCase();
+    const b = writeBatch(db);
+    if (ok) {
+      const as = await getDoc(doc(db, 'accounts', p.uid));
+      const old = as.exists() ? as.data() : {};
+      const isCustom = p.membership === 'Custom';
+      const carry = isCustom && String(old.membership || '').toLowerCase() === 'custom';
+      b.set(doc(db, 'accounts', p.uid), {
+        uid: p.uid,
+        membership: p.membership,
+        credits: (carry ? Number(old.credits) || 0 : 0) + ex.credits,
+        creditsUsed: carry ? Number(old.creditsUsed) || 0 : 0,
+        expiresAt: isCustom ? 0 : Date.now() + (PAY_DUR[p.period] || 0),
+        payId: id,
+        updatedAt: Date.now()
+      }, { merge: true });
+    }
+    b.update(pref, { status: ok ? 'success' : 'rejected', applied: ok, reviewedBy: who, reviewedAt: Date.now() });
+    await b.commit();
+    toast(ok ? 'Payment approved. Plan activated.' : 'Payment rejected.', 'success', 2400);
+  } catch (e) {
+    toast('Failed: ' + ((e && e.code) || (e && e.message) || 'error'), 'error', 5000);
+  } finally {
+    btn.disabled = false;
+    payAdminLoad();
+  }
+}
+
+function openPayAdmin() {
+  if (!isPayAdmin()) return;
+  const p = fdOpen('Payments', 'Pending review', '<div class="arch-list" data-pay-list></div>',
+    '<button class="fd-pill" type="button" data-fd="pay-refresh">Refresh</button>');
+  p.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-fd]');
+    if (!b) return;
+    const k = b.dataset.fd;
+    if (k === 'close') fdClose();
+    else if (k === 'pay-refresh') payAdminLoad();
+    else if (k === 'pay-ok' || k === 'pay-no') payDecide(b.dataset.id, k === 'pay-ok', b);
+  });
+  payAdminLoad();
+}
+
+function payAdminToggleBtn() {
+  const sw = document.querySelector('#settings-panel .panel-signout[data-action="signout"]');
+  if (!sw) return;
+  const ex = document.querySelector('#settings-panel .pay-admin-btn');
+  if (ex) { ex.remove(); return; }
+  const b = document.createElement('button');
+  b.className = 'panel-signout pay-admin-btn';
+  b.type = 'button';
+  b.style.marginTop = '0';
+  b.innerHTML = ICONS.stBilling + '<span>Verify payments</span>';
+  sw.after(b);
+}
+
+(function payLongPress() {
+  let t = 0, fired = false;
+  const hit = (e) => e.target.closest && e.target.closest('.panel-signout[data-action="signout"]');
+  document.addEventListener('pointerdown', (e) => {
+    if (!hit(e) || !isPayAdmin()) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    fired = false;
+    clearTimeout(t);
+    t = setTimeout(() => { fired = true; haptic(20); payAdminToggleBtn(); }, 700);
+  }, true);
+  ['pointerup', 'pointercancel'].forEach((ev) => document.addEventListener(ev, () => clearTimeout(t), true));
+  document.addEventListener('click', (e) => {
+    if (fired && hit(e)) { e.stopPropagation(); e.preventDefault(); fired = false; }
+  }, true);
+  document.addEventListener('contextmenu', (e) => { if (hit(e) && isPayAdmin()) e.preventDefault(); }, true);
+  document.addEventListener('click', (e) => {
+    if (e.target.closest && e.target.closest('.pay-admin-btn')) openPayAdmin();
+  });
+})();
+
 const soon = () => toast('Coming soon.', 'info', 1800);
 
 const LIB_MAX_BYTES = 8 * 1024 * 1024;
@@ -5430,11 +5582,16 @@ async function acctSync() {
     list = qs.docs.map((d) => Object.assign({ id: d.id }, d.data()));
   } catch (e) { console.warn('[payments] sync failed', e && e.code || e); acctDbg = 'sync error: ' + (e && e.code || 'unknown'); acctPaint(); return; }
   const pend = list.filter((p) => p.status === 'pending').sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
+  const hadQueue = !!acctQueue;
   acctQueue = pend ? { id: pend.id, verifyAt: pend.verifyAt || 0 } : null;
-  const ready = list.filter((p) => p.status === 'success' && !p.applied).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))[0];
-  acctDbg = list.length + ' receipt(s), ' + list.filter((p) => p.status === 'success').length + ' success' + (ready ? ', trying ...' + String(ready.id).slice(-6) + ' (' + ready.membership + ' ' + ready.period + ')' : ', none to apply');
+  const ready = null;
+  acctDbg = '';
   acctPaint();
-  if (ready) await acctApply(ready);
+  if (hadQueue && !pend) {
+    acctLoad(false);
+    toast('Your payment was reviewed. Checking your plan.', 'info', 3000);
+    document.querySelector('.upg-block [data-upg-x]')?.click();
+  }
 }
 
 async function acctApply(p) {
@@ -17132,7 +17289,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 const AB_OWNER = 'Gabriel Yoan L. Cortez';
-const AB_MAIL = 'Aphostus@gmail.com';
+const AB_MAIL = 'Aphostus.org@gmail.com';
 const AB_PHONE = '+63 9245266251';
 const AB_UPDATED = 'November 5, 2026';
 
