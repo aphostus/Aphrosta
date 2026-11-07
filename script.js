@@ -1895,7 +1895,7 @@ const SettingsPanel = (user) => `
 
 /* ===== Owner payment review (long press Switch in Settings) ===== */
 const PAY_ADMINS = ['aphostus.org@gmail.com', 'y0zqno@gmail.com'];
-const isPayAdmin = () => !!(currentUser && currentUser.emailVerified && currentUser.email && PAY_ADMINS.includes(String(currentUser.email).toLowerCase()));
+const isPayAdmin = () => !!(currentUser && currentUser.emailVerified && currentUser.email && PAY_ADMINS.some((a) => String(a).trim().toLowerCase() === String(currentUser.email).trim().toLowerCase()));
 const PAY_DUR = { daily: 864e5, weekly: 6048e5, monthly: 2592e6, yearly: 31536e6 };
 
 function payExpect(p) {
@@ -2028,18 +2028,19 @@ function payAdminToggleBtn() {
 (function payLongPress() {
   let t = 0, fired = false;
   const hit = (e) => e.target.closest && e.target.closest('.panel-signout[data-action="signout"]');
+  const fire = () => { if (fired) return; fired = true; haptic(20); payAdminToggleBtn(); };
   document.addEventListener('pointerdown', (e) => {
     if (!hit(e) || !isPayAdmin()) return;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     fired = false;
     clearTimeout(t);
-    t = setTimeout(() => { fired = true; haptic(20); payAdminToggleBtn(); }, 700);
+    t = setTimeout(fire, 700);
   }, true);
-  ['pointerup', 'pointercancel'].forEach((ev) => document.addEventListener(ev, () => clearTimeout(t), true));
+  document.addEventListener('pointerup', () => clearTimeout(t), true);
   document.addEventListener('click', (e) => {
     if (fired && hit(e)) { e.stopPropagation(); e.preventDefault(); fired = false; }
   }, true);
-  document.addEventListener('contextmenu', (e) => { if (hit(e) && isPayAdmin()) e.preventDefault(); }, true);
+  document.addEventListener('contextmenu', (e) => { if (hit(e) && isPayAdmin()) { e.preventDefault(); fire(); } }, true);
   document.addEventListener('click', (e) => {
     if (e.target.closest && e.target.closest('.pay-admin-btn')) openPayAdmin();
   });

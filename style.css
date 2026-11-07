@@ -1772,6 +1772,11 @@ button.lib-card-eye.is-off { opacity: 0.55; }
   font-size: calc(13px * var(--ts));
   font-weight: 600;
   transition: background 0.2s var(--ease-smooth), color 0.2s var(--ease-smooth);
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 .panel-signout:hover {
   background: var(--glass-bg-hover);
